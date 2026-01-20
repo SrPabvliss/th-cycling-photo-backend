@@ -1,0 +1,55 @@
+{
+  // Biome como formatter y linter por defecto
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": "explicit",
+      "source.fixAll.biome": "explicit"
+    }
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": "explicit",
+      "source.fixAll.biome": "explicit",
+      "source.suppressRule.inline.biome": "never"
+    }
+  },
+  "[json]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.formatOnSave": true
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.formatOnSave": true
+  },
+  // Configuración de Biome
+  "biome.enabled": true,
+  "biome.requireConfiguration": false,
+  // Habilitar LSP de Biome con trazas para debugging
+  "biome.lsp.enabled": true,
+  "biome.lsp.trace.server": "verbose",
+  // Forzar que Biome sea el proveedor principal de diagnósticos
+  "biome.diagnostics": true,
+  // Configurar TypeScript: mantener validación de tipos pero deshabilitar formateo
+  "typescript.validate.enable": true,
+  "typescript.format.enable": false,
+  "typescript.suggest.autoImports": true,
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  // JavaScript: mantener validación pero deshabilitar formateo (Biome lo maneja)
+  "javascript.validate.enable": true,
+  "javascript.format.enable": false,
+  // Configuración general del editor
+  "problems.showCurrentInStatus": true,
+  "editor.rulers": [100],
+  // Configuración para Error Lens
+  "errorLens.enabled": true,
+  "errorLens.enabledDiagnosticLevels": ["error", "warning", "info"],
+  "errorLens.followCursor": "allLines",
+  "errorLens.gutterIconsEnabled": true,
+  // Deshabilitar otros formatters/linters que puedan interferir
+  "prettier.enable": false,
+  "eslint.enable": false
+}
