@@ -1,14 +1,205 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma Schema - Cycling Photo Classification System
+// Database Design v2.1 (2026-01-20)
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum EventStatus {
+  draft
+  uploading
+  processing
+  completed
+
+  @@map("event_status")
+}
+
+enum PhotoStatus {
+  pending
+  detecting
+  analyzing
+  completed
+  failed
+
+  @@map("photo_status")
+}
+
+enum UnclassifiedReason {
+  no_cyclist // No cyclist detected
+  ocr_failed // OCR failed to read plate
+  low_confidence // Detection below threshold
+  processing_error // Technical error
+
+  @@map("unclassified_reason")
+}
+
+enum JobStatus {
+  pending
+  processing
+  completed
+  failed
+
+  @@map("job_status")
+}
+
+enum JobType {
+  detection
+  ocr
+  color_analysis
+
+  @@map("job_type")
+}
+
+enum ProcessingStage {
+  detection
+  ocr
+  color_analysis
+  completed
+
+  @@map("processing_stage")
+}
+
+enum EquipmentItem {
+  helmet
+  jersey
+  bike
+
+  @@map("equipment_item")
+}
+
+// ============================================================================
+// MODELS
+// ============================================================================
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique @db.VarChar(255)
+  password_hash String    @db.VarChar(255)
+  created_at    DateTime  @default(now()) @db.Timestamptz
+  last_login_at DateTime? @db.Timestamptz
+
+  @@map("users")
+}
+
+model Event {
+  id               String      @id @default(uuid()) @db.Uuid
+  name             String      @db.VarChar(200)
+  event_date       DateTime    @db.Date
+  location         String?     @db.VarChar(200)
+  status           EventStatus @default(draft)
+  total_photos     Int         @default(0)
+  processed_photos Int         @default(0)
+  exported_photos  Int         @default(0)
+  created_at       DateTime    @default(now()) @db.Timestamptz
+  updated_at       DateTime    @updatedAt @db.Timestamptz
+
+  photos Photo[]
+
+  @@index([status])
+  @@index([event_date(sort: Desc)])
+  @@map("events")
+}
+
+model Photo {
+  id                  String              @id @default(uuid()) @db.Uuid
+  event_id            String              @db.Uuid
+  filename            String              @db.VarChar(255)
+  storage_key         String              @db.VarChar(500)
+  file_size           BigInt
+  mime_type           String              @default("image/jpeg") @db.VarChar(50)
+  width               Int?
+  height              Int?
+  status              PhotoStatus         @default(pending)
+  unclassified_reason UnclassifiedReason?
+  captured_at         DateTime?           @db.Timestamptz
+  uploaded_at         DateTime            @default(now()) @db.Timestamptz
+  processed_at        DateTime?           @db.Timestamptz
+
+  event             Event             @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  detected_cyclists DetectedCyclist[]
+  processing_jobs   ProcessingJob[]
+
+  @@unique([event_id, filename], name: "unique_event_filename")
+  @@index([event_id])
+  @@index([status])
+  @@map("photos")
+}
+
+model DetectedCyclist {
+  id               String   @id @default(uuid()) @db.Uuid
+  photo_id         String   @db.Uuid
+  bounding_box     Json // {"x1": 0.1, "y1": 0.2, "x2": 0.5, "y2": 0.8}
+  confidence_score Decimal  @db.Decimal(5, 4)
+  created_at       DateTime @default(now()) @db.Timestamptz
+
+  photo            Photo            @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  plate_number     PlateNumber?
+  equipment_colors EquipmentColor[]
+
+  @@index([photo_id])
+  @@index([confidence_score(sort: Desc)])
+  @@map("detected_cyclists")
+}
+
+model PlateNumber {
+  id                  String    @id @default(uuid()) @db.Uuid
+  detected_cyclist_id String    @unique @db.Uuid
+  number              Int // 1-999, NOT unique across events
+  confidence_score    Decimal?  @db.Decimal(5, 4)
+  manually_corrected  Boolean   @default(false)
+  corrected_at        DateTime? @db.Timestamptz
+  created_at          DateTime  @default(now()) @db.Timestamptz
+
+  detected_cyclist DetectedCyclist @relation(fields: [detected_cyclist_id], references: [id], onDelete: Cascade)
+
+  @@index([number])
+  @@index([detected_cyclist_id])
+  @@map("plate_numbers")
+}
+
+model EquipmentColor {
+  id                  String        @id @default(uuid()) @db.Uuid
+  detected_cyclist_id String        @db.Uuid
+  item_type           EquipmentItem
+  color_name          String        @db.VarChar(50)
+  color_hex           String        @db.VarChar(7)
+  density_percentage  Decimal       @db.Decimal(5, 2)
+  created_at          DateTime      @default(now()) @db.Timestamptz
+
+  detected_cyclist DetectedCyclist @relation(fields: [detected_cyclist_id], references: [id], onDelete: Cascade)
+
+  @@index([detected_cyclist_id])
+  @@index([item_type])
+  @@index([color_name])
+  @@map("equipment_colors")
+}
+
+model ProcessingJob {
+  id               String          @id @default(uuid()) @db.Uuid
+  photo_id         String          @db.Uuid
+  job_type         JobType
+  status           JobStatus       @default(pending)
+  processing_stage ProcessingStage
+  error_message    String?         @db.Text
+  retry_count      Int             @default(0)
+  max_retries      Int             @default(3)
+  started_at       DateTime?       @db.Timestamptz
+  completed_at     DateTime?       @db.Timestamptz
+  created_at       DateTime        @default(now()) @db.Timestamptz
+
+  photo Photo @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+
+  @@index([photo_id])
+  @@index([status])
+  @@index([job_type])
+  @@map("processing_jobs")
 }

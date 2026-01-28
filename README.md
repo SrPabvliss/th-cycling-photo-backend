@@ -35,7 +35,7 @@ Before getting started, make sure you have the following installed:
 * **Node.js** >= 22.0.0 ([nvm](https://github.com/nvm-sh/nvm) recommended)
 * **pnpm** >= 10.0.0
 * **Redis** (required for BullMQ)
-* **Database** (PostgreSQL / MySQL depending on Prisma configuration)
+* **PostgreSQL** (or use Prisma's local dev server)
 
 ---
 
@@ -68,15 +68,9 @@ Before getting started, make sure you have the following installed:
    # Edit .env with your configuration
    ```
 
-   > ⚠️ **Note**: Environment variable configuration and the database schema are still pending implementation.
-
 5. **Set up the database**
 
-   ```bash
-   # Once Prisma is configured
-   pnpm prisma generate
-   pnpm prisma migrate dev
-   ```
+   See [Database Setup](#-database-setup) section below.
 
 ---
 
@@ -156,12 +150,80 @@ The project follows a **NestJS module-based architecture**:
 
 ---
 
+## 🗄️ Database Setup
+
+The project uses **Prisma 7** with **PostgreSQL**. You have two options for local development:
+
+### Option 1: Prisma Dev Server (Recommended)
+
+Prisma provides a local PostgreSQL server that requires no external installation:
+
+```bash
+# Start the local database server (runs in background)
+npx prisma dev --detach
+
+# The command outputs a DATABASE_URL - copy it to your .env file
+# Example: prisma+postgres://localhost:51213/?api_key=...
+```
+
+### Option 2: External PostgreSQL
+
+If you have PostgreSQL installed locally or via Docker:
+
+```bash
+# Update .env with your connection string
+DATABASE_URL="postgresql://user:password@localhost:5432/cycling_photos_dev"
+```
+
+### Running Migrations
+
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Run migrations
+npx prisma migrate dev
+
+# Seed the database with test data
+npx prisma db seed
+```
+
+### Useful Prisma Commands
+
+```bash
+# View database in browser (requires external PostgreSQL)
+npx prisma studio
+
+# Reset database (drops all data)
+npx prisma migrate reset
+
+# Check migration status
+npx prisma migrate status
+
+# Format schema file
+npx prisma format
+```
+
+### Database Schema
+
+The database includes the following tables:
+
+| Table | Description |
+|-------|-------------|
+| `users` | System users |
+| `events` | Cycling events |
+| `photos` | Event photos |
+| `detected_cyclists` | Detected cyclists in photos |
+| `plate_numbers` | OCR-detected race numbers |
+| `equipment_colors` | Detected gear colors |
+| `processing_jobs` | Background processing tasks |
+
+---
+
 ## 🔧 Pending Configuration
 
 The following items are still pending:
 
-* **Database schema**: Prisma schema definition
-* **Environment variables**: Complete environment configuration
 * **Core modules**: Events, photos, processing, and storage modules are in the planning phase
 
 ---
