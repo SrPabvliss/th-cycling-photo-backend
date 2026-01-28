@@ -56,3 +56,10 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# ContextKeeper - Local session ledger
+.claude/ledger/sessions/
+.claude/ledger/research/
+!.claude/ledger/sessions/_TEMPLATE.md
+!.claude/ledger/research/_TEMPLATE.md
+!.claude/ledger/README.md
