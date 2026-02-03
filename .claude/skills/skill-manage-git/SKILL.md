@@ -1,26 +1,50 @@
 ---
 name: manage-git
 description: >
-  Manage git operations following project conventions.
-  Use when creating commits, branches, or preparing PRs.
+  Manage git operations AND Jira ticket lifecycle.
+  Handles commits, branches, PRs, and ticket state transitions.
 ---
 
-# Manage Git
+# Manage Git & Jira
 
-Handle git operations with correct conventions.
+Handle git operations and Jira ticket lifecycle.
 
 ## When to Use
 
-- Creating commits
-- Creating branches
-- Preparing pull requests
-- Writing commit messages
+- **Start of ticket:** Transition to "In Progress", create branch
+- **During implementation:** Create commits at checkpoints
+- **End of ticket:** Create PR, transition to "Ready for Review"
 
 ## Required Context
 
-Read before git operations:
-
 - `contexts/conventions/git.md` - Full git conventions
+
+## Jira Ticket Lifecycle
+
+### At Task Start
+```
+→ Jira MCP: Transition ticket to "In Progress"
+→ Git: Create branch feat/{TICKET-ID}
+→ Ledger: Create session file
+```
+
+### At Task End
+```
+→ Git: Push branch, create PR
+→ Jira MCP: Transition ticket to "Ready for Review"
+→ Jira MCP: Add PR link as comment
+```
+
+### Jira MCP Commands
+
+```typescript
+// Transition ticket
+jira.transitionIssue('TTV-1001', 'In Progress')
+jira.transitionIssue('TTV-1001', 'Ready for Review')
+
+// Add comment with PR link
+jira.addComment('TTV-1001', 'PR: https://github.com/...')
+```
 
 ## Commit Message Format
 
@@ -28,27 +52,12 @@ Read before git operations:
 <type>(<scope>): [<ticket>] <subject>
 ```
 
-### Components
-
-| Part | Description | Example |
-|------|-------------|---------|
-| type | Change category | `feat`, `fix`, `chore` |
-| scope | Module affected | `events`, `photos`, `api` |
-| ticket | Jira ticket ID | `[TTV-1001]` |
-| subject | Short description | `add create event command` |
-
-### Types
-
-| Type | When to Use |
-|------|-------------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `style` | Formatting, no code change |
-| `refactor` | Code change without feat/fix |
-| `perf` | Performance improvement |
-| `test` | Adding/updating tests |
-| `chore` | Build, tooling, deps |
+| Part | Example |
+|------|---------|
+| type | `feat`, `fix`, `chore`, `test`, `refactor` |
+| scope | `events`, `photos`, `processing` |
+| ticket | `[TTV-1001]` |
+| subject | `add create event command` |
 
 ### Examples
 
@@ -56,47 +65,50 @@ Read before git operations:
 feat(events): [TTV-1001] add event creation command
 fix(photos): [TTV-1023] handle missing EXIF data
 test(processing): [TTV-1045] add OCR adapter tests
-chore(deps): [TTV-1050] update prisma to 7.2.0
-refactor(events): [TTV-1067] extract mapper to separate class
-```
-
-### Breaking Changes
-
-```bash
-feat(api)!: [TTV-1100] change response envelope format
-
-BREAKING CHANGE: Response now wraps data in { data, meta } envelope.
 ```
 
 ## Branch Naming
-
-Only ticket ID, no description:
 
 ```
 <type>/<ticket>
 ```
 
-### Examples
+Examples: `feat/TTV-1001`, `fix/TTV-1023`
 
+## Complete Workflow
+
+### 1. Start Task
 ```bash
-feat/TTV-1001
-fix/TTV-1023
-chore/TTV-1050
-refactor/TTV-1067
+# Transition Jira (via MCP)
+→ Jira: TTV-1001 → "In Progress"
+
+# Create branch
+git checkout main
+git pull origin main
+git checkout -b feat/TTV-1001
 ```
 
-## Workflow
+### 2. During Implementation (at checkpoints)
+```bash
+git add .
+git commit -m "feat(events): [TTV-1001] add Event entity"
+```
 
-1. Create branch: `git checkout -b feat/TTV-1001`
-2. Make commits with ticket
-3. Push and create PR
-4. Squash and merge to `main`
+### 3. End Task
+```bash
+# Push and create PR
+git push -u origin feat/TTV-1001
+# Create PR via GitHub
+
+# Transition Jira (via MCP)
+→ Jira: TTV-1001 → "Ready for Review"
+→ Jira: Add comment with PR link
+```
 
 ## Checklist
 
+- [ ] Jira transitioned to "In Progress" at start
 - [ ] Branch name is `type/TTV-XXXX`
-- [ ] Commit has ticket `[TTV-XXXX]`
-- [ ] Commit type matches change
-- [ ] Subject is imperative ("add" not "added")
-- [ ] Subject is lowercase
-- [ ] No period at end
+- [ ] Commits include ticket `[TTV-XXXX]`
+- [ ] PR created and linked to Jira
+- [ ] Jira transitioned to "Ready for Review" at end

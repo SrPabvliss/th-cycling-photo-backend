@@ -9,9 +9,9 @@ Software Engineering Thesis - Universidad Técnica de Ambato.
 
 **Core:**
 - Runtime: Node.js 22 LTS
-- Framework: NestJS + TypeScript
-- Database: PostgreSQL + Prisma ORM
-- Queue: BullMQ + Redis
+- Framework: NestJS 11 + TypeScript 5.9
+- Database: PostgreSQL 16 + Prisma 7
+- Queue: BullMQ 5 + Redis 7
 - Linting: Biome v2.3
 - Package Manager: pnpm (enforced)
 
@@ -27,90 +27,108 @@ Software Engineering Thesis - Universidad Técnica de Ambato.
 ## Commands
 
 ```bash
-# Dependencies
-pnpm install
-
 # Development
+pnpm install
 pnpm start:dev
-pnpm start:debug
 
-# Linting & Format
+# Linting
 pnpm check          # biome check + fix
-pnpm check:ci       # biome check (CI mode, no fix)
-pnpm lint           # lint + fix
-pnpm format         # format + fix
+pnpm check:ci       # CI mode
 
 # Database
 npx prisma migrate dev
 npx prisma generate
-npx prisma studio
 
 # Tests
 pnpm test
-pnpm test:watch
-pnpm test:cov
 pnpm test:e2e
-
-# Build
-pnpm build
-pnpm start:prod
 ```
 
-## Conventions
+## Workflow: Ticket → Delivery
 
-- **Code language:** English
-- **Architecture:** Feature-Sliced + CQRS Light
-- **Commits:** Conventional Commits
-- **Imports:** Use `@/` alias for src/
-
-## Folder Structure
+### CRITICAL: Always Follow This Order
 
 ```
-src/
-├── modules/{domain}/     # domain, application, infrastructure, presentation
-├── shared/               # Cross-cutting concerns
-└── app.module.ts
+1. skill:plan-task (Orchestrator)
+   ├─ Jira → "In Progress"
+   ├─ Context7 → Research ALL technologies
+   ├─ Load local contexts
+   └─ Output: Plan with skill assignments + checkpoints
+
+2. skill:research-external (if not cached)
+   ├─ Context7 MCP queries
+   └─ Save to .claude/ledger/research/{tech}.md
+
+3. skill:implement-feature (per task in plan)
+   ├─ VERIFY research cache exists
+   ├─ Load specified contexts
+   ├─ Implement
+   └─ Commit at checkpoint
+
+4. skill:write-tests
+5. skill:review-code
+6. skill:manage-git
+   ├─ Create PR
+   └─ Jira → "Ready for Review"
+
+7. skill:context-keeper
+   └─ Update session ledger
 ```
 
-See `.claude/contexts/structure/feature-sliced.md` for full structure details.
+### MANDATORY Rules
+
+1. **ALWAYS use Context7 before implementing** - No exceptions. Outdated code is worse than slow code.
+2. **ALWAYS verify research cache** - Check `.claude/ledger/research/` before writing any code using external APIs.
+3. **ALWAYS commit at checkpoints** - As defined in plan-task output.
+4. **ALWAYS transition Jira** - "In Progress" at start, "Ready for Review" at end.
+5. **ALWAYS update ledger** - `.claude/ledger/sessions/{TICKET-ID}.md`
+
+## MCP Servers
+
+| Server | Purpose | When to Use |
+|--------|---------|-------------|
+| **Context7** | Library docs | BEFORE any implementation |
+| **Jira** | Ticket lifecycle | Start/end of tickets |
+| **Prisma** | Schema inspection | DB-related tasks |
 
 ## Context References
 
-Detailed implementation guides in `.claude/contexts/`:
+Detailed guides in `.claude/contexts/`:
 
 | Folder | Content |
 |--------|---------|
 | `patterns/` | CQRS, entities, repositories, controllers |
-| `structure/` | Feature-Sliced, NestJS modules |
-| `infrastructure/` | Prisma, Jest, BullMQ, env config |
-| `conventions/` | Naming, validations, errors, git |
+| `structure/` | Feature-Sliced, module setup |
+| `infrastructure/` | Prisma, Jest, BullMQ, env |
+| `conventions/` | Naming, validations, git |
 | `testing/` | Unit, integration, E2E |
-| `review/` | Review process |
-| `checklists/` | Verification by type |
-| `troubleshooting/` | Common errors |
+| `checklists/` | Implementation verification |
 
-## Available Skills
+## Project Docs
 
-| Skill | Description |
-|-------|-------------|
-| `skill-plan-task` | Analyze task and generate execution plan |
-| `skill-implement-feature` | Implement following the plan |
-| `skill-write-tests` | Generate tests (unit/integration/e2e) |
-| `skill-review-code` | Validate architecture and patterns |
-| `skill-document-code` | JSDoc, README, changelog |
-| `skill-manage-git` | Commits and PRs |
-| `skill-research-external` | Research external docs |
-| `skill-context-keeper` | Manage session ledger and research cache |
+Ticket-specific documentation in `.claude/project_docs/`:
+- Load relevant docs as specified in plan-task
+- These are summarized versions for context efficiency
 
-## MCP Servers
+## Ledger System
 
-| Server | Purpose | Usage |
-|--------|---------|-------|
-| **Jira** | Tickets, issues | Already configured |
-| **Context7** | Library documentation | `use context7` in prompts |
-| **Prisma** | Schema inspection, migrations | Auto when DB tasks |
+```
+.claude/ledger/
+├── research/           # Technology docs cache
+│   ├── prisma.md
+│   ├── nestjs.md
+│   └── ...
+└── sessions/           # Per-ticket state
+    └── TTV-XXX.md
+```
 
-**Rules:**
-- Check `.claude/ledger/research/` cache BEFORE using Context7
-- Update cache AFTER Context7 queries
-- Use Prisma MCP for schema-aware planning
+**Research cache avoids repeated Context7 queries.**
+**Session ledger maintains state across interruptions.**
+
+## Architecture
+
+- **Pattern:** Feature-Sliced + CQRS Light + Ports & Adapters
+- **Modules:** `events/`, `photos/`, `processing/`, `storage/`
+- **Each module:** `domain/`, `application/`, `infrastructure/`, `presentation/`
+
+See `contexts/structure/feature-sliced.md` for details.

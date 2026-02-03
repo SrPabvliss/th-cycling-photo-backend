@@ -1,117 +1,115 @@
 ---
 name: research-external
 description: >
-  Research external libraries, APIs, or technical solutions.
-  Use when investigating new technologies or solving technical problems.
+  Research external libraries and APIs using Context7 MCP.
+  MANDATORY before implementing features that use external technologies.
 ---
 
 # Research External
 
-Research external technologies and solutions.
+**Primary Tool:** Context7 MCP for library documentation
 
 ## When to Use
 
-- Evaluating new libraries or packages
-- Investigating API integrations
-- Solving technical problems
-- Comparing alternatives
+- **ALWAYS** before implementing with external libraries
+- When plan-task identifies technologies (Prisma, NestJS, etc.)
+- When encountering unfamiliar APIs
+- When version-specific behavior matters
 
 ## Process
 
-### 1. Define the Problem
+### 1. Check Research Cache First
 
-```markdown
-## Research: [Topic]
-
-### Problem Statement
-What specific problem needs solving?
-
-### Requirements
-- Must have: [critical requirements]
-- Nice to have: [optional features]
-- Constraints: [limitations to consider]
+```bash
+# Before researching, check if we already have cached info
+cat .claude/ledger/research/{technology}.md
 ```
 
-### 2. Research Sources
+If cache exists AND version matches → use cached info, skip research.
 
-| Source Type | Examples |
-|-------------|----------|
-| Official docs | Library documentation, API references |
-| GitHub | Repos, issues, discussions |
-| npm/package info | Downloads, maintenance, dependencies |
-| Community | Stack Overflow, Discord, forums |
+### 2. Use Context7 MCP
 
-### 3. Evaluate Options
+**This is the primary research method.** Context7 provides up-to-date library documentation.
 
-```markdown
-### Option A: [Name]
-
-**Pros:**
-- Pro 1
-- Pro 2
-
-**Cons:**
-- Con 1
-- Con 2
-
-**Metrics:**
-- npm downloads: X/week
-- Last update: [date]
-- GitHub stars: X
-- Bundle size: X KB
+```
+Context7 queries:
+- "Prisma 7 schema syntax generator client"
+- "NestJS 11 module configuration providers"
+- "class-validator decorator options"
+- "BullMQ queue processor patterns"
 ```
 
-### 4. Document Decision
+**Query tips:**
+- Include version number
+- Be specific about the feature/API
+- Search for examples, not just reference
+
+### 3. Document Findings
+
+Save to `.claude/ledger/research/{technology}.md`:
 
 ```markdown
-### Recommendation
+# {Technology} Research Cache
 
-**Selected:** [Option name]
+**Version:** {version}
+**Updated:** {date}
+**Source:** Context7 MCP
 
-**Rationale:**
-1. Reason 1
-2. Reason 2
+## Key APIs Used
 
-**Trade-offs Accepted:**
-- Trade-off 1
-
-**Next Steps:**
-1. [ ] Step 1
-2. [ ] Step 2
+### {Feature 1}
+```typescript
+// Example from docs
 ```
 
-## Evaluation Criteria
+**Notes:**
+- Important gotcha 1
+- Version-specific behavior
 
-| Criteria | Questions to Ask |
-|----------|------------------|
-| Maintenance | Last commit? Active issues? Responsive maintainers? |
-| Adoption | npm downloads? GitHub stars? Used by major projects? |
-| Documentation | Complete docs? Examples? TypeScript support? |
-| Size | Bundle size? Tree-shakeable? |
-| Compatibility | Works with our stack? NestJS/Node version? |
-| License | MIT/Apache? Commercial use allowed? |
+### {Feature 2}
+...
 
-## Output Format
+## Integration Notes
 
-Research should produce:
+- How it works with NestJS
+- Required configuration
+- Common patterns
 
-1. **Summary document** - Problem, options, recommendation
-2. **Comparison table** - Side-by-side feature comparison
-3. **Decision record** - Why chosen option was selected
-4. **Implementation notes** - How to integrate
+## Gotchas
 
-## Example Topics
+1. Issue 1 and solution
+2. Issue 2 and solution
+```
 
-- AI service SDK evaluation (Roboflow, Google Vision, Clarifai)
-- Storage solutions (S3, B2, local)
-- Queue systems (BullMQ, RabbitMQ)
-- Authentication strategies
-- Caching solutions
+## Technologies We Use (Reference)
 
-## Tips
+| Technology | Version | Key Areas to Research |
+|------------|---------|----------------------|
+| Prisma | 7.x | Schema syntax, client generation, migrations, adapters |
+| NestJS | 11.x | Modules, providers, dependency injection |
+| BullMQ | 5.x | Queues, workers, job options, events |
+| class-validator | 0.14.x | Decorators, custom validators, groups |
+| class-transformer | 0.5.x | Decorators, transformation options |
+| Socket.io | 4.x | Gateway, namespaces, rooms |
 
-- Check GitHub issues for known problems
-- Look for TypeScript support
-- Consider long-term maintenance
-- Prototype before committing
-- Document findings even for rejected options
+## When Context7 Isn't Enough
+
+If Context7 doesn't have the info:
+
+1. Check official docs URL (save URL for reference)
+2. Check GitHub repo issues/discussions
+3. Document source in research cache
+
+## Critical Rules
+
+1. **NEVER assume API syntax** - always verify with Context7
+2. **ALWAYS check version** - APIs change between versions
+3. **ALWAYS save to research cache** - avoid repeated lookups
+4. **ALWAYS note gotchas** - save time for future tasks
+
+## Output
+
+Research produces:
+- Updated `.claude/ledger/research/{technology}.md`
+- Specific code examples ready to use
+- Known gotchas documented
