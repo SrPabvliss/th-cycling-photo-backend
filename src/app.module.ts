@@ -4,6 +4,7 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import configuration from './config/configuration'
 import { validate } from './config/env.validation'
+import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { validate } from './config/env.validation'
       load: [configuration],
       isGlobal: true,
     }),
+    PrismaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
