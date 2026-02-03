@@ -6,11 +6,17 @@ const env = process.env.NODE_ENV || 'development'
 config({ path: `.env.${env}` })
 config({ path: '.env' })
 
-const { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME } = process.env
-const connectionString = `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
+const { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, DB_SSL_MODE } = process.env
+
+let connectionString = `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
+if (DB_SSL_MODE) {
+  connectionString += `?sslmode=${DB_SSL_MODE}`
+}
 
 const adapter = new PrismaPg({ connectionString })
 const prisma = new PrismaClient({ adapter })
+
+console.log(`Environment: ${env} | Database: ${DB_NAME}@${DB_HOST}:${DB_PORT}`)
 
 async function main() {
   console.log('Seeding database...')

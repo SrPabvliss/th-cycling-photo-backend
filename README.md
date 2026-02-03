@@ -80,14 +80,14 @@ Before getting started, make sure you have the following installed:
 6. **Set up the database**
 
    ```bash
-   npx prisma generate
-   npx prisma migrate dev
+   pnpm prisma:generate
+   pnpm prisma:migrate
    ```
 
 7. **Seed the database** (optional, creates test data)
 
    ```bash
-   npx prisma db seed
+   pnpm prisma:seed
    ```
 
 ---
@@ -191,22 +191,29 @@ The database uses PostgreSQL 16 with Prisma 7 ORM. The schema includes:
 
 ```bash
 # Generate Prisma client after schema changes
-npx prisma generate
+pnpm prisma:generate
 
-# Create and apply migrations
-npx prisma migrate dev --name descriptive-name
+# Create and apply migrations (development)
+pnpm prisma:migrate
 
-# Apply migrations (production)
-npx prisma migrate deploy
+# Apply migrations (production/test)
+pnpm prisma:migrate:deploy
 
 # Reset database (development only)
-npx prisma migrate reset
+pnpm prisma:reset
 
 # Seed test data
-npx prisma db seed
+pnpm prisma:seed
 
 # Open Prisma Studio (visual data browser)
-npx prisma studio
+pnpm prisma:studio
+```
+
+To target a specific environment, prefix with `NODE_ENV`:
+
+```bash
+NODE_ENV=test pnpm prisma:migrate:deploy
+NODE_ENV=test pnpm prisma:seed
 ```
 
 ### Seed Data
