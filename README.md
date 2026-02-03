@@ -80,8 +80,14 @@ Before getting started, make sure you have the following installed:
 6. **Set up the database**
 
    ```bash
-   pnpm prisma generate
-   pnpm prisma migrate dev
+   pnpm prisma:generate
+   pnpm prisma:migrate
+   ```
+
+7. **Seed the database** (optional, creates test data)
+
+   ```bash
+   pnpm prisma:seed
    ```
 
 ---
@@ -172,11 +178,57 @@ The project follows a **NestJS module-based architecture**:
 
 ---
 
+## 🗄️ Database
+
+### Schema
+
+The database uses PostgreSQL 16 with Prisma 7 ORM. The schema includes:
+
+* **7 tables**: `users`, `events`, `photos`, `detected_cyclists`, `plate_numbers`, `equipment_colors`, `processing_jobs`
+* **7 enums**: `event_status`, `photo_status`, `unclassified_reason`, `job_status`, `job_type`, `processing_stage`, `equipment_item`
+
+### Commands
+
+```bash
+# Generate Prisma client after schema changes
+pnpm prisma:generate
+
+# Create and apply migrations (development)
+pnpm prisma:migrate
+
+# Apply migrations (production/test)
+pnpm prisma:migrate:deploy
+
+# Reset database (development only)
+pnpm prisma:reset
+
+# Seed test data
+pnpm prisma:seed
+
+# Open Prisma Studio (visual data browser)
+pnpm prisma:studio
+```
+
+To target a specific environment, prefix with `NODE_ENV`:
+
+```bash
+NODE_ENV=test pnpm prisma:migrate:deploy
+NODE_ENV=test pnpm prisma:seed
+```
+
+### Seed Data
+
+Running `npx prisma db seed` creates:
+* 1 test user (`admin@cyclingphoto.dev`)
+* 1 event ("Vuelta Ciclistica del Ecuador 2026")
+* 10 photos in pending status
+
+---
+
 ## 🔧 Pending Configuration
 
 The following items are still pending:
 
-* **Database schema**: Prisma schema definition
 * **Core modules**: Events, photos, processing, and storage modules are in the planning phase
 
 ---
