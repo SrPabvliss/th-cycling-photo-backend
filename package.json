@@ -11,6 +11,8 @@
   },
   "packageManager": "pnpm@10.28.1",
   "scripts": {
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
     "build": "nest build",
     "format": "biome format --write .",
     "format:check": "biome format .",
