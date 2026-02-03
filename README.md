@@ -34,8 +34,7 @@ Before getting started, make sure you have the following installed:
 
 * **Node.js** >= 22.0.0 ([nvm](https://github.com/nvm-sh/nvm) recommended)
 * **pnpm** >= 10.0.0
-* **Redis** (required for BullMQ)
-* **Database** (PostgreSQL / MySQL depending on Prisma configuration)
+* **Docker** and **Docker Compose** (for local development services)
 
 ---
 
@@ -65,15 +64,22 @@ Before getting started, make sure you have the following installed:
 
    ```bash
    cp .env.example .env
-   # Edit .env with your configuration
+   # Edit .env with your configuration (defaults work for local Docker setup)
    ```
 
-   > ⚠️ **Note**: Environment variable configuration and the database schema are still pending implementation.
-
-5. **Set up the database**
+5. **Start local services (PostgreSQL & Redis)**
 
    ```bash
-   # Once Prisma is configured
+   pnpm docker:up
+   ```
+
+   This starts:
+   - PostgreSQL 16 on port `5498`
+   - Redis 7 on port `6394`
+
+6. **Set up the database**
+
+   ```bash
    pnpm prisma generate
    pnpm prisma migrate dev
    ```
@@ -81,6 +87,16 @@ Before getting started, make sure you have the following installed:
 ---
 
 ## 📜 Available Scripts
+
+### Docker
+
+```bash
+# Start local services (PostgreSQL, Redis)
+pnpm docker:up
+
+# Stop local services
+pnpm docker:down
+```
 
 ### Development
 
@@ -161,7 +177,6 @@ The project follows a **NestJS module-based architecture**:
 The following items are still pending:
 
 * **Database schema**: Prisma schema definition
-* **Environment variables**: Complete environment configuration
 * **Core modules**: Events, photos, processing, and storage modules are in the planning phase
 
 ---
