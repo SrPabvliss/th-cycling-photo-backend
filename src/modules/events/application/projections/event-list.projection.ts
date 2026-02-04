@@ -1,0 +1,9 @@
+export class EventListProjection {
+	id: string
+	name: string
+	date: Date
+	location: string | null
+	status: string
+	totalPhotos: number
+	processedPhotos: number
+}
