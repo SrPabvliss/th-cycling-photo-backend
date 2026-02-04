@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-and-test:
-    name: Lint & Test
+  lint-build-test:
+    name: Lint, Build & Test
     runs-on: ubuntu-latest
 
     steps:
@@ -30,6 +30,12 @@ jobs:
 
       - name: Lint
         run: pnpm check:ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build
+        run: pnpm build
 
       - name: Test
         run: pnpm test --passWithNoTests
