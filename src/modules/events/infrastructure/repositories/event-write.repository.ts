@@ -25,4 +25,9 @@ export class EventWriteRepository {
     const record = await this.prisma.event.findUnique({ where: { id } })
     return record ? EventMapper.toEntity(record) : null
   }
+
+  /** Deletes an event by its ID. */
+  async delete(id: string): Promise<void> {
+    await this.prisma.event.delete({ where: { id } })
+  }
 }

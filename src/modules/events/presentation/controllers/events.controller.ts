@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import type { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { SuccessMessage } from '../../../../shared/http/decorators/success-message.decorator.js'
 import { CreateEventCommand } from '../../application/commands/create-event/create-event.command.js'
 import type { CreateEventDto } from '../../application/commands/create-event/create-event.dto.js'
+import { DeleteEventCommand } from '../../application/commands/delete-event/delete-event.command.js'
 import { UpdateEventCommand } from '../../application/commands/update-event/update-event.command.js'
 import type { UpdateEventDto } from '../../application/commands/update-event/update-event.dto.js'
 import { GetEventDetailQuery } from '../../application/queries/get-event-detail/get-event-detail.query.js'
@@ -27,6 +28,13 @@ export class EventsController {
   @SuccessMessage('success.UPDATED')
   async update(@Param('id') id: string, @Body() dto: UpdateEventDto) {
     const command = new UpdateEventCommand(id, dto.name, dto.date, dto.location)
+    return this.commandBus.execute(command)
+  }
+
+  @Delete(':id')
+  @SuccessMessage('success.DELETED')
+  async remove(@Param('id') id: string) {
+    const command = new DeleteEventCommand(id)
     return this.commandBus.execute(command)
   }
 
