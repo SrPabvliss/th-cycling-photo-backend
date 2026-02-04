@@ -235,6 +235,26 @@ The following items are still pending:
 
 ## 📝 Development
 
+### Branch Strategy (Gitflow)
+
+| Branch | Purpose |
+|--------|---------|
+| `main` | Production-ready code (protected) |
+| `develop` | Integration branch (protected) |
+| `feat/TTV-XXX` | Feature branches |
+| `fix/TTV-XXX` | Bug fix branches |
+| `chore/TTV-XXX` | Maintenance branches |
+
+**Flow:** `feat/*` → `develop` → `main`
+
+### CI Pipelines
+
+| Workflow | Trigger | Actions |
+|----------|---------|---------|
+| `ci.yml` | PR to `develop` or `main` | Install, lint (Biome), test (Jest) |
+| `deploy-preview.yml` | Manual | Placeholder for preview deploys |
+| `deploy-prod.yml` | Manual | Placeholder for production deploys |
+
 ### Pre-commit Hooks
 
 The project uses **Husky** to run checks before each commit. The hooks are configured to execute:
