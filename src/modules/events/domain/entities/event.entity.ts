@@ -17,6 +17,11 @@ export class Event {
   /**
    * Factory method for creating a new event.
    * Applies all business validations before instantiation.
+   *
+   * @param data - Event creation data (name, date, location)
+   * @returns New Event instance with draft status
+   * @throws AppException.businessRule if name length is not between 3 and 200
+   * @throws AppException.businessRule if date is in the past
    */
   static create(data: { name: string; date: Date; location: string | null }): Event {
     if (data.name.length < 3 || data.name.length > 200) {
