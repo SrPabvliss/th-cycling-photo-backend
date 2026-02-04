@@ -1,102 +1,266 @@
 ---
 name: context-keeper
 description: >
-  Manage session context and research cache to optimize token usage.
-  Use ALWAYS at session start to load/create ticket context.
-  Use before external research to check cache first.
+  TRANSVERSAL SKILL - Manages session state throughout the entire workflow.
+  Invoked at START, after each commit, after decisions, and at GIT (end).
+  Maintains session ledger and research cache for context optimization.
 ---
 
-# ContextKeeper
+# Context Keeper (Transversal)
 
-Optimize token consumption by maintaining local context ledger.
+**Role:** Maintain session state and optimize context across the entire workflow.
 
-## When to Use
+**This is NOT a phase-specific skill.** It runs at multiple points during the workflow.
 
-- **Session Start**: Load or create session for current ticket
-- **Before Research**: Check research cache before MCP calls
-- **After Decisions**: Update session with decisions made
-- **After Review**: Update review attempts and feedback
+## When to Invoke
 
-## Session Management
+| Trigger | Action |
+|---------|--------|
+| **START phase** | Initialize session ledger |
+| **After each commit** | Update progress |
+| **After important decisions** | Record decision |
+| **After review attempt** | Record attempt + feedback |
+| **GIT phase (end)** | Finalize session |
+| **Before external research** | Check research cache |
+| **After external research** | Update research cache |
 
-### Starting Work on a Ticket
+## Session Ledger
 
-1. Read session file: `.claude/ledger/sessions/{TICKET-ID}.md`
-2. If not exists, create from template: `.claude/ledger/sessions/_TEMPLATE.md`
-3. Update status to current phase
+### Purpose
 
-```markdown
-## Status
-phase: implementing
-blocked: false
-review_attempts: 0/3
+1. **Traceability** - Record what happened during the session
+2. **Context optimization** - Quick reference without re-reading all code
+3. **Recovery** - If session interrupted, resume from ledger state
+4. **Review tracking** - Track attempts and feedback
+
+### Location
+
+```
+.claude/ledger/sessions/{TICKET-ID}.md
 ```
 
-### Updating Session
+### Initialize (START phase)
 
-Update relevant sections, don't append infinitely:
+Create from template:
+
+```bash
+cp .claude/ledger/sessions/_TEMPLATE.md .claude/ledger/sessions/TTV-XXX.md
+```
+
+Fill initial data:
+
+```markdown
+# Session: TTV-XXX
+
+## Ticket
+**ID:** TTV-XXX
+**Title:** {from Jira}
+**Type:** Feature / Fix / Task
+
+## Status
+phase: start
+blocked: false
+review_attempts: 0/3
+
+## Timeline
+- {timestamp} Session initialized
+- {timestamp} Branch created: feat/TTV-XXX
+
+## Technologies
+- Prisma 7
+- NestJS 11
+- {others identified}
+
+## Decisions
+{empty initially}
+
+## Files Changed
+{empty initially}
+
+## Notes
+{empty initially}
+```
+
+### Update After Commit
+
+After each commit checkpoint:
+
+```markdown
+## Timeline
+- {timestamp} Session initialized
+- {timestamp} Branch created: feat/TTV-XXX
+- {timestamp} Entity created: Event.entity.ts
+- {timestamp} Commit: feat(events): [TTV-XXX] add Event entity
+
+## Files Changed
+- src/modules/events/domain/entities/event.entity.ts (created)
+- src/modules/events/domain/value-objects/event-status.vo.ts (created)
+```
+
+### Update After Decision
+
+When a technical decision is made:
 
 ```markdown
 ## Decisions
-- Socket.io v4.7 (better NestJS integration)
-- Gateway in shared/ (reusable)
-
-## Files Changed
-src/shared/infrastructure/websockets/
-src/modules/events/gateways/
+- Used UUID for entity ID (consistent with other entities)
+- Placed validation in factory method, not constructor
+- Used AppException.businessRule for date validation
 ```
 
-### Review Cycle Tracking
+### Update After Review Attempt
 
 ```markdown
 ## Status
+phase: review-rejected
 review_attempts: 2/3
 
-## Notes
-Attempt 1: Missing tests for disconnect
-Attempt 2: Naming convention in gateway
+## Review History
+### Attempt 1
+**Result:** Rejected
+**Issues:**
+- Missing Mapper class
+- Inline mapping in repository
+
+### Attempt 2
+**Result:** Rejected
+**Issues:**
+- Mapper created but not used in one method
 ```
 
-**Rule**: Max 3 attempts. On 3rd failure → create PR with issues noted.
+### Finalize (GIT phase)
+
+```markdown
+## Status
+phase: completed
+review_attempts: 1/3
+
+## Timeline
+- {timestamp} Session initialized
+- {timestamp} Branch created
+- ...
+- {timestamp} Review passed
+- {timestamp} PR created: #42
+- {timestamp} Session finalized
+
+## Summary
+Implemented Event entity with CQRS pattern. Created CreateEventCommand
+with full validation. Repository uses dedicated EventMapper.
+
+## PR
+https://github.com/user/repo/pull/42
+```
 
 ## Research Cache
 
-### Before Investigating
+### Purpose
 
-1. Check if exists: `.claude/ledger/research/{technology}.md`
-2. If exists and sufficient → use cached info
-3. If not exists or outdated → research → update cache
+Avoid repeated Context7 queries. Store findings locally.
 
-### Caching Research
+### Location
 
-```markdown
-# Socket.io
-
-## Info
-version: 4.7.5
-installed: true
-docs: https://socket.io/docs/v4
-
-## Key Notes
-- Use @nestjs/platform-socket.io for NestJS
-- Requires adapter for Redis in cluster mode
-
-## Integration
-Gateway extends WebSocketGateway from @nestjs/websockets
+```
+.claude/ledger/research/{technology}.md
 ```
 
-## Path Reference
+### Check Before Research
 
-| Type | Path Pattern |
-|------|--------------|
-| Session | `.claude/ledger/sessions/{TICKET-ID}.md` |
-| Research | `.claude/ledger/research/{technology}.md` |
-| Session Template | `.claude/ledger/sessions/_TEMPLATE.md` |
-| Research Template | `.claude/ledger/research/_TEMPLATE.md` |
+Before invoking `skill:research-external`:
 
-## Rules
+```bash
+# Check if cache exists
+cat .claude/ledger/research/prisma.md
 
-1. **Sessions**: State only, NO code, max ~50 lines
-2. **Research**: Facts only, NO implementation details
-3. **Update**: Overwrite sections, don't append history
-4. **Check first**: Always check cache before external calls
+# If exists, check if sufficient for current need
+# If not exists or outdated → proceed with research
+```
+
+### Cache Structure
+
+```markdown
+# {Technology} Research Cache
+
+**Version:** 7.x
+**Updated:** 2026-02-03
+**Source:** Context7 MCP
+
+## Key APIs
+
+### Schema Definition
+```typescript
+model User {
+  id String @id @default(uuid())
+  // ... example from docs
+}
+```
+
+**Notes:**
+- Use @db.Uuid for PostgreSQL UUID
+- @map for snake_case in DB
+
+### Client Usage
+```typescript
+const user = await prisma.user.create({
+  data: { ... }
+});
+```
+
+## Gotchas
+1. Prisma 7 requires `output` in generator
+2. Migrations need `prisma migrate dev` not `deploy` locally
+
+## Integration with NestJS
+- PrismaService extends PrismaClient
+- Use onModuleInit for connection
+```
+
+## Update Rules
+
+### Session Ledger
+- **State only** - No code snippets (reference files instead)
+- **Max ~50 lines** - Keep it scannable
+- **Overwrite sections** - Don't append infinitely
+- **Update, don't duplicate** - Modify existing entries
+
+### Research Cache
+- **Facts only** - No implementation details
+- **Include version** - APIs change between versions
+- **Include gotchas** - Save debugging time
+- **Include examples** - Copy-paste ready
+
+## Quick Reference
+
+### Initialize Session
+```bash
+# Create session file
+cp .claude/ledger/sessions/_TEMPLATE.md .claude/ledger/sessions/TTV-XXX.md
+
+# Edit with initial data
+# Set phase: start
+# Add ticket info
+```
+
+### Update Progress
+```bash
+# After commit, update:
+# - Timeline section (add entry)
+# - Files Changed section (add/update)
+# - Status phase if changed
+```
+
+### Check Research
+```bash
+# Before Context7 query
+ls .claude/ledger/research/
+cat .claude/ledger/research/{tech}.md
+
+# Decide: use cache or research fresh
+```
+
+### Finalize
+```bash
+# At end:
+# - Status phase: completed
+# - Add PR link
+# - Add summary
+```

@@ -1,181 +1,187 @@
 ---
 name: plan-task
 description: >
-  Orchestrator skill - plans tasks, assigns skills, defines checkpoints.
-  MUST be invoked at the start of every ticket. Coordinates the entire workflow.
+  Create implementation plans based on research and existing code review.
+  REQUIRES research-external to run first. Never plan without research cache.
 ---
 
-# Plan Task (Orchestrator)
+# Plan Task
 
-**Role:** This skill orchestrates the entire development workflow. It reads tickets, researches technologies, creates structured plans with skill assignments, and defines checkpoints.
+**Role:** Create informed implementation plans. Does NOT implement, only plans.
 
 ## When to Use
 
-- Starting ANY new ticket from Jira
-- Re-planning after a failed review
-- Breaking down complex tasks
+- After `skill:research-external` has populated the research cache
+- Starting a new ticket (after START phase)
+- Re-planning after review rejection (with reduced scope)
 
-## Mandatory Process
+## Prerequisites (MANDATORY)
 
-### Phase 0: Jira Transition
+Before planning, verify:
+
+1. **Research cache exists** for all technologies
+   ```bash
+   ls .claude/ledger/research/
+   # Must contain files for technologies in this ticket
+   ```
+   If missing → STOP → invoke `skill:research-external` first
+
+2. **Session ledger initialized**
+   ```bash
+   cat .claude/ledger/sessions/{TICKET-ID}.md
+   ```
+   If missing → STOP → invoke `skill:context-keeper` first
+
+## Process
+
+### Step 1: Read Research Cache
+
+Load ALL research files relevant to the ticket:
+```bash
+cat .claude/ledger/research/prisma.md
+cat .claude/ledger/research/nestjs.md
+# etc.
 ```
-→ skill:manage-git
-```
-1. Read ticket details from Jira MCP
-2. **Transition ticket to "In Progress"**
-3. Create/update session ledger: `.claude/ledger/sessions/{TICKET-ID}.md`
 
-### Phase 1: Technology Research (MANDATORY)
-```
-→ skill:research-external
-```
-**BEFORE planning implementation, ALWAYS research with Context7 MCP:**
+Extract:
+- Version-specific APIs
+- Patterns to follow
+- Gotchas to avoid
 
-1. Identify technologies involved (e.g., Prisma, NestJS, BullMQ)
-2. Use Context7 to fetch current documentation for each
-3. Note version-specific APIs and patterns
-4. Save findings to `.claude/ledger/research/{technology}.md`
+### Step 2: Review Existing Code
 
-**Example:**
-```
-Technologies detected: Prisma 7, NestJS 11, class-validator
-→ Context7: Prisma 7 schema syntax, migrations
-→ Context7: NestJS 11 module configuration
-→ Save research cache
-```
+**This is NOT optional.** Before planning new code, understand what exists:
 
-**NEVER skip this phase.** Outdated implementations are worse than slow implementations.
+1. **Related modules** - How are similar features structured?
+   ```bash
+   ls src/modules/
+   ```
 
-### Phase 2: Context Loading
-Read relevant local contexts before planning:
+2. **Existing patterns** - What patterns are already in use?
+   ```bash
+   # Example: check how other entities are structured
+   cat src/modules/events/domain/entities/event.entity.ts
+   ```
 
-| Context Type | Files |
-|--------------|-------|
-| Structure | `contexts/structure/feature-sliced.md`, `module-setup.md` |
-| Patterns | `contexts/patterns/cqrs.md`, `entities.md`, `repositories.md` |
-| Conventions | `contexts/conventions/naming.md`, `validations.md` |
-| Project Docs | `.claude/project_docs/*.md` (ticket-specific) |
+3. **Shared code** - What can be reused?
+   ```bash
+   ls src/shared/
+   ```
 
-### Phase 3: Analysis & Planning
-1. **Understand the requirement** - What needs to be built?
-2. **Identify the domain** - Which module does this belong to?
-3. **Define the components** - Commands, queries, entities, etc.
-4. **Check existing code** - What already exists that can be reused?
-5. **Plan file structure** - Where each file goes
-6. **List implementation steps** - With skill assignments and checkpoints
+4. **Infrastructure** - What's already configured?
+   ```bash
+   cat src/app.module.ts
+   ```
 
-## Output Format
+Record findings in plan.
+
+### Step 3: Load Context Files
+
+Based on ticket type, load relevant contexts:
+
+| Ticket Type | Contexts to Load |
+|-------------|-----------------|
+| New Entity | `patterns/entities.md`, `patterns/cqrs.md` |
+| New Module | `structure/feature-sliced.md`, `structure/module-setup.md` |
+| Repository | `patterns/repositories.md` |
+| Controller | `patterns/controllers.md` |
+| Infrastructure | `infrastructure/*.md` (relevant) |
+
+Always load:
+- `conventions/naming.md`
+- `conventions/error-handling.md`
+
+### Step 4: Generate Plan
+
+Create a structured plan with:
 
 ```markdown
 ## Plan: {TICKET-ID}
 
-### Prerequisites
-- [x] Ticket transitioned to "In Progress" → skill:manage-git
-- [x] Research completed:
-  - Prisma 7: `.claude/ledger/research/prisma.md`
-  - NestJS 11: `.claude/ledger/research/nestjs.md`
-- [x] Contexts loaded: patterns/cqrs.md, conventions/naming.md
+### Research Summary
+Technologies: {list with versions}
+Key findings:
+- Finding 1 from research
+- Finding 2 from research
 
-### Analysis
-- **Domain:** {module name}
-- **Type:** Command / Query / Both
-- **Complexity:** S / M / L / XL
-- **Technologies:** {list with versions}
+### Existing Code Review
+Related code found:
+- `path/to/file.ts` - Description of what it does
+- `path/to/other.ts` - Can reuse X pattern
 
-### Required Components
-- [ ] Entity: `{name}.entity.ts`
-- [ ] Command: `{name}.command.ts`
-- [ ] Handler: `{name}.handler.ts`
-- [ ] Repository: `{name}-write.repository.ts`
+### Components to Create
 
-### Tasks
+| Component | Path | Skill |
+|-----------|------|-------|
+| Entity | `domain/entities/x.entity.ts` | implement-feature |
+| Command | `application/commands/x/x.command.ts` | implement-feature |
+| Handler | `application/commands/x/x.handler.ts` | implement-feature |
+| Tests | `*.spec.ts` | write-tests |
 
-#### 1. Create module structure
-```
-→ skill:implement-feature
-Contexts: structure/module-setup.md
-```
-- [ ] Create folders according to feature-sliced
-- [ ] Register module in app.module.ts
-- **Checkpoint:** `git commit -m "feat({domain}): scaffold module structure"`
+### Implementation Steps
 
-#### 2. Implement Entity
-```
-→ skill:implement-feature
-Contexts: patterns/entities.md
-Research: prisma.md (schema syntax)
-```
-- [ ] Create entity with factory method
-- [ ] Add domain validations
-- **Checkpoint:** `git commit -m "feat({domain}): add {Entity} entity"`
+#### 1. {Step name}
+**Skill:** `implement-feature`
+**Contexts:** `patterns/entities.md`
+**Research:** `prisma.md` (entity mapping)
 
-#### 3. Implement Command/Handler
-```
-→ skill:implement-feature
-Contexts: patterns/cqrs.md
-```
-- [ ] Create DTO with class-validator
-- [ ] Create Command
-- [ ] Create Handler with repository injection
-- **Checkpoint:** `git commit -m "feat({domain}): add {Feature}Command"`
+Tasks:
+- Task 1
+- Task 2
 
-#### 4. Implement Repository
-```
-→ skill:implement-feature
-Contexts: patterns/repositories.md
-Research: prisma.md (client usage)
-```
-- [ ] Create Write Repository
-- [ ] Create Mapper Entity ↔ Prisma
-- **Checkpoint:** `git commit -m "feat({domain}): add {Entity} repository"`
+**Checkpoint:** `git commit -m "feat(x): [TTV-XXX] add X entity"`
 
-#### 5. Tests
-```
-→ skill:write-tests
-Contexts: testing/test-guidelines.md
-```
-- [ ] Unit tests for handler (mock repository)
-- [ ] Integration test for repository (test DB)
-- **Checkpoint:** `git commit -m "test({domain}): add tests for {Feature}"`
+#### 2. {Step name}
+...
 
-#### 6. Documentation
+### Validation Criteria
+- [ ] Criteria 1
+- [ ] Criteria 2
 ```
-→ skill:document-code
-Contexts: conventions/documentation.md
-```
-- [ ] JSDoc on public methods
-- [ ] Update module README if new
 
-#### 7. Internal review
-```
-→ skill:review-code
-Contexts: checklists/implementation.md
-```
-- [ ] Verify feature-sliced structure
-- [ ] Verify CQRS patterns
-- [ ] Verify naming conventions
+## Re-Planning After Review Rejection
 
-### Post-tasks (MANDATORY)
-- [ ] Update ledger: `.claude/ledger/sessions/{TICKET-ID}.md`
-- [ ] Create PR → skill:manage-git
-- [ ] Transition Jira to "Ready for Review" → skill:manage-git
+When invoked with review feedback:
+
+1. **Read the feedback** from review-code
+2. **Scope is REDUCED** - only fix reported issues
+3. **Do NOT refactor** unrelated code
+4. **Reference session ledger** for context
+
+```markdown
+## Re-Plan: {TICKET-ID} (Attempt {N}/3)
+
+### Review Feedback
+{paste feedback from review-code}
+
+### Focused Fixes
+
+#### Fix 1: {Issue from feedback}
+**File:** `path/to/file.ts`
+**Current:** {what's wrong}
+**Fix:** {what to do}
+**Skill:** implement-feature
+
+#### Fix 2: ...
+
+### Scope Boundary
+ONLY fix the above issues. Do not:
+- Refactor unrelated code
+- Add new features
+- Change working code
 ```
+
+## Output
+
+The plan is used by subsequent skills:
+- `implement-feature` follows the steps
+- `write-tests` knows what to test
+- `review-code` validates against criteria
 
 ## Critical Rules
 
-1. **ALWAYS** use Context7 MCP for external technology documentation
-2. **ALWAYS** indicate `→ skill:xxx` for each task group
-3. **ALWAYS** define commit checkpoints
-4. **ALWAYS** update ledger when finished
-5. **ALWAYS** load relevant local contexts before implementing
-6. **NEVER** assume APIs or syntax - verify with Context7 first
-
-## In Case of Review Failure
-
-If `skill:review-code` detects issues:
-
-1. Increment `review_attempts` in ledger
-2. Analyze feedback
-3. Re-plan ONLY the affected tasks
-4. If 3rd attempt fails → create PR with documented issues for manual review
-
+1. **NEVER plan without research cache** - Hallucinations come from assumptions
+2. **ALWAYS review existing code** - Don't reinvent what exists
+3. **ALWAYS specify contexts per step** - Skills need to know what to load
+4. **ALWAYS define commit checkpoints** - Small, functional commits
+5. **Planner does NOT implement** - Only plans, `implement-feature` executes

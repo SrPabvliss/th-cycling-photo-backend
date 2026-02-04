@@ -44,44 +44,29 @@ pnpm test
 pnpm test:e2e
 ```
 
-## Workflow: Ticket → Delivery
+## Workflow
 
-### CRITICAL: Always Follow This Order
+**See `.claude/WORKFLOW.md` for the complete development workflow.**
+
+### Quick Reference
 
 ```
-1. skill:plan-task (Orchestrator)
-   ├─ Jira → "In Progress"
-   ├─ Context7 → Research ALL technologies
-   ├─ Load local contexts
-   └─ Output: Plan with skill assignments + checkpoints
-
-2. skill:research-external (if not cached)
-   ├─ Context7 MCP queries
-   └─ Save to .claude/ledger/research/{tech}.md
-
-3. skill:implement-feature (per task in plan)
-   ├─ VERIFY research cache exists
-   ├─ Load specified contexts
-   ├─ Implement
-   └─ Commit at checkpoint
-
-4. skill:write-tests
-5. skill:review-code
-6. skill:manage-git
-   ├─ Create PR
-   └─ Jira → "Ready for Review"
-
-7. skill:context-keeper
-   └─ Update session ledger
+START         → skill:manage-git + skill:context-keeper
+PLANIFICATION → skill:research-external + skill:plan-task
+IMPLEMENTATION→ skill:implement-feature (+ context-keeper per commit)
+TESTING       → skill:write-tests
+DOCUMENTATION → skill:document-code
+REVIEW        → skill:review-code (max 3 attempts)
+GIT           → skill:manage-git + skill:context-keeper
 ```
 
-### MANDATORY Rules
+### Critical Rules
 
-1. **ALWAYS use Context7 before implementing** - No exceptions. Outdated code is worse than slow code.
-2. **ALWAYS verify research cache** - Check `.claude/ledger/research/` before writing any code using external APIs.
-3. **ALWAYS commit at checkpoints** - As defined in plan-task output.
-4. **ALWAYS transition Jira** - "In Progress" at start, "Ready for Review" at end.
-5. **ALWAYS update ledger** - `.claude/ledger/sessions/{TICKET-ID}.md`
+1. **ALWAYS research before implementing** - Use Context7 MCP, save to research cache
+2. **ALWAYS review existing code before planning** - Don't reinvent what exists
+3. **ALWAYS commit at checkpoints** - Small, functional commits
+4. **ALWAYS update session ledger** - Track progress for recovery and review
+5. **ALWAYS transition Jira** - "In Progress" at start, "Ready for Review" at end
 
 ## MCP Servers
 
@@ -91,7 +76,7 @@ pnpm test:e2e
 | **Jira** | Ticket lifecycle | Start/end of tickets |
 | **Prisma** | Schema inspection | DB-related tasks |
 
-## Context References
+## Context Files
 
 Detailed guides in `.claude/contexts/`:
 
@@ -100,30 +85,23 @@ Detailed guides in `.claude/contexts/`:
 | `patterns/` | CQRS, entities, repositories, controllers |
 | `structure/` | Feature-Sliced, module setup |
 | `infrastructure/` | Prisma, Jest, BullMQ, env |
-| `conventions/` | Naming, validations, git |
-| `testing/` | Unit, integration, E2E |
+| `conventions/` | Naming, validations, error-handling, git |
+| `testing/` | Unit, integration, E2E guidelines |
 | `checklists/` | Implementation verification |
-
-## Project Docs
-
-Ticket-specific documentation in `.claude/project_docs/`:
-- Load relevant docs as specified in plan-task
-- These are summarized versions for context efficiency
+| `review/` | Review process |
 
 ## Ledger System
 
 ```
 .claude/ledger/
-├── research/           # Technology docs cache
-│   ├── prisma.md
-│   ├── nestjs.md
-│   └── ...
-└── sessions/           # Per-ticket state
-    └── TTV-XXX.md
+├── research/           # Technology docs cache (Context7 findings)
+│   └── {technology}.md
+└── sessions/           # Per-ticket state tracking
+    └── {TICKET-ID}.md
 ```
 
-**Research cache avoids repeated Context7 queries.**
-**Session ledger maintains state across interruptions.**
+**Research cache:** Avoid repeated Context7 queries
+**Session ledger:** Track progress, decisions, review attempts
 
 ## Architecture
 
@@ -132,3 +110,22 @@ Ticket-specific documentation in `.claude/project_docs/`:
 - **Each module:** `domain/`, `application/`, `infrastructure/`, `presentation/`
 
 See `contexts/structure/feature-sliced.md` for details.
+
+## Skills
+
+| Skill | Responsibility |
+|-------|----------------|
+| `context-keeper` | Session state (TRANSVERSAL - runs at multiple points) |
+| `manage-git` | Git operations + Jira transitions |
+| `research-external` | Context7 research → cache |
+| `plan-task` | Implementation planning (requires research first) |
+| `implement-feature` | Code implementation |
+| `write-tests` | Test creation (based on complexity) |
+| `document-code` | JSDoc, README, changelog |
+| `review-code` | Quality validation + retry loop |
+
+## Project Docs
+
+Ticket-specific documentation in `.claude/project_docs/`:
+- Simplified versions of main docs for context efficiency
+- Referenced in ticket prompts when relevant
