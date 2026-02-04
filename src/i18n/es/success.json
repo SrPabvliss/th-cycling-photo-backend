@@ -1,0 +1,7 @@
+{
+  "CREATED": "{entity} creado exitosamente",
+  "UPDATED": "{entity} actualizado exitosamente",
+  "DELETED": "{entity} eliminado exitosamente",
+  "FETCHED": "{entity} obtenido exitosamente",
+  "LIST": "Lista obtenida exitosamente"
+}
