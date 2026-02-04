@@ -15,6 +15,7 @@ describe('CreateEventHandler', () => {
     repository = {
       save: jest.fn(),
       findById: jest.fn(),
+      delete: jest.fn(),
     } as unknown as jest.Mocked<EventWriteRepository>
     handler = new CreateEventHandler(repository)
   })

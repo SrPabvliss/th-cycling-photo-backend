@@ -72,6 +72,67 @@ describe('Event Entity', () => {
     })
   })
 
+  describe('update', () => {
+    it('should update name when valid', () => {
+      const event = Event.create(validData)
+      event.update({ name: 'New Name' })
+
+      expect(event.name).toBe('New Name')
+    })
+
+    it('should update date when valid', () => {
+      const event = Event.create(validData)
+      const newDate = new Date()
+      newDate.setFullYear(newDate.getFullYear() + 2)
+
+      event.update({ date: newDate })
+
+      expect(event.date).toBe(newDate)
+    })
+
+    it('should update location to null', () => {
+      const event = Event.create(validData)
+      event.update({ location: null })
+
+      expect(event.location).toBeNull()
+    })
+
+    it('should throw for invalid name on update', () => {
+      const event = Event.create(validData)
+
+      expect(() => event.update({ name: 'AB' })).toThrow(AppException)
+      expect(() => event.update({ name: 'AB' })).toThrow('event.name_invalid_length')
+    })
+
+    it('should throw for past date on update', () => {
+      const event = Event.create(validData)
+
+      expect(() => event.update({ date: new Date('2020-01-01') })).toThrow(AppException)
+      expect(() => event.update({ date: new Date('2020-01-01') })).toThrow('event.date_in_past')
+    })
+
+    it('should not modify fields not provided', () => {
+      const event = Event.create(validData)
+      const originalDate = event.date
+      const originalLocation = event.location
+
+      event.update({ name: 'Only Name Changed' })
+
+      expect(event.name).toBe('Only Name Changed')
+      expect(event.date).toBe(originalDate)
+      expect(event.location).toBe(originalLocation)
+    })
+
+    it('should update updatedAt timestamp', () => {
+      const event = Event.create(validData)
+      const originalUpdatedAt = event.updatedAt
+
+      event.update({ name: 'Updated' })
+
+      expect(event.updatedAt.getTime()).toBeGreaterThanOrEqual(originalUpdatedAt.getTime())
+    })
+  })
+
   describe('fromPersistence', () => {
     it('should reconstitute entity without validations', () => {
       const pastDate = new Date('2020-01-01')
