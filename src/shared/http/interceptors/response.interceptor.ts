@@ -27,13 +27,13 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiSuccessResp
     const successMessageKey = this.reflector.get<string>(SUCCESS_MESSAGE_KEY, context.getHandler())
 
     const translatedMessage =
-      successMessageKey && i18n ? i18n.t(successMessageKey) : (successMessageKey ?? null)
+      successMessageKey && i18n ? String(i18n.t(successMessageKey)) : (successMessageKey ?? null)
 
     return next.handle().pipe(
       map((data) => ({
         data,
         meta: {
-          requestId: (request as Record<string, unknown>)['requestId'] as string,
+          requestId: request.requestId,
           timestamp: new Date().toISOString(),
           message: translatedMessage,
         },

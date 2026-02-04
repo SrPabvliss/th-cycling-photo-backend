@@ -43,14 +43,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     i18n: I18nContext | undefined,
   ): { status: number; body: ApiErrorResponse } {
     const meta = {
-      requestId: (request as Record<string, unknown>)['requestId'] as string,
+      requestId: request.requestId,
       timestamp: new Date().toISOString(),
       path: request.url,
     }
 
     if (exception instanceof AppException) {
       const translatedMessage = i18n
-        ? i18n.t(exception.messageKey, { args: exception.context })
+        ? String(i18n.t(exception.messageKey, { args: exception.context }))
         : exception.messageKey
 
       return {
@@ -79,7 +79,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
       const errorCode = fields ? 'VALIDATION_FAILED' : 'INTERNAL'
       const messageKey = fields ? 'errors.VALIDATION_FAILED' : 'errors.INTERNAL'
-      const translatedMessage = i18n ? i18n.t(messageKey) : messageKey
+      const translatedMessage = i18n ? String(i18n.t(messageKey)) : messageKey
 
       return {
         status,
@@ -99,7 +99,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     }
 
-    const translatedMessage = i18n ? i18n.t('errors.INTERNAL') : 'An unexpected error occurred'
+    const translatedMessage = i18n
+      ? String(i18n.t('errors.INTERNAL'))
+      : 'An unexpected error occurred'
 
     return {
       status: HttpStatus.INTERNAL_SERVER_ERROR,

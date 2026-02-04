@@ -11,7 +11,7 @@ import type { NextFunction, Request, Response } from 'express'
 export class RequestIdMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const requestId = (req.headers['x-request-id'] as string) || randomUUID()
-    req['requestId'] = requestId
+    req.requestId = requestId
     res.setHeader('X-Request-Id', requestId)
     next()
   }
