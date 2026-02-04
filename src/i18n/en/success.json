@@ -1,0 +1,7 @@
+{
+  "CREATED": "{entity} created successfully",
+  "UPDATED": "{entity} updated successfully",
+  "DELETED": "{entity} deleted successfully",
+  "FETCHED": "{entity} fetched successfully",
+  "LIST": "List fetched successfully"
+}

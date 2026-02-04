@@ -1,0 +1,9 @@
+{
+  "VALIDATION_FAILED": "Validation failed",
+  "NOT_FOUND": "{entity} not found",
+  "BUSINESS_RULE": "Business rule violation",
+  "EXTERNAL_SERVICE": "External service error: {service}",
+  "INTERNAL": "An unexpected error occurred",
+  "UNAUTHORIZED": "Unauthorized",
+  "FORBIDDEN": "Access denied"
+}
