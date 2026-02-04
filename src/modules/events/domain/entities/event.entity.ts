@@ -48,6 +48,37 @@ export class Event {
   }
 
   /**
+   * Updates mutable event fields with business validations.
+   *
+   * @param data - Partial update data
+   * @throws AppException.businessRule if name length is not between 3 and 200
+   * @throws AppException.businessRule if date is in the past
+   */
+  update(data: { name?: string; date?: Date; location?: string | null }): void {
+    if (data.name !== undefined) {
+      if (data.name.length < 3 || data.name.length > 200) {
+        throw AppException.businessRule('event.name_invalid_length')
+      }
+      this.name = data.name
+    }
+
+    if (data.date !== undefined) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (data.date < today) {
+        throw AppException.businessRule('event.date_in_past')
+      }
+      this.date = data.date
+    }
+
+    if (data.location !== undefined) {
+      this.location = data.location
+    }
+
+    this.updatedAt = new Date()
+  }
+
+  /**
    * Reconstitutes an entity from persistence data.
    * No validations are applied – the data is trusted.
    */

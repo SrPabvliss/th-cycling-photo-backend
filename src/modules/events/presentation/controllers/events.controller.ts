@@ -1,8 +1,10 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import type { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { SuccessMessage } from '../../../../shared/http/decorators/success-message.decorator.js'
 import { CreateEventCommand } from '../../application/commands/create-event/create-event.command.js'
 import type { CreateEventDto } from '../../application/commands/create-event/create-event.dto.js'
+import { UpdateEventCommand } from '../../application/commands/update-event/update-event.command.js'
+import type { UpdateEventDto } from '../../application/commands/update-event/update-event.dto.js'
 import { GetEventDetailQuery } from '../../application/queries/get-event-detail/get-event-detail.query.js'
 import type { GetEventsListDto } from '../../application/queries/get-events-list/get-events-list.dto.js'
 import { GetEventsListQuery } from '../../application/queries/get-events-list/get-events-list.query.js'
@@ -18,6 +20,13 @@ export class EventsController {
   @SuccessMessage('success.CREATED')
   async create(@Body() dto: CreateEventDto) {
     const command = new CreateEventCommand(dto.name, dto.date, dto.location ?? null)
+    return this.commandBus.execute(command)
+  }
+
+  @Patch(':id')
+  @SuccessMessage('success.UPDATED')
+  async update(@Param('id') id: string, @Body() dto: UpdateEventDto) {
+    const command = new UpdateEventCommand(id, dto.name, dto.date, dto.location)
     return this.commandBus.execute(command)
   }
 
