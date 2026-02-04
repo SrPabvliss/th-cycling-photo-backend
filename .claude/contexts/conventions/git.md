@@ -98,12 +98,14 @@ refactor/TTV-1067
 
 ## Pull Request Template
 
-```markdown
-## Description
-Brief description of changes.
+Located at `.github/pull_request_template.md`. Auto-loads when creating PRs on GitHub.
 
+```markdown
 ## Ticket
-[TTV-XXXX](https://your-jira.atlassian.net/browse/TTV-XXXX)
+[TTV-XXX](https://pablomartinvillacres.atlassian.net/browse/TTV-XXX)
+
+## Changes
+-
 
 ## Type of Change
 - [ ] feat: New feature
@@ -114,21 +116,47 @@ Brief description of changes.
 - [ ] chore: Maintenance
 
 ## Checklist
-- [ ] Code follows project conventions
-- [ ] Tests added/updated
-- [ ] Documentation updated
-- [ ] No linting errors (`pnpm check`)
+- [ ] Tests pass (`pnpm test`)
+- [ ] No lint errors (`pnpm check:ci`)
+- [ ] Documentation updated (if needed)
 ```
 
 ---
 
-## Git Workflow
+## Branch Strategy (Gitflow)
 
-1. Create branch from `main`: `git checkout -b feat/TTV-1001`
+### Branches
+
+| Branch | Purpose | Protected |
+|--------|---------|-----------|
+| `main` | Production-ready code | Yes (require PR, no direct push) |
+| `develop` | Integration branch | Yes (require PR) |
+| `feat/TTV-XXX` | Feature development | No |
+| `fix/TTV-XXX` | Bug fixes | No |
+| `chore/TTV-XXX` | Maintenance tasks | No |
+
+### Flow
+
+```
+feat/TTV-XXX → develop → main
+fix/TTV-XXX  → develop → main
+```
+
+1. Create branch from `develop`: `git checkout -b feat/TTV-1001 develop`
 2. Make commits with ticket: `feat(events): [TTV-1001] add command handler`
-3. Push and create PR
-4. Code review
-5. Squash and merge to `main`
+3. Push and create PR to `develop`
+4. CI runs (lint + test)
+5. Code review
+6. Squash and merge to `develop`
+7. Periodically merge `develop` → `main` for releases
+
+### CI Pipelines
+
+| Workflow | Trigger | Actions |
+|----------|---------|---------|
+| `ci.yml` | PR to `develop` or `main` | Install, lint (Biome), test (Jest) |
+| `deploy-preview.yml` | Manual (future: push to develop) | Preview deployment |
+| `deploy-prod.yml` | Manual (future: push to main) | Production deployment |
 
 ---
 
