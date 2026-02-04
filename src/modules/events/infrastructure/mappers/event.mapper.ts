@@ -2,6 +2,7 @@ import type {
   EventCreateInput,
   Event as PrismaEvent,
 } from '../../../../../generated/prisma/client.js'
+import type { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
 import type { EventListProjection } from '../../application/projections/event-list.projection.js'
 import { Event } from '../../domain/entities/event.entity.js'
 import type { EventStatusType } from '../../domain/value-objects/event-status.vo.js'
@@ -55,6 +56,31 @@ export class EventMapper {
       status: record.status,
       totalPhotos: record.total_photos,
       processedPhotos: record.processed_photos,
+    }
+  }
+
+  /** Converts a Prisma record to a detail projection. */
+  static toDetailProjection(record: {
+    id: string
+    name: string
+    event_date: Date
+    location: string | null
+    status: string
+    total_photos: number
+    processed_photos: number
+    created_at: Date
+    updated_at: Date
+  }): EventDetailProjection {
+    return {
+      id: record.id,
+      name: record.name,
+      date: record.event_date,
+      location: record.location,
+      status: record.status,
+      totalPhotos: record.total_photos,
+      processedPhotos: record.processed_photos,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at,
     }
   }
 }

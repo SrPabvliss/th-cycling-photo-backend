@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common'
 import type { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { SuccessMessage } from '../../../../shared/http/decorators/success-message.decorator.js'
 import { CreateEventCommand } from '../../application/commands/create-event/create-event.command.js'
 import type { CreateEventDto } from '../../application/commands/create-event/create-event.dto.js'
+import { GetEventDetailQuery } from '../../application/queries/get-event-detail/get-event-detail.query.js'
 import type { GetEventsListDto } from '../../application/queries/get-events-list/get-events-list.dto.js'
 import { GetEventsListQuery } from '../../application/queries/get-events-list/get-events-list.query.js'
 
@@ -18,6 +19,13 @@ export class EventsController {
   async create(@Body() dto: CreateEventDto) {
     const command = new CreateEventCommand(dto.name, dto.date, dto.location ?? null)
     return this.commandBus.execute(command)
+  }
+
+  @Get(':id')
+  @SuccessMessage('success.FETCHED')
+  async findOne(@Param('id') id: string) {
+    const query = new GetEventDetailQuery(id)
+    return this.queryBus.execute(query)
   }
 
   @Get()

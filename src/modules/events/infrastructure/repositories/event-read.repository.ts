@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import type { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js'
+import type { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
 import type { EventListProjection } from '../../application/projections/event-list.projection.js'
 import { EventMapper } from '../mappers/event.mapper.js'
 
@@ -27,5 +28,25 @@ export class EventReadRepository {
     })
 
     return events.map(EventMapper.toListProjection)
+  }
+
+  /** Retrieves a single event's detail by ID. */
+  async getEventDetail(id: string): Promise<EventDetailProjection | null> {
+    const record = await this.prisma.event.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        event_date: true,
+        location: true,
+        status: true,
+        total_photos: true,
+        processed_photos: true,
+        created_at: true,
+        updated_at: true,
+      },
+    })
+
+    return record ? EventMapper.toDetailProjection(record) : null
   }
 }
