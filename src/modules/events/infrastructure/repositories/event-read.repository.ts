@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common'
 import type { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js'
 import type { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
 import type { EventListProjection } from '../../application/projections/event-list.projection.js'
-import { EventMapper } from '../mappers/event.mapper.js'
+import * as EventMapper from '../mappers/event.mapper.js'
 
 @Injectable()
 export class EventReadRepository {
