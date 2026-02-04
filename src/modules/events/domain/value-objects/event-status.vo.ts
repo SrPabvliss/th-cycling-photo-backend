@@ -7,10 +7,10 @@
  * - `completed`  – All photos have been processed
  */
 export const EventStatus = {
-	DRAFT: 'draft',
-	UPLOADING: 'uploading',
-	PROCESSING: 'processing',
-	COMPLETED: 'completed',
+  DRAFT: 'draft',
+  UPLOADING: 'uploading',
+  PROCESSING: 'processing',
+  COMPLETED: 'completed',
 } as const
 
 export type EventStatusType = (typeof EventStatus)[keyof typeof EventStatus]
