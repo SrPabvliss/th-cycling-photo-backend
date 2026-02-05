@@ -1,16 +1,14 @@
-import { Inject } from '@nestjs/common'
-import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import type { EntityIdProjection } from '../../../../../shared/application/projections/entity-id.projection.js'
-import { AppException } from '../../../../../shared/domain/exceptions/app.exception.js'
 import {
   EVENT_READ_REPOSITORY,
-  type IEventReadRepository,
-} from '../../../domain/ports/event-read-repository.port.js'
-import {
   EVENT_WRITE_REPOSITORY,
+  type IEventReadRepository,
   type IEventWriteRepository,
-} from '../../../domain/ports/event-write-repository.port.js'
-import { UpdateEventCommand } from './update-event.command.js'
+} from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import type { EntityIdProjection } from '@shared/application'
+import { AppException } from '@shared/domain'
+import { UpdateEventCommand } from './update-event.command'
 
 @CommandHandler(UpdateEventCommand)
 export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {

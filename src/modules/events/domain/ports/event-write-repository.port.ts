@@ -1,4 +1,4 @@
-import type { Event } from '../entities/event.entity.js'
+import type { Event } from '../entities'
 
 export interface IEventWriteRepository {
   save(event: Event): Promise<Event>

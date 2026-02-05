@@ -1,4 +1,4 @@
-import { AppException } from '../../../../shared/domain/exceptions/app.exception'
+import { AppException } from '@shared/domain'
 import { Event } from './event.entity'
 
 describe('Event Entity', () => {

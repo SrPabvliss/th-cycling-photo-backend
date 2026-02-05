@@ -1,23 +1,21 @@
+import {
+  CreateEventCommand,
+  CreateEventDto,
+  DeleteEventCommand,
+  UpdateEventCommand,
+  UpdateEventDto,
+} from '@events/application/commands'
+import { EventDetailProjection, EventListProjection } from '@events/application/projections'
+import {
+  GetEventDetailQuery,
+  GetEventsListDto,
+  GetEventsListQuery,
+} from '@events/application/queries'
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
-import { Pagination } from '../../../../shared/application/pagination.js'
-import { EntityIdProjection } from '../../../../shared/application/projections/entity-id.projection.js'
-import { SuccessMessage } from '../../../../shared/http/decorators/success-message.decorator.js'
-import {
-  ApiEnvelopeErrorResponse,
-  ApiEnvelopeResponse,
-} from '../../../../shared/http/swagger/api-envelope-response.decorator.js'
-import { CreateEventCommand } from '../../application/commands/create-event/create-event.command.js'
-import { CreateEventDto } from '../../application/commands/create-event/create-event.dto.js'
-import { DeleteEventCommand } from '../../application/commands/delete-event/delete-event.command.js'
-import { UpdateEventCommand } from '../../application/commands/update-event/update-event.command.js'
-import { UpdateEventDto } from '../../application/commands/update-event/update-event.dto.js'
-import { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
-import { EventListProjection } from '../../application/projections/event-list.projection.js'
-import { GetEventDetailQuery } from '../../application/queries/get-event-detail/get-event-detail.query.js'
-import { GetEventsListDto } from '../../application/queries/get-events-list/get-events-list.dto.js'
-import { GetEventsListQuery } from '../../application/queries/get-events-list/get-events-list.query.js'
+import { EntityIdProjection, Pagination } from '@shared/application'
+import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Events')
 @Controller('events')

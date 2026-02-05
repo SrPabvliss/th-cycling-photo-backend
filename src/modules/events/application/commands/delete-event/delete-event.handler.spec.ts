@@ -1,7 +1,6 @@
-import { AppException } from '../../../../../shared/domain/exceptions/app.exception'
-import { Event } from '../../../domain/entities/event.entity'
-import type { IEventReadRepository } from '../../../domain/ports/event-read-repository.port'
-import type { IEventWriteRepository } from '../../../domain/ports/event-write-repository.port'
+import { Event } from '@events/domain/entities'
+import { IEventReadRepository, IEventWriteRepository } from '@events/domain/ports'
+import { AppException } from '@shared/domain'
 import { DeleteEventCommand } from './delete-event.command'
 import { DeleteEventHandler } from './delete-event.handler'
 

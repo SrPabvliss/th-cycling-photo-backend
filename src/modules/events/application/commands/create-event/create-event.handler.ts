@@ -1,12 +1,9 @@
+import { Event } from '@events/domain/entities'
+import { EVENT_WRITE_REPOSITORY, type IEventWriteRepository } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import type { EntityIdProjection } from '../../../../../shared/application/projections/entity-id.projection.js'
-import { Event } from '../../../domain/entities/event.entity.js'
-import {
-  EVENT_WRITE_REPOSITORY,
-  type IEventWriteRepository,
-} from '../../../domain/ports/event-write-repository.port.js'
-import { CreateEventCommand } from './create-event.command.js'
+import type { EntityIdProjection } from '@shared/application'
+import { CreateEventCommand } from './create-event.command'
 
 @CommandHandler(CreateEventCommand)
 export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {

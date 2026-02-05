@@ -1,6 +1,5 @@
-import { AuditFields } from '../../../../shared/domain/audit-fields.js'
-import { AppException } from '../../../../shared/domain/exceptions/app.exception.js'
-import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo.js'
+import { AppException, AuditFields } from '@shared/domain'
+import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo'
 
 export class Event {
   constructor(

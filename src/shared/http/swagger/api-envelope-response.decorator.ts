@@ -1,6 +1,6 @@
 import { applyDecorators, type Type } from '@nestjs/common'
 import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger'
-import { ApiErrorResponseSchema, ApiMetaSchema } from './api-response.schema.js'
+import { ApiErrorResponseSchema, ApiMetaSchema } from './api-response.schema'
 
 /** Documents a successful response wrapped in the ADR-002 envelope `{ data: T, meta }`. */
 export const ApiEnvelopeResponse = <T extends Type>(options: {

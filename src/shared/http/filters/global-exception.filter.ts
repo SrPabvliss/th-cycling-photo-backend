@@ -8,8 +8,8 @@ import {
 } from '@nestjs/common'
 import type { Request, Response } from 'express'
 import { I18nContext } from 'nestjs-i18n'
-import { AppException } from '../../domain/exceptions/app.exception.js'
-import type { ApiErrorResponse } from '../interfaces/api-response.interface.js'
+import { AppException } from '../../domain/exceptions/app.exception'
+import type { ApiErrorResponse } from '../interfaces/api-response.interface'
 
 /**
  * Global exception filter that catches all exceptions and formats

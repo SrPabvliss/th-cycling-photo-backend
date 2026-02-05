@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common'
-import type { Pagination } from '../../../../shared/application/pagination.js'
-import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js'
-import type { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
-import type { EventListProjection } from '../../application/projections/event-list.projection.js'
-import type { Event } from '../../domain/entities/event.entity.js'
-import type { IEventReadRepository } from '../../domain/ports/event-read-repository.port.js'
-import * as EventMapper from '../mappers/event.mapper.js'
+import type { Pagination } from '@shared/application'
+import { PrismaService } from '@shared/infrastructure'
+import type { EventDetailProjection, EventListProjection } from '../../application/projections'
+import type { Event } from '../../domain/entities'
+import type { IEventReadRepository } from '../../domain/ports'
+import * as EventMapper from '../mappers/event.mapper'
 
 @Injectable()
 export class EventReadRepository implements IEventReadRepository {

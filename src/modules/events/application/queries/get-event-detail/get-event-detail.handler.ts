@@ -1,12 +1,9 @@
+import { EventDetailProjection } from '@events/application/projections'
+import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
-import { AppException } from '../../../../../shared/domain/exceptions/app.exception.js'
-import {
-  EVENT_READ_REPOSITORY,
-  type IEventReadRepository,
-} from '../../../domain/ports/event-read-repository.port.js'
-import type { EventDetailProjection } from '../../projections/event-detail.projection.js'
-import { GetEventDetailQuery } from './get-event-detail.query.js'
+import { AppException } from '@shared/domain'
+import { GetEventDetailQuery } from './get-event-detail.query'
 
 @QueryHandler(GetEventDetailQuery)
 export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery> {

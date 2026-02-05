@@ -1,8 +1,7 @@
-import type { Prisma, Event as PrismaEvent } from '../../../../generated/prisma/client.js'
-import type { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
-import type { EventListProjection } from '../../application/projections/event-list.projection.js'
-import { Event } from '../../domain/entities/event.entity.js'
-import type { EventStatusType } from '../../domain/value-objects/event-status.vo.js'
+import type { EventDetailProjection, EventListProjection } from '@events/application/projections'
+import { Event } from '@events/domain/entities'
+import type { EventStatusType } from '@events/domain/value-objects/event-status.vo'
+import type { Prisma, Event as PrismaEvent } from '@generated/prisma/client'
 
 type EventListSelect = {
   id: string

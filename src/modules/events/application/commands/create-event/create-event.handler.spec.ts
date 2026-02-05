@@ -1,6 +1,6 @@
-import { AppException } from '../../../../../shared/domain/exceptions/app.exception'
-import type { Event } from '../../../domain/entities/event.entity'
-import type { IEventWriteRepository } from '../../../domain/ports/event-write-repository.port'
+import { Event } from '@events/domain/entities'
+import { IEventWriteRepository } from '@events/domain/ports'
+import { AppException } from '@shared/domain'
 import { CreateEventCommand } from './create-event.command'
 import { CreateEventHandler } from './create-event.handler'
 

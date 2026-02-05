@@ -1,4 +1,4 @@
-import type { ErrorCode } from '../../domain/exceptions/app.exception.js'
+import type { ErrorCode } from '../../domain/exceptions/app.exception'
 
 export interface ApiMeta {
   requestId: string
