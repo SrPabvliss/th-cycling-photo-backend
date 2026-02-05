@@ -2,11 +2,19 @@ import { Injectable } from '@nestjs/common'
 import type { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js'
 import type { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
 import type { EventListProjection } from '../../application/projections/event-list.projection.js'
+import type { Event } from '../../domain/entities/event.entity.js'
+import type { IEventReadRepository } from '../../domain/ports/event-read-repository.port.js'
 import * as EventMapper from '../mappers/event.mapper.js'
 
 @Injectable()
-export class EventReadRepository {
+export class EventReadRepository implements IEventReadRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Finds an event entity by ID for command operations. */
+  async findById(id: string): Promise<Event | null> {
+    const record = await this.prisma.event.findUnique({ where: { id } })
+    return record ? EventMapper.toEntity(record) : null
+  }
 
   /** Retrieves a paginated list of events as projections. */
   async getEventsList(filters: { page: number; limit: number }): Promise<EventListProjection[]> {

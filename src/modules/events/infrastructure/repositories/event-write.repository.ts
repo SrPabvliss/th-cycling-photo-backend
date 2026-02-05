@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common'
 import type { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js'
 import type { Event } from '../../domain/entities/event.entity.js'
+import type { IEventWriteRepository } from '../../domain/ports/event-write-repository.port.js'
 import * as EventMapper from '../mappers/event.mapper.js'
 
 @Injectable()
-export class EventWriteRepository {
+export class EventWriteRepository implements IEventWriteRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Persists an event entity (create or update). */
@@ -18,12 +19,6 @@ export class EventWriteRepository {
     })
 
     return EventMapper.toEntity(saved)
-  }
-
-  /** Finds an event by its ID, or returns null. */
-  async findById(id: string): Promise<Event | null> {
-    const record = await this.prisma.event.findUnique({ where: { id } })
-    return record ? EventMapper.toEntity(record) : null
   }
 
   /** Deletes an event by its ID. */
