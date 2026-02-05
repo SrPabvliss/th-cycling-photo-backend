@@ -84,7 +84,7 @@ Detailed guides in `.claude/contexts/`:
 |--------|---------|
 | `patterns/` | CQRS, entities, repositories, controllers |
 | `structure/` | Feature-Sliced, module setup |
-| `infrastructure/` | Prisma, Jest, BullMQ, env |
+| `infrastructure/` | Prisma, Jest, BullMQ, env, Swagger, CI |
 | `conventions/` | Naming, validations, error-handling, git |
 | `testing/` | Unit, integration, E2E guidelines |
 | `checklists/` | Implementation verification |

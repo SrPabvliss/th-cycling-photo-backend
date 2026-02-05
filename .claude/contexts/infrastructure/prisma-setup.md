@@ -5,7 +5,15 @@
 ```
 prisma/
 ├── schema.prisma
-└── migrations/
+├── migrations/
+└── seed.ts
+
+prisma.config.ts                    # Datasource config (uses dotenv)
+
+src/generated/prisma/               # Generated client (gitignored)
+├── client.ts
+├── models/
+└── ...
 
 src/shared/infrastructure/prisma/
 ├── prisma.service.ts
@@ -14,79 +22,84 @@ src/shared/infrastructure/prisma/
 
 ---
 
-## Schema Example
+## Generator Configuration
 
 ```prisma
 // prisma/schema.prisma
-
 generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model Event {
-  id               String   @id @default(uuid())
-  name             String
-  event_date       DateTime
-  location         String?
-  category         String
-  status           String   @default("DRAFT")
-  total_photos     Int      @default(0)
-  processed_photos Int      @default(0)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-
-  photos           Photo[]
-
-  @@index([status])
-  @@index([event_date])
-  @@map("events")
+  provider     = "prisma-client-js"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 ```
 
-### Naming Conventions
+**Critical settings:**
+- `output` → `../src/generated/prisma` (not default `node_modules`)
+- `moduleFormat = "cjs"` → Avoids `import.meta.url` errors in CJS compilation
 
-| Element | Convention | Example |
-|---------|------------|---------|
-| Model name | PascalCase | `DetectedCyclist` |
-| Table name | snake_case via @@map | `@@map("detected_cyclists")` |
-| Column name | snake_case | `plate_number` |
-| Foreign key | `{table}_id` | `event_id` |
+### prisma.config.ts
+
+```typescript
+import { config } from 'dotenv'
+import { defineConfig } from 'prisma/config'
+
+const env = process.env.NODE_ENV || 'development'
+config({ path: `.env.${env}` })
+config({ path: '.env' })
+
+const { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, DB_SSL_MODE } = process.env
+let databaseUrl = `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
+if (DB_SSL_MODE) databaseUrl += `?sslmode=${DB_SSL_MODE}`
+
+export default defineConfig({
+  schema: 'prisma/schema.prisma',
+  migrations: { path: 'prisma/migrations', seed: 'tsx prisma/seed.ts' },
+  datasource: { url: databaseUrl },
+})
+```
 
 ---
 
-## PrismaService
+## Import Rules
+
+⚠️ **Import from generated path, NOT from `@prisma/client`:**
+
+```typescript
+// ✅ Correct
+import { PrismaClient } from '../generated/prisma/client.js'
+import type { Prisma, Event as PrismaEvent } from '../../../../generated/prisma/client.js'
+
+// ❌ Wrong (old Prisma pattern)
+import { PrismaClient } from '@prisma/client'
+```
+
+⚠️ **Prisma 7 namespace types:**
+Input types (e.g., `EventCreateInput`) must be accessed via `Prisma` namespace:
+
+```typescript
+import type { Prisma } from '../../../../generated/prisma/client.js'
+
+function toPersistence(entity: Event): Prisma.EventCreateInput { ... }
+```
+
+---
+
+## PrismaService & PrismaModule
 
 ```typescript
 // shared/infrastructure/prisma/prisma.service.ts
-
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common'
+import { PrismaClient } from '../../../generated/prisma/client.js'
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  async onModuleInit() {
-    await this.$connect();
-  }
-
-  async onModuleDestroy() {
-    await this.$disconnect();
-  }
+  async onModuleInit() { await this.$connect() }
+  async onModuleDestroy() { await this.$disconnect() }
 }
 ```
 
-### PrismaModule
-
 ```typescript
 // shared/infrastructure/prisma/prisma.module.ts
-
-import { Global, Module } from '@nestjs/common';
-import { PrismaService } from './prisma.service';
-
 @Global()
 @Module({
   providers: [PrismaService],
@@ -95,161 +108,71 @@ import { PrismaService } from './prisma.service';
 export class PrismaModule {}
 ```
 
+### Why `@Global()`
+
+`PrismaModule` is decorated with `@Global()` and imported **once** in `AppModule`. This makes `PrismaService` available in all modules without re-importing. Feature modules (e.g., `EventsModule`) do NOT import `PrismaModule` — their repositories receive `PrismaService` via standard constructor injection.
+
+### PrismaService vs Symbol Token Injection
+
+| Concern | Pattern | Example |
+|---------|---------|---------|
+| `PrismaService` | Direct class injection (no Symbol) | `constructor(private readonly prisma: PrismaService)` |
+| Repositories | Symbol token + interface (Ports & Adapters) | `@Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository` |
+
+`PrismaService` does NOT use a Symbol token because it's infrastructure — repositories are the abstraction boundary. Handlers never inject `PrismaService` directly; they inject repository interfaces.
+
 ---
 
 ## Commands
 
 ```bash
-# Generate client after schema changes
-npx prisma generate
-
-# Create migration
-npx prisma migrate dev --name descriptive-name
-
-# Apply migrations (production)
-npx prisma migrate deploy
-
-# Reset database (development only)
-npx prisma migrate reset
-
-# Open Prisma Studio
-npx prisma studio
-
-# Format schema
-npx prisma format
+npx prisma generate          # Generate client to src/generated/prisma
+npx prisma migrate dev       # Create/apply migration (dev)
+npx prisma migrate deploy    # Apply migrations (prod)
+npx prisma studio            # Open visual DB editor
+npx prisma format            # Format schema file
 ```
 
 ---
 
-## Repository Usage
+## Schema Naming Conventions
 
-Repositories use Mappers for conversion (see `patterns/repositories.md`):
-
-```typescript
-import { EventMapper } from '../mappers/event.mapper';
-
-@Injectable()
-export class EventWriteRepository {
-  constructor(private readonly prisma: PrismaService) {}
-
-  async save(event: Event): Promise<Event> {
-    const data = EventMapper.toPersistence(event);
-    
-    const saved = await this.prisma.event.upsert({
-      where: { id: event.id },
-      create: data,
-      update: data,
-    });
-
-    return EventMapper.toEntity(saved);
-  }
-}
-```
+| Element | Convention | Example |
+|---------|------------|---------|
+| Model name | PascalCase | `DetectedCyclist` |
+| Table name | snake_case via @@map | `@@map("detected_cyclists")` |
+| Column name | snake_case | `plate_number`, `event_date` |
+| Foreign key | `{table}_id` | `event_id` |
 
 ---
 
-## Transactions
+## .gitignore
 
-```typescript
-async saveEventWithPhotos(event: Event, photos: Photo[]): Promise<void> {
-  await this.prisma.$transaction(async (tx) => {
-    await tx.event.create({ 
-      data: EventMapper.toPersistence(event) 
-    });
-    
-    await tx.photo.createMany({
-      data: photos.map(PhotoMapper.toPersistence),
-    });
-  });
-}
 ```
+src/generated/
+```
+
+The generated client is **not committed**. CI runs `prisma generate` before build/test.
 
 ---
 
-## Query Optimization
+## Troubleshooting
 
-### Select Only Needed Fields
+### `import.meta.url` error
+**Cause:** Default Prisma client uses ESM but NestJS compiles to CJS.
+**Fix:** Add `moduleFormat = "cjs"` to generator config.
 
-```typescript
-// GOOD: Specific fields
-const events = await this.prisma.event.findMany({
-  select: {
-    id: true,
-    name: true,
-    status: true,
-  },
-});
+### Types not found after schema change
+**Fix:** Run `npx prisma generate` to regenerate client.
 
-// BAD: Fetches everything
-const events = await this.prisma.event.findMany();
-```
-
-### Use Indexes
-
-```prisma
-model Photo {
-  id        String @id @default(uuid())
-  event_id  String
-  status    String
-
-  event     Event  @relation(fields: [event_id], references: [id])
-
-  @@index([event_id])
-  @@index([status])
-  @@map("photos")
-}
-```
-
----
-
-## Error Handling
-
-```typescript
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-
-try {
-  await this.prisma.event.create({ data });
-} catch (error) {
-  if (error instanceof PrismaClientKnownRequestError) {
-    if (error.code === 'P2002') {
-      throw AppException.businessRule('event.already_exists');
-    }
-    if (error.code === 'P2025') {
-      throw AppException.notFound('event', id);
-    }
-  }
-  throw error;
-}
-```
-
-### Common Error Codes
-
-| Code | Description |
-|------|-------------|
-| P2002 | Unique constraint violation |
-| P2025 | Record not found |
-| P2003 | Foreign key constraint |
-| P2014 | Required relation missing |
-
----
-
-## Environment
-
-```env
-# .env.development
-DATABASE_URL="postgresql://user:password@localhost:5432/cycling_photos_dev"
-
-# .env.test
-DATABASE_URL="postgresql://user:password@localhost:5432/cycling_photos_test"
-
-# .env.production
-DATABASE_URL="postgresql://user:password@prod-host:5432/cycling_photos"
-```
+### `Prisma.EventCreateInput` not found
+**Cause:** Prisma 7 doesn't export input types directly.
+**Fix:** Use `Prisma` namespace: `Prisma.EventCreateInput` (not `EventCreateInput`).
 
 ---
 
 ## See Also
 
 - `patterns/repositories.md` - Repository and Mapper patterns
-- `structure/module-setup.md` - PrismaModule registration
+- `infrastructure/ci-pipeline.md` - CI requires `prisma generate`
 - `infrastructure/env-config.md` - Environment variables
