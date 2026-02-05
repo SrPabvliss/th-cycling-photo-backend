@@ -29,9 +29,9 @@ export function toPersistence(entity: Event): Prisma.EventCreateInput {
     status: entity.status,
     total_photos: entity.totalPhotos,
     processed_photos: entity.processedPhotos,
-    created_at: entity.createdAt,
-    updated_at: entity.updatedAt,
-    deleted_at: entity.deletedAt,
+    created_at: entity.audit.createdAt,
+    updated_at: entity.audit.updatedAt,
+    deleted_at: entity.audit.deletedAt,
   }
 }
 

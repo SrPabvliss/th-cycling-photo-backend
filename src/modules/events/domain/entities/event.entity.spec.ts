@@ -23,8 +23,9 @@ describe('Event Entity', () => {
       expect(event.status).toBe('draft')
       expect(event.totalPhotos).toBe(0)
       expect(event.processedPhotos).toBe(0)
-      expect(event.deletedAt).toBeNull()
-      expect(event.isDeleted).toBe(false)
+      expect(event.audit.deletedAt).toBeNull()
+      expect(event.audit.isDeleted).toBe(false)
+      expect(event.audit.createdAt).toBeInstanceOf(Date)
     })
 
     it('should create event with null location', () => {
@@ -125,26 +126,26 @@ describe('Event Entity', () => {
       expect(event.location).toBe(originalLocation)
     })
 
-    it('should update updatedAt timestamp', () => {
+    it('should update updatedAt timestamp via audit', () => {
       const event = Event.create(validData)
-      const originalUpdatedAt = event.updatedAt
+      const originalUpdatedAt = event.audit.updatedAt
 
       event.update({ name: 'Updated' })
 
-      expect(event.updatedAt.getTime()).toBeGreaterThanOrEqual(originalUpdatedAt.getTime())
+      expect(event.audit.updatedAt.getTime()).toBeGreaterThanOrEqual(originalUpdatedAt.getTime())
     })
   })
 
   describe('softDelete', () => {
-    it('should set deletedAt and updatedAt', () => {
+    it('should mark event as deleted via audit', () => {
       const event = Event.create(validData)
-      const beforeDelete = event.updatedAt
+      const beforeDelete = event.audit.updatedAt
 
       event.softDelete()
 
-      expect(event.deletedAt).toBeInstanceOf(Date)
-      expect(event.isDeleted).toBe(true)
-      expect(event.updatedAt.getTime()).toBeGreaterThanOrEqual(beforeDelete.getTime())
+      expect(event.audit.deletedAt).toBeInstanceOf(Date)
+      expect(event.audit.isDeleted).toBe(true)
+      expect(event.audit.updatedAt.getTime()).toBeGreaterThanOrEqual(beforeDelete.getTime())
     })
   })
 
@@ -169,7 +170,8 @@ describe('Event Entity', () => {
       expect(event.date).toBe(pastDate)
       expect(event.status).toBe('completed')
       expect(event.totalPhotos).toBe(100)
-      expect(event.deletedAt).toBeNull()
+      expect(event.audit.deletedAt).toBeNull()
+      expect(event.audit.isDeleted).toBe(false)
     })
 
     it('should reconstitute soft-deleted entity', () => {
@@ -187,8 +189,8 @@ describe('Event Entity', () => {
         deletedAt: deletedDate,
       })
 
-      expect(event.deletedAt).toBe(deletedDate)
-      expect(event.isDeleted).toBe(true)
+      expect(event.audit.deletedAt).toBe(deletedDate)
+      expect(event.audit.isDeleted).toBe(true)
     })
   })
 })

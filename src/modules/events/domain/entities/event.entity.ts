@@ -1,3 +1,4 @@
+import { AuditFields } from '../../../../shared/domain/audit-fields.js'
 import { AppException } from '../../../../shared/domain/exceptions/app.exception.js'
 import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo.js'
 
@@ -10,21 +11,8 @@ export class Event {
     public status: EventStatusType,
     public totalPhotos: number,
     public processedPhotos: number,
-    public readonly createdAt: Date,
-    public updatedAt: Date,
-    public deletedAt: Date | null,
+    public readonly audit: AuditFields,
   ) {}
-
-  /** Whether the event has been soft-deleted. */
-  get isDeleted(): boolean {
-    return this.deletedAt !== null
-  }
-
-  /** Marks the event as soft-deleted. */
-  softDelete(): void {
-    this.deletedAt = new Date()
-    this.updatedAt = new Date()
-  }
 
   /**
    * Factory method for creating a new event.
@@ -53,9 +41,7 @@ export class Event {
       EventStatus.DRAFT,
       0,
       0,
-      new Date(),
-      new Date(),
-      null,
+      AuditFields.initialize(),
     )
   }
 
@@ -83,7 +69,12 @@ export class Event {
 
     if (data.location !== undefined) this.location = data.location
 
-    this.updatedAt = new Date()
+    this.audit.markUpdated()
+  }
+
+  /** Marks this event as soft-deleted. */
+  softDelete(): void {
+    this.audit.markDeleted()
   }
 
   /**
@@ -110,9 +101,11 @@ export class Event {
       data.status,
       data.totalPhotos,
       data.processedPhotos,
-      data.createdAt,
-      data.updatedAt,
-      data.deletedAt,
+      AuditFields.fromPersistence({
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        deletedAt: data.deletedAt,
+      }),
     )
   }
 }
