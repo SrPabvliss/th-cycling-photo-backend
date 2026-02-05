@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import type { CommandBus, QueryBus } from '@nestjs/cqrs'
+import { Pagination } from '../../../../shared/application/pagination.js'
 import { SuccessMessage } from '../../../../shared/http/decorators/success-message.decorator.js'
 import { CreateEventCommand } from '../../application/commands/create-event/create-event.command.js'
 import type { CreateEventDto } from '../../application/commands/create-event/create-event.dto.js'
@@ -48,7 +49,8 @@ export class EventsController {
   @Get()
   @SuccessMessage('success.LIST')
   async findAll(@Query() dto: GetEventsListDto) {
-    const query = new GetEventsListQuery(dto.page ?? 1, dto.limit ?? 20)
+    const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
+    const query = new GetEventsListQuery(pagination)
     return this.queryBus.execute(query)
   }
 }

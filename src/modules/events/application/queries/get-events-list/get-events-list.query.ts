@@ -1,6 +1,5 @@
+import type { Pagination } from '../../../../../shared/application/pagination.js'
+
 export class GetEventsListQuery {
-  constructor(
-    public readonly page: number,
-    public readonly limit: number,
-  ) {}
+  constructor(public readonly pagination: Pagination) {}
 }

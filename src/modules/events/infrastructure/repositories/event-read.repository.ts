@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import type { Pagination } from '../../../../shared/application/pagination.js'
 import type { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js'
 import type { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
 import type { EventListProjection } from '../../application/projections/event-list.projection.js'
@@ -17,9 +18,7 @@ export class EventReadRepository implements IEventReadRepository {
   }
 
   /** Retrieves a paginated list of events as projections. */
-  async getEventsList(filters: { page: number; limit: number }): Promise<EventListProjection[]> {
-    const skip = (filters.page - 1) * filters.limit
-
+  async getEventsList(pagination: Pagination): Promise<EventListProjection[]> {
     const events = await this.prisma.event.findMany({
       select: {
         id: true,
@@ -31,8 +30,8 @@ export class EventReadRepository implements IEventReadRepository {
         processed_photos: true,
       },
       orderBy: { event_date: 'desc' },
-      skip,
-      take: filters.limit,
+      skip: pagination.skip,
+      take: pagination.take,
     })
 
     return events.map(EventMapper.toListProjection)
