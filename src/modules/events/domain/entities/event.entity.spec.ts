@@ -23,6 +23,8 @@ describe('Event Entity', () => {
       expect(event.status).toBe('draft')
       expect(event.totalPhotos).toBe(0)
       expect(event.processedPhotos).toBe(0)
+      expect(event.deletedAt).toBeNull()
+      expect(event.isDeleted).toBe(false)
     })
 
     it('should create event with null location', () => {
@@ -133,6 +135,19 @@ describe('Event Entity', () => {
     })
   })
 
+  describe('softDelete', () => {
+    it('should set deletedAt and updatedAt', () => {
+      const event = Event.create(validData)
+      const beforeDelete = event.updatedAt
+
+      event.softDelete()
+
+      expect(event.deletedAt).toBeInstanceOf(Date)
+      expect(event.isDeleted).toBe(true)
+      expect(event.updatedAt.getTime()).toBeGreaterThanOrEqual(beforeDelete.getTime())
+    })
+  })
+
   describe('fromPersistence', () => {
     it('should reconstitute entity without validations', () => {
       const pastDate = new Date('2020-01-01')
@@ -146,6 +161,7 @@ describe('Event Entity', () => {
         processedPhotos: 95,
         createdAt: new Date('2020-01-01'),
         updatedAt: new Date('2020-06-01'),
+        deletedAt: null,
       })
 
       expect(event).toBeInstanceOf(Event)
@@ -153,6 +169,26 @@ describe('Event Entity', () => {
       expect(event.date).toBe(pastDate)
       expect(event.status).toBe('completed')
       expect(event.totalPhotos).toBe(100)
+      expect(event.deletedAt).toBeNull()
+    })
+
+    it('should reconstitute soft-deleted entity', () => {
+      const deletedDate = new Date('2024-06-15')
+      const event = Event.fromPersistence({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: 'Deleted Event',
+        date: new Date('2024-01-01'),
+        location: null,
+        status: 'draft',
+        totalPhotos: 0,
+        processedPhotos: 0,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-06-15'),
+        deletedAt: deletedDate,
+      })
+
+      expect(event.deletedAt).toBe(deletedDate)
+      expect(event.isDeleted).toBe(true)
     })
   })
 })

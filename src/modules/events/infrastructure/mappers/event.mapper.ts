@@ -31,6 +31,7 @@ export function toPersistence(entity: Event): Prisma.EventCreateInput {
     processed_photos: entity.processedPhotos,
     created_at: entity.createdAt,
     updated_at: entity.updatedAt,
+    deleted_at: entity.deletedAt,
   }
 }
 
@@ -46,6 +47,7 @@ export function toEntity(record: PrismaEvent): Event {
     processedPhotos: record.processed_photos,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
+    deletedAt: record.deleted_at,
   })
 }
 

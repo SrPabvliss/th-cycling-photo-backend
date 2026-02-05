@@ -12,7 +12,19 @@ export class Event {
     public processedPhotos: number,
     public readonly createdAt: Date,
     public updatedAt: Date,
+    public deletedAt: Date | null,
   ) {}
+
+  /** Whether the event has been soft-deleted. */
+  get isDeleted(): boolean {
+    return this.deletedAt !== null
+  }
+
+  /** Marks the event as soft-deleted. */
+  softDelete(): void {
+    this.deletedAt = new Date()
+    this.updatedAt = new Date()
+  }
 
   /**
    * Factory method for creating a new event.
@@ -43,6 +55,7 @@ export class Event {
       0,
       new Date(),
       new Date(),
+      null,
     )
   }
 
@@ -87,6 +100,7 @@ export class Event {
     processedPhotos: number
     createdAt: Date
     updatedAt: Date
+    deletedAt: Date | null
   }): Event {
     return new Event(
       data.id,
@@ -98,6 +112,7 @@ export class Event {
       data.processedPhotos,
       data.createdAt,
       data.updatedAt,
+      data.deletedAt,
     )
   }
 }

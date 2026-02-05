@@ -11,15 +11,16 @@ import * as EventMapper from '../mappers/event.mapper.js'
 export class EventReadRepository implements IEventReadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Finds an event entity by ID for command operations. */
+  /** Finds a non-deleted event entity by ID for command operations. */
   async findById(id: string): Promise<Event | null> {
-    const record = await this.prisma.event.findUnique({ where: { id } })
+    const record = await this.prisma.event.findFirst({ where: { id, deleted_at: null } })
     return record ? EventMapper.toEntity(record) : null
   }
 
   /** Retrieves a paginated list of events as projections. */
   async getEventsList(pagination: Pagination): Promise<EventListProjection[]> {
     const events = await this.prisma.event.findMany({
+      where: { deleted_at: null },
       select: {
         id: true,
         name: true,
@@ -37,10 +38,10 @@ export class EventReadRepository implements IEventReadRepository {
     return events.map(EventMapper.toListProjection)
   }
 
-  /** Retrieves a single event's detail by ID. */
+  /** Retrieves a single non-deleted event's detail by ID. */
   async getEventDetail(id: string): Promise<EventDetailProjection | null> {
-    const record = await this.prisma.event.findUnique({
-      where: { id },
+    const record = await this.prisma.event.findFirst({
+      where: { id, deleted_at: null },
       select: {
         id: true,
         name: true,
