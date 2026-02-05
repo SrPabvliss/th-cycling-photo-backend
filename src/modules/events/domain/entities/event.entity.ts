@@ -24,14 +24,8 @@ export class Event {
    * @throws AppException.businessRule if date is in the past
    */
   static create(data: { name: string; date: Date; location: string | null }): Event {
-    if (data.name.length < 3 || data.name.length > 200) {
-      throw AppException.businessRule('event.name_invalid_length')
-    }
-
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    if (data.date < today) throw AppException.businessRule('event.date_in_past')
+    Event.validateName(data.name)
+    Event.validateDate(data.date)
 
     return new Event(
       crypto.randomUUID(),
@@ -54,16 +48,12 @@ export class Event {
    */
   update(data: { name?: string; date?: Date; location?: string | null }): void {
     if (data.name !== undefined) {
-      if (data.name.length < 3 || data.name.length > 200) {
-        throw AppException.businessRule('event.name_invalid_length')
-      }
+      Event.validateName(data.name)
       this.name = data.name
     }
 
     if (data.date !== undefined) {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      if (data.date < today) throw AppException.businessRule('event.date_in_past')
+      Event.validateDate(data.date)
       this.date = data.date
     }
 
@@ -75,6 +65,18 @@ export class Event {
   /** Marks this event as soft-deleted. */
   softDelete(): void {
     this.audit.markDeleted()
+  }
+
+  private static validateName(name: string): void {
+    if (name.length < 3 || name.length > 200) {
+      throw AppException.businessRule('event.name_invalid_length')
+    }
+  }
+
+  private static validateDate(date: Date): void {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (date < today) throw AppException.businessRule('event.date_in_past')
   }
 
   /**

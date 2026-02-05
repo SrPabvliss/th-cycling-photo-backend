@@ -11,8 +11,8 @@ import { EventReadRepository } from './infrastructure/repositories/event-read.re
 import { EventWriteRepository } from './infrastructure/repositories/event-write.repository.js'
 import { EventsController } from './presentation/controllers/events.controller.js'
 
-const CommandHandlers = [CreateEventHandler, DeleteEventHandler, UpdateEventHandler]
-const QueryHandlers = [GetEventDetailHandler, GetEventsListHandler]
+const CommandHandlers = [CreateEventHandler, UpdateEventHandler, DeleteEventHandler]
+const QueryHandlers = [GetEventsListHandler, GetEventDetailHandler]
 
 @Module({
   imports: [CqrsModule],

@@ -27,6 +27,36 @@ export class EventsController {
     private readonly queryBus: QueryBus,
   ) {}
 
+  @Get()
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'List events with pagination' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Paginated event list',
+    type: EventListProjection,
+    isArray: true,
+  })
+  async findAll(@Query() dto: GetEventsListDto) {
+    const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
+    const query = new GetEventsListQuery(pagination)
+    return this.queryBus.execute(query)
+  }
+
+  @Get(':id')
+  @SuccessMessage('success.FETCHED')
+  @ApiOperation({ summary: 'Get event details by ID' })
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Event detail retrieved',
+    type: EventDetailProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
+  async findOne(@Param('id') id: string) {
+    const query = new GetEventDetailQuery(id)
+    return this.queryBus.execute(query)
+  }
+
   @Post()
   @SuccessMessage('success.CREATED')
   @ApiOperation({ summary: 'Create a new event' })
@@ -70,35 +100,5 @@ export class EventsController {
   async remove(@Param('id') id: string) {
     const command = new DeleteEventCommand(id)
     return this.commandBus.execute(command)
-  }
-
-  @Get(':id')
-  @SuccessMessage('success.FETCHED')
-  @ApiOperation({ summary: 'Get event details by ID' })
-  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
-  @ApiEnvelopeResponse({
-    status: 200,
-    description: 'Event detail retrieved',
-    type: EventDetailProjection,
-  })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async findOne(@Param('id') id: string) {
-    const query = new GetEventDetailQuery(id)
-    return this.queryBus.execute(query)
-  }
-
-  @Get()
-  @SuccessMessage('success.LIST')
-  @ApiOperation({ summary: 'List events with pagination' })
-  @ApiEnvelopeResponse({
-    status: 200,
-    description: 'Paginated event list',
-    type: EventListProjection,
-    isArray: true,
-  })
-  async findAll(@Query() dto: GetEventsListDto) {
-    const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetEventsListQuery(pagination)
-    return this.queryBus.execute(query)
   }
 }
