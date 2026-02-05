@@ -9,14 +9,14 @@ import {
   ApiEnvelopeResponse,
 } from '../../../../shared/http/swagger/api-envelope-response.decorator.js'
 import { CreateEventCommand } from '../../application/commands/create-event/create-event.command.js'
-import type { CreateEventDto } from '../../application/commands/create-event/create-event.dto.js'
+import { CreateEventDto } from '../../application/commands/create-event/create-event.dto.js'
 import { DeleteEventCommand } from '../../application/commands/delete-event/delete-event.command.js'
 import { UpdateEventCommand } from '../../application/commands/update-event/update-event.command.js'
-import type { UpdateEventDto } from '../../application/commands/update-event/update-event.dto.js'
+import { UpdateEventDto } from '../../application/commands/update-event/update-event.dto.js'
 import { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
 import { EventListProjection } from '../../application/projections/event-list.projection.js'
 import { GetEventDetailQuery } from '../../application/queries/get-event-detail/get-event-detail.query.js'
-import type { GetEventsListDto } from '../../application/queries/get-events-list/get-events-list.dto.js'
+import { GetEventsListDto } from '../../application/queries/get-events-list/get-events-list.dto.js'
 import { GetEventsListQuery } from '../../application/queries/get-events-list/get-events-list.query.js'
 
 @ApiTags('Events')
