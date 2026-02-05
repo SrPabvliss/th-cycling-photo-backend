@@ -4,7 +4,7 @@ import {
   Injectable,
   type NestInterceptor,
 } from '@nestjs/common'
-import type { Reflector } from '@nestjs/core'
+import { Reflector } from '@nestjs/core'
 import type { Request } from 'express'
 import { I18nContext } from 'nestjs-i18n'
 import type { Observable } from 'rxjs'

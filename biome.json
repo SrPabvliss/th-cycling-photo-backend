@@ -27,7 +27,8 @@
         "useConst": "error",
         "useTemplate": "warn",
         "useArrayLiterals": "warn",
-        "useBlockStatements": "off"
+        "useBlockStatements": "off",
+        "useImportType": "off"
       },
       "correctness": {
         "noUnusedVariables": "warn"

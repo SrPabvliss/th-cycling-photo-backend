@@ -1,4 +1,4 @@
-import type { Prisma, Event as PrismaEvent } from '../../../../../generated/prisma/client.js'
+import type { Prisma, Event as PrismaEvent } from '../../../../generated/prisma/client.js'
 import type { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
 import type { EventListProjection } from '../../application/projections/event-list.projection.js'
 import { Event } from '../../domain/entities/event.entity.js'

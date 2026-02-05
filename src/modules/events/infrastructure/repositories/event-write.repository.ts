@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import type { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js'
+import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js'
 import type { Event } from '../../domain/entities/event.entity.js'
 import type { IEventWriteRepository } from '../../domain/ports/event-write-repository.port.js'
 import * as EventMapper from '../mappers/event.mapper.js'
