@@ -30,9 +30,8 @@ export class Event {
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    if (data.date < today) {
-      throw AppException.businessRule('event.date_in_past')
-    }
+
+    if (data.date < today) throw AppException.businessRule('event.date_in_past')
 
     return new Event(
       crypto.randomUUID(),
@@ -65,15 +64,11 @@ export class Event {
     if (data.date !== undefined) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      if (data.date < today) {
-        throw AppException.businessRule('event.date_in_past')
-      }
+      if (data.date < today) throw AppException.businessRule('event.date_in_past')
       this.date = data.date
     }
 
-    if (data.location !== undefined) {
-      this.location = data.location
-    }
+    if (data.location !== undefined) this.location = data.location
 
     this.updatedAt = new Date()
   }

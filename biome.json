@@ -26,7 +26,8 @@
         "useSingleVarDeclarator": "error",
         "useConst": "error",
         "useTemplate": "warn",
-        "useArrayLiterals": "warn"
+        "useArrayLiterals": "warn",
+        "useBlockStatements": "off"
       },
       "correctness": {
         "noUnusedVariables": "warn"

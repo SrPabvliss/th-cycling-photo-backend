@@ -22,10 +22,7 @@ export class DeleteEventHandler implements ICommandHandler<DeleteEventCommand> {
   /** Verifies the event exists and deletes it. */
   async execute(command: DeleteEventCommand): Promise<EntityIdProjection> {
     const event = await this.readRepo.findById(command.id)
-
-    if (!event) {
-      throw AppException.notFound('Event', command.id)
-    }
+    if (!event) throw AppException.notFound('Event', command.id)
 
     await this.writeRepo.delete(command.id)
 

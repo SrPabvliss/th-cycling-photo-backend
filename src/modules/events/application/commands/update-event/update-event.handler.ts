@@ -22,10 +22,7 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
   /** Loads an event, applies updates, and persists it. */
   async execute(command: UpdateEventCommand): Promise<EntityIdProjection> {
     const event = await this.readRepo.findById(command.id)
-
-    if (!event) {
-      throw AppException.notFound('Event', command.id)
-    }
+    if (!event) throw AppException.notFound('Event', command.id)
 
     event.update({
       name: command.name,
