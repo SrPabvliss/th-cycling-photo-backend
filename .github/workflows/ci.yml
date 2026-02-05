@@ -11,31 +11,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-build-test:
-    name: Lint, Build & Test
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
-
       - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:ci
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+  build:
+    name: Build
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: npx prisma generate
+      - run: pnpm build
 
-      - name: Lint
-        run: pnpm check:ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Build
-        run: pnpm build
-
-      - name: Test
-        run: pnpm test --passWithNoTests
+  test:
+    name: Test
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: npx prisma generate
+      - run: pnpm test --passWithNoTests

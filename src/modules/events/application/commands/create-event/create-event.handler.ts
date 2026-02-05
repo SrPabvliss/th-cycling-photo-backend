@@ -10,9 +10,7 @@ import { CreateEventCommand } from './create-event.command.js'
 
 @CommandHandler(CreateEventCommand)
 export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
-  constructor(
-    @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
-  ) {}
+  constructor(@Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository) {}
 
   /** Creates a new event entity and persists it. */
   async execute(command: CreateEventCommand): Promise<EntityIdProjection> {
