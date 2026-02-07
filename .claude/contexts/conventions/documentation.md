@@ -113,34 +113,46 @@ Follow [Keep a Changelog](https://keepachangelog.com/):
 
 ---
 
-## API Documentation
+## API Documentation (Swagger) — MANDATORY
 
-Use Swagger/OpenAPI decorators for endpoints:
+⚠️ **Every module MUST include Swagger documentation.** This is not optional.
+
+Use custom envelope decorators (not raw `@ApiResponse`):
 
 ```typescript
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiEnvelopeResponse, ApiEnvelopeErrorResponse } from '../../../../shared/http/swagger/api-envelope-response.decorator.js'
 
-@ApiTags('events')
+@ApiTags('Events')
 @Controller('events')
 export class EventsController {
   @Post()
   @ApiOperation({ summary: 'Create a new event' })
-  @ApiResponse({ status: 201, description: 'Event created successfully' })
-  @ApiResponse({ status: 400, description: 'Validation failed' })
-  async create(@Body() dto: CreateEventDto) {
-    // ...
-  }
+  @ApiEnvelopeResponse({ status: 201, description: 'Event created successfully', type: EntityIdProjection })
+  @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
+  async create(@Body() dto: CreateEventDto) { ... }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get event by ID' })
-  @ApiParam({ name: 'id', description: 'Event UUID' })
-  @ApiResponse({ status: 200, description: 'Event found' })
-  @ApiResponse({ status: 404, description: 'Event not found' })
-  async findOne(@Param('id') id: string) {
-    // ...
-  }
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({ status: 200, description: 'Event found', type: EventDetailProjection })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
+  async findOne(@Param('id') id: string) { ... }
 }
 ```
+
+### Swagger Checklist Per Endpoint
+
+- [ ] `@ApiTags` on controller class
+- [ ] `@ApiOperation({ summary })` on each method
+- [ ] `@ApiParam` for path parameters
+- [ ] `@ApiEnvelopeResponse` for success responses
+- [ ] `@ApiEnvelopeErrorResponse` for each error case
+- [ ] `@ApiProperty`/`@ApiPropertyOptional` on DTO properties
+- [ ] JSDoc comments on Projection properties
+- [ ] Spanish translations in `src/i18n/es/swagger.json`
+
+See `infrastructure/swagger-setup.md` for full configuration details.
 
 ---
 

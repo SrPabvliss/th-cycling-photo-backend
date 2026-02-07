@@ -5,5 +5,11 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@shared/(.*)$": "<rootDir>/../src/shared/$1",
+    "^@generated/(.*)$": "<rootDir>/../src/generated/$1",
+    "^@events/(.*)$": "<rootDir>/../src/modules/events/$1",
+    "^(\\.{1,2}/.*)\\.js$": "$1"
   }
 }

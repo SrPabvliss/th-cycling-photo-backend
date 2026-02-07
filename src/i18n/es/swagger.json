@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "title": "API de Clasificación de Fotos de Ciclismo",
+    "description": "Sistema automatizado de clasificación de fotografía ciclista usando servicios de IA en la nube."
+  },
+  "tags": {
+    "Events": "Eventos"
+  },
+  "translations": {
+    "Create a new event": "Crear un nuevo evento",
+    "Update an existing event": "Actualizar un evento existente",
+    "Delete an event": "Eliminar un evento",
+    "Get event details by ID": "Obtener detalles de un evento por ID",
+    "List events with pagination": "Listar eventos con paginación",
+    "Event UUID": "UUID del evento",
+    "Event created successfully": "Evento creado exitosamente",
+    "Event updated successfully": "Evento actualizado exitosamente",
+    "Event deleted successfully": "Evento eliminado exitosamente",
+    "Event detail retrieved": "Detalle del evento obtenido",
+    "Paginated event list": "Lista paginada de eventos",
+    "Validation failed": "Error de validación",
+    "Event not found": "Evento no encontrado",
+    "Name of the cycling event": "Nombre del evento ciclista",
+    "Date when the event takes place": "Fecha en la que se realiza el evento",
+    "Physical location or address of the event": "Ubicación física o dirección del evento",
+    "Physical location or address of the event (null to clear)": "Ubicación física o dirección del evento (null para limpiar)",
+    "Physical location or address": "Ubicación física o dirección",
+    "Current event status": "Estado actual del evento",
+    "Total number of photos uploaded": "Número total de fotos subidas",
+    "Number of photos already processed": "Número de fotos ya procesadas",
+    "When the event record was created": "Cuándo se creó el registro del evento",
+    "When the event record was last updated": "Cuándo se actualizó por última vez el registro del evento",
+    "Entity UUID": "UUID de la entidad",
+    "Page number (defaults to 1)": "Número de página (por defecto 1)",
+    "Items per page (defaults to 20, max 100)": "Elementos por página (por defecto 20, máximo 100)",
+    "Unique request identifier": "Identificador único de solicitud",
+    "ISO 8601 timestamp": "Marca de tiempo ISO 8601",
+    "Translated success message": "Mensaje de éxito traducido",
+    "Request path": "Ruta de la solicitud",
+    "Error code": "Código de error",
+    "Human-readable error message": "Mensaje de error legible",
+    "Whether the frontend should propagate the error prominently": "Si el frontend debería propagar el error de forma prominente",
+    "Per-field validation errors": "Errores de validación por campo"
+  }
+}

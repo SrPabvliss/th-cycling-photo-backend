@@ -14,6 +14,11 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@generated/*": ["src/generated/*"],
+      "@events/*": ["src/modules/events/*"]
+    },
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,

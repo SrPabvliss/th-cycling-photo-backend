@@ -1,0 +1,4 @@
+{
+  "name_invalid_length": "El nombre del evento debe tener entre 3 y 200 caracteres",
+  "date_in_past": "La fecha del evento no puede ser en el pasado"
+}

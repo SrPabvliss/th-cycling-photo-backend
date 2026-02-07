@@ -1,236 +1,149 @@
-# Common Errors
+# Common Errors & Troubleshooting
 
-## Prisma Errors
+## Import Type vs Value Import (NestJS DI + Swagger)
 
-### P2002 - Unique Constraint
+**Problem:** Using `import type` for classes injected via NestJS DI or used in Swagger causes runtime failures.
 
-```
-Unique constraint failed on the fields: (`email`)
-```
-
-**Cause**: Trying to insert duplicate value in unique column.
-
-**Fix**:
 ```typescript
-try {
-  await this.prisma.user.create({ data });
-} catch (error) {
-  if (error.code === 'P2002') {
-    throw AppException.businessRule('user.email_exists');
-  }
-  throw error;
-}
+// ❌ BAD - disappears at runtime, DI can't resolve
+import type { PrismaService } from '...'
+import type { CommandBus } from '@nestjs/cqrs'
+
+// ✅ GOOD - class reference preserved at runtime
+import { PrismaService } from '...'
+import { CommandBus } from '@nestjs/cqrs'
 ```
 
-### P2025 - Record Not Found
+**Why:** TypeScript's `emitDecoratorMetadata` needs class references at runtime for:
+- Constructor parameter injection (NestJS DI)
+- `@Body()` / `@Query()` parameter types (Swagger schema generation)
 
-```
-An operation failed because it depends on one or more records that were required but not found.
-```
+**Project config:** Biome `useImportType` is **OFF** to prevent auto-converting to `import type`.
 
-**Cause**: Update/delete on non-existent record.
-
-**Fix**:
-```typescript
-const event = await this.repository.findById(id);
-if (!event) {
-  throw AppException.notFound('event', id);
-}
-```
-
-### P2003 - Foreign Key Constraint
-
-```
-Foreign key constraint failed on the field: `event_id`
-```
-
-**Cause**: Referenced record doesn't exist.
-
-**Fix**: Validate parent exists before creating child.
+**When `import type` IS correct:**
+- Interfaces: `import type { IEventWriteRepository } from '...'`
+- Types used only in type positions: `import type { EventStatusType } from '...'`
 
 ---
 
-## NestJS Errors
+## Prisma 7 ESM/CJS Conflict
 
-### Cannot Resolve Dependencies
+**Problem:** `import.meta.url is not supported in CJS` error at runtime.
 
-```
-Nest can't resolve dependencies of the EventsController (?). 
-Please make sure that the argument EventWriteRepository at index [0] is available
-```
+**Cause:** Default Prisma client generates ESM code, but NestJS compiles to CJS.
 
-**Cause**: Provider not registered in module.
-
-**Fix**:
-```typescript
-@Module({
-  providers: [
-    EventWriteRepository,  // Add missing provider
-    CreateEventHandler,
-  ],
-})
-```
-
-### Circular Dependency
-
-```
-A circular dependency has been detected
-```
-
-**Cause**: Module A imports Module B which imports Module A.
-
-**Fix**: 
-- Use `forwardRef()`
-- Or restructure to avoid circular imports
-
-```typescript
-@Module({
-  imports: [forwardRef(() => PhotosModule)],
-})
-export class EventsModule {}
+**Fix:** In `schema.prisma`:
+```prisma
+generator client {
+  provider     = "prisma-client-js"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
 ```
 
 ---
 
-## Validation Errors
+## Prisma 7 Input Types
 
-### Validation Failed
+**Problem:** `Cannot find name 'EventCreateInput'` - direct imports don't work.
 
+**Fix:** Use `Prisma` namespace:
+```typescript
+import type { Prisma } from '../../../../generated/prisma/client.js'
+
+function toPersistence(entity: Event): Prisma.EventCreateInput { ... }
+```
+
+---
+
+## i18n Files Not Found at Runtime
+
+**Problem:** `Error: ENOENT: no such file or directory 'dist/.../i18n/es/swagger.json'`
+
+**Cause:** JSON files not copied to `dist/` during build.
+
+**Fix:** In `nest-cli.json`:
 ```json
 {
-  "error": {
-    "code": "VALIDATION_FAILED",
-    "fields": {
-      "name": ["must be longer than or equal to 5 characters"]
+  "compilerOptions": {
+    "assets": [{ "include": "i18n/**/*.json", "outDir": "dist/src" }]
+  }
+}
+```
+
+---
+
+## Swagger Shows Empty Request Body
+
+**Problem:** Swagger UI shows request body schema as `{}` for DTOs.
+
+**Cause:** DTOs imported with `import type` → class reference erased at runtime.
+
+**Fix:** Use value imports for DTOs used in `@Body()` or `@Query()`:
+```typescript
+import { CreateEventDto } from '...'  // ✅ Not import type
+```
+
+---
+
+## NestJS Module Resolution Errors
+
+**Problem:** `Nest can't resolve dependencies of...`
+
+**Common causes:**
+1. Missing `@Inject(TOKEN)` when using Symbol-based DI
+2. Provider not registered in module
+3. `import type` used for injected class
+
+**Fix checklist:**
+```typescript
+// 1. Port has Symbol token
+export const EVENT_READ_REPOSITORY = Symbol('EVENT_READ_REPOSITORY')
+
+// 2. Module registers with token
+{ provide: EVENT_READ_REPOSITORY, useClass: EventReadRepository }
+
+// 3. Handler uses @Inject with token
+@Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository
+```
+
+---
+
+## Biome Changes Disappearing
+
+**Problem:** Biome auto-fix converts `import` to `import type`, breaking DI.
+
+**Fix:** Disable `useImportType` in `biome.json`:
+```json
+{
+  "linter": {
+    "rules": {
+      "style": {
+        "useImportType": "off"
+      }
     }
   }
 }
 ```
 
-**Cause**: DTO validation failed.
-
-**Fix**: Check input matches DTO constraints.
-
-### Transform Not Working
-
-```
-Expected Date, received string
-```
-
-**Cause**: Missing `@Type()` decorator.
-
-**Fix**:
-```typescript
-@IsDate()
-@Type(() => Date)  // Add this
-date: Date;
-```
-
 ---
 
-## TypeScript Errors
+## Test Failures After Schema Change
 
-### Type 'X' is not assignable to type 'Y'
+**Problem:** Tests fail with type errors after modifying Prisma schema.
 
-**Common in**: Entity ↔ Prisma mapping.
-
-**Fix**: Check Mapper methods have correct types.
-
-### Property 'X' does not exist on type 'Y'
-
-**Cause**: Accessing property not in type definition.
-
-**Fix**: 
-- Add property to interface
-- Or use type assertion (carefully)
-
----
-
-## Test Errors
-
-### Cannot find module '@/...'
-
-**Cause**: Path alias not configured in Jest.
-
-**Fix** in `jest.config.js`:
-```javascript
-moduleNameMapper: {
-  '^@/(.*)$': '<rootDir>/$1',
-}
-```
-
-### Database Connection in Tests
-
-```
-Can't reach database server at `localhost:5432`
-```
-
-**Cause**: Test database not running.
-
-**Fix**:
+**Fix:** Regenerate client before running tests:
 ```bash
-# Start test database
-docker-compose up -d postgres-test
-
-# Or use .env.test
-NODE_ENV=test npx prisma migrate deploy
+npx prisma generate
+pnpm test
 ```
 
----
-
-## Runtime Errors
-
-### Cannot Read Property 'X' of Undefined
-
-**Common in**: Missing null checks.
-
-**Fix**:
-```typescript
-// Bad
-const name = event.name;
-
-// Good
-const name = event?.name;
-
-// Or with AppException
-if (!event) {
-  throw AppException.notFound('event', id);
-}
-```
-
-### Maximum Call Stack Exceeded
-
-**Cause**: Infinite recursion, often in circular references.
-
-**Fix**: Check for circular object references, especially in mappers.
-
----
-
-## BullMQ Errors
-
-### Connection Refused (Redis)
-
-```
-connect ECONNREFUSED 127.0.0.1:6379
-```
-
-**Cause**: Redis not running.
-
-**Fix**:
-```bash
-docker-compose up -d redis
-```
-
-### Job Stalled
-
-**Cause**: Job took too long, worker crashed.
-
-**Fix**: Increase timeout or handle in smaller chunks.
+CI pipeline already does this automatically.
 
 ---
 
 ## See Also
 
-- `infrastructure/prisma-setup.md` - Prisma error handling
-- `conventions/error-handling.md` - AppException usage
-- `infrastructure/bullmq-setup.md` - Queue errors
+- `infrastructure/prisma-setup.md` - Prisma configuration
+- `infrastructure/swagger-setup.md` - Swagger setup details
+- `infrastructure/ci-pipeline.md` - CI pipeline steps

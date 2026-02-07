@@ -146,7 +146,47 @@ src/
 
 ---
 
+## Symbol Token Naming
+
+DI tokens for Ports & Adapters use `UPPER_SNAKE_CASE` Symbols:
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Symbol token | `{ENTITY}_{WRITE/READ}_REPOSITORY` | `EVENT_WRITE_REPOSITORY` |
+| Interface | `I{Entity}{Write/Read}Repository` | `IEventWriteRepository` |
+| Port file | `{entity}-{write/read}-repository.port.ts` | `event-write-repository.port.ts` |
+
+```typescript
+// domain/ports/event-write-repository.port.ts
+export interface IEventWriteRepository {
+  save(event: Event): Promise<Event>
+  delete(id: string): Promise<void>
+}
+
+export const EVENT_WRITE_REPOSITORY = Symbol('EVENT_WRITE_REPOSITORY')
+```
+
+The Symbol and interface are **co-located in the same port file**.
+
+---
+
+## Import Rules: `import` vs `import type`
+
+| Import Target | Use `import` | Use `import type` | Why |
+|---------------|-------------|-------------------|-----|
+| DTOs (`@Body()`, `@Query()`) | ✅ | ❌ | `emitDecoratorMetadata` needs class ref |
+| Projection classes (Swagger `type`) | ✅ | ❌ | Swagger needs class ref for `$ref` |
+| CommandBus, QueryBus | ✅ | ❌ | NestJS DI resolution |
+| Handler decorator interfaces (`ICommandHandler`) | ❌ | ✅ | Only used as type constraint |
+| Port interfaces (`IEventWriteRepository`) | ❌ | ✅ | Only used as type annotation |
+| Prisma namespace (`Prisma`) | ❌ | ✅ | Only used for type access |
+
+Biome `useImportType` is **OFF** in this project to prevent accidental type-only imports on classes needed at runtime.
+
+---
+
 ## See Also
 
 - `structure/feature-sliced.md` - Folder structure
 - `conventions/git.md` - Commit message conventions
+- `patterns/repositories.md` - Port interface and Symbol token patterns

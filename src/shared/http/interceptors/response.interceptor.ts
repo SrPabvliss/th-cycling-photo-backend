@@ -4,13 +4,13 @@ import {
   Injectable,
   type NestInterceptor,
 } from '@nestjs/common'
-import type { Reflector } from '@nestjs/core'
+import { Reflector } from '@nestjs/core'
 import type { Request } from 'express'
 import { I18nContext } from 'nestjs-i18n'
 import type { Observable } from 'rxjs'
 import { map } from 'rxjs/operators'
-import { SUCCESS_MESSAGE_KEY } from '../decorators/success-message.decorator.js'
-import type { ApiSuccessResponse } from '../interfaces/api-response.interface.js'
+import { SUCCESS_MESSAGE_KEY } from '../decorators/success-message.decorator'
+import type { ApiSuccessResponse } from '../interfaces/api-response.interface'
 
 /**
  * Global interceptor that wraps all successful responses
