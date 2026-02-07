@@ -27,7 +27,7 @@ src/shared/infrastructure/prisma/
 ```prisma
 // prisma/schema.prisma
 generator client {
-  provider     = "prisma-client-js"
+  provider     = "prisma-client"
   output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
@@ -62,22 +62,27 @@ export default defineConfig({
 
 ## Import Rules
 
-⚠️ **Import from generated path, NOT from `@prisma/client`:**
+⚠️ **Import from generated path using `@generated` alias, NOT from `@prisma/client`:**
 
 ```typescript
-// ✅ Correct
-import { PrismaClient } from '../generated/prisma/client.js'
-import type { Prisma, Event as PrismaEvent } from '../../../../generated/prisma/client.js'
+// ✅ Correct (path alias)
+import { PrismaClient } from '@generated/prisma/client'
+import type { Prisma, Event as PrismaEvent } from '@generated/prisma/client'
+
+// ✅ Also correct (relative path, no .js extension needed in CJS)
+import type { Prisma } from '../../../../generated/prisma/client'
 
 // ❌ Wrong (old Prisma pattern)
 import { PrismaClient } from '@prisma/client'
 ```
 
+> **Note:** The project compiles as CJS (no `"type": "module"` in package.json), so `.js` extensions are NOT required on imports.
+
 ⚠️ **Prisma 7 namespace types:**
 Input types (e.g., `EventCreateInput`) must be accessed via `Prisma` namespace:
 
 ```typescript
-import type { Prisma } from '../../../../generated/prisma/client.js'
+import type { Prisma } from '@generated/prisma/client'
 
 function toPersistence(entity: Event): Prisma.EventCreateInput { ... }
 ```
@@ -88,15 +93,30 @@ function toPersistence(entity: Event): Prisma.EventCreateInput { ... }
 
 ```typescript
 // shared/infrastructure/prisma/prisma.service.ts
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common'
-import { PrismaClient } from '../../../generated/prisma/client.js'
+import { PrismaClient } from '@generated/prisma/client'
+import { Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  async onModuleInit() { await this.$connect() }
-  async onModuleDestroy() { await this.$disconnect() }
+  constructor(configService: ConfigService) {
+    const connectionString = configService.get<string>('database.url')
+    const adapter = new PrismaPg({ connectionString })
+    super({ adapter })
+  }
+
+  async onModuleInit() {
+    await this.$connect()
+  }
+
+  async onModuleDestroy() {
+    await this.$disconnect()
+  }
 }
 ```
+
+> **Note:** Uses `@prisma/adapter-pg` (Prisma 7 driver adapter) with the `pg` package. The connection string comes from `ConfigService` key `'database.url'` (built by `src/config/configuration.ts`). The `datasource db` block in `schema.prisma` does NOT include a `url` — it's provided at runtime via the adapter.
 
 ```typescript
 // shared/infrastructure/prisma/prisma.module.ts
@@ -116,7 +136,7 @@ export class PrismaModule {}
 
 | Concern | Pattern | Example |
 |---------|---------|---------|
-| `PrismaService` | Direct class injection (no Symbol) | `constructor(private readonly prisma: PrismaService)` |
+| `PrismaService` | Direct class injection (no Symbol) | `constructor(private readonly prisma: PrismaService)` (receives `ConfigService` in its own constructor) |
 | Repositories | Symbol token + interface (Ports & Adapters) | `@Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository` |
 
 `PrismaService` does NOT use a Symbol token because it's infrastructure — repositories are the abstraction boundary. Handlers never inject `PrismaService` directly; they inject repository interfaces.
@@ -149,7 +169,7 @@ npx prisma format            # Format schema file
 ## .gitignore
 
 ```
-src/generated/
+src/generated/prisma
 ```
 
 The generated client is **not committed**. CI runs `prisma generate` before build/test.

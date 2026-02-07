@@ -1,5 +1,7 @@
 # WebSockets Setup
 
+> ⚠️ **ESTADO: NO IMPLEMENTADO** — Este documento describe la configuración planificada para notificaciones en tiempo real. No hay dependencias de WebSockets instaladas ni código implementado. Se implementará junto con el módulo de Processing.
+
 ## Overview
 
 WebSockets provide real-time progress updates during photo processing.

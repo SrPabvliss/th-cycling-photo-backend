@@ -55,7 +55,7 @@ jobs:
         with: { node-version: '22', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: npx prisma generate    # Required for type imports
-      - run: pnpm test --passWithNoTests
+      - run: pnpm test
 ```
 
 ## Job Dependency Graph
@@ -70,7 +70,6 @@ Build and Test run **in parallel** after Lint passes. Both need `prisma generate
 ## Key Points
 
 - **`prisma generate` is mandatory** before build and test (generates client types)
-- **`--passWithNoTests`** prevents test failure when no test files exist
 - **`concurrency` with `cancel-in-progress`** stops old runs when new commits push
 - Build catches TypeScript compilation errors
 - Lint catches Biome formatting and linting issues
