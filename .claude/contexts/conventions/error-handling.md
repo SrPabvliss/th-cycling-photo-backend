@@ -22,12 +22,14 @@ export enum ErrorCode {
 }
 
 export class AppException extends Error {
+  public readonly fields?: Record<string, string[]>
+
   constructor(
     public readonly messageKey: string,
     public readonly httpStatus: HttpStatus,
     public readonly code: ErrorCode = ErrorCode.INTERNAL,
     public readonly shouldThrow: boolean = false,
-    public readonly context?: Record<string, any>,
+    public readonly context?: Record<string, unknown>,
   ) {
     super(messageKey);
   }
@@ -193,44 +195,53 @@ All errors follow ADR-002 envelope:
 Catches all exceptions and formats them:
 
 ```typescript
-// shared/infrastructure/filters/global-exception.filter.ts
+// shared/http/filters/global-exception.filter.ts
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
-    
+    const i18n = I18nContext.current(host);
+
     const isDevelopment = process.env.NODE_ENV === 'development';
 
     if (exception instanceof AppException) {
+      const translatedMessage = i18n
+        ? String(i18n.t(exception.messageKey, { args: exception.context }))
+        : exception.messageKey;
+
       return response.status(exception.httpStatus).json({
         error: {
           code: exception.code,
-          message: exception.messageKey,
+          message: translatedMessage,
           shouldThrow: exception.shouldThrow,
+          ...(exception.fields && { fields: exception.fields }),
           ...(isDevelopment && {
             details: exception.context,
             stack: exception.stack,
           }),
         },
         meta: {
-          requestId: request['requestId'],
+          requestId: request.requestId,
           timestamp: new Date().toISOString(),
           path: request.url,
         },
       });
     }
 
+    // HttpException (class-validator BadRequestException, etc.)
+    // are also handled — extracting per-field validation errors.
+
     // Unknown errors become INTERNAL
     return response.status(500).json({
       error: {
         code: 'INTERNAL',
-        message: 'An unexpected error occurred',
+        message: i18n ? String(i18n.t('errors.INTERNAL')) : 'An unexpected error occurred',
         shouldThrow: false,
       },
       meta: {
-        requestId: request['requestId'],
+        requestId: request.requestId,
         timestamp: new Date().toISOString(),
         path: request.url,
       },
@@ -238,6 +249,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   }
 }
 ```
+
+> **Note:** The actual filter also handles `HttpException` (e.g., class-validator `BadRequestException`) as a separate branch, extracting per-field validation errors via `extractValidationFields()`. All message keys are translated through `nestjs-i18n` at runtime.
 
 ---
 
@@ -299,4 +312,3 @@ These keys are resolved by `nestjs-i18n` at runtime via the `ResponseInterceptor
 
 - `conventions/validations.md` - Where to validate
 - `infrastructure/nestjs-bootstrap.md` - Filter setup
-- `conventions/http-responses.md` - Response format

@@ -39,7 +39,7 @@
 | DTO | `{Verb}{Noun}Dto` | `CreateEventDto` |
 | Projection | `{Noun}Projection` | `EventListProjection` |
 | Repository | `{Entity}{Write/Read}Repository` | `EventWriteRepository` |
-| Mapper | `{Entity}Mapper` | `EventMapper` |
+| Mapper (module) | `{Entity}Mapper` (imported as `* as`) | `EventMapper` |
 | Adapter | `{Service}Adapter` | `RoboflowAdapter` |
 | Controller | `{Plural}Controller` | `EventsController` |
 | Module | `{Name}Module` | `EventsModule` |
@@ -54,6 +54,8 @@
 |------|---------|---------|
 | Factory | `create()` | `Event.create(data)` |
 | Reconstitution | `fromPersistence()` | `Event.fromPersistence(data)` |
+| Partial update | `update()` | `event.update({ name, date })` |
+| Soft delete | `softDelete()` | `event.softDelete()` |
 | Guard | `can{Action}()` | `canUploadPhotos()` |
 | Mutation | `{verb}()` | `startProcessing()` |
 | Query | `is{State}()`, `has{Thing}()` | `isCompleted()`, `hasPhotos()` |
@@ -64,7 +66,8 @@
 |------|---------|---------|
 | Create/Update | `save()` | `save(entity)` |
 | Find one | `findById()` | `findById(id)` |
-| Find many | `get{Noun}List()` | `getEventsList(filters)` |
+| Find many | `get{Noun}List()` | `getEventsList(pagination)` |
+| Find detail | `get{Noun}Detail()` | `getEventDetail(id)` |
 | Delete | `delete()` | `delete(id)` |
 
 ### Mapper Methods
@@ -95,7 +98,7 @@ const projection = EventMapper.toListProjection(record);
 // Primitives - descriptive names
 const eventId = command.eventId;
 const totalPhotos = event.totalPhotos;
-const isProcessing = event.status === 'PROCESSING';
+const isProcessing = event.status === 'processing';
 ```
 
 ---
@@ -107,8 +110,9 @@ const isProcessing = event.status === 'PROCESSING';
 | Table | snake_case, plural | `events`, `detected_cyclists` |
 | Column | snake_case | `plate_number`, `created_at` |
 | Foreign key | `{table}_id` | `event_id`, `photo_id` |
-| Index | `idx_{table}_{columns}` | `idx_photos_event_id` |
-| Unique | `uq_{table}_{columns}` | `uq_users_email` |
+| Index | `@@index([column])` (unnamed by default) | `@@index([status])` |
+| Named index | `map: "idx_{table}_{description}"` | `map: "idx_photos_unclassified"` |
+| Unique | `map: "unique_{table}_{columns}"` | `map: "unique_event_filename"` |
 
 Prisma model uses PascalCase, mapped to snake_case:
 
@@ -133,15 +137,19 @@ src/
 │   ├── events/
 │   │   ├── domain/
 │   │   │   ├── entities/
-│   │   │   └── value-objects/
+│   │   │   ├── value-objects/
+│   │   │   └── ports/
 │   │   ├── application/
 │   │   │   ├── commands/
 │   │   │   │   └── create-event/
-│   │   │   └── queries/
-│   │   │       └── get-events-list/
-│   │   └── infrastructure/
-│   │       ├── repositories/
-│   │       └── mappers/
+│   │   │   ├── queries/
+│   │   │   │   └── get-events-list/
+│   │   │   └── projections/
+│   │   ├── infrastructure/
+│   │   │   ├── repositories/
+│   │   │   └── mappers/
+│   │   └── presentation/
+│   │       └── controllers/
 ```
 
 ---

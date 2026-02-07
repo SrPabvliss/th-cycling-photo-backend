@@ -162,17 +162,14 @@ fix/TTV-XXX  → develop → main
 
 ## Husky Hooks
 
-Pre-commit hooks configured via Husky:
+Pre-commit hook configured via Husky:
 
 ```bash
 # .husky/pre-commit
-pnpm check:ci
-pnpm test --passWithNoTests
+pnpm biome check --write --staged --no-errors-on-unmatched
 ```
 
-Blocks commits if:
-- Linting errors exist
-- Tests fail
+The hook auto-fixes linting/formatting issues on staged files before committing. It does **not** run tests on pre-commit — tests run in CI only.
 
 ---
 

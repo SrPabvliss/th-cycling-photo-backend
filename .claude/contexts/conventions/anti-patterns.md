@@ -55,7 +55,7 @@ async create(@Body() dto: CreateEventDto) {
 ✅ **With @SuccessMessage:**
 ```typescript
 @Post()
-@SuccessMessage('event.created')
+@SuccessMessage('success.CREATED')
 async create(@Body() dto: CreateEventDto) {
   return this.commandBus.execute(command);
 }
@@ -127,11 +127,15 @@ async save(event: Event): Promise<Event> {
 }
 ```
 
-✅ **Mapper class:**
+✅ **Mapper functions:**
 ```typescript
 async save(event: Event): Promise<Event> {
   const data = EventMapper.toPersistence(event);
-  const saved = await this.prisma.event.create({ data });
+  const saved = await this.prisma.event.upsert({
+    where: { id: event.id },
+    create: data,
+    update: data,
+  });
   return EventMapper.toEntity(saved);
 }
 ```
@@ -149,7 +153,7 @@ throw new BadRequestException('Not found');
 ✅ **AppException factory methods:**
 ```typescript
 throw AppException.businessRule('event.date_in_past');
-throw AppException.notFound('event', id);
+throw AppException.notFound('Event', id);
 ```
 
 ---
@@ -159,7 +163,7 @@ throw AppException.notFound('event', id);
 ❌ **Validation in handler:**
 ```typescript
 async execute(command: CreateEventCommand) {
-  if (!command.name || command.name.length < 5) {
+  if (!command.name || command.name.length < 3) {
     throw new Error('Name too short');
   }
 }
@@ -170,7 +174,7 @@ async execute(command: CreateEventCommand) {
 // DTO for HTTP validation
 export class CreateEventDto {
   @IsString()
-  @MinLength(5)
+  @MinLength(3)
   name: string;
 }
 
