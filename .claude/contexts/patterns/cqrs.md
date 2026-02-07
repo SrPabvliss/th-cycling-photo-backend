@@ -24,24 +24,24 @@ application/commands/{feature}/
 ### DTO Template
 
 ```typescript
-import { IsString, IsNotEmpty, IsDate, MinLength, MaxLength, IsOptional } from 'class-validator'
-import { Type } from 'class-transformer'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { Type } from 'class-transformer'
+import { IsDate, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator'
 
 export class CreateEventDto {
-  @ApiProperty({ description: 'Name of the cycling event' })
+  @ApiProperty({ description: 'Name of the cycling event', example: 'Vuelta al Cotopaxi 2026' })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
   @MaxLength(200)
   name: string
 
-  @ApiProperty({ description: 'Date when the event takes place' })
+  @ApiProperty({ description: 'Date when the event takes place', example: '2026-06-15T08:00:00.000Z' })
   @IsDate()
   @Type(() => Date)
   date: Date
 
-  @ApiPropertyOptional({ description: 'Physical location or address' })
+  @ApiPropertyOptional({ description: 'Physical location or address of the event', example: 'Ambato, Ecuador' })
   @IsString()
   @IsOptional()
   location?: string
@@ -49,9 +49,10 @@ export class CreateEventDto {
 ```
 
 **DTO Rules:**
-- Always include `@ApiProperty` / `@ApiPropertyOptional` for Swagger
+- Always include `@ApiProperty` / `@ApiPropertyOptional` with `description` and `example` for Swagger
 - Use `import` (not `import type`) for DTOs used in `@Body()` / `@Query()` decorators
   (required for `emitDecoratorMetadata` to emit type references)
+- Delete commands have no DTO — the `id` comes from the URL path parameter
 
 ### Command Template
 
@@ -68,15 +69,12 @@ export class CreateEventCommand {
 ### Command Handler Template
 
 ```typescript
+import { Event } from '@events/domain/entities'
+import { EVENT_WRITE_REPOSITORY, type IEventWriteRepository } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import type { EntityIdProjection } from '../../../../../shared/application/projections/entity-id.projection.js'
-import { Event } from '../../../domain/entities/event.entity.js'
-import {
-  EVENT_WRITE_REPOSITORY,
-  type IEventWriteRepository,
-} from '../../../domain/ports/event-write-repository.port.js'
-import { CreateEventCommand } from './create-event.command.js'
+import type { EntityIdProjection } from '@shared/application'
+import { CreateEventCommand } from './create-event.command'
 
 @CommandHandler(CreateEventCommand)
 export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
@@ -96,9 +94,21 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
 }
 ```
 
-### Update/Delete Handler (needs both repos)
+### Update Handler (needs both repos)
 
 ```typescript
+import {
+  EVENT_READ_REPOSITORY,
+  EVENT_WRITE_REPOSITORY,
+  type IEventReadRepository,
+  type IEventWriteRepository,
+} from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import type { EntityIdProjection } from '@shared/application'
+import { AppException } from '@shared/domain'
+import { UpdateEventCommand } from './update-event.command'
+
 @CommandHandler(UpdateEventCommand)
 export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
   constructor(
@@ -110,7 +120,12 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
     const event = await this.readRepo.findById(command.id)
     if (!event) throw AppException.notFound('Event', command.id)
 
-    event.update({ name: command.name, date: command.date, location: command.location })
+    event.update({
+      name: command.name,
+      date: command.date,
+      location: command.location,
+    })
+
     await this.writeRepo.save(event)
 
     return { id: event.id }
@@ -118,12 +133,56 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
 }
 ```
 
+### Delete Handler
+
+Delete handler verifies the event exists via `readRepo.findById()`, then calls `writeRepo.delete(id)` which performs a **soft delete** in infrastructure (sets `deleted_at` timestamp). No DTO — the `id` comes from the URL path.
+
+```typescript
+import {
+  EVENT_READ_REPOSITORY,
+  EVENT_WRITE_REPOSITORY,
+  type IEventReadRepository,
+  type IEventWriteRepository,
+} from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import type { EntityIdProjection } from '@shared/application'
+import { AppException } from '@shared/domain'
+import { DeleteEventCommand } from './delete-event.command'
+
+@CommandHandler(DeleteEventCommand)
+export class DeleteEventHandler implements ICommandHandler<DeleteEventCommand> {
+  constructor(
+    @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
+    @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
+  ) {}
+
+  async execute(command: DeleteEventCommand): Promise<EntityIdProjection> {
+    const event = await this.readRepo.findById(command.id)
+    if (!event) throw AppException.notFound('Event', command.id)
+
+    await this.writeRepo.delete(command.id)
+
+    return { id: command.id }
+  }
+}
+```
+
+**Delete Command** is minimal — only the `id`:
+
+```typescript
+export class DeleteEventCommand {
+  constructor(public readonly id: string) {}
+}
+```
+
 **Handler Rules:**
 - Use `@Inject(TOKEN)` with Symbol tokens (Ports & Adapters)
 - Types are **interfaces** (IEventWriteRepository), not concrete classes
 - Create: only WriteRepository needed
-- Update/Delete: inject both ReadRepository (for findById) and WriteRepository
-- Return `EntityIdProjection` from `shared/application/projections/`
+- Update/Delete: inject both ReadRepository (for `findById`) and WriteRepository
+- Delete handler calls `writeRepo.delete(id)` — soft delete is in infrastructure
+- Return `EntityIdProjection` from `@shared/application`
 - Guard clauses can be one-liners: `if (!event) throw AppException.notFound(...)`
 - Thin: <30 lines ideally
 
@@ -166,24 +225,53 @@ export class Pagination {
 ### Query Template (with Pagination)
 
 ```typescript
-import type { Pagination } from '../../../../../shared/application/pagination.js'
+import type { Pagination } from '@shared/application'
 
 export class GetEventsListQuery {
   constructor(public readonly pagination: Pagination) {}
 }
 ```
 
-### Query Handler Template
+### Query Handler Template (List)
 
 ```typescript
+import { EventListProjection } from '@events/application/projections'
+import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
+import { GetEventsListQuery } from './get-events-list.query'
+
 @QueryHandler(GetEventsListQuery)
 export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
-  constructor(
-    @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
-  ) {}
+  constructor(@Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository) {}
 
   async execute(query: GetEventsListQuery): Promise<EventListProjection[]> {
     return this.readRepo.getEventsList(query.pagination)
+  }
+}
+```
+
+### Query Handler Template (Detail with notFound)
+
+Detail queries throw `AppException.notFound()` if the projection is `null`:
+
+```typescript
+import { EventDetailProjection } from '@events/application/projections'
+import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
+import { AppException } from '@shared/domain'
+import { GetEventDetailQuery } from './get-event-detail.query'
+
+@QueryHandler(GetEventDetailQuery)
+export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery> {
+  constructor(@Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository) {}
+
+  async execute(query: GetEventDetailQuery): Promise<EventDetailProjection> {
+    const event = await this.readRepo.getEventDetail(query.id)
+    if (!event) throw AppException.notFound('Event', query.id)
+
+    return event
   }
 }
 ```
@@ -213,15 +301,13 @@ export class EventListProjection {
 
 ```typescript
 // shared/application/projections/entity-id.projection.ts
-import { ApiProperty } from '@nestjs/swagger'
-
 export class EntityIdProjection {
-  @ApiProperty({ description: 'Entity UUID' })
+  /** Entity UUID */
   id: string
 }
 ```
 
-Used by all command handlers that return `{ id }`.
+Used by all command handlers that return `{ id }`. JSDoc comments are read by the Swagger CLI plugin (`introspectComments: true`) — no `@ApiProperty` needed.
 
 ---
 
@@ -249,9 +335,10 @@ export class EventsModule {}
 ```
 
 **Key conventions:**
-- Each handler imported individually — no `index.ts` barrel
+- Each handler imported individually — no barrel for handlers
 - Grouped as `const CommandHandlers` / `const QueryHandlers` for readability
 - Spread into `providers` array
+- Repository tokens and interfaces imported via barrel: `from '@events/domain/ports'`
 - Repository tokens registered via `provide/useClass`
 
 ---

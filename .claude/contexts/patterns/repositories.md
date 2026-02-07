@@ -28,10 +28,9 @@ modules/{domain}/
 
 ```typescript
 // domain/ports/event-read-repository.port.ts
-import type { Pagination } from '../../../../shared/application/pagination.js'
-import type { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
-import type { EventListProjection } from '../../application/projections/event-list.projection.js'
-import type { Event } from '../entities/event.entity.js'
+import type { EventDetailProjection, EventListProjection } from '@events/application/projections'
+import type { Pagination } from '@shared/application'
+import type { Event } from '../entities'
 
 export interface IEventReadRepository {
   findById(id: string): Promise<Event | null>
@@ -46,7 +45,7 @@ export const EVENT_READ_REPOSITORY = Symbol('EVENT_READ_REPOSITORY')
 
 ```typescript
 // domain/ports/event-write-repository.port.ts
-import type { Event } from '../entities/event.entity.js'
+import type { Event } from '../entities'
 
 export interface IEventWriteRepository {
   save(event: Event): Promise<Event>
@@ -70,11 +69,10 @@ Dedicated **exported functions** (not a class) for all mapping logic.
 
 ```typescript
 // infrastructure/mappers/event.mapper.ts
-import type { Prisma, Event as PrismaEvent } from '../../../../generated/prisma/client.js'
-import type { EventDetailProjection } from '../../application/projections/event-detail.projection.js'
-import type { EventListProjection } from '../../application/projections/event-list.projection.js'
-import { Event } from '../../domain/entities/event.entity.js'
-import type { EventStatusType } from '../../domain/value-objects/event-status.vo.js'
+import type { EventDetailProjection, EventListProjection } from '@events/application/projections'
+import { Event } from '@events/domain/entities'
+import type { EventStatusType } from '@events/domain/value-objects/event-status.vo'
+import type { Prisma, Event as PrismaEvent } from '@generated/prisma/client'
 
 type EventListSelect = {
   id: string
@@ -101,8 +99,9 @@ export function toPersistence(entity: Event): Prisma.EventCreateInput {
     status: entity.status,
     total_photos: entity.totalPhotos,
     processed_photos: entity.processedPhotos,
-    created_at: entity.createdAt,
-    updated_at: entity.updatedAt,
+    created_at: entity.audit.createdAt,
+    updated_at: entity.audit.updatedAt,
+    deleted_at: entity.audit.deletedAt,
   }
 }
 
@@ -118,6 +117,7 @@ export function toEntity(record: PrismaEvent): Event {
     processedPhotos: record.processed_photos,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
+    deletedAt: record.deleted_at,
   })
 }
 
@@ -134,7 +134,8 @@ export function toDetailProjection(record: EventDetailSelect): EventDetailProjec
 - Handles snake_case ↔ camelCase conversion
 - Named types for Prisma select results (not inline)
 - One mapper file per aggregate root
-- Import as namespace: `import * as EventMapper from '../mappers/event.mapper.js'`
+- Import as namespace: `import * as EventMapper from '../mappers/event.mapper'`
+- Audit fields accessed via composition: `entity.audit.createdAt`, `entity.audit.deletedAt`
 
 ---
 
@@ -144,31 +145,40 @@ Only `save()` and `delete()`. NO reads.
 
 ```typescript
 // infrastructure/repositories/event-write.repository.ts
+import type { Event } from '@events/domain/entities'
+import type { IEventWriteRepository } from '@events/domain/ports'
 import { Injectable } from '@nestjs/common'
-import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js'
-import type { Event } from '../../domain/entities/event.entity.js'
-import type { IEventWriteRepository } from '../../domain/ports/event-write-repository.port.js'
-import * as EventMapper from '../mappers/event.mapper.js'
+import { PrismaService } from '@shared/infrastructure'
+import * as EventMapper from '../mappers/event.mapper'
 
 @Injectable()
 export class EventWriteRepository implements IEventWriteRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Persists an event entity (create or update). */
   async save(event: Event): Promise<Event> {
     const data = EventMapper.toPersistence(event)
+
     const saved = await this.prisma.event.upsert({
       where: { id: event.id },
       create: data,
       update: data,
     })
+
     return EventMapper.toEntity(saved)
   }
 
+  /** Soft-deletes an event by setting its deleted_at timestamp. */
   async delete(id: string): Promise<void> {
-    await this.prisma.event.delete({ where: { id } })
+    await this.prisma.event.update({
+      where: { id },
+      data: { deleted_at: new Date() },
+    })
   }
 }
 ```
+
+**Soft delete:** The `delete()` method does NOT call `prisma.event.delete()`. Instead it performs an `update` setting `deleted_at` to the current timestamp. The domain layer calls `writeRepo.delete(id)` without knowing about the soft-delete implementation.
 
 ---
 
@@ -179,43 +189,72 @@ export class EventWriteRepository implements IEventWriteRepository {
 ```typescript
 // infrastructure/repositories/event-read.repository.ts
 import { Injectable } from '@nestjs/common'
-import type { Pagination } from '../../../../shared/application/pagination.js'
-import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js'
-import type { Event } from '../../domain/entities/event.entity.js'
-import type { IEventReadRepository } from '../../domain/ports/event-read-repository.port.js'
-import * as EventMapper from '../mappers/event.mapper.js'
+import type { Pagination } from '@shared/application'
+import { PrismaService } from '@shared/infrastructure'
+import type { EventDetailProjection, EventListProjection } from '../../application/projections'
+import type { Event } from '../../domain/entities'
+import type { IEventReadRepository } from '../../domain/ports'
+import * as EventMapper from '../mappers/event.mapper'
 
 @Injectable()
 export class EventReadRepository implements IEventReadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Finds an event entity by ID for command operations. */
+  /** Finds a non-deleted event entity by ID for command operations. */
   async findById(id: string): Promise<Event | null> {
-    const record = await this.prisma.event.findUnique({ where: { id } })
+    const record = await this.prisma.event.findFirst({ where: { id, deleted_at: null } })
     return record ? EventMapper.toEntity(record) : null
   }
 
-  /** Retrieves a paginated list of events as projections. */
+  /** Retrieves a paginated list of non-deleted events as projections. */
   async getEventsList(pagination: Pagination): Promise<EventListProjection[]> {
     const events = await this.prisma.event.findMany({
-      select: { id: true, name: true, event_date: true, ... },
+      where: { deleted_at: null },
+      select: {
+        id: true,
+        name: true,
+        event_date: true,
+        location: true,
+        status: true,
+        total_photos: true,
+        processed_photos: true,
+      },
       orderBy: { event_date: 'desc' },
       skip: pagination.skip,
       take: pagination.take,
     })
+
     return events.map(EventMapper.toListProjection)
   }
 
-  /** Retrieves a single event's detail by ID. */
+  /** Retrieves a single non-deleted event's detail by ID. */
   async getEventDetail(id: string): Promise<EventDetailProjection | null> {
-    const record = await this.prisma.event.findUnique({
-      where: { id },
-      select: { id: true, name: true, ... },
+    const record = await this.prisma.event.findFirst({
+      where: { id, deleted_at: null },
+      select: {
+        id: true,
+        name: true,
+        event_date: true,
+        location: true,
+        status: true,
+        total_photos: true,
+        processed_photos: true,
+        created_at: true,
+        updated_at: true,
+      },
     })
+
     return record ? EventMapper.toDetailProjection(record) : null
   }
 }
 ```
+
+**Soft-delete filtering:**
+- `findById` uses `findFirst` (not `findUnique`) with `{ id, deleted_at: null }` compound filter
+- `getEventsList` adds `where: { deleted_at: null }` to exclude soft-deleted records
+- `getEventDetail` uses `findFirst` with `{ id, deleted_at: null }` — same pattern as `findById`
+
+**Why `findFirst` instead of `findUnique`:** `findUnique` requires all filter fields to be part of a unique index. Since the compound `{ id, deleted_at }` is not a unique constraint, `findFirst` is used instead.
 
 ---
 
@@ -225,8 +264,7 @@ Use Symbol tokens with `provide/useClass`:
 
 ```typescript
 // events.module.ts
-import { EVENT_READ_REPOSITORY } from './domain/ports/event-read-repository.port.js'
-import { EVENT_WRITE_REPOSITORY } from './domain/ports/event-write-repository.port.js'
+import { EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY } from './domain/ports'
 
 @Module({
   imports: [CqrsModule],
@@ -246,9 +284,16 @@ export class EventsModule {}
 
 ## Handler Injection
 
-Handlers use `@Inject()` with Symbol tokens and interface types:
+Handlers use `@Inject()` with Symbol tokens and interface types. Tokens and interfaces are imported from barrel `@events/domain/ports`:
 
 ```typescript
+import {
+  EVENT_READ_REPOSITORY,
+  EVENT_WRITE_REPOSITORY,
+  type IEventReadRepository,
+  type IEventWriteRepository,
+} from '@events/domain/ports'
+
 @CommandHandler(UpdateEventCommand)
 export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
   constructor(
@@ -260,7 +305,12 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
     const event = await this.readRepo.findById(command.id)
     if (!event) throw AppException.notFound('Event', command.id)
 
-    event.update({ name: command.name, date: command.date, location: command.location })
+    event.update({
+      name: command.name,
+      date: command.date,
+      location: command.location,
+    })
+
     await this.writeRepo.save(event)
 
     return { id: event.id }
