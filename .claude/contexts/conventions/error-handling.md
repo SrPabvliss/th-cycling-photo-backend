@@ -22,12 +22,14 @@ export enum ErrorCode {
 }
 
 export class AppException extends Error {
+  public readonly fields?: Record<string, string[]>
+
   constructor(
     public readonly messageKey: string,
     public readonly httpStatus: HttpStatus,
     public readonly code: ErrorCode = ErrorCode.INTERNAL,
     public readonly shouldThrow: boolean = false,
-    public readonly context?: Record<string, any>,
+    public readonly context?: Record<string, unknown>,
   ) {
     super(messageKey);
   }
@@ -36,54 +38,56 @@ export class AppException extends Error {
   // Factory methods
   // ─────────────────────────────────────────────
 
+  /** Resource not found (404) */
   static notFound(entity: string, id: string): AppException {
-    return new AppException(
-      `${entity}.not_found`,
-      HttpStatus.NOT_FOUND,
-      ErrorCode.NOT_FOUND,
-      false,
-      { entity, id },
-    );
+    return new AppException('errors.NOT_FOUND', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, false, {
+      entity,
+      id,
+    })
   }
 
+  /** Validation failed with per-field errors (400) */
   static validationFailed(fields: Record<string, string[]>): AppException {
     const exception = new AppException(
-      'validation.failed',
+      'errors.VALIDATION_FAILED',
       HttpStatus.BAD_REQUEST,
       ErrorCode.VALIDATION_FAILED,
       false,
-    );
-    (exception as any).fields = fields;
-    return exception;
+    )
+    ;(exception as { fields: Record<string, string[]> }).fields = fields
+    return exception
   }
 
+  /** Business rule violation (422) */
   static businessRule(messageKey: string, shouldThrow = false): AppException {
     return new AppException(
       messageKey,
       HttpStatus.UNPROCESSABLE_ENTITY,
       ErrorCode.BUSINESS_RULE,
       shouldThrow,
-    );
+    )
   }
 
+  /** External service failure (502) */
   static externalService(service: string, originalError?: Error): AppException {
     return new AppException(
-      'external_service.failed',
+      'errors.EXTERNAL_SERVICE',
       HttpStatus.BAD_GATEWAY,
       ErrorCode.EXTERNAL_SERVICE,
       false,
       { service, originalError: originalError?.message },
-    );
+    )
   }
 
-  static internal(message: string, context?: Record<string, any>): AppException {
+  /** Unexpected internal error (500) */
+  static internal(message: string, context?: Record<string, unknown>): AppException {
     return new AppException(
       message,
       HttpStatus.INTERNAL_SERVER_ERROR,
       ErrorCode.INTERNAL,
       false,
       context,
-    );
+    )
   }
 }
 ```
@@ -97,31 +101,34 @@ export class AppException extends Error {
 ```typescript
 export class Event {
   static create(data: CreateEventData): Event {
-    if (data.date < new Date()) {
-      throw AppException.businessRule('event.date_in_past');
+    if (data.name.length < 3 || data.name.length > 200) {
+      throw AppException.businessRule('event.name_invalid_length')
     }
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (data.date < today) throw AppException.businessRule('event.date_in_past')
     // ...
-  }
-
-  startProcessing(): void {
-    if (this.status !== 'UPLOADING') {
-      throw AppException.businessRule('event.invalid_status_for_processing');
-    }
   }
 }
 ```
+
+Guard clauses can be one-liners when the condition is simple:
+```typescript
+if (data.date < today) throw AppException.businessRule('event.date_in_past')
+```
+This is enabled by Biome `useBlockStatements: "off"` in the project config.
 
 ### In Handlers (Resource Existence)
 
 ```typescript
-async execute(command: UpdateEventCommand): Promise<void> {
-  const event = await this.repository.findById(command.eventId);
-  
-  if (!event) {
-    throw AppException.notFound('event', command.eventId);
-  }
+async execute(command: UpdateEventCommand): Promise<EntityIdProjection> {
+  const event = await this.readRepo.findById(command.id)
+  if (!event) throw AppException.notFound('Event', command.id)
+  // ...
 }
 ```
+
+Note: `notFound()` uses a generic `'errors.NOT_FOUND'` message key (not `'event.not_found'`). The entity name and ID are passed in `context` for interpolation.
 
 ### In Adapters (External Services)
 
@@ -188,44 +195,53 @@ All errors follow ADR-002 envelope:
 Catches all exceptions and formats them:
 
 ```typescript
-// shared/infrastructure/filters/global-exception.filter.ts
+// shared/http/filters/global-exception.filter.ts
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
-    
+    const i18n = I18nContext.current(host);
+
     const isDevelopment = process.env.NODE_ENV === 'development';
 
     if (exception instanceof AppException) {
+      const translatedMessage = i18n
+        ? String(i18n.t(exception.messageKey, { args: exception.context }))
+        : exception.messageKey;
+
       return response.status(exception.httpStatus).json({
         error: {
           code: exception.code,
-          message: exception.messageKey,
+          message: translatedMessage,
           shouldThrow: exception.shouldThrow,
+          ...(exception.fields && { fields: exception.fields }),
           ...(isDevelopment && {
             details: exception.context,
             stack: exception.stack,
           }),
         },
         meta: {
-          requestId: request['requestId'],
+          requestId: request.requestId,
           timestamp: new Date().toISOString(),
           path: request.url,
         },
       });
     }
 
+    // HttpException (class-validator BadRequestException, etc.)
+    // are also handled — extracting per-field validation errors.
+
     // Unknown errors become INTERNAL
     return response.status(500).json({
       error: {
         code: 'INTERNAL',
-        message: 'An unexpected error occurred',
+        message: i18n ? String(i18n.t('errors.INTERNAL')) : 'An unexpected error occurred',
         shouldThrow: false,
       },
       meta: {
-        requestId: request['requestId'],
+        requestId: request.requestId,
         timestamp: new Date().toISOString(),
         path: request.url,
       },
@@ -233,6 +249,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   }
 }
 ```
+
+> **Note:** The actual filter also handles `HttpException` (e.g., class-validator `BadRequestException`) as a separate branch, extracting per-field validation errors via `extractValidationFields()`. All message keys are translated through `nestjs-i18n` at runtime.
 
 ---
 
@@ -267,9 +285,26 @@ throw new AppException('event.not_found', 404, 'NOT_FOUND', false);
 
 ✅ **Use factory methods:**
 ```typescript
-throw AppException.notFound('event', id);
-throw AppException.businessRule('event.date_in_past');
+throw AppException.notFound('Event', id)
+throw AppException.businessRule('event.date_in_past')
 ```
+
+---
+
+## Message Key Conventions
+
+Factory methods use **generic i18n keys** — NOT entity-specific keys:
+
+| Factory Method | Message Key | Notes |
+|---------------|-------------|-------|
+| `notFound()` | `'errors.NOT_FOUND'` | Entity name in `context` |
+| `validationFailed()` | `'errors.VALIDATION_FAILED'` | Field errors in `fields` |
+| `businessRule()` | *caller-provided* | e.g., `'event.date_in_past'` |
+| `externalService()` | `'errors.EXTERNAL_SERVICE'` | Service name in `context` |
+
+Success messages use `@SuccessMessage()` decorator with keys like `'success.CREATED'`, `'success.UPDATED'`, `'success.DELETED'`, `'success.FETCHED'`, `'success.LIST'`.
+
+These keys are resolved by `nestjs-i18n` at runtime via the `ResponseInterceptor` / `GlobalExceptionFilter`.
 
 ---
 
@@ -277,4 +312,3 @@ throw AppException.businessRule('event.date_in_past');
 
 - `conventions/validations.md` - Where to validate
 - `infrastructure/nestjs-bootstrap.md` - Filter setup
-- `conventions/http-responses.md` - Response format

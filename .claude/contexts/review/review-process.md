@@ -18,6 +18,18 @@ Code review validates architecture, patterns, and quality before merge.
 - [ ] Repository uses Mapper (no inline mapping)
 - [ ] Controller only does DTO → Command/Query conversion
 - [ ] Projections used for queries (not entities)
+- [ ] Ports & Adapters: `@Inject(TOKEN)` with Symbol tokens + interface types
+- [ ] Barrel alias imports (`@events/...`, `@shared/...`) — no deep relative paths
+
+### Swagger & HTTP
+- [ ] `@ApiOperation`, `@ApiEnvelopeResponse`, `@ApiParam` on every endpoint
+- [ ] `@ApiEnvelopeErrorResponse` for each error case (400, 404, etc.)
+- [ ] `@SuccessMessage()` decorator on every controller endpoint
+
+### Soft Delete Consistency
+- [ ] Entity has `softDelete()` → `this.audit.markDeleted()`
+- [ ] WriteRepository `delete()` does `prisma.update({ deleted_at })`, NOT `prisma.delete()`
+- [ ] ReadRepository filters `deleted_at: null` on all queries
 
 ### Error Handling
 - [ ] Uses AppException factory methods
@@ -27,8 +39,8 @@ Code review validates architecture, patterns, and quality before merge.
 ### Testing
 - [ ] Unit tests for entities
 - [ ] Unit tests for handlers
-- [ ] Integration tests for repositories (if new)
 - [ ] Tests follow AAA pattern
+- [ ] Integration tests for repositories *(aspirational — not yet implemented)*
 
 ### Code Quality
 - [ ] No linting errors (`pnpm check`)
@@ -87,7 +99,7 @@ Brief description of changes reviewed.
 |-------|----------|-----|
 | Business logic in handler | Handler | Move to Entity |
 | Validation in handler | Handler | Move to DTO or Entity |
-| Mapping in repository | Repository | Create Mapper class |
+| Mapping in repository | Repository | Create mapper functions (not class) |
 | Logic in controller | Controller | Move to Handler |
 
 ### CQRS Violations
@@ -96,7 +108,7 @@ Brief description of changes reviewed.
 |-------|-----|
 | Query returning Entity | Return Projection |
 | Command with SELECT * | Use specific select |
-| Handler > 30 lines | Extract to Domain Service |
+| Handler > 30 lines | Extract to Entity methods or private handler methods |
 
 ### Testing Gaps
 

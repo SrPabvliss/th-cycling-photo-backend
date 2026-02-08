@@ -1,6 +1,6 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 import { config } from 'dotenv'
-import { PrismaClient } from '../generated/prisma/client'
+import { PrismaClient } from '../src/generated/prisma/client'
 
 const env = process.env.NODE_ENV || 'development'
 config({ path: `.env.${env}` })

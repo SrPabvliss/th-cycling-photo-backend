@@ -46,34 +46,9 @@ jira.transitionIssue('TTV-1001', 'Ready for Review')
 jira.addComment('TTV-1001', 'PR: https://github.com/...')
 ```
 
-## Commit Message Format
+## Commit & Branch Conventions
 
-```
-<type>(<scope>): [<ticket>] <subject>
-```
-
-| Part | Example |
-|------|---------|
-| type | `feat`, `fix`, `chore`, `test`, `refactor` |
-| scope | `events`, `photos`, `processing` |
-| ticket | `[TTV-1001]` |
-| subject | `add create event command` |
-
-### Examples
-
-```bash
-feat(events): [TTV-1001] add event creation command
-fix(photos): [TTV-1023] handle missing EXIF data
-test(processing): [TTV-1045] add OCR adapter tests
-```
-
-## Branch Naming
-
-```
-<type>/<ticket>
-```
-
-Examples: `feat/TTV-1001`, `fix/TTV-1023`
+> Follow `conventions/git.md` for commit message format, branch naming, and PR template.
 
 ## Complete Workflow
 

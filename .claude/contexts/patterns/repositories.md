@@ -1,418 +1,369 @@
-# Repository Pattern
+# Repository Pattern (Ports & Adapters)
 
 ## Overview
 
-Repositories handle persistence. Separated into Write (commands) and Read (queries) to prevent overfetching. Mapping logic lives in dedicated Mapper classes.
+Repositories handle persistence using **Ports & Adapters** pattern. Interfaces (ports) live in the domain layer, implementations (adapters) in infrastructure. Separated into Write (commands) and Read (queries).
 
 ## File Structure
 
 ```
-modules/{domain}/infrastructure/
-├── repositories/
-│   ├── {entity}-write.repository.ts    # For commands
-│   └── {entity}-read.repository.ts     # For queries
-└── mappers/
-    └── {entity}.mapper.ts              # Entity ↔ Persistence mapping
+modules/{domain}/
+├── domain/
+│   └── ports/
+│       ├── {entity}-read-repository.port.ts    # Interface + Symbol token
+│       └── {entity}-write-repository.port.ts   # Interface + Symbol token
+└── infrastructure/
+    ├── repositories/
+    │   ├── {entity}-read.repository.ts          # implements IEventReadRepository
+    │   └── {entity}-write.repository.ts         # implements IEventWriteRepository
+    └── mappers/
+        └── {entity}.mapper.ts                   # Exported functions (not class)
 ```
 
 ---
 
-## Mapper
+## Port Interfaces (Domain Layer)
 
-Dedicated class for all mapping logic. Used by both Write and Read repositories.
+### Read Repository Port
 
 ```typescript
-import { Event } from '@/modules/events/domain/entities/event.entity';
-import { EventListProjection } from '@/modules/events/application/projections/event-list.projection';
-import { EventDetailProjection } from '@/modules/events/application/projections/event-detail.projection';
-import { Prisma, Event as PrismaEvent } from '@prisma/client';
+// domain/ports/event-read-repository.port.ts
+import type { EventDetailProjection, EventListProjection } from '@events/application/projections'
+import type { Pagination } from '@shared/application'
+import type { Event } from '../entities'
 
-export class EventMapper {
-  // ─────────────────────────────────────────────
-  // Write Repository mappings
-  // ─────────────────────────────────────────────
+export interface IEventReadRepository {
+  findById(id: string): Promise<Event | null>
+  getEventsList(pagination: Pagination): Promise<EventListProjection[]>
+  getEventDetail(id: string): Promise<EventDetailProjection | null>
+}
 
-  static toPersistence(entity: Event): Prisma.EventCreateInput {
-    return {
-      id: entity.id,
-      name: entity.name,
-      date: entity.date,
-      location: entity.location,
-      category: entity.category,
-      status: entity.status,
-      total_photos: entity.totalPhotos,
-      processed_photos: entity.processedPhotos,
-      created_at: entity.createdAt,
-      updated_at: entity.updatedAt,
-    };
-  }
+export const EVENT_READ_REPOSITORY = Symbol('EVENT_READ_REPOSITORY')
+```
 
-  static toEntity(record: PrismaEvent): Event {
-    return Event.fromPersistence({
-      id: record.id,
-      name: record.name,
-      date: record.date,
-      location: record.location,
-      category: record.category,
-      status: record.status,
-      totalPhotos: record.total_photos,
-      processedPhotos: record.processed_photos,
-      createdAt: record.created_at,
-      updatedAt: record.updated_at,
-    });
-  }
+### Write Repository Port
 
-  // ─────────────────────────────────────────────
-  // Read Repository mappings (Projections)
-  // ─────────────────────────────────────────────
+```typescript
+// domain/ports/event-write-repository.port.ts
+import type { Event } from '../entities'
 
-  static toListProjection(record: {
-    id: string;
-    name: string;
-    date: Date;
-    location: string | null;
-    status: string;
-    total_photos: number;
-    processed_photos: number;
-  }): EventListProjection {
-    return {
-      id: record.id,
-      name: record.name,
-      date: record.date,
-      location: record.location,
-      status: record.status,
-      totalPhotos: record.total_photos,
-      processedPhotos: record.processed_photos,
-    };
-  }
+export interface IEventWriteRepository {
+  save(event: Event): Promise<Event>
+  delete(id: string): Promise<void>
+}
 
-  static toDetailProjection(record: {
-    id: string;
-    name: string;
-    date: Date;
-    location: string | null;
-    category: string;
-    status: string;
-    total_photos: number;
-    processed_photos: number;
-    created_at: Date;
-    _count: { photos: number };
-  }): EventDetailProjection {
-    return {
-      id: record.id,
-      name: record.name,
-      date: record.date,
-      location: record.location,
-      category: record.category,
-      status: record.status,
-      totalPhotos: record.total_photos,
-      processedPhotos: record.processed_photos,
-      createdAt: record.created_at,
-      photoCount: record._count.photos,
-    };
+export const EVENT_WRITE_REPOSITORY = Symbol('EVENT_WRITE_REPOSITORY')
+```
+
+**Key decisions:**
+- `findById` lives in **ReadRepository** (semantically it's a read)
+- WriteRepository only has `save()` and `delete()`
+- Symbol tokens enable NestJS DI with interfaces
+- Command handlers inject ReadRepository when they need to load entities
+
+---
+
+## Mapper (Exported Functions)
+
+Dedicated **exported functions** (not a class) for all mapping logic.
+
+```typescript
+// infrastructure/mappers/event.mapper.ts
+import type { EventDetailProjection, EventListProjection } from '@events/application/projections'
+import { Event } from '@events/domain/entities'
+import type { EventStatusType } from '@events/domain/value-objects/event-status.vo'
+import type { Prisma, Event as PrismaEvent } from '@generated/prisma/client'
+
+type EventListSelect = {
+  id: string
+  name: string
+  event_date: Date
+  location: string | null
+  status: string
+  total_photos: number
+  processed_photos: number
+}
+
+type EventDetailSelect = EventListSelect & {
+  created_at: Date
+  updated_at: Date
+}
+
+/** Converts a domain entity to a Prisma create input. */
+export function toPersistence(entity: Event): Prisma.EventCreateInput {
+  return {
+    id: entity.id,
+    name: entity.name,
+    event_date: entity.date,
+    location: entity.location,
+    status: entity.status,
+    total_photos: entity.totalPhotos,
+    processed_photos: entity.processedPhotos,
+    created_at: entity.audit.createdAt,
+    updated_at: entity.audit.updatedAt,
+    deleted_at: entity.audit.deletedAt,
   }
 }
+
+/** Converts a Prisma record to a domain entity. */
+export function toEntity(record: PrismaEvent): Event {
+  return Event.fromPersistence({
+    id: record.id,
+    name: record.name,
+    date: record.event_date,
+    location: record.location,
+    status: record.status as EventStatusType,
+    totalPhotos: record.total_photos,
+    processedPhotos: record.processed_photos,
+    createdAt: record.created_at,
+    updatedAt: record.updated_at,
+    deletedAt: record.deleted_at,
+  })
+}
+
+/** Converts a Prisma selected record to a list projection. */
+export function toListProjection(record: EventListSelect): EventListProjection { ... }
+
+/** Converts a Prisma record to a detail projection. */
+export function toDetailProjection(record: EventDetailSelect): EventDetailProjection { ... }
 ```
 
 **Mapper Rules:**
-- All static methods
+- Exported functions (not static class methods - avoids Biome `noStaticOnlyClass` warning)
 - No dependencies (pure functions)
 - Handles snake_case ↔ camelCase conversion
-- One mapper per aggregate root
+- Named types for Prisma select results (not inline)
+- One mapper file per aggregate root
+- Import as namespace: `import * as EventMapper from '../mappers/event.mapper'`
+- Audit fields accessed via composition: `entity.audit.createdAt`, `entity.audit.deletedAt`
 
 ---
 
-## Write Repository
+## Write Repository (Infrastructure)
 
-Handles entity persistence for commands. Uses Mapper for conversions.
+Only `save()` and `delete()`. NO reads.
 
 ```typescript
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
-import { Event } from '@/modules/events/domain/entities/event.entity';
-import { EventMapper } from '../mappers/event.mapper';
+// infrastructure/repositories/event-write.repository.ts
+import type { Event } from '@events/domain/entities'
+import type { IEventWriteRepository } from '@events/domain/ports'
+import { Injectable } from '@nestjs/common'
+import { PrismaService } from '@shared/infrastructure'
+import * as EventMapper from '../mappers/event.mapper'
 
 @Injectable()
-export class EventWriteRepository {
+export class EventWriteRepository implements IEventWriteRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Persists an event entity (create or update). */
   async save(event: Event): Promise<Event> {
-    const data = EventMapper.toPersistence(event);
+    const data = EventMapper.toPersistence(event)
 
     const saved = await this.prisma.event.upsert({
       where: { id: event.id },
       create: data,
       update: data,
-    });
+    })
 
-    return EventMapper.toEntity(saved);
+    return EventMapper.toEntity(saved)
   }
 
-  async findById(id: string): Promise<Event | null> {
-    const record = await this.prisma.event.findUnique({
-      where: { id },
-    });
-
-    if (!record) return null;
-
-    return EventMapper.toEntity(record);
-  }
-
+  /** Soft-deletes an event by setting its deleted_at timestamp. */
   async delete(id: string): Promise<void> {
-    await this.prisma.event.delete({
+    await this.prisma.event.update({
       where: { id },
-    });
+      data: { deleted_at: new Date() },
+    })
   }
 }
 ```
 
-**Write Repository Rules:**
-- Returns full Entity (for further operations)
-- Uses `upsert` for save (create or update)
-- Delegates mapping to Mapper class
-- NO business logic
+**Soft delete:** The `delete()` method does NOT call `prisma.event.delete()`. Instead it performs an `update` setting `deleted_at` to the current timestamp. The domain layer calls `writeRepo.delete(id)` without knowing about the soft-delete implementation.
 
 ---
 
-## Read Repository
+## Read Repository (Infrastructure)
 
-Handles queries with projections. Uses Mapper for conversions.
+`findById()` (returns Entity for commands) + query methods (return Projections).
 
 ```typescript
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
-import { EventListProjection } from '@/modules/events/application/projections/event-list.projection';
-import { EventDetailProjection } from '@/modules/events/application/projections/event-detail.projection';
-import { EventMapper } from '../mappers/event.mapper';
+// infrastructure/repositories/event-read.repository.ts
+import { Injectable } from '@nestjs/common'
+import type { Pagination } from '@shared/application'
+import { PrismaService } from '@shared/infrastructure'
+import type { EventDetailProjection, EventListProjection } from '../../application/projections'
+import type { Event } from '../../domain/entities'
+import type { IEventReadRepository } from '../../domain/ports'
+import * as EventMapper from '../mappers/event.mapper'
 
 @Injectable()
-export class EventReadRepository {
+export class EventReadRepository implements IEventReadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getEventsList(filters: {
-    status?: string;
-    dateFrom?: Date;
-    dateTo?: Date;
-    search?: string;
-    page: number;
-    limit: number;
-  }): Promise<EventListProjection[]> {
-    const skip = (filters.page - 1) * filters.limit;
+  /** Finds a non-deleted event entity by ID for command operations. */
+  async findById(id: string): Promise<Event | null> {
+    const record = await this.prisma.event.findFirst({ where: { id, deleted_at: null } })
+    return record ? EventMapper.toEntity(record) : null
+  }
 
+  /** Retrieves a paginated list of non-deleted events as projections. */
+  async getEventsList(pagination: Pagination): Promise<EventListProjection[]> {
     const events = await this.prisma.event.findMany({
+      where: { deleted_at: null },
       select: {
         id: true,
         name: true,
-        date: true,
+        event_date: true,
         location: true,
         status: true,
         total_photos: true,
         processed_photos: true,
       },
-      where: {
-        ...(filters.status && { status: filters.status }),
-        ...(filters.dateFrom && { date: { gte: filters.dateFrom } }),
-        ...(filters.dateTo && { date: { lte: filters.dateTo } }),
-        ...(filters.search && {
-          name: { contains: filters.search, mode: 'insensitive' },
-        }),
-      },
-      orderBy: { date: 'desc' },
-      skip,
-      take: filters.limit,
-    });
+      orderBy: { event_date: 'desc' },
+      skip: pagination.skip,
+      take: pagination.take,
+    })
 
-    return events.map(EventMapper.toListProjection);
+    return events.map(EventMapper.toListProjection)
   }
 
+  /** Retrieves a single non-deleted event's detail by ID. */
   async getEventDetail(id: string): Promise<EventDetailProjection | null> {
-    const event = await this.prisma.event.findUnique({
-      where: { id },
+    const record = await this.prisma.event.findFirst({
+      where: { id, deleted_at: null },
       select: {
         id: true,
         name: true,
-        date: true,
+        event_date: true,
         location: true,
-        category: true,
         status: true,
         total_photos: true,
         processed_photos: true,
         created_at: true,
-        _count: {
-          select: { photos: true },
-        },
+        updated_at: true,
       },
-    });
+    })
 
-    if (!event) return null;
-
-    return EventMapper.toDetailProjection(event);
+    return record ? EventMapper.toDetailProjection(record) : null
   }
 }
 ```
 
-**Read Repository Rules:**
-- Returns Projection, NOT Entity
-- Uses `select` to fetch only needed fields
-- Delegates mapping to Mapper class
-- One method per query use case
-- Pagination built-in
+**Soft-delete filtering:**
+- `findById` uses `findFirst` (not `findUnique`) with `{ id, deleted_at: null }` compound filter
+- `getEventsList` adds `where: { deleted_at: null }` to exclude soft-deleted records
+- `getEventDetail` uses `findFirst` with `{ id, deleted_at: null }` — same pattern as `findById`
+
+**Why `findFirst` instead of `findUnique`:** `findUnique` requires all filter fields to be part of a unique index. Since the compound `{ id, deleted_at }` is not a unique constraint, `findFirst` is used instead.
+
+---
+
+## Module Registration
+
+Use Symbol tokens with `provide/useClass`:
+
+```typescript
+// events.module.ts
+import { EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY } from './domain/ports'
+
+@Module({
+  imports: [CqrsModule],
+  controllers: [EventsController],
+  providers: [
+    ...CommandHandlers,
+    ...QueryHandlers,
+    { provide: EVENT_READ_REPOSITORY, useClass: EventReadRepository },
+    { provide: EVENT_WRITE_REPOSITORY, useClass: EventWriteRepository },
+  ],
+  exports: [EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY],
+})
+export class EventsModule {}
+```
+
+---
+
+## Handler Injection
+
+Handlers use `@Inject()` with Symbol tokens and interface types. Tokens and interfaces are imported from barrel `@events/domain/ports`:
+
+```typescript
+import {
+  EVENT_READ_REPOSITORY,
+  EVENT_WRITE_REPOSITORY,
+  type IEventReadRepository,
+  type IEventWriteRepository,
+} from '@events/domain/ports'
+
+@CommandHandler(UpdateEventCommand)
+export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
+  constructor(
+    @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
+    @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
+  ) {}
+
+  async execute(command: UpdateEventCommand): Promise<EntityIdProjection> {
+    const event = await this.readRepo.findById(command.id)
+    if (!event) throw AppException.notFound('Event', command.id)
+
+    event.update({
+      name: command.name,
+      date: command.date,
+      location: command.location,
+    })
+
+    await this.writeRepo.save(event)
+
+    return { id: event.id }
+  }
+}
+```
 
 ---
 
 ## Anti-Patterns
 
-❌ **Overfetching with include:**
+❌ **findById in WriteRepository:**
 ```typescript
-// BAD: Fetches everything
-return this.prisma.event.findMany({
-  include: {
-    photos: {
-      include: {
-        detected_cyclists: true,
-        detected_colors: true,
-      },
-    },
-  },
-});
-```
-
-❌ **Business logic in repository:**
-```typescript
-// BAD: Logic belongs in Entity
-async save(event: Event) {
-  if (event.status === 'COMPLETED') {
-    await this.notificationService.send(...);
-  }
+// BAD: Reads belong in ReadRepository
+export class EventWriteRepository {
+  async findById(id: string): Promise<Event | null> { ... }
 }
 ```
 
-❌ **Mapping inside repository:**
+❌ **Mapper as static class:**
 ```typescript
-// BAD: Mapping belongs in Mapper class
-async save(event: Event) {
-  const data = {
-    id: event.id,
-    name: event.name,
-    // ... inline mapping
-  };
+// BAD: Triggers Biome noStaticOnlyClass
+export class EventMapper {
+  static toPersistence(...) { ... }
 }
 ```
 
-✅ **Correct: Delegate to Mapper:**
+❌ **Inline types for select results:**
 ```typescript
-// GOOD: Single responsibility
-const data = EventMapper.toPersistence(event);
-return EventMapper.toEntity(saved);
+// BAD: Verbose and not reusable
+export function toListProjection(record: {
+  id: string; name: string; event_date: Date; ...
+})
 ```
 
----
-
-## Port Interface (Optional)
-
-For strict domain isolation, define ports:
-
+❌ **Direct class injection (no tokens):**
 ```typescript
-// domain/ports/event-repository.port.ts
-export interface IEventWriteRepository {
-  save(event: Event): Promise<Event>;
-  findById(id: string): Promise<Event | null>;
-  delete(id: string): Promise<void>;
-}
-
-export interface IEventReadRepository {
-  getEventsList(filters: EventListFilters): Promise<EventListProjection[]>;
-  getEventDetail(id: string): Promise<EventDetailProjection | null>;
-}
+// BAD: Couples handler to implementation
+constructor(private readonly writeRepo: EventWriteRepository) {}
 ```
 
-Then implement in infrastructure and inject via interface token.
-
----
-
-## Testing Repositories
-
-### Unit Test (mocking Prisma)
-
+✅ **Correct: Token injection with interface:**
 ```typescript
-describe('EventWriteRepository', () => {
-  let repository: EventWriteRepository;
-  let prisma: jest.Mocked<PrismaService>;
-
-  beforeEach(async () => {
-    const mockPrisma = {
-      event: {
-        upsert: jest.fn(),
-        findUnique: jest.fn(),
-      },
-    };
-
-    const module = await Test.createTestingModule({
-      providers: [
-        EventWriteRepository,
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
-    }).compile();
-
-    repository = module.get(EventWriteRepository);
-    prisma = module.get(PrismaService);
-  });
-
-  it('should save and return entity', async () => {
-    const event = Event.create({ ... });
-    prisma.event.upsert.mockResolvedValue({ ... });
-
-    const result = await repository.save(event);
-
-    expect(result).toBeInstanceOf(Event);
-    expect(prisma.event.upsert).toHaveBeenCalled();
-  });
-});
-```
-
-### Integration Test (with real DB)
-
-```typescript
-describe('EventWriteRepository (Integration)', () => {
-  let repository: EventWriteRepository;
-  let prisma: PrismaService;
-
-  beforeAll(async () => {
-    const module = await Test.createTestingModule({
-      imports: [PrismaModule],
-      providers: [EventWriteRepository],
-    }).compile();
-
-    repository = module.get(EventWriteRepository);
-    prisma = module.get(PrismaService);
-  });
-
-  afterEach(async () => {
-    await prisma.event.deleteMany();
-  });
-
-  it('should persist and retrieve event', async () => {
-    const event = Event.create({
-      name: 'Test Event',
-      date: new Date('2026-05-01'),
-      location: 'Ambato',
-      category: 'ROAD',
-    });
-
-    const saved = await repository.save(event);
-    const found = await repository.findById(saved.id);
-
-    expect(found).not.toBeNull();
-    expect(found!.name).toBe('Test Event');
-  });
-});
+constructor(
+  @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
+) {}
 ```
 
 ---
 
 ## See Also
 
-- `patterns/cqrs.md` - How repositories fit in command/query flow
+- `patterns/cqrs.md` - Command/Query handler injection patterns
 - `patterns/entities.md` - Entity and fromPersistence() method
-- `infrastructure/prisma-setup.md` - PrismaService configuration
-- `testing/integration-tests.md` - Repository testing patterns
+- `infrastructure/prisma-setup.md` - PrismaService and generated client
+- `infrastructure/swagger-setup.md` - Swagger documentation for endpoints

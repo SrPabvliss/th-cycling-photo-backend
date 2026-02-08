@@ -6,6 +6,7 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import configuration from './config/configuration'
 import { validate } from './config/env.validation'
+import { EventsModule } from './modules/events/events.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
 
@@ -26,12 +27,13 @@ import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
       resolvers: [{ use: QueryResolver, options: ['lang'] }, AcceptLanguageResolver],
     }),
     PrismaModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestIdMiddleware).forRoutes('*')
+    consumer.apply(RequestIdMiddleware).forRoutes('{*splat}')
   }
 }

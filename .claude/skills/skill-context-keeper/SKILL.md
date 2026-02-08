@@ -41,45 +41,13 @@ description: >
 
 ### Initialize (START phase)
 
-Create from template:
+Create from template and fill initial data:
 
 ```bash
 cp .claude/ledger/sessions/_TEMPLATE.md .claude/ledger/sessions/TTV-XXX.md
 ```
 
-Fill initial data:
-
-```markdown
-# Session: TTV-XXX
-
-## Ticket
-**ID:** TTV-XXX
-**Title:** {from Jira}
-**Type:** Feature / Fix / Task
-
-## Status
-phase: start
-blocked: false
-review_attempts: 0/3
-
-## Timeline
-- {timestamp} Session initialized
-- {timestamp} Branch created: feat/TTV-XXX
-
-## Technologies
-- Prisma 7
-- NestJS 11
-- {others identified}
-
-## Decisions
-{empty initially}
-
-## Files Changed
-{empty initially}
-
-## Notes
-{empty initially}
-```
+> See `ledger/sessions/_TEMPLATE.md` for the full template structure. Fill ticket info, set phase to `start`, and add initial timeline entry.
 
 ### Update After Commit
 
@@ -119,7 +87,7 @@ review_attempts: 2/3
 ### Attempt 1
 **Result:** Rejected
 **Issues:**
-- Missing Mapper class
+- Missing mapper functions
 - Inline mapping in repository
 
 ### Attempt 2
@@ -169,7 +137,7 @@ Before invoking `skill:research-external`:
 
 ```bash
 # Check if cache exists
-cat .claude/ledger/research/prisma.md
+cat .claude/ledger/research/prisma-client.md
 
 # If exists, check if sufficient for current need
 # If not exists or outdated → proceed with research
@@ -177,42 +145,7 @@ cat .claude/ledger/research/prisma.md
 
 ### Cache Structure
 
-```markdown
-# {Technology} Research Cache
-
-**Version:** 7.x
-**Updated:** 2026-02-03
-**Source:** Context7 MCP
-
-## Key APIs
-
-### Schema Definition
-```typescript
-model User {
-  id String @id @default(uuid())
-  // ... example from docs
-}
-```
-
-**Notes:**
-- Use @db.Uuid for PostgreSQL UUID
-- @map for snake_case in DB
-
-### Client Usage
-```typescript
-const user = await prisma.user.create({
-  data: { ... }
-});
-```
-
-## Gotchas
-1. Prisma 7 requires `output` in generator
-2. Migrations need `prisma migrate dev` not `deploy` locally
-
-## Integration with NestJS
-- PrismaService extends PrismaClient
-- Use onModuleInit for connection
-```
+> Research cache format and template: see `skill-research-external/SKILL.md` and `ledger/research/_TEMPLATE.md`
 
 ## Update Rules
 
