@@ -90,7 +90,7 @@ Save to `.claude/ledger/research/{technology}.md`:
 | BullMQ | 5.x | Queues, workers, job options, events |
 | class-validator | 0.14.x | Decorators, custom validators, groups |
 | class-transformer | 0.5.x | Decorators, transformation options |
-| Socket.io | 4.x | Gateway, namespaces, rooms |
+| Socket.io | 4.x | Gateway, namespaces, rooms | ⚠️ Not yet implemented |
 
 ## When Context7 Isn't Enough
 
