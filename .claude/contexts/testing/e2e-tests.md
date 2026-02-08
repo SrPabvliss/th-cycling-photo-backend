@@ -21,6 +21,14 @@ E2E tests are **not included** in the backend testing strategy for this project.
 | Response format checks | Integration tests |
 | Full flow testing | Will be added with frontend |
 
+> **Current state:** Integration tests are not yet implemented. This strategy will be put in practice as more modules are developed.
+
+## NestJS E2E Scaffold
+
+The default NestJS E2E boilerplate exists at `test/app.e2e-spec.ts` with a `jest-e2e.json` config and `pnpm test:e2e` script. This is just scaffolding — not a project investment. It tests the default `AppController` hello world endpoint.
+
+---
+
 ## Future
 
 When frontend is developed, E2E tests will be:
