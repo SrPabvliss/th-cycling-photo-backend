@@ -35,7 +35,7 @@ import { CommandBus } from '@nestjs/cqrs'
 **Fix:** In `schema.prisma`:
 ```prisma
 generator client {
-  provider     = "prisma-client-js"
+  provider     = "prisma-client"
   output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
@@ -49,7 +49,7 @@ generator client {
 
 **Fix:** Use `Prisma` namespace:
 ```typescript
-import type { Prisma } from '../../../../generated/prisma/client.js'
+import type { Prisma } from '@generated/prisma/client'
 
 function toPersistence(entity: Event): Prisma.EventCreateInput { ... }
 ```
