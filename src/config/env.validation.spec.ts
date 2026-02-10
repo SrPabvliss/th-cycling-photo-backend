@@ -29,20 +29,24 @@ describe('Environment Validation', () => {
     expect(() => validate(validEnv)).not.toThrow()
   })
 
-  it.each(['B2_APPLICATION_KEY_ID', 'B2_APPLICATION_KEY', 'B2_BUCKET_ID', 'B2_BUCKET_NAME'])(
-    'should fail if %s is missing',
-    (key) => {
-      const env = { ...validEnv }
-      delete env[key as keyof typeof env]
-      expect(() => validate(env)).toThrow('Environment validation failed')
-    },
-  )
+  it.each([
+    'B2_APPLICATION_KEY_ID',
+    'B2_APPLICATION_KEY',
+    'B2_BUCKET_ID',
+    'B2_BUCKET_NAME',
+  ])('should fail if %s is missing', (key) => {
+    const env = { ...validEnv }
+    delete env[key as keyof typeof env]
+    expect(() => validate(env)).toThrow('Environment validation failed')
+  })
 
-  it.each(['B2_APPLICATION_KEY_ID', 'B2_APPLICATION_KEY', 'B2_BUCKET_ID', 'B2_BUCKET_NAME'])(
-    'should fail if %s is empty string',
-    (key) => {
-      const env = { ...validEnv, [key]: '' }
-      expect(() => validate(env)).toThrow('Environment validation failed')
-    },
-  )
+  it.each([
+    'B2_APPLICATION_KEY_ID',
+    'B2_APPLICATION_KEY',
+    'B2_BUCKET_ID',
+    'B2_BUCKET_NAME',
+  ])('should fail if %s is empty string', (key) => {
+    const env = { ...validEnv, [key]: '' }
+    expect(() => validate(env)).toThrow('Environment validation failed')
+  })
 })
