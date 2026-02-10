@@ -39,6 +39,28 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   DB_SSL_MODE?: string
+
+  // Backblaze B2
+  @IsString()
+  @IsNotEmpty()
+  B2_APPLICATION_KEY_ID: string
+
+  @IsString()
+  @IsNotEmpty()
+  B2_APPLICATION_KEY: string
+
+  @IsString()
+  @IsNotEmpty()
+  B2_BUCKET_ID: string
+
+  @IsString()
+  @IsNotEmpty()
+  B2_BUCKET_NAME: string
+
+  // Cloudflare CDN
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_CDN_URL?: string
 }
 
 export function validate(config: Record<string, unknown>) {
