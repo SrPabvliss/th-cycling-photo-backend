@@ -1,5 +1,6 @@
 export default () => {
   const { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, DB_SSL_MODE } = process.env
+  const { B2_APPLICATION_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET_ID, B2_BUCKET_NAME } = process.env
 
   let databaseUrl = `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
   if (DB_SSL_MODE) {
@@ -17,6 +18,15 @@ export default () => {
       name: DB_NAME,
       sslMode: DB_SSL_MODE,
       url: databaseUrl,
+    },
+    storage: {
+      b2: {
+        applicationKeyId: B2_APPLICATION_KEY_ID,
+        applicationKey: B2_APPLICATION_KEY,
+        bucketId: B2_BUCKET_ID,
+        bucketName: B2_BUCKET_NAME,
+      },
+      cdnUrl: process.env.CLOUDFLARE_CDN_URL,
     },
   }
 }
