@@ -57,6 +57,10 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   B2_BUCKET_NAME: string
 
+  @IsString()
+  @IsNotEmpty()
+  B2_REGION: string
+
   // Cloudflare CDN
   @IsOptional()
   @IsString()
