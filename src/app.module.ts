@@ -9,6 +9,7 @@ import { validate } from './config/env.validation'
 import { EventsModule } from './modules/events/events.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
+import { StorageModule } from './shared/storage/storage.module'
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
       resolvers: [{ use: QueryResolver, options: ['lang'] }, AcceptLanguageResolver],
     }),
     PrismaModule,
+    StorageModule,
     EventsModule,
   ],
   controllers: [AppController],

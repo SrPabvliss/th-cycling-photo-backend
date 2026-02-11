@@ -13,6 +13,7 @@ const validEnv = {
   B2_APPLICATION_KEY: 'test-key-secret',
   B2_BUCKET_ID: 'test-bucket-id',
   B2_BUCKET_NAME: 'test-bucket',
+  B2_REGION: 'us-east-005',
 }
 
 describe('Environment Validation', () => {
@@ -34,6 +35,7 @@ describe('Environment Validation', () => {
     'B2_APPLICATION_KEY',
     'B2_BUCKET_ID',
     'B2_BUCKET_NAME',
+    'B2_REGION',
   ])('should fail if %s is missing', (key) => {
     const env = { ...validEnv }
     delete env[key as keyof typeof env]
@@ -45,6 +47,7 @@ describe('Environment Validation', () => {
     'B2_APPLICATION_KEY',
     'B2_BUCKET_ID',
     'B2_BUCKET_NAME',
+    'B2_REGION',
   ])('should fail if %s is empty string', (key) => {
     const env = { ...validEnv, [key]: '' }
     expect(() => validate(env)).toThrow('Environment validation failed')
