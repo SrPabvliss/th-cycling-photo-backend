@@ -6,7 +6,9 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import configuration from './config/configuration'
 import { validate } from './config/env.validation'
+import { ClassificationsModule } from './modules/classifications/classifications.module'
 import { EventsModule } from './modules/events/events.module'
+import { PhotosModule } from './modules/photos/photos.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
 import { StorageModule } from './shared/storage/storage.module'
@@ -30,6 +32,8 @@ import { StorageModule } from './shared/storage/storage.module'
     PrismaModule,
     StorageModule,
     EventsModule,
+    PhotosModule,
+    ClassificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,0 +1,7 @@
+{
+  "filename_empty": "El nombre del archivo de la foto no puede estar vacío",
+  "invalid_mime_type": "La foto debe ser una imagen JPEG, PNG o WebP",
+  "invalid_file_size": "El tamaño del archivo de la foto debe ser mayor a cero",
+  "plate_number_out_of_range": "El número de placa debe estar entre 1 y 999",
+  "density_percentage_out_of_range": "El porcentaje de densidad debe estar entre 0 y 100"
+}
