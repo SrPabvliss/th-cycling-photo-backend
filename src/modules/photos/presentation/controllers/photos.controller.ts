@@ -24,7 +24,7 @@ import {
 } from '@photos/application/queries'
 import { EntityIdProjection, Pagination } from '@shared/application'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
-import { MAX_FILES, MAX_FILE_SIZE } from '../constants/upload.constants'
+import { MAX_FILE_SIZE, MAX_FILES } from '../constants/upload.constants'
 import { imageFileFilter } from '../filters/image-file.filter'
 
 @ApiTags('Photos')
