@@ -16,8 +16,18 @@ describe('toDetectedCyclistProjection', () => {
         manually_corrected: false,
       },
       equipment_colors: [
-        { item_type: 'jersey', color_name: 'Red', color_hex: '#FF0000', density_percentage: decimal(0.65) },
-        { item_type: 'shorts', color_name: 'Black', color_hex: '#000000', density_percentage: decimal(0.35) },
+        {
+          item_type: 'jersey',
+          color_name: 'Red',
+          color_hex: '#FF0000',
+          density_percentage: decimal(0.65),
+        },
+        {
+          item_type: 'shorts',
+          color_name: 'Black',
+          color_hex: '#000000',
+          density_percentage: decimal(0.35),
+        },
       ],
     }
 
