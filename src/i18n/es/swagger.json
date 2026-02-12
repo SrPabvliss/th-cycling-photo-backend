@@ -4,7 +4,8 @@
     "description": "Sistema automatizado de clasificación de fotografía ciclista usando servicios de IA en la nube."
   },
   "tags": {
-    "Events": "Eventos"
+    "Events": "Eventos",
+    "Photos": "Fotos"
   },
   "translations": {
     "Create a new event": "Crear un nuevo evento",
@@ -40,6 +41,19 @@
     "Error code": "Código de error",
     "Human-readable error message": "Mensaje de error legible",
     "Whether the frontend should propagate the error prominently": "Si el frontend debería propagar el error de forma prominente",
-    "Per-field validation errors": "Errores de validación por campo"
+    "Per-field validation errors": "Errores de validación por campo",
+    "List photos for an event with pagination": "Listar fotos de un evento con paginación",
+    "Search photos with multi-criteria filters": "Buscar fotos con filtros multicriteria",
+    "Get photo details by ID": "Obtener detalles de una foto por ID",
+    "Upload photos to an event": "Subir fotos a un evento",
+    "Classify a photo manually": "Clasificar una foto manualmente",
+    "Paginated photo list": "Lista paginada de fotos",
+    "Search results": "Resultados de búsqueda",
+    "Photo detail retrieved": "Detalle de la foto obtenido",
+    "Photos uploaded successfully": "Fotos subidas exitosamente",
+    "Photo classified successfully": "Foto clasificada exitosamente",
+    "Photo not found": "Foto no encontrada",
+    "Invalid file type or validation failed": "Tipo de archivo inválido o error de validación",
+    "Photo UUID": "UUID de la foto"
   }
 }

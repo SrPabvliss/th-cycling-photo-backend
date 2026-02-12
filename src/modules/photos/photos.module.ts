@@ -7,6 +7,7 @@ import { SearchPhotosHandler } from '@photos/application/queries/search-photos/s
 import { PHOTO_READ_REPOSITORY, PHOTO_WRITE_REPOSITORY } from '@photos/domain/ports'
 import { PhotoReadRepository } from '@photos/infrastructure/repositories/photo-read.repository'
 import { PhotoWriteRepository } from '@photos/infrastructure/repositories/photo-write.repository'
+import { PhotosController } from '@photos/presentation/controllers/photos.controller'
 import { EventsModule } from '../events/events.module'
 
 const CommandHandlers = [UploadPhotosHandler]
@@ -14,6 +15,7 @@ const QueryHandlers = [GetPhotosListHandler, GetPhotoDetailHandler, SearchPhotos
 
 @Module({
   imports: [CqrsModule, EventsModule],
+  controllers: [PhotosController],
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,

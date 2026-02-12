@@ -1,12 +1,10 @@
-import type { EquipmentItemType } from '@classifications/domain/value-objects/equipment-item.vo'
-
 export interface PlateClassification {
   number: number
   confidenceScore?: number
 }
 
 export interface ColorClassification {
-  itemType: EquipmentItemType
+  itemType: string
   colorName: string
   colorHex: string
   densityPercentage: number
