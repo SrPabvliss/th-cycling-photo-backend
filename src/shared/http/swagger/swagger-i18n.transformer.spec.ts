@@ -1,4 +1,8 @@
 import type { OpenAPIObject } from '@nestjs/swagger'
+import type {
+  ParameterObject,
+  ResponseObject,
+} from '@nestjs/swagger/dist/interfaces/open-api-spec.interface'
 import { type SwaggerTranslations, translateDocument } from './swagger-i18n.transformer'
 
 const translations: SwaggerTranslations = {
@@ -54,7 +58,7 @@ describe('translateDocument', () => {
     })
     const result = translateDocument(doc, translations)
 
-    expect(result.paths['/events'].post.summary).toBe('Crear un nuevo evento')
+    expect(result.paths['/events'].post?.summary).toBe('Crear un nuevo evento')
   })
 
   it('should translate operation tag references', () => {
@@ -71,7 +75,7 @@ describe('translateDocument', () => {
     })
     const result = translateDocument(doc, translations)
 
-    expect(result.paths['/events'].get.tags).toEqual(['Eventos'])
+    expect(result.paths['/events'].get?.tags).toEqual(['Eventos'])
   })
 
   it('should translate response descriptions', () => {
@@ -88,7 +92,7 @@ describe('translateDocument', () => {
     })
     const result = translateDocument(doc, translations)
 
-    expect(result.paths['/events'].post.responses['201'].description).toBe(
+    expect((result.paths['/events'].post?.responses['201'] as ResponseObject).description).toBe(
       'Evento creado exitosamente',
     )
   })
@@ -106,7 +110,9 @@ describe('translateDocument', () => {
     })
     const result = translateDocument(doc, translations)
 
-    expect(result.paths['/events/{id}'].get.parameters[0].description).toBe('UUID del evento')
+    expect((result.paths['/events/{id}'].get?.parameters?.[0] as ParameterObject).description).toBe(
+      'UUID del evento',
+    )
   })
 
   it('should translate schema property descriptions in components', () => {
@@ -142,8 +148,8 @@ describe('translateDocument', () => {
     })
     const result = translateDocument(doc, translations)
 
-    expect(result.paths['/health'].get.summary).toBe('Health check')
-    expect(result.paths['/health'].get.responses['200'].description).toBe('OK')
+    expect(result.paths['/health'].get?.summary).toBe('Health check')
+    expect((result.paths['/health'].get?.responses['200'] as ResponseObject).description).toBe('OK')
   })
 
   it('should not mutate the original document', () => {
@@ -186,8 +192,8 @@ describe('translateDocument', () => {
     const result = translateDocument(doc, emptyTranslations)
 
     expect(result.info.title).toBe('')
-    expect(result.paths['/events'].post.summary).toBe('Create a new event')
-    expect(result.paths['/events'].post.responses['201'].description).toBe(
+    expect(result.paths['/events'].post?.summary).toBe('Create a new event')
+    expect((result.paths['/events'].post?.responses['201'] as ResponseObject).description).toBe(
       'Event created successfully',
     )
   })
