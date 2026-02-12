@@ -10,7 +10,7 @@ export class PhotoDetailProjection {
   /** Storage key for CDN URL resolution */
   storageKey: string
   /** File size in bytes */
-  fileSize: bigint
+  fileSize: number
   /** MIME type */
   mimeType: string
   /** Image width in pixels */
