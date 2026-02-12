@@ -17,7 +17,9 @@
     "paths": {
       "@shared/*": ["src/shared/*"],
       "@generated/*": ["src/generated/*"],
-      "@events/*": ["src/modules/events/*"]
+      "@events/*": ["src/modules/events/*"],
+      "@photos/*": ["src/modules/photos/*"],
+      "@classifications/*": ["src/modules/classifications/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

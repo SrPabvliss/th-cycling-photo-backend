@@ -66,6 +66,7 @@
     "@nestjs/testing": "^11.0.1",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.0.0",
     "@types/node": "^22.10.7",
     "@types/pg": "^8.16.0",
     "@types/supertest": "^6.0.2",
@@ -96,6 +97,8 @@
       "^@shared/(.*)$": "<rootDir>/shared/$1",
       "^@generated/(.*)$": "<rootDir>/generated/$1",
       "^@events/(.*)$": "<rootDir>/modules/events/$1",
+      "^@photos/(.*)$": "<rootDir>/modules/photos/$1",
+      "^@classifications/(.*)$": "<rootDir>/modules/classifications/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "collectCoverageFrom": [
