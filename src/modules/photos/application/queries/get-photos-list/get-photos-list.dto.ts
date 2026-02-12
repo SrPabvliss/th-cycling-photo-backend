@@ -1,11 +1,7 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator'
+import { ApiPropertyOptional } from '@nestjs/swagger'
+import { IsInt, IsOptional, Max, Min } from 'class-validator'
 
 export class GetPhotosListDto {
-  @ApiProperty({ description: 'Event UUID to list photos for', format: 'uuid' })
-  @IsUUID()
-  eventId: string
-
   @ApiPropertyOptional({ description: 'Page number (defaults to 1)', example: 1 })
   @IsInt()
   @Min(1)
