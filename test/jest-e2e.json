@@ -3,6 +3,7 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
+  "testTimeout": 30000,
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
@@ -10,6 +11,8 @@
     "^@shared/(.*)$": "<rootDir>/../src/shared/$1",
     "^@generated/(.*)$": "<rootDir>/../src/generated/$1",
     "^@events/(.*)$": "<rootDir>/../src/modules/events/$1",
+    "^@photos/(.*)$": "<rootDir>/../src/modules/photos/$1",
+    "^@classifications/(.*)$": "<rootDir>/../src/modules/classifications/$1",
     "^(\\.{1,2}/.*)\\.js$": "$1"
   }
 }

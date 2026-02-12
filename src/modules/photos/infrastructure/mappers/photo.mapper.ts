@@ -99,7 +99,7 @@ export function toDetailProjection(record: PhotoDetailSelect): PhotoDetailProjec
     eventId: record.event_id,
     filename: record.filename,
     storageKey: record.storage_key,
-    fileSize: record.file_size,
+    fileSize: Number(record.file_size),
     mimeType: record.mime_type,
     width: record.width,
     height: record.height,
