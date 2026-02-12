@@ -44,6 +44,9 @@ describe('ClassifyPhotoHandler', () => {
   beforeEach(() => {
     readRepo = {
       findById: jest.fn(),
+      getPhotosList: jest.fn(),
+      getPhotoDetail: jest.fn(),
+      searchPhotos: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
     classificationRepo = {
