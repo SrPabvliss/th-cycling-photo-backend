@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import type { Pagination } from '@shared/application'
+import { PaginatedResult, type Pagination } from '@shared/application'
 import { PrismaService } from '@shared/infrastructure'
 import type { EventDetailProjection, EventListProjection } from '../../application/projections'
 import type { Event } from '../../domain/entities'
@@ -17,24 +17,29 @@ export class EventReadRepository implements IEventReadRepository {
   }
 
   /** Retrieves a paginated list of events as projections. */
-  async getEventsList(pagination: Pagination): Promise<EventListProjection[]> {
-    const events = await this.prisma.event.findMany({
-      where: { deleted_at: null },
-      select: {
-        id: true,
-        name: true,
-        event_date: true,
-        location: true,
-        status: true,
-        total_photos: true,
-        processed_photos: true,
-      },
-      orderBy: { event_date: 'desc' },
-      skip: pagination.skip,
-      take: pagination.take,
-    })
+  async getEventsList(pagination: Pagination): Promise<PaginatedResult<EventListProjection>> {
+    const where = { deleted_at: null }
 
-    return events.map(EventMapper.toListProjection)
+    const [events, total] = await Promise.all([
+      this.prisma.event.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          event_date: true,
+          location: true,
+          status: true,
+          total_photos: true,
+          processed_photos: true,
+        },
+        orderBy: { event_date: 'desc' },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+      this.prisma.event.count({ where }),
+    ])
+
+    return new PaginatedResult(events.map(EventMapper.toListProjection), total, pagination)
   }
 
   /** Retrieves a single non-deleted event's detail by ID. */

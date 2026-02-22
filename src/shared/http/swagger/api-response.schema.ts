@@ -1,5 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
+/** Pagination metadata for list responses. */
+export class ApiPaginationMetaSchema {
+  @ApiProperty({ description: 'Current page (1-indexed)', example: 1 })
+  page: number
+
+  @ApiProperty({ description: 'Items per page', example: 20 })
+  limit: number
+
+  @ApiProperty({ description: 'Total number of records', example: 87 })
+  total: number
+
+  @ApiProperty({ description: 'Total number of pages', example: 5 })
+  totalPages: number
+}
+
 /** Metadata included in every successful API response. */
 export class ApiMetaSchema {
   @ApiProperty({
@@ -16,6 +31,12 @@ export class ApiMetaSchema {
     example: 'Event created successfully',
   })
   message?: string | null
+
+  @ApiPropertyOptional({
+    description: 'Pagination metadata (present on list endpoints)',
+    type: ApiPaginationMetaSchema,
+  })
+  pagination?: ApiPaginationMetaSchema
 }
 
 /** Metadata included in error responses. */

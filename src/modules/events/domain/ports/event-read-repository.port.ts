@@ -1,10 +1,10 @@
 import type { EventDetailProjection, EventListProjection } from '@events/application/projections'
-import type { Pagination } from '@shared/application'
+import type { PaginatedResult, Pagination } from '@shared/application'
 import type { Event } from '../entities'
 
 export interface IEventReadRepository {
   findById(id: string): Promise<Event | null>
-  getEventsList(pagination: Pagination): Promise<EventListProjection[]>
+  getEventsList(pagination: Pagination): Promise<PaginatedResult<EventListProjection>>
   getEventDetail(id: string): Promise<EventDetailProjection | null>
 }
 

@@ -5,6 +5,7 @@ import {
   type NestInterceptor,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
+import { PaginatedResult } from '@shared/application'
 import type { Request } from 'express'
 import { I18nContext } from 'nestjs-i18n'
 import type { Observable } from 'rxjs'
@@ -15,6 +16,9 @@ import type { ApiSuccessResponse } from '../interfaces/api-response.interface'
 /**
  * Global interceptor that wraps all successful responses
  * in the ADR-002 envelope: `{ data, meta }`.
+ *
+ * When a handler returns a `PaginatedResult`, the interceptor
+ * unwraps it and adds `meta.pagination` automatically.
  */
 @Injectable()
 export class ResponseInterceptor<T> implements NestInterceptor<T, ApiSuccessResponse<T>> {
@@ -30,14 +34,30 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiSuccessResp
       successMessageKey && i18n ? String(i18n.t(successMessageKey)) : (successMessageKey ?? null)
 
     return next.handle().pipe(
-      map((data) => ({
-        data,
-        meta: {
+      map((data) => {
+        const meta = {
           requestId: request.requestId,
           timestamp: new Date().toISOString(),
           message: translatedMessage,
-        },
-      })),
+        }
+
+        if (data instanceof PaginatedResult) {
+          return {
+            data: data.items as T,
+            meta: {
+              ...meta,
+              pagination: {
+                page: data.pagination.page,
+                limit: data.pagination.limit,
+                total: data.total,
+                totalPages: data.totalPages,
+              },
+            },
+          }
+        }
+
+        return { data, meta }
+      }),
     )
   }
 }
