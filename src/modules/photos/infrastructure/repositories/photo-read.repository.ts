@@ -5,7 +5,7 @@ import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
 import { PHOTO_DETAIL_SELECT, PHOTO_LIST_SELECT } from '@photos/infrastructure/constants'
-import type { Pagination } from '@shared/application'
+import { PaginatedResult, type Pagination } from '@shared/application'
 import { PrismaService } from '@shared/infrastructure'
 import * as PhotoMapper from '../mappers/photo.mapper'
 
@@ -20,16 +20,24 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   }
 
   /** Retrieves a paginated list of photos for a given event. */
-  async getPhotosList(eventId: string, pagination: Pagination): Promise<PhotoListProjection[]> {
-    const photos = await this.prisma.photo.findMany({
-      where: { event_id: eventId },
-      select: PHOTO_LIST_SELECT,
-      orderBy: { uploaded_at: 'desc' },
-      skip: pagination.skip,
-      take: pagination.take,
-    })
+  async getPhotosList(
+    eventId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<PhotoListProjection>> {
+    const where = { event_id: eventId }
 
-    return photos.map(PhotoMapper.toListProjection)
+    const [photos, total] = await Promise.all([
+      this.prisma.photo.findMany({
+        where,
+        select: PHOTO_LIST_SELECT,
+        orderBy: { uploaded_at: 'desc' },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+      this.prisma.photo.count({ where }),
+    ])
+
+    return new PaginatedResult(photos.map(PhotoMapper.toListProjection), total, pagination)
   }
 
   /** Retrieves a single photo's detail with all classification relations. */
@@ -46,18 +54,21 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   async searchPhotos(
     filters: SearchPhotosFilters,
     pagination: Pagination,
-  ): Promise<PhotoListProjection[]> {
+  ): Promise<PaginatedResult<PhotoListProjection>> {
     const where = this.buildSearchWhere(filters)
 
-    const photos = await this.prisma.photo.findMany({
-      where,
-      select: PHOTO_LIST_SELECT,
-      orderBy: { uploaded_at: 'desc' },
-      skip: pagination.skip,
-      take: pagination.take,
-    })
+    const [photos, total] = await Promise.all([
+      this.prisma.photo.findMany({
+        where,
+        select: PHOTO_LIST_SELECT,
+        orderBy: { uploaded_at: 'desc' },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+      this.prisma.photo.count({ where }),
+    ])
 
-    return photos.map(PhotoMapper.toListProjection)
+    return new PaginatedResult(photos.map(PhotoMapper.toListProjection), total, pagination)
   }
 
   /** Builds a Prisma where clause from search filters. */

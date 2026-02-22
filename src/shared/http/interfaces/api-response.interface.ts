@@ -1,10 +1,18 @@
 import type { ErrorCode } from '../../domain/exceptions/app.exception'
 
+export interface ApiPaginationMeta {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+}
+
 export interface ApiMeta {
   requestId: string
   timestamp: string
   message?: string | null
   path?: string
+  pagination?: ApiPaginationMeta
 }
 
 export interface ApiSuccessResponse<T = unknown> {
