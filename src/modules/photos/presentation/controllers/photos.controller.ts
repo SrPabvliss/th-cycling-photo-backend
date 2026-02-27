@@ -13,8 +13,16 @@ import {
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { FilesInterceptor } from '@nestjs/platform-express'
 import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
-import { UploadPhotosCommand } from '@photos/application/commands'
-import { PhotoDetailProjection, PhotoListProjection } from '@photos/application/projections'
+import {
+  GeneratePresignedUrlCommand,
+  GeneratePresignedUrlDto,
+  UploadPhotosCommand,
+} from '@photos/application/commands'
+import {
+  PhotoDetailProjection,
+  PhotoListProjection,
+  PresignedUrlProjection,
+} from '@photos/application/projections'
 import {
   GetPhotoDetailQuery,
   GetPhotosListDto,
@@ -83,6 +91,26 @@ export class PhotosController {
   async findOne(@Param('id') id: string) {
     const query = new GetPhotoDetailQuery(id)
     return this.queryBus.execute(query)
+  }
+
+  /** Generates a presigned URL for direct upload to B2. */
+  @Post('events/:eventId/photos/presigned-url')
+  @SuccessMessage('success.CREATED')
+  @ApiOperation({ summary: 'Generate a presigned URL for direct photo upload' })
+  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Presigned URL generated',
+    type: PresignedUrlProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 400, description: 'Invalid content type' })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
+  async generatePresignedUrl(
+    @Param('eventId') eventId: string,
+    @Body() dto: GeneratePresignedUrlDto,
+  ) {
+    const command = new GeneratePresignedUrlCommand(eventId, dto.fileName, dto.contentType)
+    return this.commandBus.execute(command)
   }
 
   /** Batch-uploads photos to an event. */
