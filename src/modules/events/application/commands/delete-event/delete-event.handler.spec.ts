@@ -48,9 +48,7 @@ describe('DeleteEventHandler', () => {
 
     expect(result).toEqual({ id: existingEvent.id })
     expect(readRepo.findById).toHaveBeenCalledWith(existingEvent.id)
-    expect(writeRepo.save).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'archived' }),
-    )
+    expect(writeRepo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'archived' }))
   })
 
   it('should throw 404 when event does not exist', async () => {

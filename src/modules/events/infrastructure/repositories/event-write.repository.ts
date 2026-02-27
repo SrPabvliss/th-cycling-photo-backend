@@ -20,5 +20,4 @@ export class EventWriteRepository implements IEventWriteRepository {
 
     return EventMapper.toEntity(saved)
   }
-
 }
