@@ -21,11 +21,4 @@ export class EventWriteRepository implements IEventWriteRepository {
     return EventMapper.toEntity(saved)
   }
 
-  /** Soft-deletes an event by setting its deleted_at timestamp. */
-  async delete(id: string): Promise<void> {
-    await this.prisma.event.update({
-      where: { id },
-      data: { deleted_at: new Date() },
-    })
-  }
 }
