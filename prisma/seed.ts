@@ -45,7 +45,7 @@ async function main() {
       name: 'Vuelta Ciclística del Ecuador 2026',
       event_date: new Date('2026-03-15'),
       location: 'Ambato, Ecuador',
-      status: 'draft',
+      status: 'active',
       total_photos: 10,
     },
   })

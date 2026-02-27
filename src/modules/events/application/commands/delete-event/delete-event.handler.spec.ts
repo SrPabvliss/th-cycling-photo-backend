@@ -12,23 +12,9 @@ describe('DeleteEventHandler', () => {
   const futureDate = new Date()
   futureDate.setFullYear(futureDate.getFullYear() + 1)
 
-  const existingEvent = Event.fromPersistence({
-    id: '550e8400-e29b-41d4-a716-446655440000',
-    name: 'Vuelta Ciclística',
-    date: futureDate,
-    location: 'Ambato',
-    status: 'draft',
-    totalPhotos: 0,
-    processedPhotos: 0,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    deletedAt: null,
-  })
-
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
-      delete: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
 
     readRepo = {
@@ -40,16 +26,29 @@ describe('DeleteEventHandler', () => {
     handler = new DeleteEventHandler(writeRepo, readRepo)
   })
 
-  it('should soft-delete an existing event and return its id', async () => {
+  it('should archive an existing event and return its id', async () => {
+    const existingEvent = Event.fromPersistence({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      name: 'Vuelta Ciclística',
+      date: futureDate,
+      location: 'Ambato',
+      status: 'active',
+      totalPhotos: 0,
+      processedPhotos: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    })
+
     readRepo.findById.mockResolvedValue(existingEvent)
-    writeRepo.delete.mockResolvedValue(undefined)
+    writeRepo.save.mockImplementation(async (event) => event)
 
     const command = new DeleteEventCommand(existingEvent.id)
     const result = await handler.execute(command)
 
     expect(result).toEqual({ id: existingEvent.id })
     expect(readRepo.findById).toHaveBeenCalledWith(existingEvent.id)
-    expect(writeRepo.delete).toHaveBeenCalledWith(existingEvent.id)
+    expect(writeRepo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'archived' }))
   })
 
   it('should throw 404 when event does not exist', async () => {
@@ -58,6 +57,6 @@ describe('DeleteEventHandler', () => {
     const command = new DeleteEventCommand('non-existent-id')
 
     await expect(handler.execute(command)).rejects.toThrow(AppException)
-    expect(writeRepo.delete).not.toHaveBeenCalled()
+    expect(writeRepo.save).not.toHaveBeenCalled()
   })
 })

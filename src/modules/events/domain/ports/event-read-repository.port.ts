@@ -3,8 +3,11 @@ import type { PaginatedResult, Pagination } from '@shared/application'
 import type { Event } from '../entities'
 
 export interface IEventReadRepository {
-  findById(id: string): Promise<Event | null>
-  getEventsList(pagination: Pagination): Promise<PaginatedResult<EventListProjection>>
+  findById(id: string, includeArchived?: boolean): Promise<Event | null>
+  getEventsList(
+    pagination: Pagination,
+    includeArchived?: boolean,
+  ): Promise<PaginatedResult<EventListProjection>>
   getEventDetail(id: string): Promise<EventDetailProjection | null>
 }
 

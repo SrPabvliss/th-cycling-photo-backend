@@ -14,7 +14,6 @@ describe('CreateEventHandler', () => {
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
-      delete: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
     handler = new CreateEventHandler(writeRepo)
   })
@@ -32,7 +31,7 @@ describe('CreateEventHandler', () => {
     expect(writeRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Test Event',
-        status: 'draft',
+        status: 'active',
       }),
     )
   })

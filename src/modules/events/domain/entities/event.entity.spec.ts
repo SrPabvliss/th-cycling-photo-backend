@@ -12,7 +12,7 @@ describe('Event Entity', () => {
   }
 
   describe('create', () => {
-    it('should create event with valid data and draft status', () => {
+    it('should create event with valid data and active status', () => {
       const event = Event.create(validData)
 
       expect(event).toBeInstanceOf(Event)
@@ -20,7 +20,7 @@ describe('Event Entity', () => {
       expect(event.name).toBe(validData.name)
       expect(event.date).toBe(futureDate)
       expect(event.location).toBe('Ambato, Ecuador')
-      expect(event.status).toBe('draft')
+      expect(event.status).toBe('active')
       expect(event.totalPhotos).toBe(0)
       expect(event.processedPhotos).toBe(0)
       expect(event.audit.deletedAt).toBeNull()
@@ -136,16 +136,43 @@ describe('Event Entity', () => {
     })
   })
 
-  describe('softDelete', () => {
-    it('should mark event as deleted via audit', () => {
+  describe('archive', () => {
+    it('should set status to archived and mark as deleted', () => {
       const event = Event.create(validData)
-      const beforeDelete = event.audit.updatedAt
 
-      event.softDelete()
+      event.archive()
 
+      expect(event.status).toBe('archived')
       expect(event.audit.deletedAt).toBeInstanceOf(Date)
       expect(event.audit.isDeleted).toBe(true)
-      expect(event.audit.updatedAt.getTime()).toBeGreaterThanOrEqual(beforeDelete.getTime())
+    })
+
+    it('should throw if event is already archived', () => {
+      const event = Event.create(validData)
+      event.archive()
+
+      expect(() => event.archive()).toThrow(AppException)
+      expect(() => event.archive()).toThrow('event.already_archived')
+    })
+  })
+
+  describe('restore', () => {
+    it('should set status to active and clear deletedAt', () => {
+      const event = Event.create(validData)
+      event.archive()
+
+      event.restore()
+
+      expect(event.status).toBe('active')
+      expect(event.audit.deletedAt).toBeNull()
+      expect(event.audit.isDeleted).toBe(false)
+    })
+
+    it('should throw if event is not archived', () => {
+      const event = Event.create(validData)
+
+      expect(() => event.restore()).toThrow(AppException)
+      expect(() => event.restore()).toThrow('event.not_archived')
     })
   })
 
@@ -157,7 +184,7 @@ describe('Event Entity', () => {
         name: 'Past Event',
         date: pastDate,
         location: null,
-        status: 'completed',
+        status: 'active',
         totalPhotos: 100,
         processedPhotos: 95,
         createdAt: new Date('2020-01-01'),
@@ -168,20 +195,20 @@ describe('Event Entity', () => {
       expect(event).toBeInstanceOf(Event)
       expect(event.id).toBe('550e8400-e29b-41d4-a716-446655440000')
       expect(event.date).toBe(pastDate)
-      expect(event.status).toBe('completed')
+      expect(event.status).toBe('active')
       expect(event.totalPhotos).toBe(100)
       expect(event.audit.deletedAt).toBeNull()
       expect(event.audit.isDeleted).toBe(false)
     })
 
-    it('should reconstitute soft-deleted entity', () => {
+    it('should reconstitute archived entity', () => {
       const deletedDate = new Date('2024-06-15')
       const event = Event.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
-        name: 'Deleted Event',
+        name: 'Archived Event',
         date: new Date('2024-01-01'),
         location: null,
-        status: 'draft',
+        status: 'archived',
         totalPhotos: 0,
         processedPhotos: 0,
         createdAt: new Date('2024-01-01'),
@@ -189,6 +216,7 @@ describe('Event Entity', () => {
         deletedAt: deletedDate,
       })
 
+      expect(event.status).toBe('archived')
       expect(event.audit.deletedAt).toBe(deletedDate)
       expect(event.audit.isDeleted).toBe(true)
     })

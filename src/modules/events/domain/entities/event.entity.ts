@@ -18,7 +18,7 @@ export class Event {
    * Applies all business validations before instantiation.
    *
    * @param data - Event creation data (name, date, location)
-   * @returns New Event instance with draft status
+   * @returns New Event instance with active status
    * @throws AppException.businessRule if name length is not between 3 and 200
    * @throws AppException.businessRule if date is in the past
    */
@@ -31,7 +31,7 @@ export class Event {
       data.name,
       data.date,
       data.location,
-      EventStatus.DRAFT,
+      EventStatus.ACTIVE,
       0,
       0,
       AuditFields.initialize(),
@@ -61,9 +61,23 @@ export class Event {
     this.audit.markUpdated()
   }
 
-  /** Marks this event as soft-deleted. */
-  softDelete(): void {
+  /** Archives this event: sets status to archived and marks as soft-deleted. */
+  archive(): void {
+    if (this.status === EventStatus.ARCHIVED) {
+      throw AppException.businessRule('event.already_archived')
+    }
+    this.status = EventStatus.ARCHIVED
     this.audit.markDeleted()
+  }
+
+  /** Restores a previously archived event: sets status to active and clears deletedAt. */
+  restore(): void {
+    if (this.status !== EventStatus.ARCHIVED) {
+      throw AppException.businessRule('event.not_archived')
+    }
+    this.status = EventStatus.ACTIVE
+    this.audit.deletedAt = null
+    this.audit.markUpdated()
   }
 
   private static validateName(name: string): void {

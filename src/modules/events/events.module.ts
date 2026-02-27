@@ -1,4 +1,6 @@
+import { ArchiveEventHandler } from '@events/application/commands/archive-event/archive-event.handler'
 import { CreateEventHandler } from '@events/application/commands/create-event/create-event.handler'
+import { RestoreEventHandler } from '@events/application/commands/restore-event/restore-event.handler'
 import { GetEventDetailHandler } from '@events/application/queries/get-event-detail/get-event-detail.handler'
 import { GetEventsListHandler } from '@events/application/queries/get-events-list/get-events-list.handler'
 import { EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY } from '@events/domain/ports'
@@ -10,7 +12,13 @@ import { CqrsModule } from '@nestjs/cqrs'
 import { DeleteEventHandler } from './application/commands/delete-event/delete-event.handler'
 import { UpdateEventHandler } from './application/commands/update-event/update-event.handler'
 
-const CommandHandlers = [CreateEventHandler, UpdateEventHandler, DeleteEventHandler]
+const CommandHandlers = [
+  ArchiveEventHandler,
+  CreateEventHandler,
+  DeleteEventHandler,
+  RestoreEventHandler,
+  UpdateEventHandler,
+]
 const QueryHandlers = [GetEventsListHandler, GetEventDetailHandler]
 
 @Module({
