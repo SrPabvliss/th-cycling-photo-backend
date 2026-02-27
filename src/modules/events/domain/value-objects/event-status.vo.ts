@@ -1,16 +1,12 @@
 /**
- * Allowed statuses for an Event through its lifecycle.
+ * Allowed statuses for an Event.
  *
- * - `draft`      – Event created, no photos uploaded yet
- * - `uploading`  – Photos are being uploaded
- * - `processing` – AI processing in progress
- * - `completed`  – All photos have been processed
+ * - `active`   – Event is active and visible in listings
+ * - `archived` – Event is archived (hidden from default listings)
  */
 export const EventStatus = {
-  DRAFT: 'draft',
-  UPLOADING: 'uploading',
-  PROCESSING: 'processing',
-  COMPLETED: 'completed',
+  ACTIVE: 'active',
+  ARCHIVED: 'archived',
 } as const
 
 export type EventStatusType = (typeof EventStatus)[keyof typeof EventStatus]
