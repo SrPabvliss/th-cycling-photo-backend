@@ -51,6 +51,7 @@ describe('UploadPhotosHandler', () => {
 
     storageAdapter = {
       upload: jest.fn(),
+      getPresignedUrl: jest.fn(),
       getPublicUrl: jest.fn(),
       delete: jest.fn(),
     } as jest.Mocked<IStorageAdapter>
