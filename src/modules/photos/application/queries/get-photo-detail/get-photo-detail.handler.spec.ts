@@ -12,7 +12,7 @@ describe('GetPhotoDetailHandler', () => {
     eventId: 'event-001',
     filename: 'photo-001.jpg',
     storageKey: 'events/event-001/photo-001.jpg',
-    fileSize: BigInt(2048000),
+    fileSize: 2048000,
     mimeType: 'image/jpeg',
     width: 1920,
     height: 1080,

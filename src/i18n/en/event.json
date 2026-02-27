@@ -1,4 +1,6 @@
 {
   "name_invalid_length": "Event name must be between 3 and 200 characters",
-  "date_in_past": "Event date cannot be in the past"
+  "date_in_past": "Event date cannot be in the past",
+  "already_archived": "Event is already archived",
+  "not_archived": "Event is not archived"
 }

@@ -21,7 +21,7 @@ describe('UploadPhotosHandler', () => {
     name: 'Test Event',
     date: futureDate,
     location: 'Ambato',
-    status: 'draft',
+    status: 'active',
     totalPhotos: 0,
     processedPhotos: 0,
     createdAt: new Date(),
