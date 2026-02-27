@@ -11,10 +11,8 @@ datasource db {
 // ─── ENUMs ──────────────────────────────────────────────────────────────────
 
 enum EventStatus {
-  draft
-  uploading
-  processing
-  completed
+  active
+  archived
 
   @@map("event_status")
 }
@@ -89,7 +87,7 @@ model Event {
   name             String      @db.VarChar(200)
   event_date       DateTime    @db.Date
   location         String?     @db.VarChar(200)
-  status           EventStatus @default(draft)
+  status           EventStatus @default(active)
   total_photos     Int         @default(0)
   processed_photos Int         @default(0)
   exported_photos  Int         @default(0)
