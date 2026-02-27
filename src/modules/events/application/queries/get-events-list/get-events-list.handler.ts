@@ -11,6 +11,6 @@ export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
 
   /** Retrieves a paginated list of events. */
   async execute(query: GetEventsListQuery): Promise<PaginatedResult<EventListProjection>> {
-    return this.readRepo.getEventsList(query.pagination)
+    return this.readRepo.getEventsList(query.pagination, query.includeArchived)
   }
 }

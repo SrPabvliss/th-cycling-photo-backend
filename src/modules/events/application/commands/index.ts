@@ -1,5 +1,7 @@
+export { ArchiveEventCommand } from './archive-event/archive-event.command'
 export { CreateEventCommand } from './create-event/create-event.command'
 export { CreateEventDto } from './create-event/create-event.dto'
 export { DeleteEventCommand } from './delete-event/delete-event.command'
+export { RestoreEventCommand } from './restore-event/restore-event.command'
 export { UpdateEventCommand } from './update-event/update-event.command'
 export { UpdateEventDto } from './update-event/update-event.dto'

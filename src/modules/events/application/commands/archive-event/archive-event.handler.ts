@@ -8,17 +8,17 @@ import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
-import { DeleteEventCommand } from './delete-event.command'
+import { ArchiveEventCommand } from './archive-event.command'
 
-@CommandHandler(DeleteEventCommand)
-export class DeleteEventHandler implements ICommandHandler<DeleteEventCommand> {
+@CommandHandler(ArchiveEventCommand)
+export class ArchiveEventHandler implements ICommandHandler<ArchiveEventCommand> {
   constructor(
     @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
     @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
   ) {}
 
-  /** Verifies the event exists and archives it (soft-delete). */
-  async execute(command: DeleteEventCommand): Promise<EntityIdProjection> {
+  /** Archives an event by setting its status and soft-deleting it. */
+  async execute(command: ArchiveEventCommand): Promise<EntityIdProjection> {
     const event = await this.readRepo.findById(command.id)
     if (!event) throw AppException.notFound('Event', command.id)
 
