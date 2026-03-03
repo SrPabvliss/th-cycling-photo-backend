@@ -1,8 +1,15 @@
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AppException } from '@shared/domain/exceptions/app.exception'
-import type { IStorageAdapter, UploadParams, UploadResult } from '../../domain/ports'
+import type {
+  IStorageAdapter,
+  PresignedUrlParams,
+  PresignedUrlResult,
+  UploadParams,
+  UploadResult,
+} from '../../domain/ports/storage-adapter.port'
 
 /**
  * Storage adapter for Backblaze B2 using the S3-compatible API.
@@ -27,6 +34,8 @@ export class BackblazeB2Adapter implements IStorageAdapter {
         accessKeyId: this.config.getOrThrow<string>('storage.b2.applicationKeyId'),
         secretAccessKey: this.config.getOrThrow<string>('storage.b2.applicationKey'),
       },
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     })
   }
 
@@ -48,6 +57,30 @@ export class BackblazeB2Adapter implements IStorageAdapter {
       }
     } catch (error) {
       this.logger.error(`Failed to upload file: ${params.key}`, error)
+      throw AppException.externalService('BackblazeB2', error as Error)
+    }
+  }
+
+  /** Generates a presigned URL for direct browser upload to B2. */
+  async getPresignedUrl(params: PresignedUrlParams): Promise<PresignedUrlResult> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: params.key,
+        ContentType: params.contentType,
+      })
+
+      const url = await getSignedUrl(this.client, command, {
+        expiresIn: params.expiresIn,
+      })
+
+      return {
+        url,
+        objectKey: params.key,
+        expiresIn: params.expiresIn,
+      }
+    } catch (error) {
+      this.logger.error(`Failed to generate presigned URL for: ${params.key}`, error)
       throw AppException.externalService('BackblazeB2', error as Error)
     }
   }

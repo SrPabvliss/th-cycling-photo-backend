@@ -1,6 +1,1 @@
-export {
-  type IStorageAdapter,
-  STORAGE_ADAPTER,
-  type UploadParams,
-  type UploadResult,
-} from './storage-adapter.port'
+export { type IStorageAdapter, STORAGE_ADAPTER } from './storage-adapter.port'

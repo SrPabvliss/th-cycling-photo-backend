@@ -1,14 +1,18 @@
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { ConfigService } from '@nestjs/config'
 import { AppException } from '@shared/domain/exceptions/app.exception'
 import { BackblazeB2Adapter } from './backblaze-b2.adapter'
 
 jest.mock('@aws-sdk/client-s3')
+jest.mock('@aws-sdk/s3-request-presigner')
 
 const mockSend = jest.fn()
 ;(S3Client as jest.MockedClass<typeof S3Client>).mockImplementation(
   () => ({ send: mockSend }) as unknown as S3Client,
 )
+
+const mockGetSignedUrl = getSignedUrl as jest.MockedFunction<typeof getSignedUrl>
 
 function createConfigService(overrides: Record<string, unknown> = {}): ConfigService {
   const defaults: Record<string, unknown> = {
@@ -40,7 +44,7 @@ describe('BackblazeB2Adapter', () => {
   })
 
   describe('constructor', () => {
-    it('should initialize S3Client with correct config', () => {
+    it('should initialize S3Client with correct config including checksum settings', () => {
       expect(S3Client).toHaveBeenCalledWith({
         endpoint: 'https://s3.us-east-005.backblazeb2.com',
         region: 'us-east-005',
@@ -48,6 +52,8 @@ describe('BackblazeB2Adapter', () => {
           accessKeyId: 'test-key-id',
           secretAccessKey: 'test-key-secret',
         },
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+        responseChecksumValidation: 'WHEN_REQUIRED',
       })
     })
   })
@@ -88,6 +94,51 @@ describe('BackblazeB2Adapter', () => {
       mockSend.mockRejectedValueOnce(new Error('S3 upload failed'))
 
       const error = await adapter.upload(uploadParams).catch((e) => e)
+      expect(error).toBeInstanceOf(AppException)
+      expect(error.code).toBe('EXTERNAL_SERVICE')
+    })
+  })
+
+  describe('getPresignedUrl', () => {
+    const presignedParams = {
+      key: 'events/abc-123/uuid-photo.jpg',
+      contentType: 'image/jpeg',
+      expiresIn: 300,
+    }
+
+    it('should return presigned URL with object key and expiry', async () => {
+      mockGetSignedUrl.mockResolvedValueOnce('https://s3.us-east-005.backblazeb2.com/signed-url')
+
+      const result = await adapter.getPresignedUrl(presignedParams)
+
+      expect(result).toEqual({
+        url: 'https://s3.us-east-005.backblazeb2.com/signed-url',
+        objectKey: 'events/abc-123/uuid-photo.jpg',
+        expiresIn: 300,
+      })
+    })
+
+    it('should call getSignedUrl with PutObjectCommand and expiry', async () => {
+      mockGetSignedUrl.mockResolvedValueOnce('https://signed-url')
+
+      await adapter.getPresignedUrl(presignedParams)
+
+      expect(PutObjectCommand).toHaveBeenCalledWith({
+        Bucket: 'test-bucket',
+        Key: 'events/abc-123/uuid-photo.jpg',
+        ContentType: 'image/jpeg',
+      })
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.any(PutObjectCommand),
+        { expiresIn: 300 },
+      )
+    })
+
+    it('should throw AppException.externalService on error', async () => {
+      mockGetSignedUrl.mockRejectedValueOnce(new Error('Signing failed'))
+
+      const error = await adapter.getPresignedUrl(presignedParams).catch((e) => e)
       expect(error).toBeInstanceOf(AppException)
       expect(error.code).toBe('EXTERNAL_SERVICE')
     })

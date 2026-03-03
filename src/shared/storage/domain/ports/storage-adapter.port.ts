@@ -16,6 +16,26 @@ export interface UploadResult {
   url: string
 }
 
+/** Parameters required to generate a presigned URL. */
+export interface PresignedUrlParams {
+  /** Storage key (path) where the file will be uploaded. */
+  key: string
+  /** MIME type of the file (e.g., `image/jpeg`). */
+  contentType: string
+  /** URL expiration time in seconds. */
+  expiresIn: number
+}
+
+/** Result returned after generating a presigned URL. */
+export interface PresignedUrlResult {
+  /** Presigned URL for uploading the file directly to storage. */
+  url: string
+  /** Storage key the URL is scoped to. */
+  objectKey: string
+  /** Expiration time in seconds. */
+  expiresIn: number
+}
+
 /**
  * Port interface for storage operations.
  * Abstracts the underlying storage provider (Backblaze B2, S3, etc.)
@@ -24,6 +44,9 @@ export interface UploadResult {
 export interface IStorageAdapter {
   /** Uploads a file to storage and returns the storage key and public URL. */
   upload(params: UploadParams): Promise<UploadResult>
+
+  /** Generates a presigned URL for direct browser upload to storage. */
+  getPresignedUrl(params: PresignedUrlParams): Promise<PresignedUrlResult>
 
   /** Constructs the public URL for a given storage key. */
   getPublicUrl(key: string): string
