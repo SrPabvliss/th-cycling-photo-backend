@@ -14,11 +14,14 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { FilesInterceptor } from '@nestjs/platform-express'
 import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import {
+  ConfirmPhotoBatchCommand,
+  ConfirmPhotoBatchDto,
   GeneratePresignedUrlCommand,
   GeneratePresignedUrlDto,
   UploadPhotosCommand,
 } from '@photos/application/commands'
 import {
+  ConfirmBatchProjection,
   PhotoDetailProjection,
   PhotoListProjection,
   PresignedUrlProjection,
@@ -110,6 +113,34 @@ export class PhotosController {
     @Body() dto: GeneratePresignedUrlDto,
   ) {
     const command = new GeneratePresignedUrlCommand(eventId, dto.fileName, dto.contentType)
+    return this.commandBus.execute(command)
+  }
+
+  /** Confirms a batch of photos uploaded directly to B2. */
+  @Post('events/:eventId/photos/confirm-batch')
+  @SuccessMessage('success.CREATED')
+  @ApiOperation({ summary: 'Confirm a batch of photos uploaded via presigned URLs' })
+  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Photos confirmed',
+    type: ConfirmBatchProjection,
+  })
+  @ApiEnvelopeErrorResponse({
+    status: 400,
+    description: 'Invalid object key prefix or validation failed',
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
+  async confirmBatch(@Param('eventId') eventId: string, @Body() dto: ConfirmPhotoBatchDto) {
+    const command = new ConfirmPhotoBatchCommand(
+      eventId,
+      dto.photos.map((p) => ({
+        fileName: p.fileName,
+        fileSize: p.fileSize,
+        objectKey: p.objectKey,
+        contentType: p.contentType,
+      })),
+    )
     return this.commandBus.execute(command)
   }
 

@@ -21,6 +21,16 @@ export class PhotoWriteRepository implements IPhotoWriteRepository {
     return PhotoMapper.toEntity(saved)
   }
 
+  /** Batch-inserts photos, silently skipping duplicates by storage_key. Returns count of created records. */
+  async saveMany(photos: Photo[]): Promise<number> {
+    const data = photos.map(PhotoMapper.toPersistence)
+    const result = await this.prisma.photo.createMany({
+      data,
+      skipDuplicates: true,
+    })
+    return result.count
+  }
+
   /** Hard-deletes a photo by ID. */
   async delete(id: string): Promise<void> {
     await this.prisma.photo.delete({ where: { id } })

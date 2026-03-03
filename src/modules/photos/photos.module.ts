@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
+import { ConfirmPhotoBatchHandler } from '@photos/application/commands/confirm-photo-batch/confirm-photo-batch.handler'
 import { GeneratePresignedUrlHandler } from '@photos/application/commands/generate-presigned-url/generate-presigned-url.handler'
 import { UploadPhotosHandler } from '@photos/application/commands/upload-photos/upload-photos.handler'
 import { GetPhotoDetailHandler } from '@photos/application/queries/get-photo-detail/get-photo-detail.handler'
@@ -11,7 +12,7 @@ import { PhotoWriteRepository } from '@photos/infrastructure/repositories/photo-
 import { PhotosController } from '@photos/presentation/controllers/photos.controller'
 import { EventsModule } from '../events/events.module'
 
-const CommandHandlers = [GeneratePresignedUrlHandler, UploadPhotosHandler]
+const CommandHandlers = [ConfirmPhotoBatchHandler, GeneratePresignedUrlHandler, UploadPhotosHandler]
 const QueryHandlers = [GetPhotosListHandler, GetPhotoDetailHandler, SearchPhotosHandler]
 
 @Module({

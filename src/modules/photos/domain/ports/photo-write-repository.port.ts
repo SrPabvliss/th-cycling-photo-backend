@@ -2,6 +2,7 @@ import type { Photo } from '../entities'
 
 export interface IPhotoWriteRepository {
   save(photo: Photo): Promise<Photo>
+  saveMany(photos: Photo[]): Promise<number>
   delete(id: string): Promise<void>
 }
 

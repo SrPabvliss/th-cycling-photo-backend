@@ -3,5 +3,6 @@
   "invalid_mime_type": "Photo must be a JPEG, PNG, or WebP image",
   "invalid_file_size": "Photo file size must be greater than zero",
   "plate_number_out_of_range": "Plate number must be between 1 and 999",
-  "density_percentage_out_of_range": "Density percentage must be between 0 and 100"
+  "density_percentage_out_of_range": "Density percentage must be between 0 and 100",
+  "invalid_object_key_prefix": "Object key does not match the expected event prefix"
 }

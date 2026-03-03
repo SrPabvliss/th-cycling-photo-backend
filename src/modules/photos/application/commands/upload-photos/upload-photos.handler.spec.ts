@@ -45,6 +45,7 @@ describe('UploadPhotosHandler', () => {
 
     photoWriteRepo = {
       save: jest.fn(),
+      saveMany: jest.fn(),
       delete: jest.fn(),
       saveClassification: jest.fn(),
     } as jest.Mocked<IPhotoWriteRepository>

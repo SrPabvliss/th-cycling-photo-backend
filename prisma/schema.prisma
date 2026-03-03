@@ -108,7 +108,7 @@ model Photo {
   event_id String @db.Uuid
 
   filename    String @db.VarChar(255)
-  storage_key String @db.VarChar(500)
+  storage_key String @unique @db.VarChar(500)
   file_size   BigInt
   mime_type   String @default("image/jpeg") @db.VarChar(50)
   width       Int?
@@ -125,7 +125,7 @@ model Photo {
   detected_cyclists DetectedCyclist[]
   processing_jobs   ProcessingJob[]
 
-  @@unique([event_id, filename], map: "unique_event_filename")
+  @@index([event_id, filename])
   @@index([event_id])
   @@index([status])
   @@index([event_id, unclassified_reason], map: "idx_photos_unclassified")
