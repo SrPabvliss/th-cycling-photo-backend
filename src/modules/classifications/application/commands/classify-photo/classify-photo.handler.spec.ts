@@ -44,6 +44,7 @@ describe('ClassifyPhotoHandler', () => {
   beforeEach(() => {
     readRepo = {
       findById: jest.fn(),
+      existsByEventAndFilename: jest.fn(),
       getPhotosList: jest.fn(),
       getPhotoDetail: jest.fn(),
       searchPhotos: jest.fn(),
