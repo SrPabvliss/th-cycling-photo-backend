@@ -98,7 +98,6 @@ async function seedDemoData() {
       province_id: tungurahua?.id ?? null,
       canton_id: ambato?.id ?? null,
       status: 'active',
-      total_photos: 10,
     },
   })
   console.log(`Created event: ${event.name}`)
