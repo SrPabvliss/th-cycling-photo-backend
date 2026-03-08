@@ -1,24 +1,12 @@
 import { ClassifyPhotoCommand, ClassifyPhotoDto } from '@classifications/application/commands'
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UploadedFiles,
-  UseInterceptors,
-} from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { FilesInterceptor } from '@nestjs/platform-express'
-import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import {
   ConfirmPhotoBatchCommand,
   ConfirmPhotoBatchDto,
   GeneratePresignedUrlCommand,
   GeneratePresignedUrlDto,
-  UploadPhotosCommand,
 } from '@photos/application/commands'
 import {
   ConfirmBatchProjection,
@@ -35,8 +23,6 @@ import {
 } from '@photos/application/queries'
 import { EntityIdProjection, Pagination } from '@shared/application'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
-import { MAX_FILE_SIZE, MAX_FILES } from '../constants/upload.constants'
-import { imageFileFilter } from '../filters/image-file.filter'
 
 @ApiTags('Photos')
 @Controller()
@@ -139,51 +125,6 @@ export class PhotosController {
         fileSize: p.fileSize,
         objectKey: p.objectKey,
         contentType: p.contentType,
-      })),
-    )
-    return this.commandBus.execute(command)
-  }
-
-  /** Batch-uploads photos to an event. */
-  @Post('events/:eventId/photos')
-  @SuccessMessage('success.CREATED')
-  @UseInterceptors(
-    FilesInterceptor('photos', MAX_FILES, {
-      fileFilter: imageFileFilter,
-      limits: { fileSize: MAX_FILE_SIZE },
-    }),
-  )
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload photos to an event' })
-  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        photos: {
-          type: 'array',
-          items: { type: 'string', format: 'binary' },
-          description: 'Photo files (JPEG, PNG, or WebP). Max 50 files, 10 MB each.',
-        },
-      },
-    },
-  })
-  @ApiEnvelopeResponse({
-    status: 201,
-    description: 'Photos uploaded successfully',
-    type: EntityIdProjection,
-    isArray: true,
-  })
-  @ApiEnvelopeErrorResponse({ status: 400, description: 'Invalid file type or validation failed' })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async upload(@Param('eventId') eventId: string, @UploadedFiles() files: Express.Multer.File[]) {
-    const command = new UploadPhotosCommand(
-      eventId,
-      files.map((f) => ({
-        buffer: f.buffer,
-        originalname: f.originalname,
-        mimetype: f.mimetype,
-        size: f.size,
       })),
     )
     return this.commandBus.execute(command)
