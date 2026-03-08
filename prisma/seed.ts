@@ -1,3 +1,5 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { config } from 'dotenv'
 import { PrismaClient } from '../src/generated/prisma/client'
@@ -18,10 +20,52 @@ const prisma = new PrismaClient({ adapter })
 
 console.log(`Environment: ${env} | Database: ${DB_NAME}@${DB_HOST}:${DB_PORT}`)
 
-async function main() {
-  console.log('Seeding database...')
+type ProvinceEntry = { name: string; code: string }
+type CantonsByProvince = Record<string, string[]>
 
-  // Clean existing data in dependency order
+async function seedLocations() {
+  const provincesData: ProvinceEntry[] = JSON.parse(
+    fs.readFileSync(path.join(__dirname, 'seed-data/provinces.json'), 'utf-8'),
+  )
+  const cantonsData: CantonsByProvince = JSON.parse(
+    fs.readFileSync(path.join(__dirname, 'seed-data/cantons.json'), 'utf-8'),
+  )
+
+  let provincesCount = 0
+  let cantonsCount = 0
+
+  for (const province of provincesData) {
+    const upserted = await prisma.province.upsert({
+      where: { code: province.code },
+      update: { name: province.name },
+      create: { name: province.name, code: province.code },
+    })
+
+    provincesCount++
+
+    const cantonNames = cantonsData[province.code] || []
+    for (const cantonName of cantonNames) {
+      await prisma.canton.upsert({
+        where: {
+          id: await prisma.canton
+            .findFirst({
+              where: { name: cantonName, province_id: upserted.id },
+              select: { id: true },
+            })
+            .then((c) => c?.id ?? 0),
+        },
+        update: { name: cantonName },
+        create: { name: cantonName, province_id: upserted.id },
+      })
+      cantonsCount++
+    }
+  }
+
+  console.log(`Seeded ${provincesCount} provinces and ${cantonsCount} cantons`)
+}
+
+async function seedDemoData() {
+  // Clean existing demo data in dependency order
   await prisma.equipmentColor.deleteMany()
   await prisma.plateNumber.deleteMany()
   await prisma.detectedCyclist.deleteMany()
@@ -39,12 +83,20 @@ async function main() {
   })
   console.log(`Created user: ${user.email}`)
 
+  // Find Tungurahua province and Ambato canton for demo event
+  const tungurahua = await prisma.province.findFirst({ where: { code: 'EC-T' } })
+  const ambato = tungurahua
+    ? await prisma.canton.findFirst({ where: { name: 'Ambato', province_id: tungurahua.id } })
+    : null
+
   // Create event
   const event = await prisma.event.create({
     data: {
       name: 'Vuelta Ciclística del Ecuador 2026',
       event_date: new Date('2026-03-15'),
       location: 'Ambato, Ecuador',
+      province_id: tungurahua?.id ?? null,
+      canton_id: ambato?.id ?? null,
       status: 'active',
       total_photos: 10,
     },
@@ -70,6 +122,16 @@ async function main() {
     ),
   )
   console.log(`Created ${photos.length} photos`)
+}
+
+async function main() {
+  console.log('Seeding database...')
+
+  // Seed reference data first (idempotent)
+  await seedLocations()
+
+  // Seed demo data (destructive — clears and recreates)
+  await seedDemoData()
 
   console.log('Seeding completed.')
 }
