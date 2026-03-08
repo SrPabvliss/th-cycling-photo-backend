@@ -20,6 +20,8 @@ const EVENT_LIST_SELECT = {
 
 const EVENT_DETAIL_SELECT = {
   ...EVENT_LIST_SELECT,
+  province_id: true,
+  canton_id: true,
   cover_image_storage_key: true,
   created_at: true,
   updated_at: true,
