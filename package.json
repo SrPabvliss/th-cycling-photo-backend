@@ -91,6 +91,9 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "testPathIgnorePatterns": [
+      "<rootDir>/modules/classifications/"
+    ],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
@@ -99,7 +102,6 @@
       "^@generated/(.*)$": "<rootDir>/generated/$1",
       "^@events/(.*)$": "<rootDir>/modules/events/$1",
       "^@photos/(.*)$": "<rootDir>/modules/photos/$1",
-      "^@classifications/(.*)$": "<rootDir>/modules/classifications/$1",
       "^@locations/(.*)$": "<rootDir>/modules/locations/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
