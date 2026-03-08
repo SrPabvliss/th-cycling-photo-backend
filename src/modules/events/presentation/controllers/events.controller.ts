@@ -22,7 +22,7 @@ import {
   GetEventsListDto,
   GetEventsListQuery,
 } from '@events/application/queries'
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { EntityIdProjection, Pagination } from '@shared/application'
