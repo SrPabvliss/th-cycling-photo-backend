@@ -10,12 +10,14 @@ type EventListSelect = {
   location: string | null
   province: { name: string } | null
   canton: { name: string } | null
+  cover_image_url: string | null
   status: string
   total_photos: number
   processed_photos: number
 }
 
 type EventDetailSelect = EventListSelect & {
+  cover_image_storage_key: string | null
   created_at: Date
   updated_at: Date
 }
@@ -29,6 +31,8 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
     location: entity.location,
     province_id: entity.provinceId,
     canton_id: entity.cantonId,
+    cover_image_url: entity.coverImageUrl,
+    cover_image_storage_key: entity.coverImageStorageKey,
     status: entity.status,
     total_photos: entity.totalPhotos,
     processed_photos: entity.processedPhotos,
@@ -47,6 +51,8 @@ export function toEntity(record: PrismaEvent): Event {
     location: record.location,
     provinceId: record.province_id,
     cantonId: record.canton_id,
+    coverImageUrl: record.cover_image_url,
+    coverImageStorageKey: record.cover_image_storage_key,
     status: record.status as EventStatusType,
     totalPhotos: record.total_photos,
     processedPhotos: record.processed_photos,
@@ -65,6 +71,8 @@ export function toListProjection(record: EventListSelect): EventListProjection {
     location: record.location,
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
+    coverImageUrl: record.cover_image_url,
+    coverImageSource: record.cover_image_url ? 'manual' : null,
     status: record.status,
     totalPhotos: record.total_photos,
     processedPhotos: record.processed_photos,
@@ -80,6 +88,8 @@ export function toDetailProjection(record: EventDetailSelect): EventDetailProjec
     location: record.location,
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
+    coverImageUrl: record.cover_image_url,
+    coverImageSource: record.cover_image_url ? 'manual' : null,
     status: record.status,
     totalPhotos: record.total_photos,
     processedPhotos: record.processed_photos,

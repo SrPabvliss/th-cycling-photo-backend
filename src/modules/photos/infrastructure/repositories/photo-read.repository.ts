@@ -80,6 +80,30 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return new PaginatedResult(photos.map(PhotoMapper.toListProjection), total, pagination)
   }
 
+  /** Returns the storage key of the first uploaded photo for an event. */
+  async findFirstStorageKeyByEvent(eventId: string): Promise<string | null> {
+    const photo = await this.prisma.photo.findFirst({
+      where: { event_id: eventId },
+      orderBy: { uploaded_at: 'asc' },
+      select: { storage_key: true },
+    })
+    return photo?.storage_key ?? null
+  }
+
+  /** Batch: returns a map of eventId → first photo storage key. */
+  async findFirstStorageKeysByEventIds(eventIds: string[]): Promise<Map<string, string>> {
+    if (eventIds.length === 0) return new Map()
+
+    const photos = await this.prisma.photo.findMany({
+      where: { event_id: { in: eventIds } },
+      distinct: ['event_id'],
+      orderBy: { uploaded_at: 'asc' },
+      select: { event_id: true, storage_key: true },
+    })
+
+    return new Map(photos.map((p) => [p.event_id, p.storage_key]))
+  }
+
   /** Builds a Prisma where clause from search filters. */
   private buildSearchWhere(filters: SearchPhotosFilters): Prisma.PhotoWhereInput {
     const where: Prisma.PhotoWhereInput = {}

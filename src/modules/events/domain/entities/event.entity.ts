@@ -9,6 +9,8 @@ export class Event {
     public location: string | null,
     public provinceId: number | null,
     public cantonId: number | null,
+    public coverImageUrl: string | null,
+    public coverImageStorageKey: string | null,
     public status: EventStatusType,
     public totalPhotos: number,
     public processedPhotos: number,
@@ -41,6 +43,8 @@ export class Event {
       data.location,
       data.provinceId,
       data.cantonId,
+      null,
+      null,
       EventStatus.ACTIVE,
       0,
       0,
@@ -76,6 +80,20 @@ export class Event {
     if (data.provinceId !== undefined) this.provinceId = data.provinceId
     if (data.cantonId !== undefined) this.cantonId = data.cantonId
 
+    this.audit.markUpdated()
+  }
+
+  /** Sets the manual cover image for this event. */
+  setCoverImage(url: string, storageKey: string): void {
+    this.coverImageUrl = url
+    this.coverImageStorageKey = storageKey
+    this.audit.markUpdated()
+  }
+
+  /** Removes the manual cover image from this event. */
+  removeCoverImage(): void {
+    this.coverImageUrl = null
+    this.coverImageStorageKey = null
     this.audit.markUpdated()
   }
 
@@ -121,6 +139,8 @@ export class Event {
     location: string | null
     provinceId: number | null
     cantonId: number | null
+    coverImageUrl: string | null
+    coverImageStorageKey: string | null
     status: EventStatusType
     totalPhotos: number
     processedPhotos: number
@@ -135,6 +155,8 @@ export class Event {
       data.location,
       data.provinceId,
       data.cantonId,
+      data.coverImageUrl,
+      data.coverImageStorageKey,
       data.status,
       data.totalPhotos,
       data.processedPhotos,
