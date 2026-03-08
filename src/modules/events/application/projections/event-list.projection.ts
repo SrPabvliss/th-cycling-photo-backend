@@ -11,6 +11,10 @@ export class EventListProjection {
   provinceName: string | null
   /** Canton name (resolved from relation) */
   cantonName: string | null
+  /** Cover image URL (manual upload URL or first photo storage key for fallback) */
+  coverImageUrl: string | null
+  /** Source of the cover image: 'manual', 'auto' (first photo), or null */
+  coverImageSource: 'manual' | 'auto' | null
   /** Current event status */
   status: string
   /** Total number of photos uploaded */

@@ -13,6 +13,7 @@ const EVENT_LIST_SELECT = {
   location: true,
   province: { select: { name: true } },
   canton: { select: { name: true } },
+  cover_image_url: true,
   status: true,
   total_photos: true,
   processed_photos: true,
@@ -20,6 +21,7 @@ const EVENT_LIST_SELECT = {
 
 const EVENT_DETAIL_SELECT = {
   ...EVENT_LIST_SELECT,
+  cover_image_storage_key: true,
   created_at: true,
   updated_at: true,
 } as const
@@ -53,7 +55,11 @@ export class EventReadRepository implements IEventReadRepository {
       this.prisma.event.count({ where }),
     ])
 
-    return new PaginatedResult(events.map(EventMapper.toListProjection), total, pagination)
+    return new PaginatedResult(
+      events.map((e) => EventMapper.toListProjection(e)),
+      total,
+      pagination,
+    )
   }
 
   /** Retrieves a single event's detail by ID (including archived). */
