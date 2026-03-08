@@ -9,6 +9,8 @@ describe('Event Entity', () => {
     name: 'Vuelta Ciclística de Ambato',
     date: futureDate,
     location: 'Ambato, Ecuador',
+    provinceId: 18 as number | null,
+    cantonId: 1 as number | null,
   }
 
   describe('create', () => {
@@ -20,6 +22,8 @@ describe('Event Entity', () => {
       expect(event.name).toBe(validData.name)
       expect(event.date).toBe(futureDate)
       expect(event.location).toBe('Ambato, Ecuador')
+      expect(event.provinceId).toBe(18)
+      expect(event.cantonId).toBe(1)
       expect(event.status).toBe('active')
       expect(event.totalPhotos).toBe(0)
       expect(event.processedPhotos).toBe(0)
@@ -32,6 +36,13 @@ describe('Event Entity', () => {
       const event = Event.create({ ...validData, location: null })
 
       expect(event.location).toBeNull()
+    })
+
+    it('should create event with null provinceId and cantonId', () => {
+      const event = Event.create({ ...validData, provinceId: null, cantonId: null })
+
+      expect(event.provinceId).toBeNull()
+      expect(event.cantonId).toBeNull()
     })
 
     it('should throw for name shorter than 3 characters', () => {
@@ -184,6 +195,8 @@ describe('Event Entity', () => {
         name: 'Past Event',
         date: pastDate,
         location: null,
+        provinceId: null,
+        cantonId: null,
         status: 'active',
         totalPhotos: 100,
         processedPhotos: 95,
@@ -208,6 +221,8 @@ describe('Event Entity', () => {
         name: 'Archived Event',
         date: new Date('2024-01-01'),
         location: null,
+        provinceId: 18,
+        cantonId: 1,
         status: 'archived',
         totalPhotos: 0,
         processedPhotos: 0,

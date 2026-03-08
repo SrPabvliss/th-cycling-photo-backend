@@ -7,6 +7,8 @@ export class Event {
     public name: string,
     public date: Date,
     public location: string | null,
+    public provinceId: number | null,
+    public cantonId: number | null,
     public status: EventStatusType,
     public totalPhotos: number,
     public processedPhotos: number,
@@ -22,7 +24,13 @@ export class Event {
    * @throws AppException.businessRule if name length is not between 3 and 200
    * @throws AppException.businessRule if date is in the past
    */
-  static create(data: { name: string; date: Date; location: string | null }): Event {
+  static create(data: {
+    name: string
+    date: Date
+    location: string | null
+    provinceId: number | null
+    cantonId: number | null
+  }): Event {
     Event.validateName(data.name)
     Event.validateDate(data.date)
 
@@ -31,6 +39,8 @@ export class Event {
       data.name,
       data.date,
       data.location,
+      data.provinceId,
+      data.cantonId,
       EventStatus.ACTIVE,
       0,
       0,
@@ -45,7 +55,13 @@ export class Event {
    * @throws AppException.businessRule if name length is not between 3 and 200
    * @throws AppException.businessRule if date is in the past
    */
-  update(data: { name?: string; date?: Date; location?: string | null }): void {
+  update(data: {
+    name?: string
+    date?: Date
+    location?: string | null
+    provinceId?: number | null
+    cantonId?: number | null
+  }): void {
     if (data.name !== undefined) {
       Event.validateName(data.name)
       this.name = data.name
@@ -57,6 +73,8 @@ export class Event {
     }
 
     if (data.location !== undefined) this.location = data.location
+    if (data.provinceId !== undefined) this.provinceId = data.provinceId
+    if (data.cantonId !== undefined) this.cantonId = data.cantonId
 
     this.audit.markUpdated()
   }
@@ -101,6 +119,8 @@ export class Event {
     name: string
     date: Date
     location: string | null
+    provinceId: number | null
+    cantonId: number | null
     status: EventStatusType
     totalPhotos: number
     processedPhotos: number
@@ -113,6 +133,8 @@ export class Event {
       data.name,
       data.date,
       data.location,
+      data.provinceId,
+      data.cantonId,
       data.status,
       data.totalPhotos,
       data.processedPhotos,

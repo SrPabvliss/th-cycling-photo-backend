@@ -8,6 +8,8 @@ type EventListSelect = {
   name: string
   event_date: Date
   location: string | null
+  province: { name: string } | null
+  canton: { name: string } | null
   status: string
   total_photos: number
   processed_photos: number
@@ -19,12 +21,14 @@ type EventDetailSelect = EventListSelect & {
 }
 
 /** Converts a domain entity to a Prisma create input. */
-export function toPersistence(entity: Event): Prisma.EventCreateInput {
+export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
   return {
     id: entity.id,
     name: entity.name,
     event_date: entity.date,
     location: entity.location,
+    province_id: entity.provinceId,
+    canton_id: entity.cantonId,
     status: entity.status,
     total_photos: entity.totalPhotos,
     processed_photos: entity.processedPhotos,
@@ -41,6 +45,8 @@ export function toEntity(record: PrismaEvent): Event {
     name: record.name,
     date: record.event_date,
     location: record.location,
+    provinceId: record.province_id,
+    cantonId: record.canton_id,
     status: record.status as EventStatusType,
     totalPhotos: record.total_photos,
     processedPhotos: record.processed_photos,
@@ -57,6 +63,8 @@ export function toListProjection(record: EventListSelect): EventListProjection {
     name: record.name,
     date: record.event_date,
     location: record.location,
+    provinceName: record.province?.name ?? null,
+    cantonName: record.canton?.name ?? null,
     status: record.status,
     totalPhotos: record.total_photos,
     processedPhotos: record.processed_photos,
@@ -70,6 +78,8 @@ export function toDetailProjection(record: EventDetailSelect): EventDetailProjec
     name: record.name,
     date: record.event_date,
     location: record.location,
+    provinceName: record.province?.name ?? null,
+    cantonName: record.canton?.name ?? null,
     status: record.status,
     totalPhotos: record.total_photos,
     processedPhotos: record.processed_photos,

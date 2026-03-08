@@ -7,6 +7,7 @@ import { EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY } from '@events/domain/po
 import { EventReadRepository } from '@events/infrastructure/repositories/event-read.repository'
 import { EventWriteRepository } from '@events/infrastructure/repositories/event-write.repository'
 import { EventsController } from '@events/presentation/controllers/events.controller'
+import { LocationsModule } from '@locations/locations.module'
 import { Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { DeleteEventHandler } from './application/commands/delete-event/delete-event.handler'
@@ -22,7 +23,7 @@ const CommandHandlers = [
 const QueryHandlers = [GetEventsListHandler, GetEventDetailHandler]
 
 @Module({
-  imports: [CqrsModule],
+  imports: [CqrsModule, LocationsModule],
   controllers: [EventsController],
   providers: [
     ...CommandHandlers,

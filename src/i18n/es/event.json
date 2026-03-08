@@ -2,5 +2,8 @@
   "name_invalid_length": "El nombre del evento debe tener entre 3 y 200 caracteres",
   "date_in_past": "La fecha del evento no puede ser en el pasado",
   "already_archived": "El evento ya está archivado",
-  "not_archived": "El evento no está archivado"
+  "not_archived": "El evento no está archivado",
+  "province_not_found": "La provincia especificada no existe",
+  "canton_not_in_province": "El cantón especificado no pertenece a la provincia seleccionada",
+  "canton_requires_province": "Se debe especificar una provincia al seleccionar un cantón"
 }

@@ -4,6 +4,7 @@ import {
   type IEventReadRepository,
   type IEventWriteRepository,
 } from '@events/domain/ports'
+import { LocationValidator } from '@locations/application/services'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
@@ -15,6 +16,7 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
   constructor(
     @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
     @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
+    private readonly locationValidator: LocationValidator,
   ) {}
 
   /** Loads an event, applies updates, and persists it. */
@@ -22,10 +24,17 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
     const event = await this.readRepo.findById(command.id)
     if (!event) throw AppException.notFound('Event', command.id)
 
+    const provinceId = command.provinceId !== undefined ? command.provinceId : event.provinceId
+    const cantonId = command.cantonId !== undefined ? command.cantonId : event.cantonId
+
+    await this.locationValidator.validate(provinceId, cantonId)
+
     event.update({
       name: command.name,
       date: command.date,
       location: command.location,
+      provinceId: command.provinceId,
+      cantonId: command.cantonId,
     })
 
     await this.writeRepo.save(event)
