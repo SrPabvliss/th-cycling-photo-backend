@@ -1,4 +1,4 @@
-import { LOCATION_READ_REPOSITORY, type ILocationReadRepository } from '@locations/domain/ports'
+import { type ILocationReadRepository, LOCATION_READ_REPOSITORY } from '@locations/domain/ports'
 import { Inject, Injectable } from '@nestjs/common'
 import { AppException } from '@shared/domain'
 
