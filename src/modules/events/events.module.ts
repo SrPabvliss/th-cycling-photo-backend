@@ -3,6 +3,7 @@ import { CreateEventHandler } from '@events/application/commands/create-event/cr
 import { RestoreEventHandler } from '@events/application/commands/restore-event/restore-event.handler'
 import { GetEventDetailHandler } from '@events/application/queries/get-event-detail/get-event-detail.handler'
 import { GetEventsListHandler } from '@events/application/queries/get-events-list/get-events-list.handler'
+import { GetEventsStatsHandler } from '@events/application/queries/get-events-stats/get-events-stats.handler'
 import { EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY } from '@events/domain/ports'
 import { EventReadRepository } from '@events/infrastructure/repositories/event-read.repository'
 import { EventWriteRepository } from '@events/infrastructure/repositories/event-write.repository'
@@ -27,7 +28,7 @@ const CommandHandlers = [
   ConfirmEventCoverHandler,
   UpdateEventHandler,
 ]
-const QueryHandlers = [GetEventsListHandler, GetEventDetailHandler]
+const QueryHandlers = [GetEventsListHandler, GetEventDetailHandler, GetEventsStatsHandler]
 
 @Module({
   imports: [CqrsModule, LocationsModule, forwardRef(() => PhotosModule)],
