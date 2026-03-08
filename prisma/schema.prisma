@@ -114,10 +114,12 @@ model Event {
   location         String?     @db.VarChar(200)
   province_id      Int?
   canton_id        Int?
-  status           EventStatus @default(active)
-  total_photos     Int         @default(0)
-  processed_photos Int         @default(0)
-  exported_photos  Int         @default(0)
+  cover_image_url         String?     @db.VarChar(500)
+  cover_image_storage_key String?     @db.VarChar(500)
+  status                  EventStatus @default(active)
+  total_photos            Int         @default(0)
+  processed_photos        Int         @default(0)
+  exported_photos         Int         @default(0)
   created_at       DateTime    @default(now()) @db.Timestamptz
   updated_at       DateTime    @default(now()) @updatedAt @db.Timestamptz
   deleted_at       DateTime?   @db.Timestamptz
