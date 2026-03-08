@@ -12,8 +12,6 @@ export class Event {
     public coverImageUrl: string | null,
     public coverImageStorageKey: string | null,
     public status: EventStatusType,
-    public totalPhotos: number,
-    public processedPhotos: number,
     public readonly audit: AuditFields,
   ) {}
 
@@ -46,8 +44,6 @@ export class Event {
       null,
       null,
       EventStatus.ACTIVE,
-      0,
-      0,
       AuditFields.initialize(),
     )
   }
@@ -142,8 +138,6 @@ export class Event {
     coverImageUrl: string | null
     coverImageStorageKey: string | null
     status: EventStatusType
-    totalPhotos: number
-    processedPhotos: number
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
@@ -158,8 +152,6 @@ export class Event {
       data.coverImageUrl,
       data.coverImageStorageKey,
       data.status,
-      data.totalPhotos,
-      data.processedPhotos,
       AuditFields.fromPersistence({
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
