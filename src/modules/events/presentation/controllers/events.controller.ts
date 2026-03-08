@@ -67,7 +67,13 @@ export class EventsController {
   })
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
   async create(@Body() dto: CreateEventDto) {
-    const command = new CreateEventCommand(dto.name, dto.date, dto.location ?? null)
+    const command = new CreateEventCommand(
+      dto.name,
+      dto.date,
+      dto.location ?? null,
+      dto.provinceId ?? null,
+      dto.cantonId ?? null,
+    )
     return this.commandBus.execute(command)
   }
 
@@ -83,7 +89,14 @@ export class EventsController {
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
   async update(@Param('id') id: string, @Body() dto: UpdateEventDto) {
-    const command = new UpdateEventCommand(id, dto.name, dto.date, dto.location)
+    const command = new UpdateEventCommand(
+      id,
+      dto.name,
+      dto.date,
+      dto.location,
+      dto.provinceId,
+      dto.cantonId,
+    )
     return this.commandBus.execute(command)
   }
 

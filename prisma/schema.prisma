@@ -70,6 +70,31 @@ enum EquipmentItem {
   @@map("equipment_item")
 }
 
+// ─── Reference Tables ───────────────────────────────────────────────────────
+
+model Province {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(100)
+  code String @unique @db.VarChar(10)
+
+  cantons Canton[]
+  events  Event[]
+
+  @@map("provinces")
+}
+
+model Canton {
+  id          Int    @id @default(autoincrement())
+  name        String @db.VarChar(100)
+  province_id Int
+
+  province Province @relation(fields: [province_id], references: [id])
+  events   Event[]
+
+  @@index([province_id])
+  @@map("cantons")
+}
+
 // ─── Models ─────────────────────────────────────────────────────────────────
 
 model User {
@@ -87,6 +112,8 @@ model Event {
   name             String      @db.VarChar(200)
   event_date       DateTime    @db.Date
   location         String?     @db.VarChar(200)
+  province_id      Int?
+  canton_id        Int?
   status           EventStatus @default(active)
   total_photos     Int         @default(0)
   processed_photos Int         @default(0)
@@ -95,11 +122,15 @@ model Event {
   updated_at       DateTime    @default(now()) @updatedAt @db.Timestamptz
   deleted_at       DateTime?   @db.Timestamptz
 
-  photos Photo[]
+  province Province? @relation(fields: [province_id], references: [id])
+  canton   Canton?   @relation(fields: [canton_id], references: [id])
+  photos   Photo[]
 
   @@index([status])
   @@index([event_date(sort: Desc)])
   @@index([deleted_at])
+  @@index([province_id])
+  @@index([canton_id])
   @@map("events")
 }
 

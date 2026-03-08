@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
-import { IsDate, IsOptional, IsString, MaxLength, MinLength } from 'class-validator'
+import { IsDate, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator'
 
 export class UpdateEventDto {
   @ApiPropertyOptional({
@@ -30,4 +30,26 @@ export class UpdateEventDto {
   @IsString()
   @IsOptional()
   location?: string | null
+
+  @ApiPropertyOptional({
+    description: 'Province ID where the event takes place (null to clear)',
+    example: 18,
+    nullable: true,
+  })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  @Type(() => Number)
+  provinceId?: number | null
+
+  @ApiPropertyOptional({
+    description: 'Canton ID where the event takes place (null to clear, requires provinceId)',
+    example: 1,
+    nullable: true,
+  })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  @Type(() => Number)
+  cantonId?: number | null
 }

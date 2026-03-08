@@ -6,6 +6,24 @@ import type { Event } from '../../domain/entities'
 import type { IEventReadRepository } from '../../domain/ports'
 import * as EventMapper from '../mappers/event.mapper'
 
+const EVENT_LIST_SELECT = {
+  id: true,
+  name: true,
+  event_date: true,
+  location: true,
+  province: { select: { name: true } },
+  canton: { select: { name: true } },
+  status: true,
+  total_photos: true,
+  processed_photos: true,
+} as const
+
+const EVENT_DETAIL_SELECT = {
+  ...EVENT_LIST_SELECT,
+  created_at: true,
+  updated_at: true,
+} as const
+
 @Injectable()
 export class EventReadRepository implements IEventReadRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -27,15 +45,7 @@ export class EventReadRepository implements IEventReadRepository {
     const [events, total] = await Promise.all([
       this.prisma.event.findMany({
         where,
-        select: {
-          id: true,
-          name: true,
-          event_date: true,
-          location: true,
-          status: true,
-          total_photos: true,
-          processed_photos: true,
-        },
+        select: EVENT_LIST_SELECT,
         orderBy: { event_date: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
@@ -50,17 +60,7 @@ export class EventReadRepository implements IEventReadRepository {
   async getEventDetail(id: string): Promise<EventDetailProjection | null> {
     const record = await this.prisma.event.findFirst({
       where: { id },
-      select: {
-        id: true,
-        name: true,
-        event_date: true,
-        location: true,
-        status: true,
-        total_photos: true,
-        processed_photos: true,
-        created_at: true,
-        updated_at: true,
-      },
+      select: EVENT_DETAIL_SELECT,
     })
 
     return record ? EventMapper.toDetailProjection(record) : null
