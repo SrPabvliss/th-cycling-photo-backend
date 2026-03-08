@@ -19,7 +19,8 @@
       "@generated/*": ["src/generated/*"],
       "@events/*": ["src/modules/events/*"],
       "@photos/*": ["src/modules/photos/*"],
-      "@classifications/*": ["src/modules/classifications/*"]
+      "@classifications/*": ["src/modules/classifications/*"],
+      "@locations/*": ["src/modules/locations/*"]
     },
     "incremental": true,
     "skipLibCheck": true,
