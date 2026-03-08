@@ -15,17 +15,24 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
   ) {}
 
-  /** Retrieves a single event's detail, enriching with auto cover when needed. */
+  /** Retrieves a single event's detail, enriching with auto cover and file size. */
   async execute(query: GetEventDetailQuery): Promise<EventDetailProjection> {
     const event = await this.readRepo.getEventDetail(query.id)
     if (!event) throw AppException.notFound('Event', query.id)
-    if (event.coverImageUrl) return event
 
-    const storageKey = await this.photoReadRepo.findFirstStorageKeyByEvent(event.id)
-    if (!storageKey) return event
+    const [totalFileSize, storageKey] = await Promise.all([
+      this.photoReadRepo.getTotalFileSizeByEvent(event.id),
+      event.coverImageUrl
+        ? Promise.resolve(null)
+        : this.photoReadRepo.findFirstStorageKeyByEvent(event.id),
+    ])
 
-    event.coverImageUrl = this.storage.getPublicUrl(storageKey)
-    event.coverImageSource = 'auto'
+    event.totalFileSize = totalFileSize
+
+    if (!event.coverImageUrl && storageKey) {
+      event.coverImageUrl = this.storage.getPublicUrl(storageKey)
+      event.coverImageSource = 'auto'
+    }
 
     return event
   }

@@ -15,15 +15,24 @@ export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
   ) {}
 
-  /** Retrieves a paginated list of events, enriching with auto cover when needed. */
+  /** Retrieves a paginated list of events, enriching with auto cover and file sizes. */
   async execute(query: GetEventsListQuery): Promise<PaginatedResult<EventListProjection>> {
     const result = await this.readRepo.getEventsList(query.pagination, query.includeArchived)
+    if (result.items.length === 0) return result
 
+    const allEventIds = result.items.map((e) => e.id)
     const eventsWithoutCover = result.items.filter((e) => !e.coverImageUrl)
-    if (eventsWithoutCover.length <= 0) return result
 
-    const eventIds = eventsWithoutCover.map((e) => e.id)
-    const firstPhotos = await this.photoReadRepo.findFirstStorageKeysByEventIds(eventIds)
+    const [fileSizes, firstPhotos] = await Promise.all([
+      this.photoReadRepo.getTotalFileSizesByEventIds(allEventIds),
+      eventsWithoutCover.length > 0
+        ? this.photoReadRepo.findFirstStorageKeysByEventIds(eventsWithoutCover.map((e) => e.id))
+        : Promise.resolve(new Map<string, string>()),
+    ])
+
+    for (const event of result.items) {
+      event.totalFileSize = fileSizes.get(event.id) ?? 0
+    }
 
     for (const event of eventsWithoutCover) {
       const storageKey = firstPhotos.get(event.id)
