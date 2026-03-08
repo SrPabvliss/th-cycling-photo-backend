@@ -3,6 +3,7 @@ import { HttpStatus } from '@nestjs/common'
 export enum ErrorCode {
   VALIDATION_FAILED = 'VALIDATION_FAILED',
   NOT_FOUND = 'NOT_FOUND',
+  CONFLICT = 'CONFLICT',
   BUSINESS_RULE = 'BUSINESS_RULE',
   EXTERNAL_SERVICE = 'EXTERNAL_SERVICE',
   INTERNAL = 'INTERNAL',
@@ -32,6 +33,11 @@ export class AppException extends Error {
       entity,
       id,
     })
+  }
+
+  /** Unique constraint conflict (409) */
+  static conflict(messageKey: string, context?: Record<string, unknown>): AppException {
+    return new AppException(messageKey, HttpStatus.CONFLICT, ErrorCode.CONFLICT, false, context)
   }
 
   /** Validation failed with per-field errors (400) */
