@@ -1,8 +1,10 @@
 export class PresignedUrlProjection {
-  /** Presigned URL for direct upload to B2 */
-  url: string
-  /** Storage key the URL is scoped to */
-  objectKey: string
-  /** Expiration time in seconds */
-  expiresIn: number
+  /** Whether this file was already uploaded for the event */
+  isDuplicate: boolean
+  /** Presigned URL for direct upload to B2 (null if duplicate) */
+  url: string | null
+  /** Storage key the URL is scoped to (null if duplicate) */
+  objectKey: string | null
+  /** Expiration time in seconds (null if duplicate) */
+  expiresIn: number | null
 }

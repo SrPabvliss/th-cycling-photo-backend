@@ -19,6 +19,15 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return record ? PhotoMapper.toEntity(record) : null
   }
 
+  /** Checks if a photo already exists for a given event and filename. */
+  async existsByEventAndFilename(eventId: string, filename: string): Promise<boolean> {
+    const record = await this.prisma.photo.findFirst({
+      where: { event_id: eventId, filename },
+      select: { id: true },
+    })
+    return record !== null
+  }
+
   /** Retrieves a paginated list of photos for a given event. */
   async getPhotosList(
     eventId: string,

@@ -5,6 +5,7 @@ import type { Photo } from '../entities'
 
 export interface IPhotoReadRepository {
   findById(id: string): Promise<Photo | null>
+  existsByEventAndFilename(eventId: string, filename: string): Promise<boolean>
   getPhotosList(
     eventId: string,
     pagination: Pagination,

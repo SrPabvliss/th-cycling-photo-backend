@@ -1,5 +1,6 @@
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
+import type { IPhotoReadRepository } from '@photos/domain/ports'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
 import { GeneratePresignedUrlCommand } from './generate-presigned-url.command'
@@ -8,6 +9,7 @@ import { GeneratePresignedUrlHandler } from './generate-presigned-url.handler'
 describe('GeneratePresignedUrlHandler', () => {
   let handler: GeneratePresignedUrlHandler
   let eventReadRepo: jest.Mocked<IEventReadRepository>
+  let photoReadRepo: jest.Mocked<IPhotoReadRepository>
   let storageAdapter: jest.Mocked<IStorageAdapter>
 
   const futureDate = new Date()
@@ -33,6 +35,14 @@ describe('GeneratePresignedUrlHandler', () => {
       getEventDetail: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
+    photoReadRepo = {
+      findById: jest.fn(),
+      existsByEventAndFilename: jest.fn(),
+      getPhotosList: jest.fn(),
+      getPhotoDetail: jest.fn(),
+      searchPhotos: jest.fn(),
+    } as jest.Mocked<IPhotoReadRepository>
+
     storageAdapter = {
       upload: jest.fn(),
       getPresignedUrl: jest.fn(),
@@ -40,7 +50,7 @@ describe('GeneratePresignedUrlHandler', () => {
       delete: jest.fn(),
     } as jest.Mocked<IStorageAdapter>
 
-    handler = new GeneratePresignedUrlHandler(eventReadRepo, storageAdapter)
+    handler = new GeneratePresignedUrlHandler(eventReadRepo, photoReadRepo, storageAdapter)
   })
 
   it('should throw NOT_FOUND when event does not exist', async () => {
@@ -53,8 +63,34 @@ describe('GeneratePresignedUrlHandler', () => {
     expect(error.code).toBe('NOT_FOUND')
   })
 
+  it('should return isDuplicate: true when photo already exists for event', async () => {
+    eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
+    photoReadRepo.existsByEventAndFilename.mockResolvedValueOnce(true)
+
+    const command = new GeneratePresignedUrlCommand(
+      existingEvent.id,
+      'already-uploaded.jpg',
+      'image/jpeg',
+    )
+
+    const result = await handler.execute(command)
+
+    expect(result).toEqual({
+      isDuplicate: true,
+      url: null,
+      objectKey: null,
+      expiresIn: null,
+    })
+    expect(storageAdapter.getPresignedUrl).not.toHaveBeenCalled()
+    expect(photoReadRepo.existsByEventAndFilename).toHaveBeenCalledWith(
+      existingEvent.id,
+      'already-uploaded.jpg',
+    )
+  })
+
   it('should generate presigned URL with sanitized file name in object key', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
+    photoReadRepo.existsByEventAndFilename.mockResolvedValueOnce(false)
     storageAdapter.getPresignedUrl.mockResolvedValueOnce({
       url: 'https://s3.us-east-005.backblazeb2.com/signed-url',
       objectKey: 'events/550e8400/uuid-photo_with_spaces.jpg',
@@ -72,7 +108,7 @@ describe('GeneratePresignedUrlHandler', () => {
     expect(storageAdapter.getPresignedUrl).toHaveBeenCalledWith(
       expect.objectContaining({
         key: expect.stringMatching(
-          /^events\/550e8400-e29b-41d4-a716-446655440000\/[a-f0-9-]+-photo_with_spaces___.jpg$/,
+          /^events\/550e8400-e29b-41d4-a716-446655440000\/photos\/[a-f0-9-]+-photo_with_spaces___.jpg$/,
         ),
         contentType: 'image/jpeg',
         expiresIn: 300,
@@ -80,23 +116,29 @@ describe('GeneratePresignedUrlHandler', () => {
     )
   })
 
-  it('should return the presigned URL result from storage adapter', async () => {
+  it('should return isDuplicate: false with presigned URL for new photos', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
-    const expectedResult = {
+    photoReadRepo.existsByEventAndFilename.mockResolvedValueOnce(false)
+    storageAdapter.getPresignedUrl.mockResolvedValueOnce({
       url: 'https://s3.us-east-005.backblazeb2.com/signed-url',
       objectKey: 'events/550e8400/uuid-photo.jpg',
       expiresIn: 300,
-    }
-    storageAdapter.getPresignedUrl.mockResolvedValueOnce(expectedResult)
+    })
 
     const command = new GeneratePresignedUrlCommand(existingEvent.id, 'photo.jpg', 'image/jpeg')
 
     const result = await handler.execute(command)
-    expect(result).toEqual(expectedResult)
+    expect(result).toEqual({
+      isDuplicate: false,
+      url: 'https://s3.us-east-005.backblazeb2.com/signed-url',
+      objectKey: 'events/550e8400/uuid-photo.jpg',
+      expiresIn: 300,
+    })
   })
 
-  it('should build object key with event ID and UUID prefix', async () => {
+  it('should build object key with event ID and UUID prefix under photos/', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
+    photoReadRepo.existsByEventAndFilename.mockResolvedValueOnce(false)
     storageAdapter.getPresignedUrl.mockResolvedValueOnce({
       url: 'https://signed-url',
       objectKey: 'key',
@@ -108,7 +150,7 @@ describe('GeneratePresignedUrlHandler', () => {
     await handler.execute(command)
 
     const calledKey = storageAdapter.getPresignedUrl.mock.calls[0][0].key
-    expect(calledKey).toMatch(/^events\/550e8400-e29b-41d4-a716-446655440000\//)
+    expect(calledKey).toMatch(/^events\/550e8400-e29b-41d4-a716-446655440000\/photos\//)
     expect(calledKey).toContain('clean-file.png')
   })
 })
