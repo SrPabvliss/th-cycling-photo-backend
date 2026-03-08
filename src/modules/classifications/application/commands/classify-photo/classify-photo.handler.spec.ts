@@ -50,6 +50,10 @@ describe('ClassifyPhotoHandler', () => {
       searchPhotos: jest.fn(),
       findFirstStorageKeyByEvent: jest.fn(),
       findFirstStorageKeysByEventIds: jest.fn(),
+      getTotalFileSizeByEvent: jest.fn(),
+      getTotalFileSizesByEventIds: jest.fn(),
+      countAll: jest.fn(),
+      sumAllFileSize: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
     classificationRepo = {

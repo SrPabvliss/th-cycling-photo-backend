@@ -25,8 +25,6 @@ describe('GeneratePresignedUrlHandler', () => {
     coverImageUrl: null,
     coverImageStorageKey: null,
     status: 'active',
-    totalPhotos: 0,
-    processedPhotos: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
@@ -37,6 +35,7 @@ describe('GeneratePresignedUrlHandler', () => {
       findById: jest.fn(),
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
+      countAll: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoReadRepo = {
@@ -47,6 +46,10 @@ describe('GeneratePresignedUrlHandler', () => {
       searchPhotos: jest.fn(),
       findFirstStorageKeyByEvent: jest.fn(),
       findFirstStorageKeysByEventIds: jest.fn(),
+      getTotalFileSizeByEvent: jest.fn(),
+      getTotalFileSizesByEventIds: jest.fn(),
+      countAll: jest.fn(),
+      sumAllFileSize: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
     storageAdapter = {

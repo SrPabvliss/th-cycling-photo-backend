@@ -21,6 +21,7 @@ describe('DeleteEventHandler', () => {
       findById: jest.fn(),
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
+      countAll: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     handler = new DeleteEventHandler(writeRepo, readRepo)
@@ -37,8 +38,6 @@ describe('DeleteEventHandler', () => {
       coverImageUrl: null,
       coverImageStorageKey: null,
       status: 'active',
-      totalPhotos: 0,
-      processedPhotos: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
       deletedAt: null,
