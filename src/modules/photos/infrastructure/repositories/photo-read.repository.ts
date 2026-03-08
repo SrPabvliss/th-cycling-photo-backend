@@ -104,6 +104,39 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return new Map(photos.map((p) => [p.event_id, p.storage_key]))
   }
 
+  /** Returns the total file size (in bytes) for a single event's photos. */
+  async getTotalFileSizeByEvent(eventId: string): Promise<number> {
+    const result = await this.prisma.photo.aggregate({
+      where: { event_id: eventId },
+      _sum: { file_size: true },
+    })
+    return Number(result._sum.file_size ?? 0)
+  }
+
+  /** Batch: returns a map of eventId → total file size in bytes. */
+  async getTotalFileSizesByEventIds(eventIds: string[]): Promise<Map<string, number>> {
+    if (eventIds.length === 0) return new Map()
+
+    const results = await this.prisma.photo.groupBy({
+      by: ['event_id'],
+      where: { event_id: { in: eventIds } },
+      _sum: { file_size: true },
+    })
+
+    return new Map(results.map((r) => [r.event_id, Number(r._sum.file_size ?? 0)]))
+  }
+
+  /** Counts all photos globally. */
+  async countAll(): Promise<number> {
+    return this.prisma.photo.count()
+  }
+
+  /** Returns the sum of all photo file sizes in bytes. */
+  async sumAllFileSize(): Promise<number> {
+    const result = await this.prisma.photo.aggregate({ _sum: { file_size: true } })
+    return Number(result._sum.file_size ?? 0)
+  }
+
   /** Builds a Prisma where clause from search filters. */
   private buildSearchWhere(filters: SearchPhotosFilters): Prisma.PhotoWhereInput {
     const where: Prisma.PhotoWhereInput = {}

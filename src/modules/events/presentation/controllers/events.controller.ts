@@ -16,11 +16,13 @@ import {
   CoverPresignedUrlProjection,
   EventDetailProjection,
   EventListProjection,
+  EventsStatsProjection,
 } from '@events/application/projections'
 import {
   GetEventDetailQuery,
   GetEventsListDto,
   GetEventsListQuery,
+  GetEventsStatsQuery,
 } from '@events/application/queries'
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
@@ -49,6 +51,18 @@ export class EventsController {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     const query = new GetEventsListQuery(pagination, dto.includeArchived ?? false)
     return this.queryBus.execute(query)
+  }
+
+  @Get('stats')
+  @SuccessMessage('success.FETCHED')
+  @ApiOperation({ summary: 'Get global event and photo statistics' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Global statistics retrieved',
+    type: EventsStatsProjection,
+  })
+  async getStats() {
+    return this.queryBus.execute(new GetEventsStatsQuery())
   }
 
   @Get(':id')

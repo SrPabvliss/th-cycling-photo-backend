@@ -12,8 +12,7 @@ type EventListSelect = {
   canton: { name: string } | null
   cover_image_url: string | null
   status: string
-  total_photos: number
-  processed_photos: number
+  _count: { photos: number }
 }
 
 type EventDetailSelect = EventListSelect & {
@@ -34,8 +33,6 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
     cover_image_url: entity.coverImageUrl,
     cover_image_storage_key: entity.coverImageStorageKey,
     status: entity.status,
-    total_photos: entity.totalPhotos,
-    processed_photos: entity.processedPhotos,
     created_at: entity.audit.createdAt,
     updated_at: entity.audit.updatedAt,
     deleted_at: entity.audit.deletedAt,
@@ -54,8 +51,6 @@ export function toEntity(record: PrismaEvent): Event {
     coverImageUrl: record.cover_image_url,
     coverImageStorageKey: record.cover_image_storage_key,
     status: record.status as EventStatusType,
-    totalPhotos: record.total_photos,
-    processedPhotos: record.processed_photos,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
     deletedAt: record.deleted_at,
@@ -74,8 +69,8 @@ export function toListProjection(record: EventListSelect): EventListProjection {
     coverImageUrl: record.cover_image_url,
     coverImageSource: record.cover_image_url ? 'manual' : null,
     status: record.status,
-    totalPhotos: record.total_photos,
-    processedPhotos: record.processed_photos,
+    photoCount: record._count.photos,
+    totalFileSize: 0,
   }
 }
 
@@ -91,8 +86,8 @@ export function toDetailProjection(record: EventDetailSelect): EventDetailProjec
     coverImageUrl: record.cover_image_url,
     coverImageSource: record.cover_image_url ? 'manual' : null,
     status: record.status,
-    totalPhotos: record.total_photos,
-    processedPhotos: record.processed_photos,
+    photoCount: record._count.photos,
+    totalFileSize: 0,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
   }

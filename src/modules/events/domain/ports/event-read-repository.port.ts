@@ -9,6 +9,7 @@ export interface IEventReadRepository {
     includeArchived?: boolean,
   ): Promise<PaginatedResult<EventListProjection>>
   getEventDetail(id: string): Promise<EventDetailProjection | null>
+  countAll(): Promise<number>
 }
 
 export const EVENT_READ_REPOSITORY = Symbol('EVENT_READ_REPOSITORY')

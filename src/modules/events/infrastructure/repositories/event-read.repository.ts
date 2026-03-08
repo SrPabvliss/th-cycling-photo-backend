@@ -15,8 +15,7 @@ const EVENT_LIST_SELECT = {
   canton: { select: { name: true } },
   cover_image_url: true,
   status: true,
-  total_photos: true,
-  processed_photos: true,
+  _count: { select: { photos: true } },
 } as const
 
 const EVENT_DETAIL_SELECT = {
@@ -70,5 +69,10 @@ export class EventReadRepository implements IEventReadRepository {
     })
 
     return record ? EventMapper.toDetailProjection(record) : null
+  }
+
+  /** Counts all events (including archived). */
+  async countAll(): Promise<number> {
+    return this.prisma.event.count()
   }
 }

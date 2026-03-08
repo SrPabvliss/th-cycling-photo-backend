@@ -17,6 +17,10 @@ export interface IPhotoReadRepository {
   ): Promise<PaginatedResult<PhotoListProjection>>
   findFirstStorageKeyByEvent(eventId: string): Promise<string | null>
   findFirstStorageKeysByEventIds(eventIds: string[]): Promise<Map<string, string>>
+  getTotalFileSizeByEvent(eventId: string): Promise<number>
+  getTotalFileSizesByEventIds(eventIds: string[]): Promise<Map<string, number>>
+  countAll(): Promise<number>
+  sumAllFileSize(): Promise<number>
 }
 
 export const PHOTO_READ_REPOSITORY = Symbol('PHOTO_READ_REPOSITORY')

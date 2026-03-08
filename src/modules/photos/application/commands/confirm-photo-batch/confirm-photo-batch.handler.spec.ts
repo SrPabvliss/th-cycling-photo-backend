@@ -26,8 +26,6 @@ describe('ConfirmPhotoBatchHandler', () => {
     coverImageUrl: null,
     coverImageStorageKey: null,
     status: 'active',
-    totalPhotos: 0,
-    processedPhotos: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
@@ -45,6 +43,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       findById: jest.fn(),
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
+      countAll: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoWriteRepo = {

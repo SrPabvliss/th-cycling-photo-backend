@@ -25,8 +25,6 @@ describe('Event Entity', () => {
       expect(event.provinceId).toBe(18)
       expect(event.cantonId).toBe(1)
       expect(event.status).toBe('active')
-      expect(event.totalPhotos).toBe(0)
-      expect(event.processedPhotos).toBe(0)
       expect(event.audit.deletedAt).toBeNull()
       expect(event.audit.isDeleted).toBe(false)
       expect(event.audit.createdAt).toBeInstanceOf(Date)
@@ -200,8 +198,6 @@ describe('Event Entity', () => {
         coverImageUrl: null,
         coverImageStorageKey: null,
         status: 'active',
-        totalPhotos: 100,
-        processedPhotos: 95,
         createdAt: new Date('2020-01-01'),
         updatedAt: new Date('2020-06-01'),
         deletedAt: null,
@@ -211,7 +207,6 @@ describe('Event Entity', () => {
       expect(event.id).toBe('550e8400-e29b-41d4-a716-446655440000')
       expect(event.date).toBe(pastDate)
       expect(event.status).toBe('active')
-      expect(event.totalPhotos).toBe(100)
       expect(event.audit.deletedAt).toBeNull()
       expect(event.audit.isDeleted).toBe(false)
     })
@@ -228,8 +223,6 @@ describe('Event Entity', () => {
         coverImageUrl: null,
         coverImageStorageKey: null,
         status: 'archived',
-        totalPhotos: 0,
-        processedPhotos: 0,
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date('2024-06-15'),
         deletedAt: deletedDate,
