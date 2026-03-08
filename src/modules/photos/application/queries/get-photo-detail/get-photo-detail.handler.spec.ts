@@ -31,6 +31,8 @@ describe('GetPhotoDetailHandler', () => {
       getPhotosList: jest.fn(),
       getPhotoDetail: jest.fn(),
       searchPhotos: jest.fn(),
+      findFirstStorageKeyByEvent: jest.fn(),
+      findFirstStorageKeysByEventIds: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
     handler = new GetPhotoDetailHandler(readRepo)

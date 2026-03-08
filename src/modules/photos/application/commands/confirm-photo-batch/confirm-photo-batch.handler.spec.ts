@@ -23,6 +23,8 @@ describe('ConfirmPhotoBatchHandler', () => {
     location: 'Ambato',
     provinceId: null,
     cantonId: null,
+    coverImageUrl: null,
+    coverImageStorageKey: null,
     status: 'active',
     totalPhotos: 0,
     processedPhotos: 0,
