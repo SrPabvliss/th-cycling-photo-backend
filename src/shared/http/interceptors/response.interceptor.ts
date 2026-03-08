@@ -10,7 +10,10 @@ import type { Request } from 'express'
 import { I18nContext } from 'nestjs-i18n'
 import type { Observable } from 'rxjs'
 import { map } from 'rxjs/operators'
-import { SUCCESS_MESSAGE_KEY } from '../decorators/success-message.decorator'
+import {
+  SUCCESS_MESSAGE_KEY,
+  type SuccessMessageMetadata,
+} from '../decorators/success-message.decorator'
 import type { ApiSuccessResponse } from '../interfaces/api-response.interface'
 
 /**
@@ -28,10 +31,23 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiSuccessResp
     const request = context.switchToHttp().getRequest<Request>()
     const i18n = I18nContext.current()
 
-    const successMessageKey = this.reflector.get<string>(SUCCESS_MESSAGE_KEY, context.getHandler())
+    const messageMeta = this.reflector.get<SuccessMessageMetadata>(
+      SUCCESS_MESSAGE_KEY,
+      context.getHandler(),
+    )
 
-    const translatedMessage =
-      successMessageKey && i18n ? String(i18n.t(successMessageKey)) : (successMessageKey ?? null)
+    let translatedMessage: string | null = null
+    if (messageMeta) {
+      const resolvedArgs =
+        messageMeta.args && i18n
+          ? Object.fromEntries(
+              Object.entries(messageMeta.args).map(([k, v]) => [k, String(i18n.t(v))]),
+            )
+          : messageMeta.args
+      translatedMessage = i18n
+        ? String(i18n.t(messageMeta.key, { args: resolvedArgs }))
+        : messageMeta.key
+    }
 
     return next.handle().pipe(
       map((data) => {

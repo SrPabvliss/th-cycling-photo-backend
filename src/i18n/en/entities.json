@@ -1,0 +1,7 @@
+{
+  "event": "Event",
+  "photo": "Photo",
+  "cover": "Cover image",
+  "presigned_url": "Presigned URL",
+  "stats": "Statistics"
+}

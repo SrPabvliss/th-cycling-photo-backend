@@ -54,7 +54,7 @@ export class EventsController {
   }
 
   @Get('stats')
-  @SuccessMessage('success.FETCHED')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.stats' })
   @ApiOperation({ summary: 'Get global event and photo statistics' })
   @ApiEnvelopeResponse({
     status: 200,
@@ -66,7 +66,7 @@ export class EventsController {
   }
 
   @Get(':id')
-  @SuccessMessage('success.FETCHED')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Get event details by ID' })
   @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
@@ -81,7 +81,7 @@ export class EventsController {
   }
 
   @Post()
-  @SuccessMessage('success.CREATED')
+  @SuccessMessage('success.CREATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Create a new event' })
   @ApiEnvelopeResponse({
     status: 201,
@@ -101,7 +101,7 @@ export class EventsController {
   }
 
   @Patch(':id')
-  @SuccessMessage('success.UPDATED')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Update an existing event' })
   @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
@@ -124,7 +124,7 @@ export class EventsController {
   }
 
   @Post(':id/cover/presigned-url')
-  @SuccessMessage('success.CREATED')
+  @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate a presigned URL for cover image upload' })
   @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
@@ -139,7 +139,7 @@ export class EventsController {
   }
 
   @Post(':id/cover/confirm')
-  @SuccessMessage('success.UPDATED')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.cover' })
   @ApiOperation({ summary: 'Confirm cover image upload after presigned URL flow' })
   @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
@@ -155,7 +155,7 @@ export class EventsController {
   }
 
   @Delete(':id/cover')
-  @SuccessMessage('success.UPDATED')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.cover' })
   @ApiOperation({ summary: 'Remove event cover image' })
   @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
@@ -170,7 +170,7 @@ export class EventsController {
   }
 
   @Patch(':id/archive')
-  @SuccessMessage('success.UPDATED')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Archive an event' })
   @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
@@ -186,7 +186,7 @@ export class EventsController {
   }
 
   @Patch(':id/restore')
-  @SuccessMessage('success.UPDATED')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Restore an archived event' })
   @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
@@ -202,7 +202,7 @@ export class EventsController {
   }
 
   @Delete(':id')
-  @SuccessMessage('success.DELETED')
+  @SuccessMessage('success.DELETED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Delete an event' })
   @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
