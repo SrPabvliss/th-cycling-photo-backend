@@ -1,15 +1,16 @@
-import { AppException } from '@shared/domain'
 import type { EquipmentItemType } from '../value-objects/equipment-item.vo'
 
 export class EquipmentColor {
   constructor(
     public readonly id: string,
     public readonly detectedCyclistId: string,
-    public readonly itemType: EquipmentItemType,
-    public readonly colorName: string,
-    public readonly colorHex: string,
-    public readonly densityPercentage: number,
+    public itemType: EquipmentItemType,
+    public colorName: string,
+    public colorHex: string,
+    public rawHex: string | null,
+    public densityPercentage: number | null,
     public readonly createdAt: Date,
+    public updatedAt: Date,
   ) {}
 
   static create(data: {
@@ -17,25 +18,19 @@ export class EquipmentColor {
     itemType: EquipmentItemType
     colorName: string
     colorHex: string
-    densityPercentage: number
   }): EquipmentColor {
-    EquipmentColor.validateDensityPercentage(data.densityPercentage)
-
+    const now = new Date()
     return new EquipmentColor(
       crypto.randomUUID(),
       data.detectedCyclistId,
       data.itemType,
       data.colorName,
       data.colorHex,
-      data.densityPercentage,
-      new Date(),
+      null,
+      null,
+      now,
+      now,
     )
-  }
-
-  private static validateDensityPercentage(value: number): void {
-    if (value < 0 || value > 100) {
-      throw AppException.businessRule('photo.density_percentage_out_of_range')
-    }
   }
 
   static fromPersistence(data: {
@@ -44,8 +39,10 @@ export class EquipmentColor {
     itemType: EquipmentItemType
     colorName: string
     colorHex: string
-    densityPercentage: number
+    rawHex: string | null
+    densityPercentage: number | null
     createdAt: Date
+    updatedAt: Date
   }): EquipmentColor {
     return new EquipmentColor(
       data.id,
@@ -53,8 +50,10 @@ export class EquipmentColor {
       data.itemType,
       data.colorName,
       data.colorHex,
+      data.rawHex,
       data.densityPercentage,
       data.createdAt,
+      data.updatedAt,
     )
   }
 }

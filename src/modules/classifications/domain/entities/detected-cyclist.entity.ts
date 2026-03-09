@@ -1,39 +1,40 @@
+import {
+  ClassificationSource,
+  type ClassificationSourceType,
+} from '../value-objects/classification-source.vo'
+
 export class DetectedCyclist {
   constructor(
     public readonly id: string,
     public readonly photoId: string,
-    public readonly boundingBox: Record<string, number>,
-    public readonly confidenceScore: number,
+    public source: ClassificationSourceType,
     public readonly createdAt: Date,
+    public updatedAt: Date,
   ) {}
 
-  static create(data: {
-    photoId: string
-    boundingBox: Record<string, number>
-    confidenceScore: number
-  }): DetectedCyclist {
+  /** Creates a new manually-classified cyclist record. */
+  static create(data: { photoId: string }): DetectedCyclist {
+    const now = new Date()
     return new DetectedCyclist(
       crypto.randomUUID(),
       data.photoId,
-      data.boundingBox,
-      data.confidenceScore,
-      new Date(),
+      ClassificationSource.MANUAL,
+      now,
+      now,
     )
+  }
+
+  markUpdated(): void {
+    this.updatedAt = new Date()
   }
 
   static fromPersistence(data: {
     id: string
     photoId: string
-    boundingBox: Record<string, number>
-    confidenceScore: number
+    source: ClassificationSourceType
     createdAt: Date
+    updatedAt: Date
   }): DetectedCyclist {
-    return new DetectedCyclist(
-      data.id,
-      data.photoId,
-      data.boundingBox,
-      data.confidenceScore,
-      data.createdAt,
-    )
+    return new DetectedCyclist(data.id, data.photoId, data.source, data.createdAt, data.updatedAt)
   }
 }
