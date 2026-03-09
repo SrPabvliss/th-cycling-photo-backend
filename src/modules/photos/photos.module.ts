@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common'
+import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { ConfirmPhotoBatchHandler } from '@photos/application/commands/confirm-photo-batch/confirm-photo-batch.handler'
 import { GeneratePresignedUrlHandler } from '@photos/application/commands/generate-presigned-url/generate-presigned-url.handler'
@@ -15,7 +15,7 @@ const CommandHandlers = [ConfirmPhotoBatchHandler, GeneratePresignedUrlHandler]
 const QueryHandlers = [GetPhotosListHandler, GetPhotoDetailHandler, SearchPhotosHandler]
 
 @Module({
-  imports: [CqrsModule, EventsModule],
+  imports: [CqrsModule, forwardRef(() => EventsModule)],
   controllers: [PhotosController],
   providers: [
     ...CommandHandlers,

@@ -1,5 +1,4 @@
-import { ClassifyPhotoCommand, ClassifyPhotoDto } from '@classifications/application/commands'
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import {
@@ -21,7 +20,7 @@ import {
   SearchPhotosDto,
   SearchPhotosQuery,
 } from '@photos/application/queries'
-import { EntityIdProjection, Pagination } from '@shared/application'
+import { Pagination } from '@shared/application'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Photos')
@@ -66,9 +65,9 @@ export class PhotosController {
     return this.queryBus.execute(query)
   }
 
-  /** Retrieves a single photo's detail with classification data. */
+  /** Retrieves a single photo's detail. */
   @Get('photos/:id')
-  @SuccessMessage('success.FETCHED')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get photo details by ID' })
   @ApiParam({ name: 'id', description: 'Photo UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
@@ -84,7 +83,7 @@ export class PhotosController {
 
   /** Generates a presigned URL for direct upload to B2. */
   @Post('events/:eventId/photos/presigned-url')
-  @SuccessMessage('success.CREATED')
+  @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate a presigned URL for direct photo upload' })
   @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
@@ -104,7 +103,7 @@ export class PhotosController {
 
   /** Confirms a batch of photos uploaded directly to B2. */
   @Post('events/:eventId/photos/confirm-batch')
-  @SuccessMessage('success.CREATED')
+  @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Confirm a batch of photos uploaded via presigned URLs' })
   @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
@@ -127,23 +126,6 @@ export class PhotosController {
         contentType: p.contentType,
       })),
     )
-    return this.commandBus.execute(command)
-  }
-
-  /** Classifies a photo with detected cyclist data. */
-  @Patch('photos/:id/classify')
-  @SuccessMessage('success.UPDATED')
-  @ApiOperation({ summary: 'Classify a photo manually' })
-  @ApiParam({ name: 'id', description: 'Photo UUID', format: 'uuid' })
-  @ApiEnvelopeResponse({
-    status: 200,
-    description: 'Photo classified successfully',
-    type: EntityIdProjection,
-  })
-  @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
-  async classify(@Param('id') id: string, @Body() dto: ClassifyPhotoDto) {
-    const command = new ClassifyPhotoCommand(id, dto.cyclists)
     return this.commandBus.execute(command)
   }
 }

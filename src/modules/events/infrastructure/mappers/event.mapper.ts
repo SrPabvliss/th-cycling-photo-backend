@@ -16,6 +16,8 @@ type EventListSelect = {
 }
 
 type EventDetailSelect = EventListSelect & {
+  province_id: number | null
+  canton_id: number | null
   cover_image_storage_key: string | null
   created_at: Date
   updated_at: Date
@@ -83,6 +85,8 @@ export function toDetailProjection(record: EventDetailSelect): EventDetailProjec
     location: record.location,
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
+    provinceId: record.province_id,
+    cantonId: record.canton_id,
     coverImageUrl: record.cover_image_url,
     coverImageSource: record.cover_image_url ? 'manual' : null,
     status: record.status,

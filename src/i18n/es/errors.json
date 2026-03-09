@@ -1,7 +1,9 @@
 {
   "VALIDATION_FAILED": "Error de validación",
   "NOT_FOUND": "{entity} no encontrado",
+  "CONFLICT": "Ya existe un registro con el mismo valor ({fields})",
   "BUSINESS_RULE": "Regla de negocio violada",
+  "FOREIGN_KEY_FAILED": "El registro referenciado no existe",
   "EXTERNAL_SERVICE": "Error en servicio externo: {service}",
   "INTERNAL": "Ha ocurrido un error inesperado",
   "UNAUTHORIZED": "No autorizado",

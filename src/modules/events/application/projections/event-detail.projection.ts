@@ -11,6 +11,10 @@ export class EventDetailProjection {
   provinceName: string | null
   /** Canton name (resolved from relation) */
   cantonName: string | null
+  /** Province FK (for form pre-selection) */
+  provinceId: number | null
+  /** Canton FK (for form pre-selection) */
+  cantonId: number | null
   /** Cover image URL (manual upload URL or first photo storage key for fallback) */
   coverImageUrl: string | null
   /** Source of the cover image: 'manual', 'auto' (first photo), or null */
