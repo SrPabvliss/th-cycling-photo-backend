@@ -19,6 +19,9 @@ export class Photo {
     public readonly capturedAt: Date | null,
     public readonly uploadedAt: Date,
     public processedAt: Date | null,
+    public retouchedStorageKey: string | null,
+    public retouchedFileSize: bigint | null,
+    public retouchedAt: Date | null,
   ) {}
 
   static create(data: {
@@ -49,6 +52,9 @@ export class Photo {
       data.capturedAt ?? null,
       new Date(),
       null,
+      null,
+      null,
+      null,
     )
   }
 
@@ -61,6 +67,18 @@ export class Photo {
     this.status = PhotoStatus.FAILED
     this.unclassifiedReason = reason
     this.processedAt = new Date()
+  }
+
+  setRetouched(storageKey: string, fileSize: bigint): void {
+    this.retouchedStorageKey = storageKey
+    this.retouchedFileSize = fileSize
+    this.retouchedAt = new Date()
+  }
+
+  clearRetouched(): void {
+    this.retouchedStorageKey = null
+    this.retouchedFileSize = null
+    this.retouchedAt = null
   }
 
   private static validateFilename(filename: string): void {
@@ -95,6 +113,9 @@ export class Photo {
     capturedAt: Date | null
     uploadedAt: Date
     processedAt: Date | null
+    retouchedStorageKey: string | null
+    retouchedFileSize: bigint | null
+    retouchedAt: Date | null
   }): Photo {
     return new Photo(
       data.id,
@@ -110,6 +131,9 @@ export class Photo {
       data.capturedAt,
       data.uploadedAt,
       data.processedAt,
+      data.retouchedStorageKey,
+      data.retouchedFileSize,
+      data.retouchedAt,
     )
   }
 }

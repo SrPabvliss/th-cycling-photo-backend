@@ -30,6 +30,9 @@ export type PhotoDetailSelect = {
   height: number | null
   status: string
   unclassified_reason: string | null
+  retouched_storage_key: string | null
+  retouched_file_size: bigint | null
+  retouched_at: Date | null
   captured_at: Date | null
   uploaded_at: Date
   processed_at: Date | null
@@ -52,6 +55,9 @@ export function toPersistence(entity: Photo): Prisma.PhotoUncheckedCreateInput {
     height: entity.height,
     status: entity.status,
     unclassified_reason: entity.unclassifiedReason,
+    retouched_storage_key: entity.retouchedStorageKey,
+    retouched_file_size: entity.retouchedFileSize,
+    retouched_at: entity.retouchedAt,
     captured_at: entity.capturedAt,
     uploaded_at: entity.uploadedAt,
     processed_at: entity.processedAt,
@@ -74,6 +80,9 @@ export function toEntity(record: PrismaPhoto): Photo {
     capturedAt: record.captured_at,
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
+    retouchedStorageKey: record.retouched_storage_key,
+    retouchedFileSize: record.retouched_file_size,
+    retouchedAt: record.retouched_at,
   })
 }
 
@@ -106,6 +115,9 @@ export function toDetailProjection(record: PhotoDetailSelect): PhotoDetailProjec
     height: record.height,
     status: record.status,
     unclassifiedReason: record.unclassified_reason,
+    retouchedStorageKey: record.retouched_storage_key,
+    retouchedFileSize: record.retouched_file_size ? Number(record.retouched_file_size) : null,
+    retouchedAt: record.retouched_at,
     capturedAt: record.captured_at,
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
