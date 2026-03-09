@@ -1,20 +1,26 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import {
   ConfirmPhotoBatchCommand,
   ConfirmPhotoBatchDto,
+  ConfirmRetouchedUploadCommand,
+  ConfirmRetouchedUploadDto,
   GeneratePresignedUrlCommand,
   GeneratePresignedUrlDto,
+  GenerateRetouchedPresignedUrlCommand,
+  GenerateRetouchedPresignedUrlDto,
 } from '@photos/application/commands'
 import {
   ConfirmBatchProjection,
+  DownloadUrlProjection,
   PhotoDetailProjection,
   PhotoListProjection,
   PresignedUrlProjection,
 } from '@photos/application/projections'
 import {
   GetPhotoDetailQuery,
+  GetPhotoDownloadUrlQuery,
   GetPhotosListDto,
   GetPhotosListQuery,
   SearchPhotosDto,
@@ -127,5 +133,58 @@ export class PhotosController {
       })),
     )
     return this.commandBus.execute(command)
+  }
+
+  /** Generates a presigned URL for retouched photo upload. */
+  @Post('photos/:id/retouched/presigned-url')
+  @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
+  @ApiOperation({ summary: 'Generate presigned URL for retouched photo upload' })
+  @ApiParam({ name: 'id', description: 'Photo UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Presigned URL generated for retouched upload',
+    type: PresignedUrlProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
+  async generateRetouchedPresignedUrl(
+    @Param('id') id: string,
+    @Body() dto: GenerateRetouchedPresignedUrlDto,
+  ) {
+    const command = new GenerateRetouchedPresignedUrlCommand(id, dto.fileName, dto.contentType)
+    return this.commandBus.execute(command)
+  }
+
+  /** Confirms a retouched photo upload. Replaces previous retouched if exists. */
+  @Post('photos/:id/retouched/confirm')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Confirm retouched photo upload' })
+  @ApiParam({ name: 'id', description: 'Photo UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Retouched photo confirmed',
+    type: ConfirmBatchProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 400, description: 'Invalid object key prefix' })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
+  async confirmRetouchedUpload(@Param('id') id: string, @Body() dto: ConfirmRetouchedUploadDto) {
+    const command = new ConfirmRetouchedUploadCommand(id, dto.objectKey, dto.fileSize)
+    return this.commandBus.execute(command)
+  }
+
+  /** Returns a download URL for the original or retouched photo. */
+  @Get('photos/:id/download')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Get download URL for a photo' })
+  @ApiParam({ name: 'id', description: 'Photo UUID', format: 'uuid' })
+  @ApiQuery({ name: 'type', enum: ['original', 'retouched'], required: false })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Download URL retrieved',
+    type: DownloadUrlProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo or retouched version not found' })
+  async getDownloadUrl(@Param('id') id: string, @Query('type') type?: string) {
+    const query = new GetPhotoDownloadUrlQuery(id, (type ?? 'original') as 'original' | 'retouched')
+    return this.queryBus.execute(query)
   }
 }
