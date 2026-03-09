@@ -122,6 +122,9 @@ describe('Photo Entity', () => {
         capturedAt: new Date('2026-01-10'),
         uploadedAt: new Date('2026-01-15'),
         processedAt: new Date('2026-01-15'),
+        retouchedStorageKey: null,
+        retouchedFileSize: null,
+        retouchedAt: null,
       })
 
       expect(photo).toBeInstanceOf(Photo)
@@ -147,6 +150,9 @@ describe('Photo Entity', () => {
         capturedAt: null,
         uploadedAt: new Date('2026-01-15'),
         processedAt: new Date('2026-01-15'),
+        retouchedStorageKey: null,
+        retouchedFileSize: null,
+        retouchedAt: null,
       })
 
       expect(photo.status).toBe('failed')
