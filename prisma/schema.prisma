@@ -62,9 +62,16 @@ enum ProcessingStage {
   @@map("processing_stage")
 }
 
+enum ClassificationSource {
+  manual
+  ai
+
+  @@map("classification_source")
+}
+
 enum EquipmentItem {
   helmet
-  jersey
+  clothing
   bike
 
   @@map("equipment_item")
@@ -147,9 +154,10 @@ model Photo {
   status              PhotoStatus         @default(pending)
   unclassified_reason UnclassifiedReason?
 
-  captured_at  DateTime? @db.Timestamptz
-  uploaded_at  DateTime  @default(now()) @db.Timestamptz
-  processed_at DateTime? @db.Timestamptz
+  captured_at   DateTime? @db.Timestamptz
+  uploaded_at   DateTime  @default(now()) @db.Timestamptz
+  processed_at  DateTime? @db.Timestamptz
+  classified_at DateTime? @db.Timestamptz
 
   event             Event             @relation(fields: [event_id], references: [id], onDelete: Cascade)
   detected_cyclists DetectedCyclist[]
@@ -166,18 +174,33 @@ model DetectedCyclist {
   id       String @id @default(uuid()) @db.Uuid
   photo_id String @db.Uuid
 
-  bounding_box     Json    @db.JsonB
-  confidence_score Decimal @db.Decimal(5, 4)
+  source ClassificationSource @default(manual)
+
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  photo            Photo              @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  plate_number     PlateNumber?
+  equipment_colors EquipmentColor[]
+  ai_metadata      CyclistAiMetadata?
+
+  @@index([photo_id])
+  @@map("detected_cyclists")
+}
+
+model CyclistAiMetadata {
+  id                  String @id @default(uuid()) @db.Uuid
+  detected_cyclist_id String @unique @db.Uuid
+
+  bounding_box         Json    @db.JsonB
+  detection_confidence Decimal @db.Decimal(5, 4)
 
   created_at DateTime @default(now()) @db.Timestamptz
 
-  photo            Photo            @relation(fields: [photo_id], references: [id], onDelete: Cascade)
-  plate_number     PlateNumber?
-  equipment_colors EquipmentColor[]
+  detected_cyclist DetectedCyclist @relation(fields: [detected_cyclist_id], references: [id], onDelete: Cascade)
 
-  @@index([photo_id])
-  @@index([confidence_score(sort: Desc)])
-  @@map("detected_cyclists")
+  @@index([detected_cyclist_id])
+  @@map("cyclist_ai_metadata")
 }
 
 model PlateNumber {
@@ -191,6 +214,7 @@ model PlateNumber {
   corrected_at       DateTime? @db.Timestamptz
 
   created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
 
   detected_cyclist DetectedCyclist @relation(fields: [detected_cyclist_id], references: [id], onDelete: Cascade)
 
@@ -206,9 +230,11 @@ model EquipmentColor {
   item_type          EquipmentItem @map("item_type")
   color_name         String        @db.VarChar(50)
   color_hex          String        @db.VarChar(7)
-  density_percentage Decimal       @db.Decimal(5, 2)
+  raw_hex            String?       @db.VarChar(7)
+  density_percentage Decimal?      @db.Decimal(5, 2)
 
   created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
 
   detected_cyclist DetectedCyclist @relation(fields: [detected_cyclist_id], references: [id], onDelete: Cascade)
 
