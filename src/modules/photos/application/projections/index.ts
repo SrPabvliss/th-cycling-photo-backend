@@ -1,4 +1,5 @@
 export { ConfirmBatchProjection } from './confirm-batch.projection'
+export { DownloadUrlProjection } from './download-url.projection'
 export { PhotoDetailProjection } from './photo-detail.projection'
 export { PhotoListProjection } from './photo-list.projection'
 export { PresignedUrlProjection } from './presigned-url.projection'

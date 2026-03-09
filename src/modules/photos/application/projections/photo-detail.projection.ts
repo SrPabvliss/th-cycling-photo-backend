@@ -21,6 +21,12 @@ export class PhotoDetailProjection {
   status: string
   /** Reason for classification failure, if any */
   unclassifiedReason: string | null
+  /** Storage key of the retouched version */
+  retouchedStorageKey: string | null
+  /** Retouched file size in bytes */
+  retouchedFileSize: number | null
+  /** When the retouched version was uploaded */
+  retouchedAt: Date | null
   /** When the photo was captured (from EXIF) */
   capturedAt: Date | null
   /** When the photo was uploaded */
