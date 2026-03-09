@@ -1,3 +1,5 @@
+import type { ClassificationDetailSelect } from '@classifications/infrastructure/constants'
+import { toDetectedCyclistProjection } from '@classifications/infrastructure/mappers/classification-projection.mapper'
 import type { Prisma, Photo as PrismaPhoto } from '@generated/prisma/client'
 import type { PhotoDetailProjection, PhotoListProjection } from '@photos/application/projections'
 import { Photo } from '@photos/domain/entities'
@@ -31,6 +33,8 @@ export type PhotoDetailSelect = {
   captured_at: Date | null
   uploaded_at: Date
   processed_at: Date | null
+  classified_at: Date | null
+  detected_cyclists: ClassificationDetailSelect[]
 }
 
 // --- Entity mappers ---
@@ -89,7 +93,7 @@ export function toListProjection(record: PhotoListSelect): PhotoListProjection {
   }
 }
 
-/** Converts a Prisma selected record to a detail projection. */
+/** Converts a Prisma selected record to a detail projection with nested relations. */
 export function toDetailProjection(record: PhotoDetailSelect): PhotoDetailProjection {
   return {
     id: record.id,
@@ -105,5 +109,7 @@ export function toDetailProjection(record: PhotoDetailSelect): PhotoDetailProjec
     capturedAt: record.captured_at,
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
+    classifiedAt: record.classified_at,
+    detectedCyclists: record.detected_cyclists.map(toDetectedCyclistProjection),
   }
 }

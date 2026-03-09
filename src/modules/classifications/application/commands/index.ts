@@ -1,2 +1,6 @@
-export { ClassifyPhotoCommand } from './classify-photo/classify-photo.command'
-export { ClassifyPhotoDto } from './classify-photo/classify-photo.dto'
+export { CreateCyclistCommand } from './create-cyclist/create-cyclist.command'
+export { ColorInputDto, CreateCyclistDto } from './create-cyclist/create-cyclist.dto'
+export { DeleteCyclistCommand } from './delete-cyclist/delete-cyclist.command'
+export { MarkPhotoClassifiedCommand } from './mark-photo-classified/mark-photo-classified.command'
+export { UpdateCyclistCommand } from './update-cyclist/update-cyclist.command'
+export { UpdateCyclistDto } from './update-cyclist/update-cyclist.dto'

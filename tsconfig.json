@@ -19,6 +19,7 @@
       "@generated/*": ["src/generated/*"],
       "@events/*": ["src/modules/events/*"],
       "@photos/*": ["src/modules/photos/*"],
+      "@classifications/*": ["src/modules/classifications/*"],
       "@locations/*": ["src/modules/locations/*"]
     },
     "incremental": true,
@@ -29,5 +30,5 @@
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true
   },
-  "exclude": ["src/modules/classifications"]
+  "exclude": []
 }

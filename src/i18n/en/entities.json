@@ -3,5 +3,6 @@
   "photo": "Photo",
   "cover": "Cover image",
   "presigned_url": "Presigned URL",
+  "cyclist": "Cyclist",
   "stats": "Statistics"
 }
