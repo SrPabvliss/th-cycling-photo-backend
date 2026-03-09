@@ -1,10 +1,14 @@
 export class EquipmentColorProjection {
-  /** Equipment type (helmet, jersey, bike) */
+  /** EquipmentColor UUID */
+  id: string
+  /** Equipment category: 'helmet', 'clothing', or 'bike' */
   itemType: string
-  /** Human-readable color name */
+  /** W3C color name */
   colorName: string
-  /** Hex color code */
+  /** W3C hex code */
   colorHex: string
-  /** Color density percentage (0-100) */
-  densityPercentage: number
+  /** AI raw centroid hex (null for manual) */
+  rawHex: string | null
+  /** AI color density percentage (null for manual) */
+  densityPercentage: number | null
 }

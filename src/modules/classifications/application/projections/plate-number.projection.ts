@@ -1,8 +1,12 @@
 export class PlateNumberProjection {
-  /** Plate number value (1-999) */
+  /** PlateNumber UUID */
+  id: string
+  /** Detected plate number (1-9999) */
   number: number
-  /** OCR confidence score (0-1) */
+  /** AI confidence score (null for manual) */
   confidenceScore: number | null
-  /** Whether the number was manually corrected */
+  /** Whether an operator corrected this value */
   manuallyCorrected: boolean
+  /** When the correction was made */
+  correctedAt: Date | null
 }
