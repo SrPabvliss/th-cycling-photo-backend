@@ -21,6 +21,7 @@ describe('GetPhotoDetailHandler', () => {
     capturedAt: new Date('2025-06-15T10:30:00Z'),
     uploadedAt: new Date('2025-06-15T12:00:00Z'),
     processedAt: new Date('2025-06-15T12:05:00Z'),
+    classifiedAt: null,
     detectedCyclists: [],
   }
 
