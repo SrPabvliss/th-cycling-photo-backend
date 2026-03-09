@@ -154,6 +154,10 @@ model Photo {
   status              PhotoStatus         @default(pending)
   unclassified_reason UnclassifiedReason?
 
+  retouched_storage_key String?  @unique @db.VarChar(500)
+  retouched_file_size   BigInt?
+  retouched_at          DateTime? @db.Timestamptz
+
   captured_at   DateTime? @db.Timestamptz
   uploaded_at   DateTime  @default(now()) @db.Timestamptz
   processed_at  DateTime? @db.Timestamptz
