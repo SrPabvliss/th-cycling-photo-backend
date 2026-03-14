@@ -26,6 +26,8 @@ import {
   SearchPhotosDto,
   SearchPhotosQuery,
 } from '@photos/application/queries'
+import { GetDownloadManifestQuery } from '@photos/application/queries/get-download-manifest/get-download-manifest.query'
+import { GetResumePointQuery } from '@photos/application/queries/get-resume-point/get-resume-point.query'
 import { Pagination } from '@shared/application'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
@@ -36,6 +38,28 @@ export class PhotosController {
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
   ) {}
+
+  /** Returns the resume point (first unclassified photo) for the classification workspace. */
+  @Get('events/:eventId/photos/resume-point')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Get resume point for classification workspace' })
+  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getResumePoint(
+    @Param('eventId') eventId: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.queryBus.execute(new GetResumePointQuery(eventId, Number(limit) || 50))
+  }
+
+  /** Returns a download manifest with presigned URLs for all event photos. */
+  @Get('events/:eventId/photos/download-manifest')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Get download manifest for all event photos' })
+  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
+  async getDownloadManifest(@Param('eventId') eventId: string) {
+    return this.queryBus.execute(new GetDownloadManifestQuery(eventId))
+  }
 
   /** Lists photos for a given event with pagination. */
   @Get('events/:eventId/photos')
@@ -50,7 +74,7 @@ export class PhotosController {
   })
   async findAll(@Param('eventId') eventId: string, @Query() dto: GetPhotosListDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetPhotosListQuery(eventId, pagination)
+    const query = new GetPhotosListQuery(eventId, pagination, dto.classified)
     return this.queryBus.execute(query)
   }
 

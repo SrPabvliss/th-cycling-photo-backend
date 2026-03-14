@@ -41,12 +41,25 @@ export interface PresignedUrlResult {
  * Abstracts the underlying storage provider (Backblaze B2, S3, etc.)
  * so it can be swapped without changing business logic.
  */
+/** Parameters required to generate a presigned download URL. */
+export interface PresignedDownloadParams {
+  /** Storage key (path) of the file to download. */
+  key: string
+  /** Filename for the Content-Disposition header. */
+  filename: string
+  /** URL expiration time in seconds (default: 3600). */
+  expiresIn?: number
+}
+
 export interface IStorageAdapter {
   /** Uploads a file to storage and returns the storage key and public URL. */
   upload(params: UploadParams): Promise<UploadResult>
 
   /** Generates a presigned URL for direct browser upload to storage. */
   getPresignedUrl(params: PresignedUrlParams): Promise<PresignedUrlResult>
+
+  /** Generates a presigned URL for downloading a file with Content-Disposition: attachment. */
+  getPresignedDownloadUrl(params: PresignedDownloadParams): Promise<string>
 
   /** Constructs the public URL for a given storage key. */
   getPublicUrl(key: string): string
