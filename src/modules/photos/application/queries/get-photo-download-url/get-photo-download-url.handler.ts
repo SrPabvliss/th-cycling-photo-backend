@@ -28,7 +28,10 @@ export class GetPhotoDownloadUrlHandler implements IQueryHandler<GetPhotoDownloa
       storageKey = photo.storageKey
     }
 
-    const url = this.storage.getPublicUrl(storageKey)
+    const url = await this.storage.getPresignedDownloadUrl({
+      key: storageKey,
+      filename: photo.filename,
+    })
     return { url }
   }
 }

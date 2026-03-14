@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { IsInt, IsOptional, Max, Min } from 'class-validator'
+import { Transform } from 'class-transformer'
+import { IsBoolean, IsInt, IsOptional, Max, Min } from 'class-validator'
 
 export class GetPhotosListDto {
   @ApiPropertyOptional({ description: 'Page number (defaults to 1)', example: 1 })
@@ -14,4 +15,17 @@ export class GetPhotosListDto {
   @Max(100)
   @IsOptional()
   limit?: number
+
+  @ApiPropertyOptional({
+    description: 'Filter by classification status: true=classified, false=unclassified',
+  })
+  @Transform(({ obj, key }) => {
+    const raw = obj[key]
+    if (raw === 'true' || raw === true) return true
+    if (raw === 'false' || raw === false) return false
+    return undefined
+  })
+  @IsBoolean()
+  @IsOptional()
+  classified?: boolean
 }

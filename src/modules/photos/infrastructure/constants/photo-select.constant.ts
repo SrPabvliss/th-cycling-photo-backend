@@ -10,6 +10,7 @@ export const PHOTO_LIST_SELECT = {
   width: true,
   height: true,
   uploaded_at: true,
+  classified_at: true,
 } as const
 
 /** Prisma select shape for photo detail with classification relations. */

@@ -4,9 +4,11 @@ import { ConfirmPhotoBatchHandler } from '@photos/application/commands/confirm-p
 import { ConfirmRetouchedUploadHandler } from '@photos/application/commands/confirm-retouched-upload/confirm-retouched-upload.handler'
 import { GeneratePresignedUrlHandler } from '@photos/application/commands/generate-presigned-url/generate-presigned-url.handler'
 import { GenerateRetouchedPresignedUrlHandler } from '@photos/application/commands/generate-retouched-presigned-url/generate-retouched-presigned-url.handler'
+import { GetDownloadManifestHandler } from '@photos/application/queries/get-download-manifest/get-download-manifest.handler'
 import { GetPhotoDetailHandler } from '@photos/application/queries/get-photo-detail/get-photo-detail.handler'
 import { GetPhotoDownloadUrlHandler } from '@photos/application/queries/get-photo-download-url/get-photo-download-url.handler'
 import { GetPhotosListHandler } from '@photos/application/queries/get-photos-list/get-photos-list.handler'
+import { GetResumePointHandler } from '@photos/application/queries/get-resume-point/get-resume-point.handler'
 import { SearchPhotosHandler } from '@photos/application/queries/search-photos/search-photos.handler'
 import { PHOTO_READ_REPOSITORY, PHOTO_WRITE_REPOSITORY } from '@photos/domain/ports'
 import { PhotoReadRepository } from '@photos/infrastructure/repositories/photo-read.repository'
@@ -24,6 +26,8 @@ const QueryHandlers = [
   GetPhotosListHandler,
   GetPhotoDetailHandler,
   GetPhotoDownloadUrlHandler,
+  GetResumePointHandler,
+  GetDownloadManifestHandler,
   SearchPhotosHandler,
 ]
 

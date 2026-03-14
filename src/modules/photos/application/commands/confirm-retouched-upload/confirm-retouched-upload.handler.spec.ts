@@ -44,6 +44,10 @@ describe('ConfirmRetouchedUploadHandler', () => {
       findFirstStorageKeysByEventIds: jest.fn(),
       getTotalFileSizeByEvent: jest.fn(),
       getTotalFileSizesByEventIds: jest.fn(),
+      getClassifiedCountByEvent: jest.fn(),
+      getClassifiedCountsByEventIds: jest.fn(),
+      getAllPhotoKeysForEvent: jest.fn(),
+      getResumePoint: jest.fn(),
       countAll: jest.fn(),
       sumAllFileSize: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
@@ -57,6 +61,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
     storageAdapter = {
       upload: jest.fn(),
       getPresignedUrl: jest.fn(),
+      getPresignedDownloadUrl: jest.fn(),
       getPublicUrl: jest.fn(),
       delete: jest.fn(),
     } as jest.Mocked<IStorageAdapter>

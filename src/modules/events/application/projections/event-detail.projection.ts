@@ -23,6 +23,8 @@ export class EventDetailProjection {
   status: string
   /** Number of photos associated with this event (computed) */
   photoCount: number
+  /** Number of classified photos (computed) */
+  classifiedCount: number
   /** Total file size of all photos in bytes (computed) */
   totalFileSize: number
   /** When the event record was created */

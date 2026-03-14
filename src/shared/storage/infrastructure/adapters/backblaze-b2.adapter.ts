@@ -1,10 +1,16 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AppException } from '@shared/domain/exceptions/app.exception'
 import type {
   IStorageAdapter,
+  PresignedDownloadParams,
   PresignedUrlParams,
   PresignedUrlResult,
   UploadParams,
@@ -81,6 +87,24 @@ export class BackblazeB2Adapter implements IStorageAdapter {
       }
     } catch (error) {
       this.logger.error(`Failed to generate presigned URL for: ${params.key}`, error)
+      throw AppException.externalService('BackblazeB2', error as Error)
+    }
+  }
+
+  /** Generates a presigned URL for downloading a file with Content-Disposition: attachment. */
+  async getPresignedDownloadUrl(params: PresignedDownloadParams): Promise<string> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: params.key,
+        ResponseContentDisposition: `attachment; filename="${params.filename}"`,
+      })
+
+      return await getSignedUrl(this.client, command, {
+        expiresIn: params.expiresIn ?? 3600,
+      })
+    } catch (error) {
+      this.logger.error(`Failed to generate presigned download URL for: ${params.key}`, error)
       throw AppException.externalService('BackblazeB2', error as Error)
     }
   }

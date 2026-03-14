@@ -17,6 +17,7 @@ export type PhotoListSelect = {
   width: number | null
   height: number | null
   uploaded_at: Date
+  classified_at: Date | null
 }
 
 export type PhotoDetailSelect = {
@@ -99,6 +100,7 @@ export function toListProjection(record: PhotoListSelect): PhotoListProjection {
     width: record.width,
     height: record.height,
     uploadedAt: record.uploaded_at,
+    classifiedAt: record.classified_at,
   }
 }
 
