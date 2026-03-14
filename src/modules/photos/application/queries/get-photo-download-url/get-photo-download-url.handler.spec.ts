@@ -45,6 +45,10 @@ describe('GetPhotoDownloadUrlHandler', () => {
       findFirstStorageKeysByEventIds: jest.fn(),
       getTotalFileSizeByEvent: jest.fn(),
       getTotalFileSizesByEventIds: jest.fn(),
+      getClassifiedCountByEvent: jest.fn(),
+      getClassifiedCountsByEventIds: jest.fn(),
+      getAllPhotoKeysForEvent: jest.fn(),
+      getResumePoint: jest.fn(),
       countAll: jest.fn(),
       sumAllFileSize: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
@@ -52,6 +56,7 @@ describe('GetPhotoDownloadUrlHandler', () => {
     storageAdapter = {
       upload: jest.fn(),
       getPresignedUrl: jest.fn(),
+      getPresignedDownloadUrl: jest.fn(),
       getPublicUrl: jest.fn(),
       delete: jest.fn(),
     } as jest.Mocked<IStorageAdapter>
@@ -69,30 +74,40 @@ describe('GetPhotoDownloadUrlHandler', () => {
     expect(error.code).toBe('NOT_FOUND')
   })
 
-  it('should return public URL for original photo', async () => {
+  it('should return presigned download URL for original photo', async () => {
     photoReadRepo.findById.mockResolvedValueOnce(createPhoto())
-    storageAdapter.getPublicUrl.mockReturnValueOnce(
-      'https://cdn.example.com/events/550e8400/photos/abc-original.jpg',
+    storageAdapter.getPresignedDownloadUrl.mockResolvedValueOnce(
+      'https://s3.us-west-004.backblazeb2.com/file/bucket/events/550e8400/photos/abc-original.jpg?signed=1',
     )
 
     const query = new GetPhotoDownloadUrlQuery('photo-001', 'original')
     const result = await handler.execute(query)
 
-    expect(result.url).toBe('https://cdn.example.com/events/550e8400/photos/abc-original.jpg')
-    expect(storageAdapter.getPublicUrl).toHaveBeenCalledWith(originalKey)
+    expect(result.url).toBe(
+      'https://s3.us-west-004.backblazeb2.com/file/bucket/events/550e8400/photos/abc-original.jpg?signed=1',
+    )
+    expect(storageAdapter.getPresignedDownloadUrl).toHaveBeenCalledWith({
+      key: originalKey,
+      filename: 'original.jpg',
+    })
   })
 
-  it('should return public URL for retouched photo', async () => {
+  it('should return presigned download URL for retouched photo', async () => {
     photoReadRepo.findById.mockResolvedValueOnce(createPhoto(true))
-    storageAdapter.getPublicUrl.mockReturnValueOnce(
-      'https://cdn.example.com/events/550e8400/retouched/def-retouched.jpg',
+    storageAdapter.getPresignedDownloadUrl.mockResolvedValueOnce(
+      'https://s3.us-west-004.backblazeb2.com/file/bucket/events/550e8400/retouched/def-retouched.jpg?signed=1',
     )
 
     const query = new GetPhotoDownloadUrlQuery('photo-001', 'retouched')
     const result = await handler.execute(query)
 
-    expect(result.url).toBe('https://cdn.example.com/events/550e8400/retouched/def-retouched.jpg')
-    expect(storageAdapter.getPublicUrl).toHaveBeenCalledWith(retouchedKey)
+    expect(result.url).toBe(
+      'https://s3.us-west-004.backblazeb2.com/file/bucket/events/550e8400/retouched/def-retouched.jpg?signed=1',
+    )
+    expect(storageAdapter.getPresignedDownloadUrl).toHaveBeenCalledWith({
+      key: retouchedKey,
+      filename: 'original.jpg',
+    })
   })
 
   it('should throw NOT_FOUND when requesting retouched but none exists', async () => {

@@ -39,6 +39,10 @@ describe('GetPhotoDetailHandler', () => {
       findFirstStorageKeysByEventIds: jest.fn(),
       getTotalFileSizeByEvent: jest.fn(),
       getTotalFileSizesByEventIds: jest.fn(),
+      getClassifiedCountByEvent: jest.fn(),
+      getClassifiedCountsByEventIds: jest.fn(),
+      getAllPhotoKeysForEvent: jest.fn(),
+      getResumePoint: jest.fn(),
       countAll: jest.fn(),
       sumAllFileSize: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>

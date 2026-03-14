@@ -9,6 +9,7 @@ export interface IPhotoReadRepository {
   getPhotosList(
     eventId: string,
     pagination: Pagination,
+    classified?: boolean,
   ): Promise<PaginatedResult<PhotoListProjection>>
   getPhotoDetail(id: string): Promise<PhotoDetailProjection | null>
   searchPhotos(
@@ -19,6 +20,12 @@ export interface IPhotoReadRepository {
   findFirstStorageKeysByEventIds(eventIds: string[]): Promise<Map<string, string>>
   getTotalFileSizeByEvent(eventId: string): Promise<number>
   getTotalFileSizesByEventIds(eventIds: string[]): Promise<Map<string, number>>
+  getClassifiedCountByEvent(eventId: string): Promise<number>
+  getClassifiedCountsByEventIds(eventIds: string[]): Promise<Map<string, number>>
+  getAllPhotoKeysForEvent(
+    eventId: string,
+  ): Promise<Array<{ filename: string; storageKey: string; fileSize: number }>>
+  getResumePoint(eventId: string, limit: number): Promise<{ photoId: string | null; page: number }>
   countAll(): Promise<number>
   sumAllFileSize(): Promise<number>
 }

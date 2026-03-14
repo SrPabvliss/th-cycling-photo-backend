@@ -72,6 +72,7 @@ export function toListProjection(record: EventListSelect): EventListProjection {
     coverImageSource: record.cover_image_url ? 'manual' : null,
     status: record.status,
     photoCount: record._count.photos,
+    classifiedCount: 0,
     totalFileSize: 0,
   }
 }
@@ -91,6 +92,7 @@ export function toDetailProjection(record: EventDetailSelect): EventDetailProjec
     coverImageSource: record.cover_image_url ? 'manual' : null,
     status: record.status,
     photoCount: record._count.photos,
+    classifiedCount: 0,
     totalFileSize: 0,
     createdAt: record.created_at,
     updatedAt: record.updated_at,

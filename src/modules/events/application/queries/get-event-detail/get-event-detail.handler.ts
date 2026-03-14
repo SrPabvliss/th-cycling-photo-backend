@@ -20,14 +20,16 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
     const event = await this.readRepo.getEventDetail(query.id)
     if (!event) throw AppException.notFound('Event', query.id)
 
-    const [totalFileSize, storageKey] = await Promise.all([
+    const [totalFileSize, classifiedCount, storageKey] = await Promise.all([
       this.photoReadRepo.getTotalFileSizeByEvent(event.id),
+      this.photoReadRepo.getClassifiedCountByEvent(event.id),
       event.coverImageUrl
         ? Promise.resolve(null)
         : this.photoReadRepo.findFirstStorageKeyByEvent(event.id),
     ])
 
     event.totalFileSize = totalFileSize
+    event.classifiedCount = classifiedCount
 
     if (!event.coverImageUrl && storageKey) {
       event.coverImageUrl = this.storage.getPublicUrl(storageKey)

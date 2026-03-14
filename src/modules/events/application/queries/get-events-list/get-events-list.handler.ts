@@ -23,8 +23,9 @@ export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
     const allEventIds = result.items.map((e) => e.id)
     const eventsWithoutCover = result.items.filter((e) => !e.coverImageUrl)
 
-    const [fileSizes, firstPhotos] = await Promise.all([
+    const [fileSizes, classifiedCounts, firstPhotos] = await Promise.all([
       this.photoReadRepo.getTotalFileSizesByEventIds(allEventIds),
+      this.photoReadRepo.getClassifiedCountsByEventIds(allEventIds),
       eventsWithoutCover.length > 0
         ? this.photoReadRepo.findFirstStorageKeysByEventIds(eventsWithoutCover.map((e) => e.id))
         : Promise.resolve(new Map<string, string>()),
@@ -32,6 +33,7 @@ export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
 
     for (const event of result.items) {
       event.totalFileSize = fileSizes.get(event.id) ?? 0
+      event.classifiedCount = classifiedCounts.get(event.id) ?? 0
     }
 
     for (const event of eventsWithoutCover) {

@@ -32,14 +32,17 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   async getPhotosList(
     eventId: string,
     pagination: Pagination,
+    classified?: boolean,
   ): Promise<PaginatedResult<PhotoListProjection>> {
-    const where = { event_id: eventId }
+    const where: Prisma.PhotoWhereInput = { event_id: eventId }
+    if (classified === true) where.classified_at = { not: null }
+    if (classified === false) where.classified_at = null
 
     const [photos, total] = await Promise.all([
       this.prisma.photo.findMany({
         where,
         select: PHOTO_LIST_SELECT,
-        orderBy: { uploaded_at: 'desc' },
+        orderBy: { filename: 'asc' },
         skip: pagination.skip,
         take: pagination.take,
       }),
@@ -70,7 +73,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       this.prisma.photo.findMany({
         where,
         select: PHOTO_LIST_SELECT,
-        orderBy: { uploaded_at: 'desc' },
+        orderBy: { filename: 'asc' },
         skip: pagination.skip,
         take: pagination.take,
       }),
@@ -135,6 +138,62 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   async sumAllFileSize(): Promise<number> {
     const result = await this.prisma.photo.aggregate({ _sum: { file_size: true } })
     return Number(result._sum.file_size ?? 0)
+  }
+
+  /** Returns the count of classified photos for a single event. */
+  async getClassifiedCountByEvent(eventId: string): Promise<number> {
+    return this.prisma.photo.count({
+      where: { event_id: eventId, classified_at: { not: null } },
+    })
+  }
+
+  /** Batch: returns a map of eventId → classified photo count. */
+  async getClassifiedCountsByEventIds(eventIds: string[]): Promise<Map<string, number>> {
+    if (eventIds.length === 0) return new Map()
+
+    const results = await this.prisma.photo.groupBy({
+      by: ['event_id'],
+      where: { event_id: { in: eventIds }, classified_at: { not: null } },
+      _count: { id: true },
+    })
+
+    return new Map(results.map((r) => [r.event_id, r._count.id]))
+  }
+
+  /** Returns all photo keys for an event, ordered by filename. Used for download manifest. */
+  async getAllPhotoKeysForEvent(
+    eventId: string,
+  ): Promise<Array<{ filename: string; storageKey: string; fileSize: number }>> {
+    const photos = await this.prisma.photo.findMany({
+      where: { event_id: eventId },
+      orderBy: { filename: 'asc' },
+      select: { filename: true, storage_key: true, file_size: true },
+    })
+    return photos.map((p) => ({
+      filename: p.filename,
+      storageKey: p.storage_key,
+      fileSize: Number(p.file_size),
+    }))
+  }
+
+  /** Returns the first unclassified photo and its page number for resume functionality. */
+  async getResumePoint(
+    eventId: string,
+    limit: number,
+  ): Promise<{ photoId: string | null; page: number }> {
+    const firstUnclassified = await this.prisma.photo.findFirst({
+      where: { event_id: eventId, classified_at: null },
+      orderBy: { filename: 'asc' },
+      select: { id: true, filename: true },
+    })
+
+    if (!firstUnclassified) return { photoId: null, page: 1 }
+
+    const position = await this.prisma.photo.count({
+      where: { event_id: eventId, filename: { lt: firstUnclassified.filename } },
+    })
+
+    return { photoId: firstUnclassified.id, page: Math.floor(position / limit) + 1 }
   }
 
   /** Builds a Prisma where clause from search filters. */

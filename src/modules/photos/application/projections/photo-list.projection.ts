@@ -15,4 +15,6 @@ export class PhotoListProjection {
   height: number | null
   /** When the photo was uploaded */
   uploadedAt: Date
+  /** When the photo was classified (null if not yet classified) */
+  classifiedAt: Date | null
 }
