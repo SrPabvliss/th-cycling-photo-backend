@@ -16,7 +16,9 @@ export class GetPhotosListDto {
   @IsOptional()
   limit?: number
 
-  @ApiPropertyOptional({ description: 'Filter by classification status: true=classified, false=unclassified' })
+  @ApiPropertyOptional({
+    description: 'Filter by classification status: true=classified, false=unclassified',
+  })
   @Transform(({ obj, key }) => {
     const raw = obj[key]
     if (raw === 'true' || raw === true) return true

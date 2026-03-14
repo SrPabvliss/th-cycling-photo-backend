@@ -45,10 +45,7 @@ export class PhotosController {
   @ApiOperation({ summary: 'Get resume point for classification workspace' })
   @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  async getResumePoint(
-    @Param('eventId') eventId: string,
-    @Query('limit') limit?: number,
-  ) {
+  async getResumePoint(@Param('eventId') eventId: string, @Query('limit') limit?: number) {
     return this.queryBus.execute(new GetResumePointQuery(eventId, Number(limit) || 50))
   }
 
