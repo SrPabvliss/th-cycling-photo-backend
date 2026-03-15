@@ -45,8 +45,8 @@ export interface PresignedUrlResult {
 export interface PresignedDownloadParams {
   /** Storage key (path) of the file to download. */
   key: string
-  /** Filename for the Content-Disposition header. */
-  filename: string
+  /** Filename for the Content-Disposition: attachment header. Omit to skip disposition (inline access). */
+  filename?: string
   /** URL expiration time in seconds (default: 3600). */
   expiresIn?: number
 }
@@ -58,7 +58,7 @@ export interface IStorageAdapter {
   /** Generates a presigned URL for direct browser upload to storage. */
   getPresignedUrl(params: PresignedUrlParams): Promise<PresignedUrlResult>
 
-  /** Generates a presigned URL for downloading a file with Content-Disposition: attachment. */
+  /** Generates a presigned URL for downloading/accessing a file. Includes Content-Disposition: attachment when filename is provided. */
   getPresignedDownloadUrl(params: PresignedDownloadParams): Promise<string>
 
   /** Constructs the public URL for a given storage key. */

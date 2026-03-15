@@ -10,6 +10,7 @@ describe('ConfirmPhotoBatchHandler', () => {
   let handler: ConfirmPhotoBatchHandler
   let eventReadRepo: jest.Mocked<IEventReadRepository>
   let photoWriteRepo: jest.Mocked<IPhotoWriteRepository>
+  let embeddingQueue: { add: jest.Mock; addBulk: jest.Mock }
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -39,6 +40,8 @@ describe('ConfirmPhotoBatchHandler', () => {
   }
 
   beforeEach(() => {
+    jest.clearAllMocks()
+
     eventReadRepo = {
       findById: jest.fn(),
       getEventsList: jest.fn(),
@@ -52,7 +55,13 @@ describe('ConfirmPhotoBatchHandler', () => {
       delete: jest.fn(),
     } as jest.Mocked<IPhotoWriteRepository>
 
-    handler = new ConfirmPhotoBatchHandler(eventReadRepo, photoWriteRepo)
+    embeddingQueue = { add: jest.fn(), addBulk: jest.fn() }
+
+    handler = new ConfirmPhotoBatchHandler(
+      eventReadRepo,
+      photoWriteRepo,
+      embeddingQueue as unknown as import('bullmq').Queue,
+    )
   })
 
   it('should throw NOT_FOUND when event does not exist', async () => {
@@ -102,6 +111,33 @@ describe('ConfirmPhotoBatchHandler', () => {
       ]),
     )
     expect(result).toEqual({ confirmed: 2 })
+  })
+
+  it('should enqueue embedding generation for each confirmed photo', async () => {
+    eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
+    photoWriteRepo.saveMany.mockResolvedValueOnce(2)
+
+    const command = new ConfirmPhotoBatchCommand(eventId, [
+      validBatchItem,
+      {
+        ...validBatchItem,
+        objectKey: `events/${eventId}/def-456-IMG_002.jpg`,
+        fileName: 'IMG_002.jpg',
+      },
+    ])
+
+    await handler.execute(command)
+
+    expect(embeddingQueue.addBulk).toHaveBeenCalledTimes(1)
+    expect(embeddingQueue.addBulk).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'generate-embedding',
+          data: expect.objectContaining({ photoId: expect.any(String) }),
+          opts: expect.objectContaining({ attempts: 3 }),
+        }),
+      ]),
+    )
   })
 
   it('should return confirmed: 0 when all photos are duplicates', async () => {
