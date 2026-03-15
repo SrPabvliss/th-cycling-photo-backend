@@ -1,3 +1,4 @@
+export { BulkClassifyResultProjection } from './bulk-classify-result.projection'
 export {
   CyclistDetailProjection,
   CyclistDetailProjection as DetectedCyclistProjection,

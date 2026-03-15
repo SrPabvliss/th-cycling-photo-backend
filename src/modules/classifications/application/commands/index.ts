@@ -1,3 +1,5 @@
+export { BulkClassifyCommand } from './bulk-classify/bulk-classify.command'
+export { BulkClassifyDto } from './bulk-classify/bulk-classify.dto'
 export { CreateCyclistCommand } from './create-cyclist/create-cyclist.command'
 export { ColorInputDto, CreateCyclistDto } from './create-cyclist/create-cyclist.dto'
 export { DeleteCyclistCommand } from './delete-cyclist/delete-cyclist.command'

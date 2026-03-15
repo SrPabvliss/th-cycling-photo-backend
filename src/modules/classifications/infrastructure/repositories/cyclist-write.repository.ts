@@ -1,5 +1,5 @@
 import type { DetectedCyclist, EquipmentColor, PlateNumber } from '@classifications/domain/entities'
-import type { ICyclistWriteRepository } from '@classifications/domain/ports'
+import type { BulkClassifyInput, ICyclistWriteRepository } from '@classifications/domain/ports'
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
 import * as CyclistMapper from '../mappers/cyclist.mapper'
@@ -55,5 +55,40 @@ export class CyclistWriteRepository implements ICyclistWriteRepository {
   /** Deletes a cyclist and all related records (cascade). */
   async deleteCyclist(id: string): Promise<void> {
     await this.prisma.detectedCyclist.delete({ where: { id } })
+  }
+
+  /** Applies the same classification to multiple photos in a single transaction. */
+  async bulkClassify(input: BulkClassifyInput): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // Delete existing classifications for all target photos
+      await tx.detectedCyclist.deleteMany({
+        where: { photo_id: { in: input.photoIds } },
+      })
+
+      // Create new cyclists
+      await tx.detectedCyclist.createMany({
+        data: input.cyclists.map(CyclistMapper.toCyclistPersistence),
+      })
+
+      // Create plate numbers
+      if (input.plateNumbers.length > 0) {
+        await tx.plateNumber.createMany({
+          data: input.plateNumbers.map(CyclistMapper.toPlatePersistence),
+        })
+      }
+
+      // Create equipment colors
+      if (input.colors.length > 0) {
+        await tx.equipmentColor.createMany({
+          data: input.colors.map(CyclistMapper.toColorPersistence),
+        })
+      }
+
+      // Mark all photos as classified
+      await tx.photo.updateMany({
+        where: { id: { in: input.photoIds } },
+        data: { classified_at: new Date() },
+      })
+    })
   }
 }

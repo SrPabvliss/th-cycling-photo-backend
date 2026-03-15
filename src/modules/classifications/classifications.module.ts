@@ -2,6 +2,7 @@ import { CYCLIST_READ_REPOSITORY, CYCLIST_WRITE_REPOSITORY } from '@classificati
 import { Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { PhotosModule } from '../photos/photos.module'
+import { BulkClassifyHandler } from './application/commands/bulk-classify/bulk-classify.handler'
 import { CreateCyclistHandler } from './application/commands/create-cyclist/create-cyclist.handler'
 import { DeleteCyclistHandler } from './application/commands/delete-cyclist/delete-cyclist.handler'
 import { MarkPhotoClassifiedHandler } from './application/commands/mark-photo-classified/mark-photo-classified.handler'
@@ -13,6 +14,7 @@ import { CyclistWriteRepository } from './infrastructure/repositories/cyclist-wr
 import { ClassificationsController } from './presentation/controllers/classifications.controller'
 
 const CommandHandlers = [
+  BulkClassifyHandler,
   CreateCyclistHandler,
   UpdateCyclistHandler,
   DeleteCyclistHandler,

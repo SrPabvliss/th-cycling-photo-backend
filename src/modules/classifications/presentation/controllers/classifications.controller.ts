@@ -1,4 +1,6 @@
 import {
+  BulkClassifyCommand,
+  BulkClassifyDto,
   CreateCyclistCommand,
   CreateCyclistDto,
   DeleteCyclistCommand,
@@ -7,6 +9,7 @@ import {
   UpdateCyclistDto,
 } from '@classifications/application/commands'
 import {
+  BulkClassifyResultProjection,
   CyclistDetailProjection,
   CyclistListProjection,
 } from '@classifications/application/projections'
@@ -117,5 +120,21 @@ export class ClassificationsController {
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
   async classify(@Param('photoId') photoId: string) {
     return this.commandBus.execute(new MarkPhotoClassifiedCommand(photoId))
+  }
+
+  /** Applies the same classification to multiple photos atomically. */
+  @Post('photos/bulk-classify')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Bulk classify multiple photos with the same cyclist data' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'All photos classified successfully',
+    type: BulkClassifyResultProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Some photos not found' })
+  async bulkClassify(@Body() dto: BulkClassifyDto) {
+    const command = new BulkClassifyCommand(dto.photoIds, dto.plateNumber ?? null, dto.colors)
+    return this.commandBus.execute(command)
   }
 }
