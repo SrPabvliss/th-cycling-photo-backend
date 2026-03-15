@@ -35,9 +35,7 @@ describe('VoyageAIEmbeddingAdapter', () => {
     expect(result.embedding).toEqual(mockEmbedding)
     expect(result.totalTokens).toBe(42)
     expect(mockMultimodalEmbed).toHaveBeenCalledWith({
-      inputs: [
-        { content: [{ type: 'image_url', imageUrl: 'https://cdn.example.com/photo.jpg' }] },
-      ],
+      inputs: [{ content: [{ type: 'image_url', imageUrl: 'https://cdn.example.com/photo.jpg' }] }],
       model: 'voyage-multimodal-3.5',
     })
   })
