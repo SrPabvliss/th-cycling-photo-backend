@@ -97,7 +97,9 @@ export class BackblazeB2Adapter implements IStorageAdapter {
       const command = new GetObjectCommand({
         Bucket: this.bucketName,
         Key: params.key,
-        ResponseContentDisposition: `attachment; filename="${params.filename}"`,
+        ...(params.filename && {
+          ResponseContentDisposition: `attachment; filename="${params.filename}"`,
+        }),
       })
 
       return await getSignedUrl(this.client, command, {

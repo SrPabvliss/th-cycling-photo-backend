@@ -1,3 +1,4 @@
+export { FindSimilarPhotosQuery } from './find-similar-photos/find-similar-photos.query'
 export { GetPhotoDetailQuery } from './get-photo-detail/get-photo-detail.query'
 export { GetPhotoDownloadUrlQuery } from './get-photo-download-url/get-photo-download-url.query'
 export { GetPhotosListDto } from './get-photos-list/get-photos-list.dto'

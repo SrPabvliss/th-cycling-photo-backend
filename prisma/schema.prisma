@@ -163,6 +163,8 @@ model Photo {
   processed_at  DateTime? @db.Timestamptz
   classified_at DateTime? @db.Timestamptz
 
+  embedding Unsupported("vector(1024)")?
+
   event             Event             @relation(fields: [event_id], references: [id], onDelete: Cascade)
   detected_cyclists DetectedCyclist[]
   processing_jobs   ProcessingJob[]
@@ -171,6 +173,7 @@ model Photo {
   @@index([event_id])
   @@index([status])
   @@index([event_id, unclassified_reason], map: "idx_photos_unclassified")
+  // HNSW index for cosine similarity is created via raw SQL in the migration
   @@map("photos")
 }
 

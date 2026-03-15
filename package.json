@@ -58,7 +58,8 @@
     "nestjs-i18n": "^10.6.0",
     "pg": "^8.18.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "voyageai": "^0.2.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",

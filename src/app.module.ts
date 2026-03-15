@@ -1,6 +1,7 @@
 import * as path from 'node:path'
+import { BullModule } from '@nestjs/bullmq'
 import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule, ConfigService } from '@nestjs/config'
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
@@ -10,6 +11,7 @@ import { ClassificationsModule } from './modules/classifications/classifications
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
 import { PhotosModule } from './modules/photos/photos.module'
+import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
 import { StorageModule } from './shared/storage/storage.module'
@@ -30,8 +32,18 @@ import { StorageModule } from './shared/storage/storage.module'
       },
       resolvers: [{ use: QueryResolver, options: ['lang'] }, AcceptLanguageResolver],
     }),
+    BullModule.forRootAsync({
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get<string>('redis.host', 'localhost'),
+          port: config.get<number>('redis.port', 6394),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     PrismaModule,
     StorageModule,
+    EmbeddingsModule,
     ClassificationsModule,
     EventsModule,
     LocationsModule,

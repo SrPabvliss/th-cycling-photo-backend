@@ -30,5 +30,12 @@ export default () => {
       },
       cdnUrl: process.env.CLOUDFLARE_CDN_URL,
     },
+    voyageAi: {
+      apiKey: process.env.VOYAGE_API_KEY,
+    },
+    redis: {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number.parseInt(process.env.REDIS_PORT || '6394', 10),
+    },
   }
 }

@@ -17,8 +17,10 @@ import {
   PhotoDetailProjection,
   PhotoListProjection,
   PresignedUrlProjection,
+  SimilarPhotoProjection,
 } from '@photos/application/projections'
 import {
+  FindSimilarPhotosQuery,
   GetPhotoDetailQuery,
   GetPhotoDownloadUrlQuery,
   GetPhotosListDto,
@@ -89,6 +91,24 @@ export class PhotosController {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     const { page, limit, ...filters } = dto
     const query = new SearchPhotosQuery(filters, pagination)
+    return this.queryBus.execute(query)
+  }
+
+  /** Finds visually similar photos within the same event using vector embeddings. */
+  @Get('photos/:id/similar')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'Find visually similar photos within the same event' })
+  @ApiParam({ name: 'id', description: 'Photo UUID', format: 'uuid' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Similar photos found',
+    type: SimilarPhotoProjection,
+    isArray: true,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
+  async findSimilar(@Param('id') id: string, @Query('limit') limit?: number) {
+    const query = new FindSimilarPhotosQuery(id, limit ? Number(limit) : 10)
     return this.queryBus.execute(query)
   }
 

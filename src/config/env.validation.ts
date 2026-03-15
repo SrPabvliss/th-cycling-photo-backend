@@ -65,6 +65,20 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   CLOUDFLARE_CDN_URL?: string
+
+  // Voyage AI
+  @IsOptional()
+  @IsString()
+  VOYAGE_API_KEY?: string
+
+  // Redis
+  @IsOptional()
+  @IsString()
+  REDIS_HOST?: string
+
+  @IsOptional()
+  @IsNumber()
+  REDIS_PORT?: number
 }
 
 export function validate(config: Record<string, unknown>) {
