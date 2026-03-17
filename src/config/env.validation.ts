@@ -71,6 +71,15 @@ export class EnvironmentVariables {
   @IsString()
   VOYAGE_API_KEY?: string
 
+  // Auth
+  @IsString()
+  @IsNotEmpty()
+  JWT_SECRET: string
+
+  @IsOptional()
+  @IsString()
+  CORS_ORIGIN?: string
+
   // Redis
   @IsOptional()
   @IsString()

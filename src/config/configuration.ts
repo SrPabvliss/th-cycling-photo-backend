@@ -1,6 +1,18 @@
 export default () => {
+  const { NODE_ENV, PORT } = process.env
+
   const { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, DB_SSL_MODE } = process.env
+
   const { B2_APPLICATION_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET_ID, B2_BUCKET_NAME, B2_REGION } =
+    process.env
+
+  const { CLOUDFLARE_CDN_URL } = process.env
+
+  const { VOYAGE_API_KEY } = process.env
+
+  const { REDIS_HOST, REDIS_PORT } = process.env
+
+  const { JWT_SECRET, JWT_ACCESS_EXPIRATION_SECONDS, JWT_REFRESH_EXPIRY_DAYS, CORS_ORIGIN } =
     process.env
 
   let databaseUrl = `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
@@ -9,8 +21,8 @@ export default () => {
   }
 
   return {
-    port: Number.parseInt(process.env.PORT || '3000', 10),
-    nodeEnv: process.env.NODE_ENV,
+    port: Number.parseInt(PORT || '3000', 10),
+    nodeEnv: NODE_ENV,
     database: {
       host: DB_HOST,
       port: Number.parseInt(DB_PORT || '5432', 10),
@@ -28,14 +40,22 @@ export default () => {
         bucketName: B2_BUCKET_NAME,
         region: B2_REGION,
       },
-      cdnUrl: process.env.CLOUDFLARE_CDN_URL,
+      cdnUrl: CLOUDFLARE_CDN_URL,
     },
     voyageAi: {
-      apiKey: process.env.VOYAGE_API_KEY,
+      apiKey: VOYAGE_API_KEY,
     },
     redis: {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number.parseInt(process.env.REDIS_PORT || '6394', 10),
+      host: REDIS_HOST || 'localhost',
+      port: Number.parseInt(REDIS_PORT || '6394', 10),
+    },
+    jwt: {
+      secret: JWT_SECRET,
+      accessExpirationSeconds: Number.parseInt(JWT_ACCESS_EXPIRATION_SECONDS || '900', 10),
+      refreshExpiryDays: Number.parseInt(JWT_REFRESH_EXPIRY_DAYS || '30', 10),
+    },
+    cors: {
+      origin: CORS_ORIGIN,
     },
   }
 }
