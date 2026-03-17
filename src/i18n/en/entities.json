@@ -4,5 +4,8 @@
   "cover": "Cover image",
   "presigned_url": "Presigned URL",
   "cyclist": "Cyclist",
-  "stats": "Statistics"
+  "stats": "Statistics",
+  "user": "User",
+  "avatar": "Avatar",
+  "password": "Password"
 }

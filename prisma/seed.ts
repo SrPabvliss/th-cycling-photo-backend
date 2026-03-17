@@ -1,6 +1,8 @@
+import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { hashSync } from 'bcryptjs'
 import { config } from 'dotenv'
 import { PrismaClient } from '../src/generated/prisma/client'
 
@@ -64,35 +66,82 @@ async function seedLocations() {
   console.log(`Seeded ${provincesCount} provinces and ${cantonsCount} cantons`)
 }
 
-async function seedDemoData() {
-  // Clean existing demo data in dependency order
-  await prisma.equipmentColor.deleteMany()
-  await prisma.plateNumber.deleteMany()
-  await prisma.detectedCyclist.deleteMany()
-  await prisma.processingJob.deleteMany()
-  await prisma.photo.deleteMany()
-  await prisma.event.deleteMany()
-  await prisma.user.deleteMany()
+async function seedRoles() {
+  for (const roleName of ['admin', 'classifier'] as const) {
+    await prisma.role.upsert({
+      where: { name: roleName },
+      update: {},
+      create: { name: roleName },
+    })
+  }
+  console.log('Seeded roles: admin, classifier')
+}
 
-  // Create user
+async function seedAdminUser() {
+  const adminEmail = process.env.ADMIN_SEED_EMAIL
+  if (!adminEmail) {
+    console.log('ADMIN_SEED_EMAIL not set — skipping admin user seed')
+    return
+  }
+
+  const existing = await prisma.user.findFirst({ where: { email: adminEmail } })
+  if (existing) {
+    console.log(`Admin user already exists: ${adminEmail}`)
+    return
+  }
+
+  let password = process.env.ADMIN_SEED_PASSWORD
+  let generated = false
+
+  if (!password) {
+    password = crypto.randomBytes(16).toString('base64url')
+    generated = true
+  }
+
+  const passwordHash = hashSync(password, 10)
+
   const user = await prisma.user.create({
     data: {
-      email: 'admin@cyclingphoto.dev',
-      password_hash: '$2b$10$placeholder_hash_for_seed_data_only',
+      email: adminEmail,
+      password_hash: passwordHash,
+      first_name: 'Pablo',
+      last_name: 'Villacres',
+      is_active: true,
     },
   })
-  console.log(`Created user: ${user.email}`)
 
+  const adminRole = await prisma.role.findUnique({ where: { name: 'admin' } })
+  if (adminRole) {
+    await prisma.userRole.create({
+      data: { user_id: user.id, role_id: adminRole.id },
+    })
+  }
+
+  console.log(`Created admin user: ${adminEmail}`)
+  if (generated) {
+    console.log(`Generated password: ${password}`)
+    console.log('Set ADMIN_SEED_PASSWORD env var to use a specific password.')
+  }
+}
+
+async function seedDemoData() {
   // Find Tungurahua province and Ambato canton for demo event
   const tungurahua = await prisma.province.findFirst({ where: { code: 'EC-T' } })
   const ambato = tungurahua
     ? await prisma.canton.findFirst({ where: { name: 'Ambato', province_id: tungurahua.id } })
     : null
 
-  // Create event
+  // Upsert demo event
+  const eventName = 'Vuelta Ciclística del Ecuador 2026'
+  const existingEvent = await prisma.event.findFirst({ where: { name: eventName } })
+  if (existingEvent) {
+    console.log(`Demo event already exists: ${eventName}`)
+    return
+  }
+
   const event = await prisma.event.create({
     data: {
-      name: 'Vuelta Ciclística del Ecuador 2026',
+      name: eventName,
       event_date: new Date('2026-03-15'),
       location: 'Ambato, Ecuador',
       province_id: tungurahua?.id ?? null,
@@ -126,10 +175,9 @@ async function seedDemoData() {
 async function main() {
   console.log('Seeding database...')
 
-  // Seed reference data first (idempotent)
   await seedLocations()
-
-  // Seed demo data (destructive — clears and recreates)
+  await seedRoles()
+  await seedAdminUser()
   await seedDemoData()
 
   console.log('Seeding completed.')

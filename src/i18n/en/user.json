@@ -1,0 +1,9 @@
+{
+  "email_invalid": "Invalid email address",
+  "first_name_invalid_length": "First name must be between 1 and 100 characters",
+  "last_name_invalid_length": "Last name must be between 1 and 100 characters",
+  "email_already_exists": "A user with this email already exists",
+  "already_deactivated": "User account is already deactivated",
+  "already_active": "User account is already active",
+  "invalid_avatar_storage_key": "The storage key does not match the expected avatar path for this user"
+}

@@ -1,0 +1,9 @@
+{
+  "email_invalid": "Dirección de correo electrónico inválida",
+  "first_name_invalid_length": "El nombre debe tener entre 1 y 100 caracteres",
+  "last_name_invalid_length": "El apellido debe tener entre 1 y 100 caracteres",
+  "email_already_exists": "Ya existe un usuario con este correo electrónico",
+  "already_deactivated": "La cuenta de usuario ya está desactivada",
+  "already_active": "La cuenta de usuario ya está activa",
+  "invalid_avatar_storage_key": "La clave de almacenamiento no corresponde a la ruta esperada para el avatar de este usuario"
+}

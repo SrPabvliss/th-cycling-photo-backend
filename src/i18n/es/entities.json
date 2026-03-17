@@ -4,5 +4,8 @@
   "cover": "Imagen de portada",
   "presigned_url": "URL de carga",
   "cyclist": "Ciclista",
-  "stats": "Estadísticas"
+  "stats": "Estadísticas",
+  "user": "Usuario",
+  "avatar": "Avatar",
+  "password": "Contraseña"
 }

@@ -11,6 +11,7 @@ import { ClassificationsModule } from './modules/classifications/classifications
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
 import { PhotosModule } from './modules/photos/photos.module'
+import { UsersModule } from './modules/users/users.module'
 import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
@@ -48,6 +49,7 @@ import { StorageModule } from './shared/storage/storage.module'
     EventsModule,
     LocationsModule,
     PhotosModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
