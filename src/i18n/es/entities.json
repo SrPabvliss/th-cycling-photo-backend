@@ -7,5 +7,7 @@
   "stats": "Estadísticas",
   "user": "Usuario",
   "avatar": "Avatar",
-  "password": "Contraseña"
+  "password": "Contraseña",
+  "session": "Sesión",
+  "access_token": "Token de acceso"
 }
