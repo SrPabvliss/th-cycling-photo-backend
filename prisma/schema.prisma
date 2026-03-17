@@ -69,6 +69,13 @@ enum ClassificationSource {
   @@map("classification_source")
 }
 
+enum RoleType {
+  admin
+  classifier
+
+  @@map("role_type")
+}
+
 enum EquipmentItem {
   helmet
   clothing
@@ -108,10 +115,66 @@ model User {
   id            String    @id @default(uuid()) @db.Uuid
   email         String    @unique @db.VarChar(255)
   password_hash String    @db.VarChar(255)
+  first_name    String?   @db.VarChar(100)
+  last_name     String?   @db.VarChar(100)
+  phone         String?   @db.VarChar(20)
+  avatar_url    String?   @db.VarChar(500)
+  is_active     Boolean   @default(true)
   created_at    DateTime  @default(now()) @db.Timestamptz
   last_login_at DateTime? @db.Timestamptz
 
+  user_roles     UserRole[]
+  refresh_tokens RefreshToken[]
+
+  events_created            Event[]           @relation("EventCreatedBy")
+  events_updated            Event[]           @relation("EventUpdatedBy")
+  photos_created            Photo[]           @relation("PhotoCreatedBy")
+  photos_updated            Photo[]           @relation("PhotoUpdatedBy")
+  cyclists_created          DetectedCyclist[] @relation("CyclistCreatedBy")
+  cyclists_classified       DetectedCyclist[] @relation("CyclistClassifiedBy")
+  plates_corrected          PlateNumber[]     @relation("PlateNumberCorrectedBy")
+
   @@map("users")
+}
+
+model Role {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       RoleType @unique
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  user_roles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @db.Uuid
+  role_id     String   @db.Uuid
+  assigned_at DateTime @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, role_id])
+  @@index([user_id])
+  @@index([role_id])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  token_hash String    @unique
+  user_id    String    @db.Uuid
+  expires_at DateTime  @db.Timestamptz
+  revoked_at DateTime? @db.Timestamptz
+  created_at DateTime  @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([expires_at])
+  @@map("refresh_tokens")
 }
 
 model Event {
@@ -128,15 +191,21 @@ model Event {
   updated_at       DateTime    @default(now()) @updatedAt @db.Timestamptz
   deleted_at       DateTime?   @db.Timestamptz
 
-  province Province? @relation(fields: [province_id], references: [id])
-  canton   Canton?   @relation(fields: [canton_id], references: [id])
-  photos   Photo[]
+  created_by_id String? @db.Uuid
+  updated_by_id String? @db.Uuid
+
+  province   Province? @relation(fields: [province_id], references: [id])
+  canton     Canton?   @relation(fields: [canton_id], references: [id])
+  created_by User?     @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  updated_by User?     @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  photos     Photo[]
 
   @@index([status])
   @@index([event_date(sort: Desc)])
   @@index([deleted_at])
   @@index([province_id])
   @@index([canton_id])
+  @@index([created_by_id])
   @@map("events")
 }
 
@@ -165,7 +234,12 @@ model Photo {
 
   embedding Unsupported("vector(1024)")?
 
+  created_by_id String? @db.Uuid
+  updated_by_id String? @db.Uuid
+
   event             Event             @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  created_by        User?             @relation("PhotoCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  updated_by        User?             @relation("PhotoUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
   detected_cyclists DetectedCyclist[]
   processing_jobs   ProcessingJob[]
 
@@ -173,6 +247,7 @@ model Photo {
   @@index([event_id])
   @@index([status])
   @@index([event_id, unclassified_reason], map: "idx_photos_unclassified")
+  @@index([created_by_id])
   // HNSW index for cosine similarity is created via raw SQL in the migration
   @@map("photos")
 }
@@ -186,12 +261,18 @@ model DetectedCyclist {
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
 
+  created_by_id   String? @db.Uuid
+  classified_by_id String? @db.Uuid
+
   photo            Photo              @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  created_by       User?              @relation("CyclistCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  classified_by    User?              @relation("CyclistClassifiedBy", fields: [classified_by_id], references: [id], onDelete: SetNull)
   plate_number     PlateNumber?
   equipment_colors EquipmentColor[]
   ai_metadata      CyclistAiMetadata?
 
   @@index([photo_id])
+  @@index([created_by_id])
   @@map("detected_cyclists")
 }
 
@@ -219,11 +300,13 @@ model PlateNumber {
 
   manually_corrected Boolean   @default(false)
   corrected_at       DateTime? @db.Timestamptz
+  corrected_by_id    String?   @db.Uuid
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
 
   detected_cyclist DetectedCyclist @relation(fields: [detected_cyclist_id], references: [id], onDelete: Cascade)
+  corrected_by     User?           @relation("PlateNumberCorrectedBy", fields: [corrected_by_id], references: [id], onDelete: SetNull)
 
   @@index([number])
   @@index([detected_cyclist_id])
