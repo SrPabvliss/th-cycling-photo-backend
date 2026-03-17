@@ -7,6 +7,7 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import configuration from './config/configuration'
 import { validate } from './config/env.validation'
+import { AuthModule } from './modules/auth/auth.module'
 import { ClassificationsModule } from './modules/classifications/classifications.module'
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
@@ -50,6 +51,7 @@ import { StorageModule } from './shared/storage/storage.module'
     LocationsModule,
     PhotosModule,
     UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -2,6 +2,7 @@ import { Logger, ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NestFactory, Reflector } from '@nestjs/core'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+import cookieParser from 'cookie-parser'
 import { AppModule } from './app.module'
 import { GlobalExceptionFilter } from './shared/http/filters/global-exception.filter'
 import { ResponseInterceptor } from './shared/http/interceptors/response.interceptor'
@@ -16,10 +17,11 @@ async function bootstrap() {
   const reflector = app.get(Reflector)
   const logger = new Logger('Bootstrap')
 
+  app.use(cookieParser())
   app.setGlobalPrefix('api/v1')
 
   app.enableCors({
-    origin: configService.get('CORS_ORIGIN', '*'),
+    origin: configService.get('cors.origin', '*'),
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: true,
   })
@@ -47,6 +49,7 @@ async function bootstrap() {
         'Automated cycling photography classification system using AI cloud services.',
       )
       .setVersion('0.1.0')
+      .addBearerAuth()
       .build()
 
     const documentEn = SwaggerModule.createDocument(app, swaggerConfig)
