@@ -50,6 +50,7 @@
     "@nestjs/swagger": "^11.2.6",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
+    "bcryptjs": "^3.0.3",
     "bullmq": "^5.66.5",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
@@ -66,6 +67,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@types/bcryptjs": "^3.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
@@ -103,6 +105,7 @@
       "^@photos/(.*)$": "<rootDir>/modules/photos/$1",
       "^@classifications/(.*)$": "<rootDir>/modules/classifications/$1",
       "^@locations/(.*)$": "<rootDir>/modules/locations/$1",
+      "^@users/(.*)$": "<rootDir>/modules/users/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "collectCoverageFrom": [
