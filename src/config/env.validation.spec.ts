@@ -14,6 +14,7 @@ const validEnv = {
   B2_BUCKET_ID: 'test-bucket-id',
   B2_BUCKET_NAME: 'test-bucket',
   B2_REGION: 'us-east-005',
+  JWT_SECRET: 'test-jwt-secret',
 }
 
 describe('Environment Validation', () => {
