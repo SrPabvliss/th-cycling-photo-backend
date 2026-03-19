@@ -31,15 +31,17 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
       }
     }
 
-    const photos = command.photos.map((item) =>
-      Photo.create({
+    const photos = command.photos.map((item) => {
+      const photo = Photo.create({
         eventId: command.eventId,
         filename: item.fileName,
         storageKey: item.objectKey,
         fileSize: BigInt(item.fileSize),
         mimeType: item.contentType,
-      }),
-    )
+      })
+      if (command.audit) photo.setCreatedBy(command.audit.userId)
+      return photo
+    })
 
     const confirmed = await this.photoWriteRepo.saveMany(photos)
 

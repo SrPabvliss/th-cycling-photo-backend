@@ -5,6 +5,16 @@ import type { UnclassifiedReasonType } from '../value-objects/unclassified-reaso
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 export class Photo {
+  private _createdById: string | null = null
+
+  get createdById(): string | null {
+    return this._createdById
+  }
+
+  setCreatedBy(userId: string): void {
+    this._createdById = userId
+  }
+
   constructor(
     public readonly id: string,
     public readonly eventId: string,
