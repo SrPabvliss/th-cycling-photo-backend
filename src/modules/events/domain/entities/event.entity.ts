@@ -141,6 +141,8 @@ export class Event {
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
+    createdById?: string | null
+    updatedById?: string | null
   }): Event {
     return new Event(
       data.id,
@@ -156,6 +158,8 @@ export class Event {
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
         deletedAt: data.deletedAt,
+        createdById: data.createdById,
+        updatedById: data.updatedById,
       }),
     )
   }

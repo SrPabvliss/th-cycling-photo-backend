@@ -25,6 +25,8 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       cantonId: command.cantonId,
     })
 
+    if (command.audit) event.audit.setCreatedBy(command.audit.userId)
+
     const saved = await this.writeRepo.save(event)
 
     return { id: saved.id }

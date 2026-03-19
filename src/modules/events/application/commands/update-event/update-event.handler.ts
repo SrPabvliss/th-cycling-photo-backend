@@ -37,6 +37,7 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
       cantonId: command.cantonId,
     })
 
+    if (command.audit) event.audit.setUpdatedBy(command.audit.userId)
     await this.writeRepo.save(event)
 
     return { id: event.id }
