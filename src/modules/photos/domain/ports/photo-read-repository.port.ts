@@ -1,4 +1,8 @@
-import type { PhotoDetailProjection, PhotoListProjection } from '@photos/application/projections'
+import type {
+  PhotoDetailProjection,
+  PhotoListProjection,
+  SimilarPhotoProjection,
+} from '@photos/application/projections'
 import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { PaginatedResult, Pagination } from '@shared/application'
 import type { Photo } from '../entities'
@@ -26,6 +30,8 @@ export interface IPhotoReadRepository {
     eventId: string,
   ): Promise<Array<{ filename: string; storageKey: string; fileSize: number }>>
   getResumePoint(eventId: string, limit: number): Promise<{ photoId: string | null; page: number }>
+  countByIds(ids: string[]): Promise<number>
+  findSimilar(photoId: string, eventId: string, limit: number): Promise<SimilarPhotoProjection[]>
   countAll(): Promise<number>
   sumAllFileSize(): Promise<number>
 }

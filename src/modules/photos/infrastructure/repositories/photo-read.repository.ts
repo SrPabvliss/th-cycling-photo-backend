@@ -1,6 +1,10 @@
 import type { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
-import type { PhotoDetailProjection, PhotoListProjection } from '@photos/application/projections'
+import type {
+  PhotoDetailProjection,
+  PhotoListProjection,
+  SimilarPhotoProjection,
+} from '@photos/application/projections'
 import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
@@ -194,6 +198,56 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     })
 
     return { photoId: firstUnclassified.id, page: Math.floor(position / limit) + 1 }
+  }
+
+  /** Counts how many of the given IDs exist. */
+  async countByIds(ids: string[]): Promise<number> {
+    return this.prisma.photo.count({ where: { id: { in: ids } } })
+  }
+
+  /** Finds visually similar photos using vector cosine similarity. */
+  async findSimilar(
+    photoId: string,
+    eventId: string,
+    limit: number,
+  ): Promise<SimilarPhotoProjection[]> {
+    const embeddingRows = await this.prisma.$queryRawUnsafe<Array<{ embedding: unknown }>>(
+      'SELECT "embedding" FROM "photos" WHERE "id" = $1::uuid AND "embedding" IS NOT NULL',
+      photoId,
+    )
+
+    if (embeddingRows.length === 0) return []
+
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{
+        id: string
+        filename: string
+        storage_key: string
+        similarity: number
+        has_classifications: boolean
+      }>
+    >(
+      `SELECT p.id, p.filename, p.storage_key,
+        1 - (p.embedding <=> (SELECT embedding FROM photos WHERE id = $1::uuid)) as similarity,
+        EXISTS(SELECT 1 FROM detected_cyclists dc WHERE dc.photo_id = p.id) as has_classifications
+      FROM photos p
+      WHERE p.event_id = $2::uuid
+        AND p.id != $1::uuid
+        AND p.embedding IS NOT NULL
+      ORDER BY p.embedding <=> (SELECT embedding FROM photos WHERE id = $1::uuid)
+      LIMIT $3`,
+      photoId,
+      eventId,
+      limit,
+    )
+
+    return rows.map((row) => ({
+      id: row.id,
+      filename: row.filename,
+      storageKey: row.storage_key,
+      similarity: Number(row.similarity),
+      hasClassifications: row.has_classifications,
+    }))
   }
 
   /** Builds a Prisma where clause from search filters. */

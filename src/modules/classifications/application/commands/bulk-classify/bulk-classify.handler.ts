@@ -6,24 +6,22 @@ import {
 import type { EquipmentItemType } from '@classifications/domain/value-objects/equipment-item.vo'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain/ports'
 import { AppException } from '@shared/domain'
-import { PrismaService } from '@shared/infrastructure'
 import { BulkClassifyCommand } from './bulk-classify.command'
 
 @CommandHandler(BulkClassifyCommand)
 export class BulkClassifyHandler implements ICommandHandler<BulkClassifyCommand> {
   constructor(
     @Inject(CYCLIST_WRITE_REPOSITORY) private readonly writeRepo: ICyclistWriteRepository,
-    private readonly prisma: PrismaService,
+    @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
   ) {}
 
   async execute(command: BulkClassifyCommand): Promise<{ classifiedCount: number }> {
     const uniqueIds = [...new Set(command.photoIds)]
 
     // Validate all photos exist in a single query
-    const existingCount = await this.prisma.photo.count({
-      where: { id: { in: uniqueIds } },
-    })
+    const existingCount = await this.photoReadRepo.countByIds(uniqueIds)
 
     if (existingCount !== uniqueIds.length) {
       throw AppException.businessRule('classification.some_photos_not_found')
