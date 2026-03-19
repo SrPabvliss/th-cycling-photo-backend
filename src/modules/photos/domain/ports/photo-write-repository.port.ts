@@ -4,6 +4,7 @@ export interface IPhotoWriteRepository {
   save(photo: Photo): Promise<Photo>
   saveMany(photos: Photo[]): Promise<number>
   delete(id: string): Promise<void>
+  markAsClassified(photoId: string, classifiedById?: string | null): Promise<void>
 }
 
 export const PHOTO_WRITE_REPOSITORY = Symbol('PHOTO_WRITE_REPOSITORY')
