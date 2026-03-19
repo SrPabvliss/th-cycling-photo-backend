@@ -1,14 +1,14 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
+import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
 import { AppException } from '@shared/domain'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import type { CookieOptions, Request, Response } from 'express'
 import { LoginCommand, LoginDto, LogoutCommand, RefreshCommand } from '../../application/commands'
 import { AuthTokensProjection, MeProjection } from '../../application/projections'
 import { GetMeQuery } from '../../application/queries'
-import { JwtAuthGuard } from '../../infrastructure/guards/jwt-auth.guard'
 
 const REFRESH_COOKIE_NAME = 'refresh_token'
 
@@ -34,6 +34,7 @@ export class AuthController {
     }
   }
 
+  @Public()
   @Post('login')
   @SuccessMessage('success.CREATED', { entity: 'entities.session' })
   @ApiOperation({ summary: 'Login with email and password' })
@@ -58,6 +59,7 @@ export class AuthController {
     return result.tokens
   }
 
+  @Public()
   @Post('refresh')
   @SuccessMessage('success.CREATED', { entity: 'entities.access_token' })
   @ApiOperation({ summary: 'Refresh access token using httpOnly cookie' })
@@ -80,6 +82,7 @@ export class AuthController {
     return this.commandBus.execute(command)
   }
 
+  @Public()
   @Post('logout')
   @SuccessMessage('success.DELETED', { entity: 'entities.session' })
   @ApiOperation({ summary: 'Logout and revoke refresh token' })
@@ -94,7 +97,6 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @SuccessMessage('success.FETCHED', { entity: 'entities.user' })
   @ApiOperation({ summary: 'Get current user from JWT payload (no DB query)' })
@@ -104,8 +106,7 @@ export class AuthController {
     type: MeProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
-  async me(@Req() req: Request) {
-    const user = req.user as { userId: string; email: string; role: string }
+  async me(@CurrentUser() user: ICurrentUser) {
     return this.queryBus.execute(new GetMeQuery(user.userId, user.email, user.role))
   }
 }

@@ -1,3 +1,5 @@
+import type { AuditContext } from '@shared/application'
+
 export class UpdateEventCommand {
   constructor(
     public readonly id: string,
@@ -6,5 +8,6 @@ export class UpdateEventCommand {
     public readonly location?: string | null,
     public readonly provinceId?: number | null,
     public readonly cantonId?: number | null,
+    public readonly audit?: AuditContext,
   ) {}
 }

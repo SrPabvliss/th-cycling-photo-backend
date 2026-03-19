@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { EntityIdProjection, Pagination } from '@shared/application'
+import { Roles } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import {
   ConfirmAvatarUploadCommand,
@@ -25,6 +26,8 @@ import {
 import { GetUserDetailQuery, GetUsersListDto, GetUsersListQuery } from '@users/application/queries'
 
 @ApiTags('Users')
+@ApiBearerAuth()
+@Roles('admin')
 @Controller('users')
 export class UsersController {
   constructor(

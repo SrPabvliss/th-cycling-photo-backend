@@ -23,6 +23,7 @@ export class CreateCyclistHandler implements ICommandHandler<CreateCyclistComman
     if (!photo) throw AppException.notFound('Photo', command.photoId)
 
     const cyclist = DetectedCyclist.create({ photoId: command.photoId })
+    if (command.audit) cyclist.setCreatedBy(command.audit.userId)
     await this.writeRepo.saveCyclist(cyclist)
 
     if (command.plateNumber !== null) {

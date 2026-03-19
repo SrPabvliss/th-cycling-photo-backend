@@ -1,4 +1,5 @@
 import type { ICyclistWriteRepository } from '@classifications/domain/ports'
+import type { IPhotoReadRepository } from '@photos/domain/ports'
 import { AppException } from '@shared/domain'
 import { BulkClassifyCommand } from './bulk-classify.command'
 import { BulkClassifyHandler } from './bulk-classify.handler'
@@ -6,7 +7,7 @@ import { BulkClassifyHandler } from './bulk-classify.handler'
 describe('BulkClassifyHandler', () => {
   let handler: BulkClassifyHandler
   let writeRepo: jest.Mocked<ICyclistWriteRepository>
-  let prisma: { photo: { count: jest.Mock } }
+  let photoReadRepo: jest.Mocked<IPhotoReadRepository>
 
   const photoId1 = '550e8400-e29b-41d4-a716-446655440001'
   const photoId2 = '550e8400-e29b-41d4-a716-446655440002'
@@ -24,15 +25,15 @@ describe('BulkClassifyHandler', () => {
       bulkClassify: jest.fn(),
     } as jest.Mocked<ICyclistWriteRepository>
 
-    prisma = {
-      photo: { count: jest.fn() },
-    }
+    photoReadRepo = {
+      countByIds: jest.fn(),
+    } as unknown as jest.Mocked<IPhotoReadRepository>
 
-    handler = new BulkClassifyHandler(writeRepo, prisma as never)
+    handler = new BulkClassifyHandler(writeRepo, photoReadRepo)
   })
 
   it('should classify multiple photos and return classifiedCount', async () => {
-    prisma.photo.count.mockResolvedValueOnce(2)
+    photoReadRepo.countByIds.mockResolvedValueOnce(2)
     writeRepo.bulkClassify.mockResolvedValueOnce(undefined)
 
     const command = new BulkClassifyCommand([photoId1, photoId2], 42, [
@@ -61,7 +62,7 @@ describe('BulkClassifyHandler', () => {
   })
 
   it('should throw BUSINESS_RULE when some photos do not exist', async () => {
-    prisma.photo.count.mockResolvedValueOnce(1)
+    photoReadRepo.countByIds.mockResolvedValueOnce(1)
 
     const command = new BulkClassifyCommand([photoId1, photoId2], null, [
       { itemType: 'clothing', colorName: 'Blue', colorHex: '#0000FF' },
@@ -75,7 +76,7 @@ describe('BulkClassifyHandler', () => {
   })
 
   it('should deduplicate photo IDs', async () => {
-    prisma.photo.count.mockResolvedValueOnce(1)
+    photoReadRepo.countByIds.mockResolvedValueOnce(1)
     writeRepo.bulkClassify.mockResolvedValueOnce(undefined)
 
     const command = new BulkClassifyCommand([photoId1, photoId1], 100, [
@@ -94,7 +95,7 @@ describe('BulkClassifyHandler', () => {
   })
 
   it('should work without plate number', async () => {
-    prisma.photo.count.mockResolvedValueOnce(1)
+    photoReadRepo.countByIds.mockResolvedValueOnce(1)
     writeRepo.bulkClassify.mockResolvedValueOnce(undefined)
 
     const command = new BulkClassifyCommand([photoId1], null, [

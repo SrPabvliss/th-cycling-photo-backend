@@ -4,6 +4,25 @@ import {
 } from '../value-objects/classification-source.vo'
 
 export class DetectedCyclist {
+  private _createdById: string | null = null
+  private _classifiedById: string | null = null
+
+  get createdById(): string | null {
+    return this._createdById
+  }
+
+  get classifiedById(): string | null {
+    return this._classifiedById
+  }
+
+  setCreatedBy(userId: string): void {
+    this._createdById = userId
+  }
+
+  setClassifiedBy(userId: string): void {
+    this._classifiedById = userId
+  }
+
   constructor(
     public readonly id: string,
     public readonly photoId: string,

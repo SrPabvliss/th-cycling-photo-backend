@@ -16,11 +16,13 @@ import {
 import { GetCyclistDetailQuery, GetPhotoCyclistsQuery } from '@classifications/application/queries'
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
-import { EntityIdProjection } from '@shared/application'
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { AuditContext, EntityIdProjection } from '@shared/application'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Classifications')
+@ApiBearerAuth()
 @Controller()
 export class ClassificationsController {
   constructor(
@@ -70,8 +72,17 @@ export class ClassificationsController {
   })
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
-  async create(@Param('photoId') photoId: string, @Body() dto: CreateCyclistDto) {
-    const command = new CreateCyclistCommand(photoId, dto.plateNumber ?? null, dto.colors)
+  async create(
+    @Param('photoId') photoId: string,
+    @Body() dto: CreateCyclistDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    const command = new CreateCyclistCommand(
+      photoId,
+      dto.plateNumber ?? null,
+      dto.colors,
+      new AuditContext(user.userId),
+    )
     return this.commandBus.execute(command)
   }
 
@@ -118,8 +129,10 @@ export class ClassificationsController {
     type: EntityIdProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
-  async classify(@Param('photoId') photoId: string) {
-    return this.commandBus.execute(new MarkPhotoClassifiedCommand(photoId))
+  async classify(@Param('photoId') photoId: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(
+      new MarkPhotoClassifiedCommand(photoId, new AuditContext(user.userId)),
+    )
   }
 
   /** Applies the same classification to multiple photos atomically. */

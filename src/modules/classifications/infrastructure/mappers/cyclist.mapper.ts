@@ -20,6 +20,8 @@ export function toCyclistPersistence(
     source: entity.source,
     created_at: entity.createdAt,
     updated_at: entity.updatedAt,
+    created_by_id: entity.createdById,
+    classified_by_id: entity.classifiedById,
   }
 }
 

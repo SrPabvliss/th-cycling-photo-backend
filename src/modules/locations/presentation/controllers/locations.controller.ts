@@ -2,10 +2,11 @@ import { CantonProjection, ProvinceProjection } from '@locations/application/pro
 import { GetCantonsByProvinceQuery, GetProvincesQuery } from '@locations/application/queries'
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common'
 import { QueryBus } from '@nestjs/cqrs'
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Locations')
+@ApiBearerAuth()
 @Controller('locations')
 export class LocationsController {
   constructor(private readonly queryBus: QueryBus) {}

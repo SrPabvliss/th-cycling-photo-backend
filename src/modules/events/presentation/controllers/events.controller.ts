@@ -26,11 +26,13 @@ import {
 } from '@events/application/queries'
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
-import { EntityIdProjection, Pagination } from '@shared/application'
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
+import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Events')
+@ApiBearerAuth()
 @Controller('events')
 export class EventsController {
   constructor(
@@ -80,6 +82,7 @@ export class EventsController {
     return this.queryBus.execute(query)
   }
 
+  @Roles('admin')
   @Post()
   @SuccessMessage('success.CREATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Create a new event' })
@@ -89,17 +92,19 @@ export class EventsController {
     type: EntityIdProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
-  async create(@Body() dto: CreateEventDto) {
+  async create(@Body() dto: CreateEventDto, @CurrentUser() user: ICurrentUser) {
     const command = new CreateEventCommand(
       dto.name,
       dto.date,
       dto.location ?? null,
       dto.provinceId ?? null,
       dto.cantonId ?? null,
+      new AuditContext(user.userId),
     )
     return this.commandBus.execute(command)
   }
 
+  @Roles('admin')
   @Patch(':id')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Update an existing event' })
@@ -111,7 +116,11 @@ export class EventsController {
   })
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async update(@Param('id') id: string, @Body() dto: UpdateEventDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateEventDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
     const command = new UpdateEventCommand(
       id,
       dto.name,
@@ -119,10 +128,12 @@ export class EventsController {
       dto.location,
       dto.provinceId,
       dto.cantonId,
+      new AuditContext(user.userId),
     )
     return this.commandBus.execute(command)
   }
 
+  @Roles('admin')
   @Post(':id/cover/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate a presigned URL for cover image upload' })
@@ -138,6 +149,7 @@ export class EventsController {
     return this.commandBus.execute(command)
   }
 
+  @Roles('admin')
   @Post(':id/cover/confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.cover' })
   @ApiOperation({ summary: 'Confirm cover image upload after presigned URL flow' })
@@ -154,6 +166,7 @@ export class EventsController {
     return this.commandBus.execute(command)
   }
 
+  @Roles('admin')
   @Delete(':id/cover')
   @SuccessMessage('success.UPDATED', { entity: 'entities.cover' })
   @ApiOperation({ summary: 'Remove event cover image' })
@@ -169,6 +182,7 @@ export class EventsController {
     return this.commandBus.execute(command)
   }
 
+  @Roles('admin')
   @Patch(':id/archive')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Archive an event' })
@@ -185,6 +199,7 @@ export class EventsController {
     return this.commandBus.execute(command)
   }
 
+  @Roles('admin')
   @Patch(':id/restore')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Restore an archived event' })
@@ -201,6 +216,7 @@ export class EventsController {
     return this.commandBus.execute(command)
   }
 
+  @Roles('admin')
   @Delete(':id')
   @SuccessMessage('success.DELETED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Delete an event' })

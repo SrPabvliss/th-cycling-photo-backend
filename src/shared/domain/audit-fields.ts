@@ -1,5 +1,5 @@
 /**
- * Encapsulates audit timestamps for domain entities.
+ * Encapsulates audit timestamps and user tracking for domain entities.
  * Composed into entities that need creation, update, and soft-delete tracking.
  */
 export class AuditFields {
@@ -7,6 +7,8 @@ export class AuditFields {
     public readonly createdAt: Date,
     public updatedAt: Date,
     public deletedAt: Date | null,
+    public createdById: string | null = null,
+    public updatedById: string | null = null,
   ) {}
 
   /** Creates audit fields for a brand-new entity. */
@@ -20,8 +22,16 @@ export class AuditFields {
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
+    createdById?: string | null
+    updatedById?: string | null
   }): AuditFields {
-    return new AuditFields(data.createdAt, data.updatedAt, data.deletedAt)
+    return new AuditFields(
+      data.createdAt,
+      data.updatedAt,
+      data.deletedAt,
+      data.createdById ?? null,
+      data.updatedById ?? null,
+    )
   }
 
   /** Whether this entity has been soft-deleted. */
@@ -38,5 +48,15 @@ export class AuditFields {
   markDeleted(): void {
     this.deletedAt = new Date()
     this.updatedAt = new Date()
+  }
+
+  /** Sets the user who created this entity. */
+  setCreatedBy(userId: string): void {
+    this.createdById = userId
+  }
+
+  /** Sets the user who last updated this entity. */
+  setUpdatedBy(userId: string): void {
+    this.updatedById = userId
   }
 }

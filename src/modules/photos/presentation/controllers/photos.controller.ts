@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import {
   ConfirmPhotoBatchCommand,
   ConfirmPhotoBatchDto,
@@ -30,10 +30,12 @@ import {
 } from '@photos/application/queries'
 import { GetDownloadManifestQuery } from '@photos/application/queries/get-download-manifest/get-download-manifest.query'
 import { GetResumePointQuery } from '@photos/application/queries/get-resume-point/get-resume-point.query'
-import { Pagination } from '@shared/application'
+import { AuditContext, Pagination } from '@shared/application'
+import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Photos')
+@ApiBearerAuth()
 @Controller()
 export class PhotosController {
   constructor(
@@ -129,6 +131,7 @@ export class PhotosController {
   }
 
   /** Generates a presigned URL for direct upload to B2. */
+  @Roles('admin')
   @Post('events/:eventId/photos/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate a presigned URL for direct photo upload' })
@@ -149,6 +152,7 @@ export class PhotosController {
   }
 
   /** Confirms a batch of photos uploaded directly to B2. */
+  @Roles('admin')
   @Post('events/:eventId/photos/confirm-batch')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Confirm a batch of photos uploaded via presigned URLs' })
@@ -163,7 +167,11 @@ export class PhotosController {
     description: 'Invalid object key prefix or validation failed',
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async confirmBatch(@Param('eventId') eventId: string, @Body() dto: ConfirmPhotoBatchDto) {
+  async confirmBatch(
+    @Param('eventId') eventId: string,
+    @Body() dto: ConfirmPhotoBatchDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
     const command = new ConfirmPhotoBatchCommand(
       eventId,
       dto.photos.map((p) => ({
@@ -172,6 +180,7 @@ export class PhotosController {
         objectKey: p.objectKey,
         contentType: p.contentType,
       })),
+      new AuditContext(user.userId),
     )
     return this.commandBus.execute(command)
   }

@@ -38,6 +38,8 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
     created_at: entity.audit.createdAt,
     updated_at: entity.audit.updatedAt,
     deleted_at: entity.audit.deletedAt,
+    created_by_id: entity.audit.createdById,
+    updated_by_id: entity.audit.updatedById,
   }
 }
 
@@ -56,6 +58,8 @@ export function toEntity(record: PrismaEvent): Event {
     createdAt: record.created_at,
     updatedAt: record.updated_at,
     deletedAt: record.deleted_at,
+    createdById: record.created_by_id,
+    updatedById: record.updated_by_id,
   })
 }
 
