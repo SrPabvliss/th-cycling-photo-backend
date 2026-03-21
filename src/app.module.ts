@@ -11,6 +11,7 @@ import { validate } from './config/env.validation'
 import { AuthModule } from './modules/auth/auth.module'
 import { JwtAuthGuard } from './modules/auth/infrastructure/guards/jwt-auth.guard'
 import { ClassificationsModule } from './modules/classifications/classifications.module'
+import { CustomersModule } from './modules/customers/customers.module'
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
 import { PhotosModule } from './modules/photos/photos.module'
@@ -50,6 +51,7 @@ import { StorageModule } from './shared/storage/storage.module'
     StorageModule,
     EmbeddingsModule,
     ClassificationsModule,
+    CustomersModule,
     EventsModule,
     LocationsModule,
     PhotosModule,

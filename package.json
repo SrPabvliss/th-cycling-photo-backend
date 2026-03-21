@@ -113,6 +113,7 @@
       "^@classifications/(.*)$": "<rootDir>/modules/classifications/$1",
       "^@locations/(.*)$": "<rootDir>/modules/locations/$1",
       "^@users/(.*)$": "<rootDir>/modules/users/$1",
+      "^@customers/(.*)$": "<rootDir>/modules/customers/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "collectCoverageFrom": [

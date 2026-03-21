@@ -1,0 +1,6 @@
+{
+  "first_name_invalid_length": "El nombre debe tener entre 1 y 100 caracteres",
+  "last_name_invalid_length": "El apellido debe tener entre 1 y 100 caracteres",
+  "whatsapp_invalid_format": "El número de WhatsApp debe empezar con + y tener entre 8 y 20 caracteres",
+  "email_invalid_format": "Formato de correo electrónico inválido"
+}
