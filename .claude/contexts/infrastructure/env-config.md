@@ -1,5 +1,7 @@
 # Environment Configuration
 
+> Updated: Sprint 5 (March 2026). See also: `project_docs/env-config.md` for the complete variable reference table.
+
 ## File Structure
 
 ```
@@ -12,7 +14,7 @@
 
 ---
 
-## .env.example
+## .env.example (current — Sprint 5)
 
 ```env
 # App
@@ -26,6 +28,33 @@ DB_USER=postgres
 DB_PASSWORD=postgres
 DB_NAME=cycling_photo_dev
 # DB_SSL_MODE=require  # Uncomment for cloud databases
+
+# Backblaze B2
+B2_APPLICATION_KEY_ID=your_application_key_id
+B2_APPLICATION_KEY=your_application_key
+B2_BUCKET_ID=your_bucket_id
+B2_BUCKET_NAME=your_bucket_name
+B2_REGION=your_region
+
+# Cloudflare CDN
+CLOUDFLARE_CDN_URL=your_cdn_url
+
+# Voyage AI
+VOYAGE_API_KEY=your_voyage_api_key
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6394
+
+# Auth
+JWT_SECRET=your_jwt_secret_change_me
+JWT_ACCESS_EXPIRATION_SECONDS=900
+JWT_REFRESH_EXPIRY_DAYS=30
+CORS_ORIGIN=http://localhost:5173
+
+# Seed
+ADMIN_SEED_EMAIL=admin@example.com
+ADMIN_SEED_PASSWORD=test123
 ```
 
 > **Note:** Database uses individual vars (`DB_HOST`, `DB_PORT`, etc.) instead of a single `DATABASE_URL`. The connection string is built at runtime by `src/config/configuration.ts`.
@@ -127,22 +156,12 @@ export class StorageService {
 
 ## Environment Validation
 
-Environment variables are validated on startup using `class-validator`:
+Environment variables are validated on startup using `class-validator`. **When adding new env vars, add them here too:**
 
 ```typescript
 // src/config/env.validation.ts
-import { plainToInstance } from 'class-transformer'
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-  validateSync,
-} from 'class-validator'
-
 export class EnvironmentVariables {
+  // App
   @IsEnum(['development', 'test', 'preview', 'production'])
   NODE_ENV: string
 
@@ -150,41 +169,61 @@ export class EnvironmentVariables {
   @Min(1)
   PORT: number
 
-  @IsString()
-  @IsNotEmpty()
+  // Database
+  @IsString() @IsNotEmpty()
   DB_HOST: string
-
   @IsNumber()
   DB_PORT: number
-
-  @IsString()
-  @IsNotEmpty()
+  @IsString() @IsNotEmpty()
   DB_USER: string
-
-  @IsString()
-  @IsNotEmpty()
+  @IsString() @IsNotEmpty()
   DB_PASSWORD: string
-
-  @IsString()
-  @IsNotEmpty()
+  @IsString() @IsNotEmpty()
   DB_NAME: string
-
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   DB_SSL_MODE?: string
-}
 
-export function validate(config: Record<string, unknown>) {
-  const validatedConfig = plainToInstance(EnvironmentVariables, config, {
-    enableImplicitConversion: true,
-  })
-  const errors = validateSync(validatedConfig, {
-    skipMissingProperties: false,
-  })
-  if (errors.length > 0) {
-    throw new Error(`Environment validation failed:\n${errors.toString()}`)
-  }
-  return validatedConfig
+  // Backblaze B2
+  @IsString() @IsNotEmpty()
+  B2_APPLICATION_KEY_ID: string
+  @IsString() @IsNotEmpty()
+  B2_APPLICATION_KEY: string
+  @IsString() @IsNotEmpty()
+  B2_BUCKET_ID: string
+  @IsString() @IsNotEmpty()
+  B2_BUCKET_NAME: string
+  @IsString() @IsNotEmpty()
+  B2_REGION: string
+
+  // Cloudflare
+  @IsString() @IsNotEmpty()
+  CLOUDFLARE_CDN_URL: string
+
+  // Voyage AI
+  @IsString() @IsNotEmpty()
+  VOYAGE_API_KEY: string
+
+  // Redis
+  @IsString() @IsNotEmpty()
+  REDIS_HOST: string
+  @IsNumber()
+  REDIS_PORT: number
+
+  // Auth
+  @IsString() @IsNotEmpty()
+  JWT_SECRET: string
+  @IsNumber()
+  JWT_ACCESS_EXPIRATION_SECONDS: number
+  @IsNumber()
+  JWT_REFRESH_EXPIRY_DAYS: number
+  @IsString() @IsNotEmpty()
+  CORS_ORIGIN: string
+
+  // Seed
+  @IsString() @IsNotEmpty()
+  ADMIN_SEED_EMAIL: string
+  @IsString() @IsNotEmpty()
+  ADMIN_SEED_PASSWORD: string
 }
 ```
 
@@ -200,7 +239,7 @@ services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - "5498:5432"    # Note: mapped to non-standard port 5498
+      - "5498:5432"    # Mapped to non-standard port
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -209,7 +248,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6394:6379"    # Note: mapped to non-standard port 6394
+      - "6394:6379"    # Mapped to non-standard port
     command: redis-server --appendonly yes
 ```
 
@@ -217,31 +256,6 @@ services:
 pnpm docker:up     # Start PostgreSQL + Redis
 pnpm docker:down   # Stop services
 ```
-
-> **Note:** Redis is provisioned but not consumed by application code yet (reserved for BullMQ Processing module).
-
----
-
-## Environment-Specific Behavior
-
-```typescript
-@Injectable()
-export class SomeService {
-  constructor(private readonly config: ConfigService) {}
-
-  private isDevelopment(): boolean {
-    return this.config.get('nodeEnv') === 'development';
-  }
-
-  async doSomething() {
-    if (this.isDevelopment()) {
-      // Development-only behavior
-    }
-  }
-}
-```
-
-> **Note:** Use `config.get('nodeEnv')` (from configuration factory), not `config.get('NODE_ENV')`.
 
 ---
 
@@ -257,5 +271,6 @@ export class SomeService {
 
 ## See Also
 
+- `project_docs/env-config.md` - Complete variable reference table
 - `infrastructure/nestjs-bootstrap.md` - Main app configuration
 - `infrastructure/prisma-setup.md` - Database connection via adapter
