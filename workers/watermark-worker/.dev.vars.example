@@ -1,0 +1,6 @@
+B2_ORIGIN_HOST=your-bucket.s3.your-region.backblazeb2.com
+WATERMARK_URL=https://your-cdn/path/to/watermark.png
+WATERMARK_OPACITY=0.6
+DEFAULT_QUALITY=60
+QR_WORKER_HOST=your_qr_worker_domain
+PUBLIC_DOMAIN=your_cdn_domain

@@ -1,0 +1,13 @@
+name = "watermark-worker"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# Route: intercepts /photos/watermarked/* on your CDN domain
+# zone_name and pattern configured per environment
+[[routes]]
+pattern = "cdn.titantv.com.ec/photos/watermarked/*"
+zone_name = "titantv.com.ec"
+
+# All sensitive vars go in .dev.vars (local) or wrangler secret (production)
+# Required secrets: B2_ORIGIN_HOST, WATERMARK_URL,
+#   WATERMARK_OPACITY, DEFAULT_QUALITY, QR_WORKER_HOST, PUBLIC_DOMAIN

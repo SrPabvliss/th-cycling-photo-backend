@@ -1,0 +1,10 @@
+name = "qr-worker"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[[routes]]
+pattern = "qr.titantv.com.ec"
+custom_domain = true
+
+# All sensitive vars go in .dev.vars (local) or wrangler secret (production)
+# Required secrets: ALLOWED_DOMAINS
