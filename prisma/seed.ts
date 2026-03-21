@@ -174,7 +174,9 @@ async function seedDemoData() {
 
 async function seedCommercialFlowData() {
   // Requires demo event and photos to exist
-  const event = await prisma.event.findFirst({ where: { name: 'Vuelta Ciclística del Ecuador 2026' } })
+  const event = await prisma.event.findFirst({
+    where: { name: 'Vuelta Ciclística del Ecuador 2026' },
+  })
   if (!event) {
     console.log('Demo event not found — skipping commercial flow seed')
     return
@@ -257,7 +259,9 @@ async function seedCommercialFlowData() {
     },
   })
 
-  console.log('Seeded commercial flow: 1 customer, 1 preview link (5 photos), 1 order (3 photos), 1 delivery link')
+  console.log(
+    'Seeded commercial flow: 1 customer, 1 preview link (5 photos), 1 order (3 photos), 1 delivery link',
+  )
 }
 
 async function main() {
