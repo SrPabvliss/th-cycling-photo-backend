@@ -22,7 +22,8 @@
       "@classifications/*": ["src/modules/classifications/*"],
       "@locations/*": ["src/modules/locations/*"],
       "@users/*": ["src/modules/users/*"],
-      "@customers/*": ["src/modules/customers/*"]
+      "@customers/*": ["src/modules/customers/*"],
+      "@previews/*": ["src/modules/previews/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

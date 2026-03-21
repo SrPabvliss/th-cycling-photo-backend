@@ -15,6 +15,7 @@ import { CustomersModule } from './modules/customers/customers.module'
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
 import { PhotosModule } from './modules/photos/photos.module'
+import { PreviewsModule } from './modules/previews/previews.module'
 import { UsersModule } from './modules/users/users.module'
 import { RolesGuard } from './shared/auth'
 import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
@@ -55,6 +56,7 @@ import { StorageModule } from './shared/storage/storage.module'
     EventsModule,
     LocationsModule,
     PhotosModule,
+    PreviewsModule,
     UsersModule,
     AuthModule,
   ],
