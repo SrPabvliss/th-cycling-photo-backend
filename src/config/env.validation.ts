@@ -80,6 +80,15 @@ export class EnvironmentVariables {
   @IsString()
   CORS_ORIGIN?: string
 
+  // Watermark / Preview
+  @IsOptional()
+  @IsString()
+  WATERMARK_BASE_URL?: string
+
+  @IsOptional()
+  @IsString()
+  PREVIEW_BASE_URL?: string
+
   // Redis
   @IsOptional()
   @IsString()

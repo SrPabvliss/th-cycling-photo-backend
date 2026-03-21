@@ -10,5 +10,6 @@
   "password": "Contraseña",
   "session": "Sesión",
   "access_token": "Token de acceso",
-  "customer": "Cliente"
+  "customer": "Cliente",
+  "preview_link": "Enlace de vista previa"
 }
