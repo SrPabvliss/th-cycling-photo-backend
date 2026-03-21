@@ -9,5 +9,6 @@
   "avatar": "Avatar",
   "password": "Contraseña",
   "session": "Sesión",
-  "access_token": "Token de acceso"
+  "access_token": "Token de acceso",
+  "customer": "Cliente"
 }

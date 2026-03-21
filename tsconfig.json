@@ -21,7 +21,8 @@
       "@photos/*": ["src/modules/photos/*"],
       "@classifications/*": ["src/modules/classifications/*"],
       "@locations/*": ["src/modules/locations/*"],
-      "@users/*": ["src/modules/users/*"]
+      "@users/*": ["src/modules/users/*"],
+      "@customers/*": ["src/modules/customers/*"]
     },
     "incremental": true,
     "skipLibCheck": true,
