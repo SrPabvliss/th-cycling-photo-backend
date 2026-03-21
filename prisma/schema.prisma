@@ -84,6 +84,31 @@ enum EquipmentItem {
   @@map("equipment_item")
 }
 
+enum PreviewLinkStatus {
+  active
+  expired
+  converted
+
+  @@map("preview_link_status")
+}
+
+enum OrderStatus {
+  pending
+  paid
+  delivered
+  cancelled
+
+  @@map("order_status")
+}
+
+enum DeliveryLinkStatus {
+  active
+  expired
+  downloaded
+
+  @@map("delivery_link_status")
+}
+
 // ─── Reference Tables ───────────────────────────────────────────────────────
 
 model Province {
@@ -134,6 +159,8 @@ model User {
   cyclists_created          DetectedCyclist[] @relation("CyclistCreatedBy")
   cyclists_classified       DetectedCyclist[] @relation("CyclistClassifiedBy")
   plates_corrected          PlateNumber[]     @relation("PlateNumberCorrectedBy")
+  preview_links_created     PreviewLink[]     @relation("PreviewLinkCreatedBy")
+  orders_confirmed          Order[]           @relation("OrderConfirmedBy")
 
   @@map("users")
 }
@@ -199,7 +226,9 @@ model Event {
   canton     Canton?   @relation(fields: [canton_id], references: [id])
   created_by User?     @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
   updated_by User?     @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
-  photos     Photo[]
+  photos        Photo[]
+  preview_links PreviewLink[]
+  orders        Order[]
 
   @@index([status])
   @@index([event_date(sort: Desc)])
@@ -241,8 +270,10 @@ model Photo {
   event             Event             @relation(fields: [event_id], references: [id], onDelete: Cascade)
   created_by        User?             @relation("PhotoCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
   updated_by        User?             @relation("PhotoUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
-  detected_cyclists DetectedCyclist[]
-  processing_jobs   ProcessingJob[]
+  detected_cyclists   DetectedCyclist[]
+  processing_jobs     ProcessingJob[]
+  preview_link_photos PreviewLinkPhoto[]
+  order_photos        OrderPhoto[]
 
   @@index([event_id, filename])
   @@index([event_id])
@@ -357,4 +388,116 @@ model ProcessingJob {
   @@index([status])
   @@index([job_type])
   @@map("processing_jobs")
+}
+
+// ─── Commercial Flow ────────────────────────────────────────────────────────
+
+model Customer {
+  id         String   @id @default(uuid()) @db.Uuid
+  first_name String   @db.VarChar(100)
+  last_name  String   @db.VarChar(100)
+  whatsapp   String   @unique @db.VarChar(20)
+  email      String?  @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  orders Order[]
+
+  @@index([email])
+  @@map("customers")
+}
+
+model PreviewLink {
+  id            String            @id @default(uuid()) @db.Uuid
+  token         String            @unique @db.VarChar(64)
+  event_id      String            @db.Uuid
+  status        PreviewLinkStatus @default(active)
+  expires_at    DateTime          @db.Timestamptz
+  viewed_at     DateTime?         @db.Timestamptz
+  created_at    DateTime          @default(now()) @db.Timestamptz
+  created_by_id String            @db.Uuid
+
+  event      Event              @relation(fields: [event_id], references: [id], onDelete: Restrict)
+  created_by User               @relation("PreviewLinkCreatedBy", fields: [created_by_id], references: [id], onDelete: Restrict)
+  photos     PreviewLinkPhoto[]
+  orders     Order[]
+
+  @@index([event_id])
+  @@index([status])
+  @@index([created_by_id])
+  @@index([expires_at])
+  @@map("preview_links")
+}
+
+model PreviewLinkPhoto {
+  id              String @id @default(uuid()) @db.Uuid
+  preview_link_id String @db.Uuid
+  photo_id        String @db.Uuid
+
+  preview_link PreviewLink @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
+  photo        Photo       @relation(fields: [photo_id], references: [id], onDelete: Restrict)
+
+  @@unique([preview_link_id, photo_id])
+  @@index([preview_link_id])
+  @@index([photo_id])
+  @@map("preview_link_photos")
+}
+
+model Order {
+  id              String      @id @default(uuid()) @db.Uuid
+  preview_link_id String      @db.Uuid
+  event_id        String      @db.Uuid
+  customer_id     String      @db.Uuid
+  status          OrderStatus @default(pending)
+  notes           String?     @db.Text
+  created_at      DateTime    @default(now()) @db.Timestamptz
+  paid_at         DateTime?   @db.Timestamptz
+  delivered_at    DateTime?   @db.Timestamptz
+  cancelled_at    DateTime?   @db.Timestamptz
+  confirmed_by_id String?     @db.Uuid
+
+  preview_link  PreviewLink   @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
+  event         Event         @relation(fields: [event_id], references: [id], onDelete: Restrict)
+  customer      Customer      @relation(fields: [customer_id], references: [id], onDelete: Restrict)
+  confirmed_by  User?         @relation("OrderConfirmedBy", fields: [confirmed_by_id], references: [id], onDelete: Restrict)
+  photos        OrderPhoto[]
+  delivery_link DeliveryLink?
+
+  @@index([preview_link_id])
+  @@index([event_id])
+  @@index([customer_id])
+  @@index([status])
+  @@index([confirmed_by_id])
+  @@index([created_at(sort: Desc)])
+  @@map("orders")
+}
+
+model OrderPhoto {
+  id       String @id @default(uuid()) @db.Uuid
+  order_id String @db.Uuid
+  photo_id String @db.Uuid
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Restrict)
+  photo Photo @relation(fields: [photo_id], references: [id], onDelete: Restrict)
+
+  @@unique([order_id, photo_id])
+  @@index([order_id])
+  @@index([photo_id])
+  @@map("order_photos")
+}
+
+model DeliveryLink {
+  id                  String             @id @default(uuid()) @db.Uuid
+  order_id            String             @unique @db.Uuid
+  token               String             @unique @db.VarChar(64)
+  status              DeliveryLinkStatus @default(active)
+  expires_at          DateTime           @db.Timestamptz
+  first_downloaded_at DateTime?          @db.Timestamptz
+  download_count      Int                @default(0)
+  created_at          DateTime           @default(now()) @db.Timestamptz
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Restrict)
+
+  @@index([status])
+  @@index([expires_at])
+  @@map("delivery_links")
 }

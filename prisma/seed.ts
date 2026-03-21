@@ -172,6 +172,98 @@ async function seedDemoData() {
   console.log(`Created ${photos.length} photos`)
 }
 
+async function seedCommercialFlowData() {
+  // Requires demo event and photos to exist
+  const event = await prisma.event.findFirst({
+    where: { name: 'Vuelta Ciclística del Ecuador 2026' },
+  })
+  if (!event) {
+    console.log('Demo event not found — skipping commercial flow seed')
+    return
+  }
+
+  const existingCustomer = await prisma.customer.findFirst({ where: { whatsapp: '+593987654321' } })
+  if (existingCustomer) {
+    console.log('Commercial flow data already exists — skipping')
+    return
+  }
+
+  // Find admin user for created_by references
+  const adminUser = await prisma.user.findFirst({
+    where: { user_roles: { some: { role: { name: 'admin' } } } },
+  })
+  if (!adminUser) {
+    console.log('No admin user found — skipping commercial flow seed')
+    return
+  }
+
+  // Get first 5 photos from the demo event
+  const photos = await prisma.photo.findMany({
+    where: { event_id: event.id },
+    take: 5,
+    orderBy: { uploaded_at: 'asc' },
+  })
+  if (photos.length === 0) {
+    console.log('No photos found — skipping commercial flow seed')
+    return
+  }
+
+  // 1. Customer
+  const customer = await prisma.customer.create({
+    data: {
+      first_name: 'Carlos',
+      last_name: 'Mendoza',
+      whatsapp: '+593987654321',
+      email: 'carlos.mendoza@example.com',
+    },
+  })
+
+  // 2. PreviewLink with photos
+  const previewLink = await prisma.previewLink.create({
+    data: {
+      token: crypto.randomBytes(32).toString('hex'),
+      event_id: event.id,
+      status: 'converted',
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      viewed_at: new Date(),
+      created_by_id: adminUser.id,
+      photos: {
+        create: photos.map((photo) => ({ photo_id: photo.id })),
+      },
+    },
+  })
+
+  // 3. Order with a subset of photos (first 3)
+  const selectedPhotos = photos.slice(0, 3)
+  const order = await prisma.order.create({
+    data: {
+      preview_link_id: previewLink.id,
+      event_id: event.id,
+      customer_id: customer.id,
+      status: 'paid',
+      paid_at: new Date(),
+      confirmed_by_id: adminUser.id,
+      photos: {
+        create: selectedPhotos.map((photo) => ({ photo_id: photo.id })),
+      },
+    },
+  })
+
+  // 4. DeliveryLink
+  await prisma.deliveryLink.create({
+    data: {
+      order_id: order.id,
+      token: crypto.randomBytes(32).toString('hex'),
+      status: 'active',
+      expires_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days
+    },
+  })
+
+  console.log(
+    'Seeded commercial flow: 1 customer, 1 preview link (5 photos), 1 order (3 photos), 1 delivery link',
+  )
+}
+
 async function main() {
   console.log('Seeding database...')
 
@@ -179,6 +271,7 @@ async function main() {
   await seedRoles()
   await seedAdminUser()
   await seedDemoData()
+  await seedCommercialFlowData()
 
   console.log('Seeding completed.')
 }
