@@ -1,0 +1,5 @@
+{
+  "link_expired": "This delivery link has expired",
+  "already_expired": "Delivery link is already expired",
+  "expires_in_days_invalid": "Expiration must be between 1 and 90 days"
+}

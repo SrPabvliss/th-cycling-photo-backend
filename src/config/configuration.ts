@@ -15,7 +15,7 @@ export default () => {
   const { JWT_SECRET, JWT_ACCESS_EXPIRATION_SECONDS, JWT_REFRESH_EXPIRY_DAYS, CORS_ORIGIN } =
     process.env
 
-  const { WATERMARK_BASE_URL, PREVIEW_BASE_URL } = process.env
+  const { WATERMARK_BASE_URL, PREVIEW_BASE_URL, DELIVERY_BASE_URL } = process.env
 
   let databaseUrl = `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
   if (DB_SSL_MODE) {
@@ -61,6 +61,9 @@ export default () => {
     },
     preview: {
       baseUrl: PREVIEW_BASE_URL,
+    },
+    delivery: {
+      baseUrl: DELIVERY_BASE_URL,
     },
     cors: {
       origin: CORS_ORIGIN,
