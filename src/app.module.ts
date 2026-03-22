@@ -16,6 +16,7 @@ import { CustomersModule } from './modules/customers/customers.module'
 import { DeliveriesModule } from './modules/deliveries/deliveries.module'
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
+import { OrdersModule } from './modules/orders/orders.module'
 import { PhotosModule } from './modules/photos/photos.module'
 import { PreviewsModule } from './modules/previews/previews.module'
 import { UsersModule } from './modules/users/users.module'
@@ -61,6 +62,7 @@ import { StorageModule } from './shared/storage/storage.module'
     DeliveriesModule,
     EventsModule,
     LocationsModule,
+    OrdersModule,
     PhotosModule,
     PreviewsModule,
     UsersModule,
