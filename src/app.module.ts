@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq'
 import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
+import { EventEmitterModule } from '@nestjs/event-emitter'
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
@@ -22,6 +23,7 @@ import { RolesGuard } from './shared/auth'
 import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
+import { NotificationsModule } from './shared/notifications'
 import { StorageModule } from './shared/storage/storage.module'
 
 @Module({
@@ -49,8 +51,10 @@ import { StorageModule } from './shared/storage/storage.module'
       }),
       inject: [ConfigService],
     }),
+    EventEmitterModule.forRoot(),
     PrismaModule,
     StorageModule,
+    NotificationsModule,
     EmbeddingsModule,
     ClassificationsModule,
     CustomersModule,
