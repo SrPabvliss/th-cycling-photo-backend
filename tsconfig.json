@@ -24,7 +24,8 @@
       "@users/*": ["src/modules/users/*"],
       "@customers/*": ["src/modules/customers/*"],
       "@previews/*": ["src/modules/previews/*"],
-      "@deliveries/*": ["src/modules/deliveries/*"]
+      "@deliveries/*": ["src/modules/deliveries/*"],
+      "@orders/*": ["src/modules/orders/*"]
     },
     "incremental": true,
     "skipLibCheck": true,
