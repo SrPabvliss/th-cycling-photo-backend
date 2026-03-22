@@ -11,5 +11,6 @@
   "session": "Session",
   "access_token": "Access token",
   "customer": "Customer",
-  "preview_link": "Preview link"
+  "preview_link": "Preview link",
+  "delivery_link": "Delivery link"
 }

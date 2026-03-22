@@ -23,7 +23,8 @@
       "@locations/*": ["src/modules/locations/*"],
       "@users/*": ["src/modules/users/*"],
       "@customers/*": ["src/modules/customers/*"],
-      "@previews/*": ["src/modules/previews/*"]
+      "@previews/*": ["src/modules/previews/*"],
+      "@deliveries/*": ["src/modules/deliveries/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

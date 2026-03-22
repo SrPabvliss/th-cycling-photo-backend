@@ -89,6 +89,10 @@ export class EnvironmentVariables {
   @IsString()
   PREVIEW_BASE_URL?: string
 
+  @IsOptional()
+  @IsString()
+  DELIVERY_BASE_URL?: string
+
   // Redis
   @IsOptional()
   @IsString()

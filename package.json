@@ -115,6 +115,7 @@
       "^@users/(.*)$": "<rootDir>/modules/users/$1",
       "^@customers/(.*)$": "<rootDir>/modules/customers/$1",
       "^@previews/(.*)$": "<rootDir>/modules/previews/$1",
+      "^@deliveries/(.*)$": "<rootDir>/modules/deliveries/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "collectCoverageFrom": [
