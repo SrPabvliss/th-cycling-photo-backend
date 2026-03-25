@@ -257,9 +257,42 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     if (filters.eventId) where.event_id = filters.eventId
     if (filters.status) where.status = filters.status as Prisma.EnumPhotoStatusFilter
 
+    const cyclistConditions: Prisma.DetectedCyclistWhereInput[] = []
+
     if (filters.plateNumber !== undefined) {
+      cyclistConditions.push({ plate_number: { number: filters.plateNumber } })
+    }
+
+    if (filters.helmetColor) {
+      const colors = filters.helmetColor.split(',').map((c) => c.trim())
+      cyclistConditions.push({
+        equipment_colors: {
+          some: { item_type: 'helmet', color_name: { in: colors, mode: 'insensitive' } },
+        },
+      })
+    }
+
+    if (filters.clothingColor) {
+      const colors = filters.clothingColor.split(',').map((c) => c.trim())
+      cyclistConditions.push({
+        equipment_colors: {
+          some: { item_type: 'clothing', color_name: { in: colors, mode: 'insensitive' } },
+        },
+      })
+    }
+
+    if (filters.bikeColor) {
+      const colors = filters.bikeColor.split(',').map((c) => c.trim())
+      cyclistConditions.push({
+        equipment_colors: {
+          some: { item_type: 'bike', color_name: { in: colors, mode: 'insensitive' } },
+        },
+      })
+    }
+
+    if (cyclistConditions.length > 0) {
       where.detected_cyclists = {
-        some: { plate_number: { number: filters.plateNumber } },
+        some: { AND: cyclistConditions },
       }
     }
 
