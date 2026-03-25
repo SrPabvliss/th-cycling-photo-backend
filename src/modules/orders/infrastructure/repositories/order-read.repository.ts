@@ -135,6 +135,14 @@ export class OrderReadRepository implements IOrderReadRepository {
     }
   }
 
+  /** Checks if an order already exists for a preview link. */
+  async existsByPreviewLinkId(previewLinkId: string): Promise<boolean> {
+    const count = await this.prisma.order.count({
+      where: { preview_link_id: previewLinkId },
+    })
+    return count > 0
+  }
+
   /** Gets photo IDs associated with a preview link. */
   async getPreviewPhotoIds(previewLinkId: string): Promise<string[]> {
     const photos = await this.prisma.previewLinkPhoto.findMany({

@@ -3,5 +3,6 @@
   "not_paid": "Order is not in paid status",
   "preview_not_available": "Preview link is not available for ordering",
   "preview_expired": "Preview link has expired",
-  "photos_not_in_preview": "One or more photos are not part of this preview"
+  "photos_not_in_preview": "One or more photos are not part of this preview",
+  "already_submitted": "An order has already been submitted for this preview link"
 }
