@@ -5,6 +5,7 @@ export class UpdateEventCommand {
     public readonly id: string,
     public readonly name?: string,
     public readonly date?: Date,
+    public readonly description?: string | null,
     public readonly location?: string | null,
     public readonly provinceId?: number | null,
     public readonly cantonId?: number | null,

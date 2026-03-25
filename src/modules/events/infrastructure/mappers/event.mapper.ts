@@ -6,6 +6,7 @@ import type { Prisma, Event as PrismaEvent } from '@generated/prisma/client'
 type EventListSelect = {
   id: string
   name: string
+  description: string | null
   event_date: Date
   location: string | null
   province: { name: string } | null
@@ -28,6 +29,7 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
   return {
     id: entity.id,
     name: entity.name,
+    description: entity.description,
     event_date: entity.date,
     location: entity.location,
     province_id: entity.provinceId,
@@ -48,6 +50,7 @@ export function toEntity(record: PrismaEvent): Event {
   return Event.fromPersistence({
     id: record.id,
     name: record.name,
+    description: record.description,
     date: record.event_date,
     location: record.location,
     provinceId: record.province_id,
@@ -68,6 +71,7 @@ export function toListProjection(record: EventListSelect): EventListProjection {
   return {
     id: record.id,
     name: record.name,
+    description: record.description,
     date: record.event_date,
     location: record.location,
     provinceName: record.province?.name ?? null,
@@ -86,6 +90,7 @@ export function toDetailProjection(record: EventDetailSelect): EventDetailProjec
   return {
     id: record.id,
     name: record.name,
+    description: record.description,
     date: record.event_date,
     location: record.location,
     provinceName: record.province?.name ?? null,

@@ -7,6 +7,7 @@ describe('Event Entity', () => {
 
   const validData = {
     name: 'Vuelta Ciclística de Ambato',
+    description: null as string | null,
     date: futureDate,
     location: 'Ambato, Ecuador',
     provinceId: 18 as number | null,
@@ -191,6 +192,7 @@ describe('Event Entity', () => {
       const event = Event.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Past Event',
+        description: null,
         date: pastDate,
         location: null,
         provinceId: null,
@@ -216,6 +218,7 @@ describe('Event Entity', () => {
       const event = Event.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Archived Event',
+        description: null,
         date: new Date('2024-01-01'),
         location: null,
         provinceId: 18,
