@@ -19,6 +19,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
 
     const event = Event.create({
       name: command.name,
+      description: command.description,
       date: command.date,
       location: command.location,
       provinceId: command.provinceId,

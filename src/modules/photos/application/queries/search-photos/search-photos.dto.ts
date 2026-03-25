@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
-import { IsDate, IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator'
+import { IsDate, IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator'
 
 const PHOTO_STATUS_VALUES = ['pending', 'detecting', 'analyzing', 'completed', 'failed'] as const
 
@@ -44,6 +44,30 @@ export class SearchPhotosDto {
   @IsOptional()
   @Type(() => Date)
   toDate?: Date
+
+  @ApiPropertyOptional({
+    description: 'Filter by helmet color names (comma-separated for multiple, case-insensitive)',
+    example: 'Red,Blue',
+  })
+  @IsString()
+  @IsOptional()
+  helmetColor?: string
+
+  @ApiPropertyOptional({
+    description: 'Filter by clothing color names (comma-separated for multiple, case-insensitive)',
+    example: 'Blue,Black',
+  })
+  @IsString()
+  @IsOptional()
+  clothingColor?: string
+
+  @ApiPropertyOptional({
+    description: 'Filter by bike color names (comma-separated for multiple, case-insensitive)',
+    example: 'Black,White',
+  })
+  @IsString()
+  @IsOptional()
+  bikeColor?: string
 
   @ApiPropertyOptional({ description: 'Page number (defaults to 1)', example: 1 })
   @IsInt()

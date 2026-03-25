@@ -5,6 +5,7 @@ export class Event {
   constructor(
     public readonly id: string,
     public name: string,
+    public description: string | null,
     public date: Date,
     public location: string | null,
     public provinceId: number | null,
@@ -26,6 +27,7 @@ export class Event {
    */
   static create(data: {
     name: string
+    description: string | null
     date: Date
     location: string | null
     provinceId: number | null
@@ -37,6 +39,7 @@ export class Event {
     return new Event(
       crypto.randomUUID(),
       data.name,
+      data.description,
       data.date,
       data.location,
       data.provinceId,
@@ -57,6 +60,7 @@ export class Event {
    */
   update(data: {
     name?: string
+    description?: string | null
     date?: Date
     location?: string | null
     provinceId?: number | null
@@ -66,6 +70,8 @@ export class Event {
       Event.validateName(data.name)
       this.name = data.name
     }
+
+    if (data.description !== undefined) this.description = data.description
 
     if (data.date !== undefined) {
       Event.validateDate(data.date)
@@ -131,6 +137,7 @@ export class Event {
   static fromPersistence(data: {
     id: string
     name: string
+    description: string | null
     date: Date
     location: string | null
     provinceId: number | null
@@ -147,6 +154,7 @@ export class Event {
     return new Event(
       data.id,
       data.name,
+      data.description,
       data.date,
       data.location,
       data.provinceId,

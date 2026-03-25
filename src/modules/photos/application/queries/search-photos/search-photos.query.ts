@@ -4,6 +4,9 @@ export interface SearchPhotosFilters {
   eventId?: string
   status?: string
   plateNumber?: number
+  helmetColor?: string
+  clothingColor?: string
+  bikeColor?: string
   fromDate?: Date
   toDate?: Date
 }

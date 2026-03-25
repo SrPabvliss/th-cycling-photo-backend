@@ -20,6 +20,7 @@ describe('ConfirmPhotoBatchHandler', () => {
   const existingEvent = Event.fromPersistence({
     id: eventId,
     name: 'Test Event',
+    description: null,
     date: futureDate,
     location: 'Ambato',
     provinceId: null,

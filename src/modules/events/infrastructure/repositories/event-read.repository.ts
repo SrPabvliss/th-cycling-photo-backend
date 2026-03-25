@@ -9,6 +9,7 @@ import * as EventMapper from '../mappers/event.mapper'
 const EVENT_LIST_SELECT = {
   id: true,
   name: true,
+  description: true,
   event_date: true,
   location: true,
   province: { select: { name: true } },

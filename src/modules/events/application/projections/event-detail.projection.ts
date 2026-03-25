@@ -3,6 +3,8 @@ export class EventDetailProjection {
   id: string
   /** Name of the cycling event */
   name: string
+  /** Optional description of the event */
+  description: string | null
   /** Date when the event takes place */
   date: Date
   /** Legacy free-text location (preserved for data migration) */

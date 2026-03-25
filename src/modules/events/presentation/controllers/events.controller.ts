@@ -96,6 +96,7 @@ export class EventsController {
     const command = new CreateEventCommand(
       dto.name,
       dto.date,
+      dto.description ?? null,
       dto.location ?? null,
       dto.provinceId ?? null,
       dto.cantonId ?? null,
@@ -125,6 +126,7 @@ export class EventsController {
       id,
       dto.name,
       dto.date,
+      dto.description,
       dto.location,
       dto.provinceId,
       dto.cantonId,

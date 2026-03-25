@@ -28,6 +28,15 @@ export class CreateEventDto {
   date: Date
 
   @ApiPropertyOptional({
+    description: 'Optional description of the event',
+    example: 'Competencia de ciclismo de montaña en la ruta del volcán Cotopaxi',
+  })
+  @IsString()
+  @MaxLength(1000)
+  @IsOptional()
+  description?: string
+
+  @ApiPropertyOptional({
     description: 'Physical location or address of the event',
     example: 'Ambato, Ecuador',
   })
