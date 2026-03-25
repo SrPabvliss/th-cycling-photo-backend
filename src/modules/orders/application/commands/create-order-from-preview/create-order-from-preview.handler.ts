@@ -52,14 +52,20 @@ export class CreateOrderFromPreviewHandler
       throw AppException.businessRule('order.preview_expired')
     }
 
-    // 2. Validate photo IDs are subset of preview photos
+    // 2. Check if an order already exists for this preview link
+    const orderExists = await this.orderReadRepo.existsByPreviewLinkId(previewLink.id)
+    if (orderExists) {
+      throw AppException.businessRule('order.already_submitted')
+    }
+
+    // 3. Validate photo IDs are subset of preview photos
     const previewPhotoIds = await this.orderReadRepo.getPreviewPhotoIds(previewLink.id)
     const invalidPhotos = command.photoIds.filter((id) => !previewPhotoIds.includes(id))
     if (invalidPhotos.length > 0) {
       throw AppException.businessRule('order.photos_not_in_preview')
     }
 
-    // 3. Find or create customer
+    // 4. Find or create customer
     const { id: customerId } = await this.commandBus.execute<
       FindOrCreateCustomerCommand,
       EntityIdProjection
@@ -72,7 +78,7 @@ export class CreateOrderFromPreviewHandler
       ),
     )
 
-    // 4. Create order
+    // 5. Create order
     const order = Order.create({
       previewLinkId: previewLink.id,
       eventId: previewLink.eventId,
@@ -83,13 +89,13 @@ export class CreateOrderFromPreviewHandler
     const saved = await this.orderWriteRepo.save(order)
     await this.orderWriteRepo.savePhotos(saved.id, command.photoIds)
 
-    // 5. Transition preview link to converted (if first order)
+    // 6. Transition preview link to converted (if first order)
     if (previewLink.status === PreviewLinkStatus.ACTIVE) {
       previewLink.markConverted()
       await this.previewWriteRepo.save(previewLink)
     }
 
-    // 6. Emit notification
+    // 7. Emit notification
     this.notifications.emitOrderCreated({
       orderId: saved.id,
       eventName: '',

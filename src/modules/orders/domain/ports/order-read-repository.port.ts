@@ -15,6 +15,7 @@ export interface IOrderReadRepository {
     filters: OrderListFilters,
   ): Promise<PaginatedResult<OrderListProjection>>
   getDetail(id: string): Promise<OrderDetailProjection | null>
+  existsByPreviewLinkId(previewLinkId: string): Promise<boolean>
   getPreviewPhotoIds(previewLinkId: string): Promise<string[]>
 }
 
