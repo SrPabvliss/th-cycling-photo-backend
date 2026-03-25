@@ -2,7 +2,6 @@ import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import { IsDate, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator'
 
-
 export class UpdateEventDto {
   @ApiPropertyOptional({
     description: 'Name of the cycling event',

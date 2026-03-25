@@ -67,7 +67,14 @@ describe('CreateEventHandler', () => {
   })
 
   it('should propagate entity validation errors without calling save', async () => {
-    const command = new CreateEventCommand('Test Event', new Date('2020-01-01'), null, null, null, null)
+    const command = new CreateEventCommand(
+      'Test Event',
+      new Date('2020-01-01'),
+      null,
+      null,
+      null,
+      null,
+    )
 
     await expect(handler.execute(command)).rejects.toThrow(AppException)
     expect(writeRepo.save).not.toHaveBeenCalled()
