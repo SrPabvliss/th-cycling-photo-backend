@@ -4,5 +4,6 @@
   "preview_not_available": "Preview link is not available for ordering",
   "preview_expired": "Preview link has expired",
   "photos_not_in_preview": "One or more photos are not part of this preview",
-  "already_submitted": "An order has already been submitted for this preview link"
+  "already_submitted": "An order has already been submitted for this preview link",
+  "not_delivered": "Order is not in delivered status"
 }

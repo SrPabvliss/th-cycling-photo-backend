@@ -7,6 +7,7 @@ export interface IEventReadRepository {
   getEventsList(
     pagination: Pagination,
     includeArchived?: boolean,
+    search?: string,
   ): Promise<PaginatedResult<EventListProjection>>
   getEventDetail(id: string): Promise<EventDetailProjection | null>
   countAll(): Promise<number>

@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Transform } from 'class-transformer'
-import { IsBoolean, IsInt, IsOptional, Max, Min } from 'class-validator'
+import { IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator'
 
 export class GetEventsListDto {
   @ApiPropertyOptional({ description: 'Page number (defaults to 1)', example: 1 })
@@ -24,4 +24,9 @@ export class GetEventsListDto {
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   includeArchived?: boolean
+
+  @ApiPropertyOptional({ description: 'Search events by name', example: 'MTB' })
+  @IsString()
+  @IsOptional()
+  search?: string
 }

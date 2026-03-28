@@ -17,7 +17,11 @@ export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
 
   /** Retrieves a paginated list of events, enriching with auto cover and file sizes. */
   async execute(query: GetEventsListQuery): Promise<PaginatedResult<EventListProjection>> {
-    const result = await this.readRepo.getEventsList(query.pagination, query.includeArchived)
+    const result = await this.readRepo.getEventsList(
+      query.pagination,
+      query.includeArchived,
+      query.search,
+    )
     if (result.items.length === 0) return result
 
     const allEventIds = result.items.map((e) => e.id)
