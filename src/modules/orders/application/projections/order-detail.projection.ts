@@ -9,6 +9,7 @@ export class OrderCustomerProjection {
 export class OrderPhotoProjection {
   id: string
   filename: string
+  storageKey: string
 }
 
 export class OrderDeliveryLinkProjection {

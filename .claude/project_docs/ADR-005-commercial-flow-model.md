@@ -1,6 +1,7 @@
 # ADR-005: Commercial Flow Data Model
 
 > Summary for Claude Code. Full ADR in claude.ai project knowledge.
+> **Updated:** Sprint 6 implementation — separated paid/delivered transitions (see TTV-90)
 
 ## Overview
 
@@ -23,23 +24,55 @@ Four new entities model the commercial flow: Customer → Order ← PreviewLink 
 
 ### Order
 - `id`, `preview_link_id`, `event_id`, `customer_id`, `status`, `notes?`, `created_at`, `paid_at`, `delivered_at`, `cancelled_at`, `confirmed_by_id`
-- Status: `pending` → `paid` → `delivered` (paid+delivered in same transaction) | `cancelled`
 - Photos via join table `OrderPhoto` (order_id, photo_id) — subset of preview photos
 - Public endpoint: POST /preview/:token/orders (creates order + find-or-create customer)
+
+**⚠️ IMPORTANT — State transitions are TWO SEPARATE admin actions, NOT automatic:**
+- `pending → paid` = Admin confirms payment received (PATCH /orders/:id/confirm-payment)
+- `paid → delivered` = Admin sends delivery to client (PATCH /orders/:id/send-delivery) — THIS generates the DeliveryLink
+- `pending → cancelled` = Admin cancels order (PATCH /orders/:id/cancel)
+
+The `paid` state is a REAL, persisted state where the admin has confirmed payment but hasn't yet sent the photos. This allows batch workflows: confirm multiple payments during the day, send deliveries later.
 
 ### DeliveryLink
 - `id`, `order_id` (unique — 1:1), `token` (64 hex), `status`, `expires_at`, `first_downloaded_at`, `download_count`, `created_at`
 - Status: `active` → `downloaded` (first access) → `expired` (expires_at)
-- Auto-generated when admin confirms payment (same transaction)
+- Generated ONLY when admin explicitly triggers "send delivery" (paid → delivered), NOT on payment confirmation
 - Public route: GET /delivery/:token — returns presigned B2 URLs (1h expiry per URL)
 
 ## State Transitions
 
 ```
-PreviewLink: active → expired | converted
-Order:       pending → paid → delivered | cancelled
+PreviewLink:  active → expired | converted
+Order:        pending → paid → delivered | cancelled (from pending only)
 DeliveryLink: active → downloaded → expired
 ```
+
+**Order transition details:**
+```
+pending ──[confirm-payment]──→ paid ──[send-delivery]──→ delivered
+pending ──[cancel]──→ cancelled
+```
+- confirm-payment: sets paid_at + confirmed_by_id. Does NOT generate DeliveryLink.
+- send-delivery: generates DeliveryLink, sets delivered_at. Only from paid status.
+- cancel: only from pending. Sets cancelled_at.
+
+## Order Endpoints (3 admin actions)
+
+```
+PATCH /orders/:id/confirm-payment  → pending → paid
+PATCH /orders/:id/send-delivery    → paid → delivered (generates DeliveryLink here)
+PATCH /orders/:id/cancel           → pending → cancelled
+```
+
+## Frontend Actions by Order Status
+
+| Status | Actions available |
+|--------|-------------------|
+| pending | "Confirmar pago" + "Contactar WhatsApp" (cobro) + "Cancelar" |
+| paid | "Enviar fotos" (generates delivery) + "Contactar WhatsApp" |
+| delivered | "Reenviar WhatsApp" (entrega) + "Regenerar link" (if expired) |
+| cancelled | View only, no actions |
 
 ## Modifications to Existing Models
 
@@ -62,6 +95,7 @@ Templates are NOT stored in DB — implemented as config/utility in the backend.
 - `preview:viewed` — first time client opens preview link
 - `order:created` — client submits order from preview
 - `order:paid` — admin confirms payment
+- `order:delivered` — admin sends delivery (NEW — added with state separation)
 
 Only emitted to authenticated admin users via /notifications namespace.
 

@@ -43,8 +43,12 @@ export class EventReadRepository implements IEventReadRepository {
   async getEventsList(
     pagination: Pagination,
     includeArchived = false,
+    search?: string,
   ): Promise<PaginatedResult<EventListProjection>> {
-    const where = includeArchived ? {} : { deleted_at: null }
+    const where: Record<string, unknown> = includeArchived ? {} : { deleted_at: null }
+    if (search) {
+      where.name = { contains: search, mode: 'insensitive' }
+    }
 
     const [events, total] = await Promise.all([
       this.prisma.event.findMany({

@@ -51,7 +51,7 @@ export class EventsController {
   })
   async findAll(@Query() dto: GetEventsListDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetEventsListQuery(pagination, dto.includeArchived ?? false)
+    const query = new GetEventsListQuery(pagination, dto.includeArchived ?? false, dto.search)
     return this.queryBus.execute(query)
   }
 
