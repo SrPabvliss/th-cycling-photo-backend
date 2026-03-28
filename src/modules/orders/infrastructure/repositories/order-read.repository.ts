@@ -94,7 +94,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         },
         event: { select: { name: true } },
         preview_link: { select: { token: true } },
-        photos: { select: { photo: { select: { id: true, filename: true } } } },
+        photos: { select: { photo: { select: { id: true, filename: true, storage_key: true } } } },
         delivery_link: {
           select: { token: true, status: true, expires_at: true, download_count: true },
         },
@@ -123,6 +123,7 @@ export class OrderReadRepository implements IOrderReadRepository {
       photos: record.photos.map((op) => ({
         id: op.photo.id,
         filename: op.photo.filename,
+        storageKey: op.photo.storage_key,
       })),
       deliveryLink: record.delivery_link
         ? {
@@ -133,6 +134,15 @@ export class OrderReadRepository implements IOrderReadRepository {
           }
         : null,
     }
+  }
+
+  /** Counts orders grouped by status. */
+  async countByStatus(): Promise<Record<string, number>> {
+    const groups = await this.prisma.order.groupBy({
+      by: ['status'],
+      _count: { id: true },
+    })
+    return Object.fromEntries(groups.map((g) => [g.status, g._count.id]))
   }
 
   /** Checks if an order already exists for a preview link. */
