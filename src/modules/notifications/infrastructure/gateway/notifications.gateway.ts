@@ -32,7 +32,6 @@ export class NotificationsGateway
 
   async handleConnection(client: Socket): Promise<void> {
     try {
-      // Extract JWT from handshake auth or query
       const token =
         client.handshake.auth?.token ||
         client.handshake.headers?.authorization?.replace('Bearer ', '') ||
@@ -44,7 +43,6 @@ export class NotificationsGateway
         return
       }
 
-      // Verify JWT
       const payload = await this.jwtService.verifyAsync(token)
       client.data.user = payload
 

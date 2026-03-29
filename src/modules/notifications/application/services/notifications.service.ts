@@ -3,9 +3,10 @@ import { EventEmitter2 } from '@nestjs/event-emitter'
 import {
   NotificationEvent,
   type OrderCreatedPayload,
+  type OrderDeliveredPayload,
   type OrderPaidPayload,
   type PreviewViewedPayload,
-} from './events'
+} from './notification-events'
 
 @Injectable()
 export class NotificationsService {
@@ -21,5 +22,9 @@ export class NotificationsService {
 
   emitOrderPaid(payload: OrderPaidPayload): void {
     this.eventEmitter.emit(NotificationEvent.ORDER_PAID, payload)
+  }
+
+  emitOrderDelivered(payload: OrderDeliveredPayload): void {
+    this.eventEmitter.emit(NotificationEvent.ORDER_DELIVERED, payload)
   }
 }
