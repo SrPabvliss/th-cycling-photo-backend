@@ -10,6 +10,7 @@ export interface IUserReadRepository {
     includeInactive?: boolean,
   ): Promise<PaginatedResult<UserListProjection>>
   getUserDetail(id: string): Promise<UserDetailProjection | null>
+  findActiveAdminIds(): Promise<string[]>
 }
 
 export const USER_READ_REPOSITORY = Symbol('USER_READ_REPOSITORY')

@@ -1,5 +1,6 @@
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import { NotificationsService } from '@notifications/application/services/notifications.service'
 import {
   type IOrderReadRepository,
   type IOrderWriteRepository,
@@ -8,7 +9,6 @@ import {
 } from '@orders/domain/ports'
 import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
-import { NotificationsService } from '@shared/notifications'
 import { ConfirmOrderPaymentCommand } from './confirm-order-payment.command'
 
 @CommandHandler(ConfirmOrderPaymentCommand)

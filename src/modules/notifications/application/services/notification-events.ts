@@ -2,6 +2,7 @@ export const NotificationEvent = {
   PREVIEW_VIEWED: 'preview.viewed',
   ORDER_CREATED: 'order.created',
   ORDER_PAID: 'order.paid',
+  ORDER_DELIVERED: 'order.delivered',
 } as const
 
 export interface PreviewViewedPayload {
@@ -25,4 +26,11 @@ export interface OrderPaidPayload {
   customerName: string
   confirmedBy: string
   paidAt: Date
+}
+
+export interface OrderDeliveredPayload {
+  orderId: string
+  eventName: string
+  customerName: string
+  deliveredAt: Date
 }

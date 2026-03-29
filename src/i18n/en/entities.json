@@ -13,5 +13,6 @@
   "customer": "Customer",
   "preview_link": "Preview link",
   "delivery_link": "Delivery link",
-  "order": "Order"
+  "order": "Order",
+  "notification": "Notification"
 }

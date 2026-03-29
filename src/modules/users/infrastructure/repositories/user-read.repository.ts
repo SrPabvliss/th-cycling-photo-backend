@@ -75,4 +75,16 @@ export class UserReadRepository implements IUserReadRepository {
 
     return record ? UserMapper.toDetailProjection(record) : null
   }
+
+  /** Returns IDs of all active users with admin role. */
+  async findActiveAdminIds(): Promise<string[]> {
+    const admins = await this.prisma.userRole.findMany({
+      where: {
+        role: { name: 'admin' },
+        user: { is_active: true },
+      },
+      select: { user_id: true },
+    })
+    return admins.map((a) => a.user_id)
+  }
 }

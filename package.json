@@ -121,6 +121,7 @@
       "^@previews/(.*)$": "<rootDir>/modules/previews/$1",
       "^@deliveries/(.*)$": "<rootDir>/modules/deliveries/$1",
       "^@orders/(.*)$": "<rootDir>/modules/orders/$1",
+      "^@notifications/(.*)$": "<rootDir>/modules/notifications/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "collectCoverageFrom": [
