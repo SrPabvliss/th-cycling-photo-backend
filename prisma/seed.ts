@@ -22,8 +22,27 @@ const prisma = new PrismaClient({ adapter })
 
 console.log(`Environment: ${env} | Database: ${DB_NAME}@${DB_HOST}:${DB_PORT}`)
 
+type CountryEntry = { name: string; iso_code: string }
 type ProvinceEntry = { name: string; code: string }
 type CantonsByProvince = Record<string, string[]>
+
+async function seedCountries() {
+  const countriesData: CountryEntry[] = JSON.parse(
+    fs.readFileSync(path.join(__dirname, 'seed-data/countries.json'), 'utf-8'),
+  )
+
+  let count = 0
+  for (const country of countriesData) {
+    await prisma.country.upsert({
+      where: { iso_code: country.iso_code },
+      update: { name: country.name },
+      create: { name: country.name, iso_code: country.iso_code },
+    })
+    count++
+  }
+
+  console.log(`Seeded ${count} countries`)
+}
 
 async function seedLocations() {
   const provincesData: ProvinceEntry[] = JSON.parse(
@@ -33,14 +52,16 @@ async function seedLocations() {
     fs.readFileSync(path.join(__dirname, 'seed-data/cantons.json'), 'utf-8'),
   )
 
+  const ecuador = await prisma.country.findFirst({ where: { iso_code: 'EC' } })
+
   let provincesCount = 0
   let cantonsCount = 0
 
   for (const province of provincesData) {
     const upserted = await prisma.province.upsert({
       where: { code: province.code },
-      update: { name: province.name },
-      create: { name: province.name, code: province.code },
+      update: { name: province.name, country_id: ecuador?.id ?? null },
+      create: { name: province.name, code: province.code, country_id: ecuador?.id ?? null },
     })
 
     provincesCount++
@@ -267,6 +288,7 @@ async function seedCommercialFlowData() {
 async function main() {
   console.log('Seeding database...')
 
+  await seedCountries()
   await seedLocations()
   await seedRoles()
   await seedAdminUser()
