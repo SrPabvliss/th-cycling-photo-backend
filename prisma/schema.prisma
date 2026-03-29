@@ -143,14 +143,17 @@ enum RiderCategory {
 // ─── Reference Tables ───────────────────────────────────────────────────────
 
 model Province {
-  id   Int    @id @default(autoincrement())
-  name String @db.VarChar(100)
-  code String @unique @db.VarChar(10)
+  id         Int    @id @default(autoincrement())
+  name       String @db.VarChar(100)
+  code       String @unique @db.VarChar(10)
+  country_id Int?
 
+  country   Country?   @relation(fields: [country_id], references: [id], onDelete: Restrict)
   cantons   Canton[]
   events    Event[]
   customers Customer[]
 
+  @@index([country_id])
   @@map("provinces")
 }
 
@@ -172,6 +175,7 @@ model Country {
   name     String @db.VarChar(100)
   iso_code String @unique @db.VarChar(2)
 
+  provinces Province[]
   customers Customer[]
 
   @@map("countries")
