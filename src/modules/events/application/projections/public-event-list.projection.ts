@@ -1,0 +1,38 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+
+export class PublicEventAssetProjection {
+  @ApiProperty({ description: 'Asset type', example: 'cover_image' })
+  assetType: string
+
+  @ApiProperty({ description: 'Public CDN URL' })
+  url: string
+}
+
+export class PublicEventListProjection {
+  @ApiProperty({ description: 'Event UUID' })
+  id: string
+
+  @ApiProperty({ description: 'Event name' })
+  name: string
+
+  @ApiProperty({ description: 'Event date' })
+  date: Date
+
+  @ApiPropertyOptional({ description: 'Location' })
+  location: string | null
+
+  @ApiPropertyOptional({ description: 'Province name' })
+  provinceName: string | null
+
+  @ApiPropertyOptional({ description: 'Canton name' })
+  cantonName: string | null
+
+  @ApiProperty({ description: 'Whether this event is featured' })
+  isFeatured: boolean
+
+  @ApiProperty({ description: 'Number of photos' })
+  photoCount: number
+
+  @ApiProperty({ description: 'Event assets with CDN URLs', type: [PublicEventAssetProjection] })
+  assets: PublicEventAssetProjection[]
+}

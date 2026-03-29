@@ -15,6 +15,7 @@ describe('DeleteEventHandler', () => {
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
+      setFeatured: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
 
     readRepo = {
@@ -22,6 +23,8 @@ describe('DeleteEventHandler', () => {
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
       countAll: jest.fn(),
+      getPublicEventsList: jest.fn(),
+      getPublicEventDetail: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     handler = new DeleteEventHandler(writeRepo, readRepo)

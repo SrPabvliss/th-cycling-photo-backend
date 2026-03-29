@@ -4,6 +4,8 @@ import {
   CreateEventDto,
   DeleteEventCommand,
   RestoreEventCommand,
+  SetFeaturedEventCommand,
+  SetFeaturedEventDto,
   UpdateEventCommand,
   UpdateEventDto,
 } from '@events/application/commands'
@@ -126,6 +128,22 @@ export class EventsController {
       dto.cantonId,
       new AuditContext(user.userId),
     )
+    return this.commandBus.execute(command)
+  }
+
+  @Roles('admin')
+  @Patch(':id/featured')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
+  @ApiOperation({ summary: 'Toggle featured status for an event' })
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Featured status updated',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
+  async setFeatured(@Param('id') id: string, @Body() dto: SetFeaturedEventDto) {
+    const command = new SetFeaturedEventCommand(id, dto.isFeatured)
     return this.commandBus.execute(command)
   }
 
