@@ -1,10 +1,17 @@
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { PrismaService } from '@shared/infrastructure'
+import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
 import type { EventDetailProjection, EventListProjection } from '../../application/projections'
 import type { Event } from '../../domain/entities'
 import type { IEventReadRepository } from '../../domain/ports'
 import * as EventMapper from '../mappers/event.mapper'
+
+const COVER_IMAGE_ASSET_SELECT = {
+  select: { storage_key: true },
+  where: { asset_type: 'cover_image' as const },
+  take: 1,
+}
 
 const EVENT_LIST_SELECT = {
   id: true,
@@ -14,23 +21,25 @@ const EVENT_LIST_SELECT = {
   location: true,
   province: { select: { name: true } },
   canton: { select: { name: true } },
-  cover_image_url: true,
   status: true,
   _count: { select: { photos: true } },
+  assets: COVER_IMAGE_ASSET_SELECT,
 } as const
 
 const EVENT_DETAIL_SELECT = {
   ...EVENT_LIST_SELECT,
   province_id: true,
   canton_id: true,
-  cover_image_storage_key: true,
   created_at: true,
   updated_at: true,
 } as const
 
 @Injectable()
 export class EventReadRepository implements IEventReadRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
+  ) {}
 
   /** Finds an event entity by ID. Excludes archived by default. */
   async findById(id: string, includeArchived = false): Promise<Event | null> {
@@ -62,7 +71,7 @@ export class EventReadRepository implements IEventReadRepository {
     ])
 
     return new PaginatedResult(
-      events.map((e) => EventMapper.toListProjection(e)),
+      events.map((e) => EventMapper.toListProjection(e, (key) => this.storage.getPublicUrl(key))),
       total,
       pagination,
     )
@@ -75,7 +84,9 @@ export class EventReadRepository implements IEventReadRepository {
       select: EVENT_DETAIL_SELECT,
     })
 
-    return record ? EventMapper.toDetailProjection(record) : null
+    return record
+      ? EventMapper.toDetailProjection(record, (key) => this.storage.getPublicUrl(key))
+      : null
   }
 
   /** Counts all events (including archived). */

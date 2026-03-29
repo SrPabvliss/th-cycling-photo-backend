@@ -1,19 +1,13 @@
 import {
   ArchiveEventCommand,
-  ConfirmEventCoverCommand,
-  ConfirmEventCoverDto,
   CreateEventCommand,
   CreateEventDto,
   DeleteEventCommand,
-  GenerateCoverUrlCommand,
-  GenerateCoverUrlDto,
-  RemoveEventCoverCommand,
   RestoreEventCommand,
   UpdateEventCommand,
   UpdateEventDto,
 } from '@events/application/commands'
 import {
-  CoverPresignedUrlProjection,
   EventDetailProjection,
   EventListProjection,
   EventsStatsProjection,
@@ -132,55 +126,6 @@ export class EventsController {
       dto.cantonId,
       new AuditContext(user.userId),
     )
-    return this.commandBus.execute(command)
-  }
-
-  @Roles('admin')
-  @Post(':id/cover/presigned-url')
-  @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
-  @ApiOperation({ summary: 'Generate a presigned URL for cover image upload' })
-  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
-  @ApiEnvelopeResponse({
-    status: 201,
-    description: 'Presigned URL generated',
-    type: CoverPresignedUrlProjection,
-  })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async generateCoverUrl(@Param('id') id: string, @Body() dto: GenerateCoverUrlDto) {
-    const command = new GenerateCoverUrlCommand(id, dto.fileName, dto.contentType)
-    return this.commandBus.execute(command)
-  }
-
-  @Roles('admin')
-  @Post(':id/cover/confirm')
-  @SuccessMessage('success.UPDATED', { entity: 'entities.cover' })
-  @ApiOperation({ summary: 'Confirm cover image upload after presigned URL flow' })
-  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
-  @ApiEnvelopeResponse({
-    status: 200,
-    description: 'Cover image confirmed successfully',
-    type: EntityIdProjection,
-  })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  @ApiEnvelopeErrorResponse({ status: 422, description: 'Invalid storage key' })
-  async confirmCover(@Param('id') id: string, @Body() dto: ConfirmEventCoverDto) {
-    const command = new ConfirmEventCoverCommand(id, dto.storageKey)
-    return this.commandBus.execute(command)
-  }
-
-  @Roles('admin')
-  @Delete(':id/cover')
-  @SuccessMessage('success.UPDATED', { entity: 'entities.cover' })
-  @ApiOperation({ summary: 'Remove event cover image' })
-  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
-  @ApiEnvelopeResponse({
-    status: 200,
-    description: 'Cover image removed successfully',
-    type: EntityIdProjection,
-  })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async removeCover(@Param('id') id: string) {
-    const command = new RemoveEventCoverCommand(id)
     return this.commandBus.execute(command)
   }
 

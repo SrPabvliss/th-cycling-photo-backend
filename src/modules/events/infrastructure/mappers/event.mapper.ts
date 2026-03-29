@@ -3,6 +3,10 @@ import { Event } from '@events/domain/entities'
 import type { EventStatusType } from '@events/domain/value-objects/event-status.vo'
 import type { Prisma, Event as PrismaEvent } from '@generated/prisma/client'
 
+type EventAssetSelect = {
+  storage_key: string
+}
+
 type EventListSelect = {
   id: string
   name: string
@@ -11,15 +15,14 @@ type EventListSelect = {
   location: string | null
   province: { name: string } | null
   canton: { name: string } | null
-  cover_image_url: string | null
   status: string
   _count: { photos: number }
+  assets: EventAssetSelect[]
 }
 
 type EventDetailSelect = EventListSelect & {
   province_id: number | null
   canton_id: number | null
-  cover_image_storage_key: string | null
   created_at: Date
   updated_at: Date
 }
@@ -34,8 +37,6 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
     location: entity.location,
     province_id: entity.provinceId,
     canton_id: entity.cantonId,
-    cover_image_url: entity.coverImageUrl,
-    cover_image_storage_key: entity.coverImageStorageKey,
     status: entity.status,
     created_at: entity.audit.createdAt,
     updated_at: entity.audit.updatedAt,
@@ -55,8 +56,6 @@ export function toEntity(record: PrismaEvent): Event {
     location: record.location,
     provinceId: record.province_id,
     cantonId: record.canton_id,
-    coverImageUrl: record.cover_image_url,
-    coverImageStorageKey: record.cover_image_storage_key,
     status: record.status as EventStatusType,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
@@ -66,8 +65,22 @@ export function toEntity(record: PrismaEvent): Event {
   })
 }
 
+/** Extracts cover image URL from joined EventAsset (asset_type = cover_image). */
+function getCoverImageUrl(
+  assets: EventAssetSelect[],
+  getPublicUrl?: (key: string) => string,
+): string | null {
+  const cover = assets[0]
+  if (!cover) return null
+  return getPublicUrl ? getPublicUrl(cover.storage_key) : null
+}
+
 /** Converts a Prisma selected record to a list projection. */
-export function toListProjection(record: EventListSelect): EventListProjection {
+export function toListProjection(
+  record: EventListSelect,
+  getPublicUrl?: (key: string) => string,
+): EventListProjection {
+  const coverUrl = getCoverImageUrl(record.assets, getPublicUrl)
   return {
     id: record.id,
     name: record.name,
@@ -76,8 +89,8 @@ export function toListProjection(record: EventListSelect): EventListProjection {
     location: record.location,
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
-    coverImageUrl: record.cover_image_url,
-    coverImageSource: record.cover_image_url ? 'manual' : null,
+    coverImageUrl: coverUrl,
+    coverImageSource: coverUrl ? 'manual' : null,
     status: record.status,
     photoCount: record._count.photos,
     classifiedCount: 0,
@@ -86,7 +99,11 @@ export function toListProjection(record: EventListSelect): EventListProjection {
 }
 
 /** Converts a Prisma record to a detail projection. */
-export function toDetailProjection(record: EventDetailSelect): EventDetailProjection {
+export function toDetailProjection(
+  record: EventDetailSelect,
+  getPublicUrl?: (key: string) => string,
+): EventDetailProjection {
+  const coverUrl = getCoverImageUrl(record.assets, getPublicUrl)
   return {
     id: record.id,
     name: record.name,
@@ -97,8 +114,8 @@ export function toDetailProjection(record: EventDetailSelect): EventDetailProjec
     cantonName: record.canton?.name ?? null,
     provinceId: record.province_id,
     cantonId: record.canton_id,
-    coverImageUrl: record.cover_image_url,
-    coverImageSource: record.cover_image_url ? 'manual' : null,
+    coverImageUrl: coverUrl,
+    coverImageSource: coverUrl ? 'manual' : null,
     status: record.status,
     photoCount: record._count.photos,
     classifiedCount: 0,

@@ -36,8 +36,6 @@ describe('DeleteEventHandler', () => {
       location: 'Ambato',
       provinceId: null,
       cantonId: null,
-      coverImageUrl: null,
-      coverImageStorageKey: null,
       status: 'active',
       createdAt: new Date(),
       updatedAt: new Date(),
