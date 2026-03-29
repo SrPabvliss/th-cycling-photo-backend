@@ -10,8 +10,6 @@ export class Event {
     public location: string | null,
     public provinceId: number | null,
     public cantonId: number | null,
-    public coverImageUrl: string | null,
-    public coverImageStorageKey: string | null,
     public status: EventStatusType,
     public readonly audit: AuditFields,
   ) {}
@@ -19,11 +17,6 @@ export class Event {
   /**
    * Factory method for creating a new event.
    * Applies all business validations before instantiation.
-   *
-   * @param data - Event creation data (name, date, location)
-   * @returns New Event instance with active status
-   * @throws AppException.businessRule if name length is not between 3 and 200
-   * @throws AppException.businessRule if date is in the past
    */
   static create(data: {
     name: string
@@ -44,8 +37,6 @@ export class Event {
       data.location,
       data.provinceId,
       data.cantonId,
-      null,
-      null,
       EventStatus.ACTIVE,
       AuditFields.initialize(),
     )
@@ -53,10 +44,6 @@ export class Event {
 
   /**
    * Updates mutable event fields with business validations.
-   *
-   * @param data - Partial update data
-   * @throws AppException.businessRule if name length is not between 3 and 200
-   * @throws AppException.businessRule if date is in the past
    */
   update(data: {
     name?: string
@@ -82,20 +69,6 @@ export class Event {
     if (data.provinceId !== undefined) this.provinceId = data.provinceId
     if (data.cantonId !== undefined) this.cantonId = data.cantonId
 
-    this.audit.markUpdated()
-  }
-
-  /** Sets the manual cover image for this event. */
-  setCoverImage(url: string, storageKey: string): void {
-    this.coverImageUrl = url
-    this.coverImageStorageKey = storageKey
-    this.audit.markUpdated()
-  }
-
-  /** Removes the manual cover image from this event. */
-  removeCoverImage(): void {
-    this.coverImageUrl = null
-    this.coverImageStorageKey = null
     this.audit.markUpdated()
   }
 
@@ -142,8 +115,6 @@ export class Event {
     location: string | null
     provinceId: number | null
     cantonId: number | null
-    coverImageUrl: string | null
-    coverImageStorageKey: string | null
     status: EventStatusType
     createdAt: Date
     updatedAt: Date
@@ -159,8 +130,6 @@ export class Event {
       data.location,
       data.provinceId,
       data.cantonId,
-      data.coverImageUrl,
-      data.coverImageStorageKey,
       data.status,
       AuditFields.fromPersistence({
         createdAt: data.createdAt,

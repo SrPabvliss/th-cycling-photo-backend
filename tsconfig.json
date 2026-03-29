@@ -17,6 +17,7 @@
     "paths": {
       "@shared/*": ["src/shared/*"],
       "@generated/*": ["src/generated/*"],
+      "@event-assets/*": ["src/modules/event-assets/*"],
       "@events/*": ["src/modules/events/*"],
       "@photos/*": ["src/modules/photos/*"],
       "@classifications/*": ["src/modules/classifications/*"],

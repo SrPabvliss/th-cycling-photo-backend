@@ -14,6 +14,7 @@ import { JwtAuthGuard } from './modules/auth/infrastructure/guards/jwt-auth.guar
 import { ClassificationsModule } from './modules/classifications/classifications.module'
 import { CustomersModule } from './modules/customers/customers.module'
 import { DeliveriesModule } from './modules/deliveries/deliveries.module'
+import { EventAssetsModule } from './modules/event-assets/event-assets.module'
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
@@ -60,6 +61,7 @@ import { StorageModule } from './shared/storage/storage.module'
     ClassificationsModule,
     CustomersModule,
     DeliveriesModule,
+    EventAssetsModule,
     EventsModule,
     LocationsModule,
     OrdersModule,

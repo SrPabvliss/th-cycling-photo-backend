@@ -23,8 +23,6 @@ describe('GeneratePresignedUrlHandler', () => {
     location: 'Ambato',
     provinceId: null,
     cantonId: null,
-    coverImageUrl: null,
-    coverImageStorageKey: null,
     status: 'active',
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -55,6 +53,8 @@ describe('GeneratePresignedUrlHandler', () => {
       getResumePoint: jest.fn(),
       countAll: jest.fn(),
       sumAllFileSize: jest.fn(),
+      countByIds: jest.fn(),
+      findSimilar: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
     storageAdapter = {

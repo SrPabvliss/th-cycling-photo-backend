@@ -14,5 +14,6 @@
   "preview_link": "Enlace de vista previa",
   "delivery_link": "Enlace de entrega",
   "order": "Orden",
-  "notification": "Notificación"
+  "notification": "Notificación",
+  "event_asset": "Recurso del evento"
 }

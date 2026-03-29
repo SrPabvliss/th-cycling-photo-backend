@@ -3,25 +3,26 @@ import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
-import type { CoverPresignedUrlProjection } from '../../projections'
-import { GenerateCoverUrlCommand } from './generate-cover-url.command'
+import type { AssetPresignedUrlProjection } from '../../projections'
+import { GenerateAssetPresignedUrlCommand } from './generate-asset-presigned-url.command'
 
 const PRESIGNED_URL_EXPIRY_SECONDS = 300
 
-@CommandHandler(GenerateCoverUrlCommand)
-export class GenerateCoverUrlHandler implements ICommandHandler<GenerateCoverUrlCommand> {
+@CommandHandler(GenerateAssetPresignedUrlCommand)
+export class GenerateAssetPresignedUrlHandler
+  implements ICommandHandler<GenerateAssetPresignedUrlCommand>
+{
   constructor(
     @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
   ) {}
 
-  /** Generates a presigned URL for direct cover image upload to B2. */
-  async execute(command: GenerateCoverUrlCommand): Promise<CoverPresignedUrlProjection> {
+  async execute(command: GenerateAssetPresignedUrlCommand): Promise<AssetPresignedUrlProjection> {
     const event = await this.eventReadRepo.findById(command.eventId)
     if (!event) throw AppException.notFound('Event', command.eventId)
 
     const sanitizedFileName = command.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const objectKey = `events/${command.eventId}/cover/${sanitizedFileName}`
+    const objectKey = `events/${command.eventId}/assets/${command.assetType}/${crypto.randomUUID()}-${sanitizedFileName}`
 
     const result = await this.storage.getPresignedUrl({
       key: objectKey,

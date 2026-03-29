@@ -1,6 +1,8 @@
 import { ArchiveEventHandler } from '@events/application/commands/archive-event/archive-event.handler'
 import { CreateEventHandler } from '@events/application/commands/create-event/create-event.handler'
+import { DeleteEventHandler } from '@events/application/commands/delete-event/delete-event.handler'
 import { RestoreEventHandler } from '@events/application/commands/restore-event/restore-event.handler'
+import { UpdateEventHandler } from '@events/application/commands/update-event/update-event.handler'
 import { GetEventDetailHandler } from '@events/application/queries/get-event-detail/get-event-detail.handler'
 import { GetEventsListHandler } from '@events/application/queries/get-events-list/get-events-list.handler'
 import { GetEventsStatsHandler } from '@events/application/queries/get-events-stats/get-events-stats.handler'
@@ -12,20 +14,12 @@ import { LocationsModule } from '@locations/locations.module'
 import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { PhotosModule } from '../photos/photos.module'
-import { ConfirmEventCoverHandler } from './application/commands/confirm-event-cover/confirm-event-cover.handler'
-import { DeleteEventHandler } from './application/commands/delete-event/delete-event.handler'
-import { GenerateCoverUrlHandler } from './application/commands/generate-cover-url/generate-cover-url.handler'
-import { RemoveEventCoverHandler } from './application/commands/remove-event-cover/remove-event-cover.handler'
-import { UpdateEventHandler } from './application/commands/update-event/update-event.handler'
 
 const CommandHandlers = [
   ArchiveEventHandler,
   CreateEventHandler,
   DeleteEventHandler,
-  GenerateCoverUrlHandler,
-  RemoveEventCoverHandler,
   RestoreEventHandler,
-  ConfirmEventCoverHandler,
   UpdateEventHandler,
 ]
 const QueryHandlers = [GetEventsListHandler, GetEventDetailHandler, GetEventsStatsHandler]

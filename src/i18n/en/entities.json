@@ -14,5 +14,6 @@
   "preview_link": "Preview link",
   "delivery_link": "Delivery link",
   "order": "Order",
-  "notification": "Notification"
+  "notification": "Notification",
+  "event_asset": "Event asset"
 }
