@@ -17,6 +17,8 @@ export class EventListProjection {
   coverImageUrl: string | null
   /** Source of the cover image: 'manual', 'auto' (first photo), or null */
   coverImageSource: 'manual' | 'auto' | null
+  /** Whether this event is currently featured */
+  isFeatured: boolean
   /** Current event status */
   status: string
   /** Number of photos associated with this event (computed) */

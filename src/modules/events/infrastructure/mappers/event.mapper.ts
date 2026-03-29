@@ -15,6 +15,7 @@ type EventListSelect = {
   location: string | null
   province: { name: string } | null
   canton: { name: string } | null
+  is_featured: boolean
   status: string
   _count: { photos: number }
   assets: EventAssetSelect[]
@@ -91,6 +92,7 @@ export function toListProjection(
     cantonName: record.canton?.name ?? null,
     coverImageUrl: coverUrl,
     coverImageSource: coverUrl ? 'manual' : null,
+    isFeatured: record.is_featured,
     status: record.status,
     photoCount: record._count.photos,
     classifiedCount: 0,
@@ -116,6 +118,7 @@ export function toDetailProjection(
     cantonId: record.canton_id,
     coverImageUrl: coverUrl,
     coverImageSource: coverUrl ? 'manual' : null,
+    isFeatured: record.is_featured,
     status: record.status,
     photoCount: record._count.photos,
     classifiedCount: 0,
