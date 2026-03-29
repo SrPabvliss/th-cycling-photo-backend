@@ -1,6 +1,7 @@
 import { FindOrCreateCustomerCommand } from '@customers/application/commands'
 import { Inject } from '@nestjs/common'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import { NotificationsService } from '@notifications/application/services/notifications.service'
 import { Order } from '@orders/domain/entities'
 import {
   type IOrderReadRepository,
@@ -17,7 +18,6 @@ import {
 import { PreviewLinkStatus } from '@previews/domain/value-objects/preview-link-status.vo'
 import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
-import { NotificationsService } from '@shared/notifications'
 import { CreateOrderFromPreviewCommand } from './create-order-from-preview.command'
 
 @CommandHandler(CreateOrderFromPreviewCommand)
@@ -95,10 +95,11 @@ export class CreateOrderFromPreviewHandler
       await this.previewWriteRepo.save(previewLink)
     }
 
-    // 7. Emit notification
+    // 7. Emit notification (fetch detail to get eventName)
+    const detail = await this.orderReadRepo.getDetail(saved.id)
     this.notifications.emitOrderCreated({
       orderId: saved.id,
-      eventName: '',
+      eventName: detail?.eventName ?? '',
       customerName: `${command.firstName} ${command.lastName}`,
       photoCount: command.photoIds.length,
       createdAt: saved.createdAt,

@@ -2,6 +2,7 @@ import { CreateDeliveryLinkCommand } from '@deliveries/application/commands'
 import type { DeliveryLinkCreatedProjection } from '@deliveries/application/projections'
 import { Inject } from '@nestjs/common'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import { NotificationsService } from '@notifications/application/services/notifications.service'
 import type { OrderPaymentConfirmedProjection } from '@orders/application/projections'
 import {
   type IOrderReadRepository,
@@ -11,7 +12,6 @@ import {
 } from '@orders/domain/ports'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import { AppException } from '@shared/domain'
-import { NotificationsService } from '@shared/notifications'
 import { SendDeliveryCommand } from './send-delivery.command'
 
 @CommandHandler(SendDeliveryCommand)
@@ -54,12 +54,11 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
       : ''
 
     // 7. Emit notification
-    this.notifications.emitOrderPaid({
+    this.notifications.emitOrderDelivered({
       orderId: order.id,
       eventName: detail?.eventName ?? '',
       customerName,
-      confirmedBy: '',
-      paidAt: order.paidAt!,
+      deliveredAt: order.deliveredAt!,
     })
 
     // 8. Build WhatsApp template
