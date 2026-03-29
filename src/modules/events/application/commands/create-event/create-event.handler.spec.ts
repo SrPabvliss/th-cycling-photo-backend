@@ -16,6 +16,7 @@ describe('CreateEventHandler', () => {
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
+      setFeatured: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
 
     locationValidator = {
