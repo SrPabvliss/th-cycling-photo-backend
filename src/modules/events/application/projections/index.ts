@@ -1,3 +1,5 @@
 export { EventDetailProjection } from './event-detail.projection'
 export { EventListProjection } from './event-list.projection'
 export { EventsStatsProjection } from './events-stats.projection'
+export { PublicEventDetailProjection } from './public-event-detail.projection'
+export { PublicEventListProjection } from './public-event-list.projection'
