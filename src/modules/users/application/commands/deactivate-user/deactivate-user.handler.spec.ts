@@ -43,6 +43,7 @@ describe('DeactivateUserHandler', () => {
       findByEmail: jest.fn(),
       getUsersList: jest.fn(),
       getUserDetail: jest.fn(),
+      findActiveAdminIds: jest.fn(),
     } as jest.Mocked<IUserReadRepository>
 
     writeRepo = {
