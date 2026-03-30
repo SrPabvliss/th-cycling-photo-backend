@@ -323,7 +323,7 @@ model Photo {
   event             Event              @relation(fields: [event_id], references: [id], onDelete: Cascade)
   created_by        User?              @relation("PhotoCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
   updated_by        User?              @relation("PhotoUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
-  photo_category    EventPhotoCategory? @relation(fields: [photo_category_id], references: [id], onDelete: SetNull)
+  photo_category    PhotoCategory? @relation(fields: [photo_category_id], references: [id], onDelete: SetNull)
   detected_cyclists   DetectedCyclist[]
   processing_jobs     ProcessingJob[]
   preview_link_photos PreviewLinkPhoto[]
@@ -586,17 +586,28 @@ model EventAsset {
   @@map("event_assets")
 }
 
-model EventPhotoCategory {
+model PhotoCategory {
   id         String   @id @default(uuid()) @db.Uuid
-  event_id   String   @db.Uuid
-  name       String   @db.VarChar(100)
+  name       String   @unique @db.VarChar(100)
   created_at DateTime @default(now()) @db.Timestamptz
 
-  event  Event   @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  photos Photo[]
+  event_photo_categories EventPhotoCategory[]
+  photos                 Photo[]
 
-  @@unique([event_id, name])
+  @@map("photo_categories")
+}
+
+model EventPhotoCategory {
+  id                String @id @default(uuid()) @db.Uuid
+  event_id          String @db.Uuid
+  photo_category_id String @db.Uuid
+
+  event          Event         @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  photo_category PhotoCategory @relation(fields: [photo_category_id], references: [id], onDelete: Cascade)
+
+  @@unique([event_id, photo_category_id])
   @@index([event_id])
+  @@index([photo_category_id])
   @@map("event_photo_categories")
 }
 

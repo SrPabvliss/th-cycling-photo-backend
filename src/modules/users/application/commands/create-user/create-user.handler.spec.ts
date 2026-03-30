@@ -19,6 +19,7 @@ describe('CreateUserHandler', () => {
       findByEmail: jest.fn(),
       getUsersList: jest.fn(),
       getUserDetail: jest.fn(),
+      findActiveAdminIds: jest.fn(),
     } as jest.Mocked<IUserReadRepository>
 
     handler = new CreateUserHandler(writeRepo, readRepo)

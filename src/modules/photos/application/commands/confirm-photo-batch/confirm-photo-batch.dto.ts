@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import {
   ArrayMaxSize,
@@ -6,7 +6,9 @@ import {
   IsIn,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   ValidateNested,
@@ -46,4 +48,12 @@ export class ConfirmPhotoBatchDto {
   @ArrayMinSize(1)
   @ArrayMaxSize(50)
   photos: PhotoBatchItemDto[]
+
+  @ApiPropertyOptional({
+    description: 'Photo category to assign to all photos in this batch',
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  photoCategoryId?: string
 }

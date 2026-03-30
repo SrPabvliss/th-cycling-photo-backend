@@ -19,6 +19,7 @@
       "@generated/*": ["src/generated/*"],
       "@event-assets/*": ["src/modules/event-assets/*"],
       "@events/*": ["src/modules/events/*"],
+      "@photo-categories/*": ["src/modules/photo-categories/*"],
       "@photos/*": ["src/modules/photos/*"],
       "@classifications/*": ["src/modules/classifications/*"],
       "@locations/*": ["src/modules/locations/*"],

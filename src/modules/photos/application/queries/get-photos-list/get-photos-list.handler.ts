@@ -11,6 +11,11 @@ export class GetPhotosListHandler implements IQueryHandler<GetPhotosListQuery> {
 
   /** Retrieves a paginated list of photos for a given event. */
   async execute(query: GetPhotosListQuery): Promise<PaginatedResult<PhotoListProjection>> {
-    return this.readRepo.getPhotosList(query.eventId, query.pagination, query.classified)
+    return this.readRepo.getPhotosList(
+      query.eventId,
+      query.pagination,
+      query.classified,
+      query.photoCategoryId,
+    )
   }
 }

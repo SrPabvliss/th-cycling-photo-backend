@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Transform } from 'class-transformer'
-import { IsBoolean, IsInt, IsOptional, Max, Min } from 'class-validator'
+import { IsBoolean, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator'
 
 export class GetPhotosListDto {
   @ApiPropertyOptional({ description: 'Page number (defaults to 1)', example: 1 })
@@ -28,4 +28,9 @@ export class GetPhotosListDto {
   @IsBoolean()
   @IsOptional()
   classified?: boolean
+
+  @ApiPropertyOptional({ description: 'Filter by photo category UUID', format: 'uuid' })
+  @IsUUID()
+  @IsOptional()
+  photoCategoryId?: string
 }

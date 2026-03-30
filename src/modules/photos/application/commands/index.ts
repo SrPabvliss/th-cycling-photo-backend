@@ -1,3 +1,5 @@
+export { BulkAssignCategoryCommand } from './bulk-assign-category/bulk-assign-category.command'
+export { BulkAssignCategoryDto } from './bulk-assign-category/bulk-assign-category.dto'
 export { ConfirmPhotoBatchCommand } from './confirm-photo-batch/confirm-photo-batch.command'
 export { ConfirmPhotoBatchDto } from './confirm-photo-batch/confirm-photo-batch.dto'
 export { ConfirmRetouchedUploadCommand } from './confirm-retouched-upload/confirm-retouched-upload.command'

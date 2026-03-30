@@ -1,7 +1,10 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
+import { BulkCategoryResultProjection } from '@photo-categories/application/projections'
 import {
+  BulkAssignCategoryCommand,
+  BulkAssignCategoryDto,
   ConfirmPhotoBatchCommand,
   ConfirmPhotoBatchDto,
   ConfirmRetouchedUploadCommand,
@@ -75,7 +78,7 @@ export class PhotosController {
   })
   async findAll(@Param('eventId') eventId: string, @Query() dto: GetPhotosListDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetPhotosListQuery(eventId, pagination, dto.classified)
+    const query = new GetPhotosListQuery(eventId, pagination, dto.classified, dto.photoCategoryId)
     return this.queryBus.execute(query)
   }
 
@@ -181,6 +184,7 @@ export class PhotosController {
         contentType: p.contentType,
       })),
       new AuditContext(user.userId),
+      dto.photoCategoryId ?? null,
     )
     return this.commandBus.execute(command)
   }
@@ -236,5 +240,19 @@ export class PhotosController {
   async getDownloadUrl(@Param('id') id: string, @Query('type') type?: string) {
     const query = new GetPhotoDownloadUrlQuery(id, (type ?? 'original') as 'original' | 'retouched')
     return this.queryBus.execute(query)
+  }
+
+  @Roles('admin')
+  @Patch('photos/bulk-category')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Bulk assign or remove category from multiple photos' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Photos updated',
+    type: BulkCategoryResultProjection,
+  })
+  async bulkAssignCategory(@Body() dto: BulkAssignCategoryDto) {
+    const command = new BulkAssignCategoryCommand(dto.photoIds, dto.photoCategoryId ?? null)
+    return this.commandBus.execute(command)
   }
 }

@@ -50,12 +50,16 @@ describe('ConfirmRetouchedUploadHandler', () => {
       getResumePoint: jest.fn(),
       countAll: jest.fn(),
       sumAllFileSize: jest.fn(),
+      countByIds: jest.fn(),
+      findSimilar: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
     photoWriteRepo = {
       save: jest.fn(),
       saveMany: jest.fn(),
       delete: jest.fn(),
+      markAsClassified: jest.fn(),
+      bulkUpdateCategory: jest.fn(),
     } as jest.Mocked<IPhotoWriteRepository>
 
     storageAdapter = {

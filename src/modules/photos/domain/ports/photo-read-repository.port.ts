@@ -14,6 +14,7 @@ export interface IPhotoReadRepository {
     eventId: string,
     pagination: Pagination,
     classified?: boolean,
+    photoCategoryId?: string,
   ): Promise<PaginatedResult<PhotoListProjection>>
   getPhotoDetail(id: string): Promise<PhotoDetailProjection | null>
   searchPhotos(

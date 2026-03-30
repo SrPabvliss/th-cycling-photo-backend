@@ -114,6 +114,7 @@
       "^@generated/(.*)$": "<rootDir>/generated/$1",
       "^@event-assets/(.*)$": "<rootDir>/modules/event-assets/$1",
       "^@events/(.*)$": "<rootDir>/modules/events/$1",
+      "^@photo-categories/(.*)$": "<rootDir>/modules/photo-categories/$1",
       "^@photos/(.*)$": "<rootDir>/modules/photos/$1",
       "^@classifications/(.*)$": "<rootDir>/modules/classifications/$1",
       "^@locations/(.*)$": "<rootDir>/modules/locations/$1",

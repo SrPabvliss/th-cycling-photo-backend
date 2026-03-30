@@ -37,10 +37,12 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     eventId: string,
     pagination: Pagination,
     classified?: boolean,
+    photoCategoryId?: string,
   ): Promise<PaginatedResult<PhotoListProjection>> {
     const where: Prisma.PhotoWhereInput = { event_id: eventId }
     if (classified === true) where.classified_at = { not: null }
     if (classified === false) where.classified_at = null
+    if (photoCategoryId) where.photo_category_id = photoCategoryId
 
     const [photos, total] = await Promise.all([
       this.prisma.photo.findMany({

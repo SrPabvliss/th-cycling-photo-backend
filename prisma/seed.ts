@@ -87,6 +87,26 @@ async function seedLocations() {
   console.log(`Seeded ${provincesCount} provinces and ${cantonsCount} cantons`)
 }
 
+async function seedPhotoCategories() {
+  const categories = [
+    'Reconocimiento de pista',
+    'Entrenamientos oficiales',
+    'Competencia',
+    'Premiación',
+    'Social',
+  ]
+
+  for (const name of categories) {
+    await prisma.photoCategory.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    })
+  }
+
+  console.log(`Seeded ${categories.length} photo categories`)
+}
+
 async function seedRoles() {
   for (const roleName of ['admin', 'classifier'] as const) {
     await prisma.role.upsert({
@@ -290,6 +310,7 @@ async function main() {
 
   await seedCountries()
   await seedLocations()
+  await seedPhotoCategories()
   await seedRoles()
   await seedAdminUser()
   await seedDemoData()
