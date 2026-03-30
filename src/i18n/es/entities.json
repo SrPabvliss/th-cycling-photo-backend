@@ -15,5 +15,6 @@
   "delivery_link": "Enlace de entrega",
   "order": "Orden",
   "notification": "Notificación",
-  "event_asset": "Recurso del evento"
+  "event_asset": "Recurso del evento",
+  "photo_category": "Categoría de fotos"
 }

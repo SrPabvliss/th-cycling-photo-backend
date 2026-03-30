@@ -19,6 +19,7 @@ import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
 import { OrdersModule } from './modules/orders/orders.module'
+import { PhotoCategoriesModule } from './modules/photo-categories/photo-categories.module'
 import { PhotosModule } from './modules/photos/photos.module'
 import { PreviewsModule } from './modules/previews/previews.module'
 import { UsersModule } from './modules/users/users.module'
@@ -65,6 +66,7 @@ import { StorageModule } from './shared/storage/storage.module'
     EventsModule,
     LocationsModule,
     OrdersModule,
+    PhotoCategoriesModule,
     PhotosModule,
     PreviewsModule,
     UsersModule,
