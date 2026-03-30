@@ -50,4 +50,13 @@ export class PhotoWriteRepository implements IPhotoWriteRepository {
       })
     }
   }
+
+  /** Bulk-updates photo_category_id on multiple photos. Returns count of updated records. */
+  async bulkUpdateCategory(photoIds: string[], photoCategoryId: string | null): Promise<number> {
+    const result = await this.prisma.photo.updateMany({
+      where: { id: { in: photoIds } },
+      data: { photo_category_id: photoCategoryId },
+    })
+    return result.count
+  }
 }

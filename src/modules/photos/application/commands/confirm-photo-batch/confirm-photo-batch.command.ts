@@ -12,5 +12,6 @@ export class ConfirmPhotoBatchCommand {
     public readonly eventId: string,
     public readonly photos: PhotoBatchItem[],
     public readonly audit?: AuditContext,
+    public readonly photoCategoryId?: string | null,
   ) {}
 }

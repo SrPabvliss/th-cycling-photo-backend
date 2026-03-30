@@ -54,6 +54,8 @@ describe('ConfirmPhotoBatchHandler', () => {
       save: jest.fn(),
       saveMany: jest.fn(),
       delete: jest.fn(),
+      markAsClassified: jest.fn(),
+      bulkUpdateCategory: jest.fn(),
     } as jest.Mocked<IPhotoWriteRepository>
 
     embeddingQueue = { add: jest.fn(), addBulk: jest.fn() }

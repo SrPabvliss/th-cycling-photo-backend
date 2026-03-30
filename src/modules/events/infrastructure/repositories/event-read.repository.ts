@@ -160,7 +160,10 @@ export class EventReadRepository implements IEventReadRepository {
         is_featured: true,
         _count: { select: { photos: true } },
         assets: { select: { asset_type: true, storage_key: true } },
-        photo_categories: { select: { id: true, name: true }, orderBy: { name: 'asc' } },
+        photo_categories: {
+          select: { photo_category: { select: { id: true, name: true } } },
+          orderBy: { photo_category: { name: 'asc' } },
+        },
       },
     })
 
@@ -181,8 +184,8 @@ export class EventReadRepository implements IEventReadRepository {
         url: this.storage.getPublicUrl(a.storage_key),
       })),
       photoCategories: event.photo_categories.map((c) => ({
-        id: c.id,
-        name: c.name,
+        id: c.photo_category.id,
+        name: c.photo_category.name,
       })),
     }
   }

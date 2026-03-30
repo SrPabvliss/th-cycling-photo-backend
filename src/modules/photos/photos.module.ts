@@ -1,6 +1,7 @@
 import { BullModule } from '@nestjs/bullmq'
 import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
+import { BulkAssignCategoryHandler } from '@photos/application/commands/bulk-assign-category/bulk-assign-category.handler'
 import { ConfirmPhotoBatchHandler } from '@photos/application/commands/confirm-photo-batch/confirm-photo-batch.handler'
 import { ConfirmRetouchedUploadHandler } from '@photos/application/commands/confirm-retouched-upload/confirm-retouched-upload.handler'
 import { GeneratePresignedUrlHandler } from '@photos/application/commands/generate-presigned-url/generate-presigned-url.handler'
@@ -20,6 +21,7 @@ import { PhotosController } from '@photos/presentation/controllers/photos.contro
 import { EventsModule } from '../events/events.module'
 
 const CommandHandlers = [
+  BulkAssignCategoryHandler,
   ConfirmPhotoBatchHandler,
   ConfirmRetouchedUploadHandler,
   GeneratePresignedUrlHandler,

@@ -5,5 +5,6 @@ export class GetPhotosListQuery {
     public readonly eventId: string,
     public readonly pagination: Pagination,
     public readonly classified?: boolean,
+    public readonly photoCategoryId?: string,
   ) {}
 }

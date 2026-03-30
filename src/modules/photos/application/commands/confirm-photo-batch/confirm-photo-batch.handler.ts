@@ -38,6 +38,7 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
         storageKey: item.objectKey,
         fileSize: BigInt(item.fileSize),
         mimeType: item.contentType,
+        photoCategoryId: command.photoCategoryId ?? null,
       })
       if (command.audit) photo.setCreatedBy(command.audit.userId)
       return photo
