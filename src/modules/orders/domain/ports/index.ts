@@ -6,4 +6,5 @@ export {
 export {
   type IOrderWriteRepository,
   ORDER_WRITE_REPOSITORY,
+  type OrderSnapData,
 } from './order-write-repository.port'

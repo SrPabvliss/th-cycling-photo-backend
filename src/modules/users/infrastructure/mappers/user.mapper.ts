@@ -1,4 +1,4 @@
-import type { Prisma, User as PrismaUser } from '@generated/prisma/client'
+import { Prisma, type User as PrismaUser } from '@generated/prisma/client'
 import type { UserDetailProjection, UserListProjection } from '@users/application/projections'
 import { User } from '@users/domain/entities'
 
@@ -8,21 +8,25 @@ type UserWithRoles = PrismaUser & {
   user_roles: Array<{ role: { name: string } }>
 }
 
-type UserListSelect = {
-  id: string
-  email: string
-  first_name: string | null
-  last_name: string | null
-  phone: string | null
-  avatar_url: string | null
-  is_active: boolean
-  created_at: Date
-  user_roles: Array<{ role: { name: string } }>
-}
+export const userListSelectConfig = {
+  id: true,
+  email: true,
+  first_name: true,
+  last_name: true,
+  avatar_url: true,
+  is_active: true,
+  created_at: true,
+  user_roles: { include: { role: true } },
+} satisfies Prisma.UserSelect
 
-type UserDetailSelect = UserListSelect & {
-  last_login_at: Date | null
-}
+export type UserListSelect = Prisma.UserGetPayload<{ select: typeof userListSelectConfig }>
+
+export const userDetailSelectConfig = {
+  ...userListSelectConfig,
+  last_login_at: true,
+} satisfies Prisma.UserSelect
+
+export type UserDetailSelect = Prisma.UserGetPayload<{ select: typeof userDetailSelectConfig }>
 
 function getDiceBearUrl(email: string): string {
   return `${DICEBEAR_BASE}?seed=${encodeURIComponent(email)}`
@@ -35,7 +39,6 @@ export function toPersistence(entity: User): Prisma.UserUncheckedCreateInput {
     password_hash: entity.passwordHash,
     first_name: entity.firstName,
     last_name: entity.lastName,
-    phone: entity.phone,
     avatar_url: entity.avatarUrl,
     avatar_storage_key: entity.avatarStorageKey,
     is_active: entity.isActive,
@@ -51,7 +54,6 @@ export function toEntity(record: UserWithRoles): User {
     passwordHash: record.password_hash,
     firstName: record.first_name,
     lastName: record.last_name,
-    phone: record.phone,
     avatarUrl: record.avatar_url,
     avatarStorageKey: record.avatar_storage_key,
     isActive: record.is_active,
@@ -67,7 +69,6 @@ export function toEntityFromRaw(record: PrismaUser): User {
     passwordHash: record.password_hash,
     firstName: record.first_name,
     lastName: record.last_name,
-    phone: record.phone,
     avatarUrl: record.avatar_url,
     avatarStorageKey: record.avatar_storage_key,
     isActive: record.is_active,
@@ -82,7 +83,6 @@ export function toListProjection(record: UserListSelect): UserListProjection {
     email: record.email,
     firstName: record.first_name,
     lastName: record.last_name,
-    phone: record.phone,
     avatarUrl: record.avatar_url ?? getDiceBearUrl(record.email),
     isActive: record.is_active,
     roles: record.user_roles.map((ur) => ur.role.name),
@@ -96,7 +96,6 @@ export function toDetailProjection(record: UserDetailSelect): UserDetailProjecti
     email: record.email,
     firstName: record.first_name,
     lastName: record.last_name,
-    phone: record.phone,
     avatarUrl: record.avatar_url ?? getDiceBearUrl(record.email),
     isActive: record.is_active,
     roles: record.user_roles.map((ur) => ur.role.name),

@@ -9,7 +9,7 @@ import * as PhotoCategoryMapper from '../mappers/photo-category.mapper'
 export class PhotoCategoryReadRepository implements IPhotoCategoryReadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findById(id: string): Promise<PhotoCategory | null> {
+  async findById(id: number): Promise<PhotoCategory | null> {
     const record = await this.prisma.photoCategory.findFirst({ where: { id } })
     return record ? PhotoCategoryMapper.toEntity(record) : null
   }
@@ -21,7 +21,7 @@ export class PhotoCategoryReadRepository implements IPhotoCategoryReadRepository
 
   async getAll(): Promise<PhotoCategoryProjection[]> {
     const records = await this.prisma.photoCategory.findMany({
-      select: { id: true, name: true, _count: { select: { photos: true } } },
+      select: PhotoCategoryMapper.photoCategorySelectConfig,
       orderBy: { name: 'asc' },
     })
     return records.map(PhotoCategoryMapper.toProjection)
@@ -32,7 +32,7 @@ export class PhotoCategoryReadRepository implements IPhotoCategoryReadRepository
       where: { event_id: eventId },
       select: {
         photo_category: {
-          select: { id: true, name: true, _count: { select: { photos: true } } },
+          select: PhotoCategoryMapper.photoCategorySelectConfig,
         },
       },
       orderBy: { photo_category: { name: 'asc' } },

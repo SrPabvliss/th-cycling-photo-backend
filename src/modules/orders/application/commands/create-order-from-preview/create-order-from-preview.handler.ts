@@ -1,6 +1,5 @@
-import { FindOrCreateCustomerCommand } from '@customers/application/commands'
 import { Inject } from '@nestjs/common'
-import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { NotificationsService } from '@notifications/application/services/notifications.service'
 import { Order } from '@orders/domain/entities'
 import {
@@ -31,7 +30,6 @@ export class CreateOrderFromPreviewHandler
     private readonly previewReadRepo: IPreviewLinkReadRepository,
     @Inject(PREVIEW_LINK_WRITE_REPOSITORY)
     private readonly previewWriteRepo: IPreviewLinkWriteRepository,
-    private readonly commandBus: CommandBus,
     private readonly notifications: NotificationsService,
   ) {}
 
@@ -65,42 +63,30 @@ export class CreateOrderFromPreviewHandler
       throw AppException.businessRule('order.photos_not_in_preview')
     }
 
-    // 4. Find or create customer
-    const { id: customerId } = await this.commandBus.execute<
-      FindOrCreateCustomerCommand,
-      EntityIdProjection
-    >(
-      new FindOrCreateCustomerCommand(
-        command.firstName,
-        command.lastName,
-        command.whatsapp,
-        command.email,
-      ),
-    )
-
-    // 5. Create order
+    // 4. Create order with userId (user is already authenticated)
     const order = Order.create({
       previewLinkId: previewLink.id,
       eventId: previewLink.eventId,
-      customerId,
+      userId: command.userId,
       notes: command.notes,
+      bibNumber: command.bibNumber,
     })
 
     const saved = await this.orderWriteRepo.save(order)
     await this.orderWriteRepo.savePhotos(saved.id, command.photoIds)
 
-    // 6. Transition preview link to converted (if first order)
+    // 5. Transition preview link to converted (if first order)
     if (previewLink.status === PreviewLinkStatus.ACTIVE) {
       previewLink.markConverted()
       await this.previewWriteRepo.save(previewLink)
     }
 
-    // 7. Emit notification (fetch detail to get eventName)
+    // 6. Emit notification (fetch detail to get eventName)
     const detail = await this.orderReadRepo.getDetail(saved.id)
     this.notifications.emitOrderCreated({
       orderId: saved.id,
       eventName: detail?.eventName ?? '',
-      customerName: `${command.firstName} ${command.lastName}`,
+      customerName: detail?.userName ?? '',
       photoCount: command.photoIds.length,
       createdAt: saved.createdAt,
     })

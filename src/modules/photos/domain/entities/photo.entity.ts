@@ -32,7 +32,7 @@ export class Photo {
     public retouchedStorageKey: string | null,
     public retouchedFileSize: bigint | null,
     public retouchedAt: Date | null,
-    public photoCategoryId: string | null,
+    public photoCategoryId: number | null,
   ) {}
 
   static create(data: {
@@ -44,7 +44,7 @@ export class Photo {
     width?: number | null
     height?: number | null
     capturedAt?: Date | null
-    photoCategoryId?: string | null
+    photoCategoryId?: number | null
   }): Photo {
     Photo.validateFilename(data.filename)
     Photo.validateMimeType(data.mimeType)
@@ -129,7 +129,7 @@ export class Photo {
     retouchedStorageKey: string | null
     retouchedFileSize: bigint | null
     retouchedAt: Date | null
-    photoCategoryId?: string | null
+    photoCategoryId?: number | null
   }): Photo {
     return new Photo(
       data.id,

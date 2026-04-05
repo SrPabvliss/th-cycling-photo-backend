@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { IsUUID } from 'class-validator'
+import { IsInt, Min } from 'class-validator'
 
 export class AssignCategoryToEventDto {
-  @ApiProperty({ description: 'Global photo category UUID to assign', format: 'uuid' })
-  @IsUUID()
-  photoCategoryId: string
+  @ApiProperty({ description: 'Global photo category ID to assign', example: 1 })
+  @IsInt()
+  @Min(1)
+  photoCategoryId: number
 }

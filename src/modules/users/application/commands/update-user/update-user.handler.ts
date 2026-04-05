@@ -20,7 +20,6 @@ export class UpdateUserHandler implements ICommandHandler<UpdateUserCommand> {
     user.update({
       firstName: command.firstName,
       lastName: command.lastName,
-      phone: command.phone,
     })
 
     await this.writeRepo.save(user)

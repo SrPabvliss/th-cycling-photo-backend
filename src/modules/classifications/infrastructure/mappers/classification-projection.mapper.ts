@@ -1,11 +1,11 @@
-import type { ClassificationDetailSelect } from '../constants'
+import type { ClassificationDetailSelect } from './cyclist.mapper'
 import { toDetailProjection } from './cyclist.mapper'
 
 /**
- * Maps a nested detected_cyclist Prisma record (inside a Photo query)
- * to a DetectedCyclistProjection.
- * Re-exports the cyclist detail mapper for use by the photos module.
+ * Maps a nested detected_participant Prisma record (inside a Photo query)
+ * to a DetectedParticipantProjection.
+ * Re-exports the participant detail mapper for use by the photos module.
  */
-export function toDetectedCyclistProjection(record: ClassificationDetailSelect) {
+export function toDetectedParticipantProjection(record: ClassificationDetailSelect) {
   return toDetailProjection(record)
 }

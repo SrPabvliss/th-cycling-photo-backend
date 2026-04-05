@@ -1,86 +1,90 @@
-import type { DetectedCyclist, EquipmentColor, PlateNumber } from '@classifications/domain/entities'
-import type { BulkClassifyInput, ICyclistWriteRepository } from '@classifications/domain/ports'
+import type {
+  DetectedParticipant,
+  GearColor,
+  ParticipantIdentifier,
+} from '@classifications/domain/entities'
+import type { BulkClassifyInput, IParticipantWriteRepository } from '@classifications/domain/ports'
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
-import * as CyclistMapper from '../mappers/cyclist.mapper'
+import * as ParticipantMapper from '../mappers/cyclist.mapper'
 
 @Injectable()
-export class CyclistWriteRepository implements ICyclistWriteRepository {
+export class ParticipantWriteRepository implements IParticipantWriteRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Creates or updates a detected cyclist record. */
-  async saveCyclist(cyclist: DetectedCyclist): Promise<DetectedCyclist> {
-    const data = CyclistMapper.toCyclistPersistence(cyclist)
-    const saved = await this.prisma.detectedCyclist.upsert({
-      where: { id: cyclist.id },
+  /** Creates or updates a detected participant record. */
+  async saveParticipant(participant: DetectedParticipant): Promise<DetectedParticipant> {
+    const data = ParticipantMapper.toParticipantPersistence(participant)
+    const saved = await this.prisma.detectedParticipant.upsert({
+      where: { id: participant.id },
       create: data,
       update: data,
     })
-    return CyclistMapper.toEntity(saved)
+    return ParticipantMapper.toEntity(saved)
   }
 
-  /** Creates or updates a plate number record. */
-  async savePlateNumber(plate: PlateNumber): Promise<PlateNumber> {
-    const data = CyclistMapper.toPlatePersistence(plate)
-    const saved = await this.prisma.plateNumber.upsert({
-      where: { id: plate.id },
+  /** Creates or updates a participant identifier record. */
+  async saveIdentifier(identifier: ParticipantIdentifier): Promise<ParticipantIdentifier> {
+    const data = ParticipantMapper.toIdentifierPersistence(identifier)
+    const saved = await this.prisma.participantIdentifier.upsert({
+      where: { id: identifier.id },
       create: data,
       update: data,
     })
-    return CyclistMapper.toPlateEntity(saved)
+    return ParticipantMapper.toIdentifierEntity(saved)
   }
 
-  /** Saves a batch of equipment colors. */
-  async saveColors(colors: EquipmentColor[]): Promise<void> {
+  /** Saves a batch of gear colors. */
+  async saveColors(colors: GearColor[]): Promise<void> {
     if (colors.length === 0) return
-    await this.prisma.equipmentColor.createMany({
-      data: colors.map(CyclistMapper.toColorPersistence),
+    await this.prisma.gearColor.createMany({
+      data: colors.map(ParticipantMapper.toColorPersistence),
     })
   }
 
-  /** Deletes all equipment colors for a given cyclist. */
-  async deleteColorsByCyclist(cyclistId: string): Promise<void> {
-    await this.prisma.equipmentColor.deleteMany({
-      where: { detected_cyclist_id: cyclistId },
+  /** Deletes all gear colors for a given participant. */
+  async deleteColorsByParticipant(participantId: string): Promise<void> {
+    await this.prisma.gearColor.deleteMany({
+      where: { detected_participant_id: participantId },
     })
   }
 
-  /** Deletes the plate number for a given cyclist. */
-  async deletePlateNumberByCyclist(cyclistId: string): Promise<void> {
-    await this.prisma.plateNumber.deleteMany({
-      where: { detected_cyclist_id: cyclistId },
+  /** Deletes the identifier for a given participant. */
+  async deleteIdentifierByParticipant(participantId: string): Promise<void> {
+    await this.prisma.participantIdentifier.deleteMany({
+      where: { detected_participant_id: participantId },
     })
   }
 
-  /** Deletes a cyclist and all related records (cascade). */
-  async deleteCyclist(id: string): Promise<void> {
-    await this.prisma.detectedCyclist.delete({ where: { id } })
+  /** Deletes a participant and all related records (cascade). */
+  async deleteParticipant(id: string): Promise<void> {
+    await this.prisma.detectedParticipant.delete({ where: { id } })
   }
 
   /** Applies the same classification to multiple photos in a single transaction. */
   async bulkClassify(input: BulkClassifyInput): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // Delete existing classifications for all target photos
-      await tx.detectedCyclist.deleteMany({
+      await tx.detectedParticipant.deleteMany({
         where: { photo_id: { in: input.photoIds } },
       })
 
-      // Create new cyclists
-      await tx.detectedCyclist.createMany({
-        data: input.cyclists.map(CyclistMapper.toCyclistPersistence),
+      // Create new participants
+      await tx.detectedParticipant.createMany({
+        data: input.participants.map(ParticipantMapper.toParticipantPersistence),
       })
 
-      // Create plate numbers
-      if (input.plateNumbers.length > 0) {
-        await tx.plateNumber.createMany({
-          data: input.plateNumbers.map(CyclistMapper.toPlatePersistence),
+      // Create identifiers
+      if (input.identifiers.length > 0) {
+        await tx.participantIdentifier.createMany({
+          data: input.identifiers.map(ParticipantMapper.toIdentifierPersistence),
         })
       }
 
-      // Create equipment colors
+      // Create gear colors
       if (input.colors.length > 0) {
-        await tx.equipmentColor.createMany({
-          data: input.colors.map(CyclistMapper.toColorPersistence),
+        await tx.gearColor.createMany({
+          data: input.colors.map(ParticipantMapper.toColorPersistence),
         })
       }
 

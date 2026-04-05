@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common'
 import type { OrderDetailProjection, OrderListProjection } from '@orders/application/projections'
 import type { Order } from '@orders/domain/entities'
 import type { IOrderReadRepository, OrderListFilters } from '@orders/domain/ports'
+import type { PendingRetouchOrderProjection } from '@photos/application/projections'
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { PrismaService } from '@shared/infrastructure'
 import * as OrderMapper from '../mappers/order.mapper'
@@ -13,9 +14,12 @@ const ORDER_LIST_SELECT = {
   created_at: true,
   paid_at: true,
   delivered_at: true,
-  customer: { select: { first_name: true, last_name: true, whatsapp: true } },
+  snap_first_name: true,
+  snap_last_name: true,
+  snap_phone: true,
+  user: { select: { first_name: true, last_name: true } },
   event: { select: { name: true } },
-  _count: { select: { photos: true } },
+  _count: { select: { items: true } },
   delivery_link: { select: { id: true } },
 } as const
 
@@ -39,13 +43,11 @@ export class OrderReadRepository implements IOrderReadRepository {
     if (filters.eventId) where.event_id = filters.eventId
     if (filters.status) where.status = filters.status as Prisma.EnumOrderStatusFilter
     if (filters.search) {
-      where.customer = {
-        OR: [
-          { first_name: { contains: filters.search, mode: 'insensitive' } },
-          { last_name: { contains: filters.search, mode: 'insensitive' } },
-          { whatsapp: { contains: filters.search, mode: 'insensitive' } },
-        ],
-      }
+      where.OR = [
+        { snap_first_name: { contains: filters.search, mode: 'insensitive' } },
+        { snap_last_name: { contains: filters.search, mode: 'insensitive' } },
+        { snap_phone: { contains: filters.search, mode: 'insensitive' } },
+      ]
     }
 
     const [orders, total] = await Promise.all([
@@ -66,10 +68,10 @@ export class OrderReadRepository implements IOrderReadRepository {
         createdAt: o.created_at,
         paidAt: o.paid_at,
         deliveredAt: o.delivered_at,
-        customerName: `${o.customer.first_name} ${o.customer.last_name}`,
-        customerWhatsapp: o.customer.whatsapp,
+        userName: [o.user.first_name, o.user.last_name].filter(Boolean).join(' '),
+        snapWhatsapp: o.snap_phone,
         eventName: o.event.name,
-        photoCount: o._count.photos,
+        photoCount: o._count.items,
         hasDeliveryLink: o.delivery_link !== null,
       })),
       total,
@@ -77,7 +79,7 @@ export class OrderReadRepository implements IOrderReadRepository {
     )
   }
 
-  /** Retrieves order detail with customer, photos, and delivery link. */
+  /** Retrieves order detail with user, photos, and delivery link. */
   async getDetail(id: string): Promise<OrderDetailProjection | null> {
     const record = await this.prisma.order.findFirst({
       where: { id },
@@ -89,12 +91,20 @@ export class OrderReadRepository implements IOrderReadRepository {
         paid_at: true,
         delivered_at: true,
         cancelled_at: true,
-        customer: {
-          select: { id: true, first_name: true, last_name: true, whatsapp: true, email: true },
-        },
+        snap_first_name: true,
+        snap_last_name: true,
+        snap_phone: true,
+        snap_email: true,
+        user: { select: { first_name: true, last_name: true } },
         event: { select: { name: true } },
         preview_link: { select: { token: true } },
-        photos: { select: { photo: { select: { id: true, filename: true, storage_key: true } } } },
+        items: {
+          select: {
+            photo: {
+              select: { id: true, filename: true, storage_key: true, retouched_storage_key: true },
+            },
+          },
+        },
         delivery_link: {
           select: { token: true, status: true, expires_at: true, download_count: true },
         },
@@ -111,19 +121,21 @@ export class OrderReadRepository implements IOrderReadRepository {
       paidAt: record.paid_at,
       deliveredAt: record.delivered_at,
       cancelledAt: record.cancelled_at,
-      customer: {
-        id: record.customer.id,
-        firstName: record.customer.first_name,
-        lastName: record.customer.last_name,
-        whatsapp: record.customer.whatsapp,
-        email: record.customer.email,
-      },
+      userName: [record.user.first_name, record.user.last_name].filter(Boolean).join(' '),
+      snapFirstName: record.snap_first_name,
+      snapLastName: record.snap_last_name,
+      snapWhatsapp: record.snap_phone,
+      snapEmail: record.snap_email,
       eventName: record.event.name,
-      previewLinkToken: record.preview_link.token,
-      photos: record.photos.map((op) => ({
-        id: op.photo.id,
-        filename: op.photo.filename,
-        storageKey: op.photo.storage_key,
+      previewLinkToken: record.preview_link?.token ?? null,
+      retouchProgress: {
+        total: record.items.length,
+        retouched: record.items.filter((oi) => !!oi.photo.retouched_storage_key).length,
+      },
+      photos: record.items.map((oi) => ({
+        id: oi.photo.id,
+        filename: oi.photo.filename,
+        storageKey: oi.photo.storage_key,
       })),
       deliveryLink: record.delivery_link
         ? {
@@ -160,5 +172,51 @@ export class OrderReadRepository implements IOrderReadRepository {
       select: { photo_id: true },
     })
     return photos.map((p) => p.photo_id)
+  }
+
+  /** Returns paid orders with at least one un-retouched photo, ordered FIFO. */
+  async getPendingRetouch(cdnUrl: string | undefined): Promise<PendingRetouchOrderProjection[]> {
+    const orders = await this.prisma.order.findMany({
+      where: { status: 'paid' },
+      orderBy: { created_at: 'asc' },
+      select: {
+        id: true,
+        created_at: true,
+        event: { select: { name: true } },
+        user: { select: { first_name: true, last_name: true } },
+        items: {
+          select: {
+            photo: {
+              select: {
+                id: true,
+                filename: true,
+                storage_key: true,
+                retouched_storage_key: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const buildThumbnailUrl = (storageKey: string): string => {
+      if (cdnUrl) return `${cdnUrl}/${storageKey}`
+      return storageKey
+    }
+
+    return orders
+      .filter((o) => o.items.some((i) => !i.photo.retouched_storage_key))
+      .map((o) => ({
+        orderId: o.id,
+        orderCreatedAt: o.created_at,
+        eventName: o.event.name,
+        userName: [o.user.first_name, o.user.last_name].filter(Boolean).join(' '),
+        photos: o.items.map((i) => ({
+          id: i.photo.id,
+          filename: i.photo.filename,
+          thumbnailUrl: buildThumbnailUrl(i.photo.storage_key),
+          isRetouched: !!i.photo.retouched_storage_key,
+        })),
+      }))
   }
 }

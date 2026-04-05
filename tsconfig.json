@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
+    "types": ["node", "jest"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
     "esModuleInterop": true,
+    "strictPropertyInitialization": false,
     "isolatedModules": true,
     "declaration": true,
     "removeComments": true,
@@ -24,11 +26,12 @@
       "@classifications/*": ["src/modules/classifications/*"],
       "@locations/*": ["src/modules/locations/*"],
       "@users/*": ["src/modules/users/*"],
-      "@customers/*": ["src/modules/customers/*"],
       "@previews/*": ["src/modules/previews/*"],
       "@deliveries/*": ["src/modules/deliveries/*"],
       "@orders/*": ["src/modules/orders/*"],
-      "@notifications/*": ["src/modules/notifications/*"]
+      "@notifications/*": ["src/modules/notifications/*"],
+      "@auth/*": ["src/modules/auth/*"],
+      "@cart/*": ["src/modules/cart/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

@@ -56,10 +56,17 @@ describe('Photos Module (e2e)', () => {
     const futureDate = new Date()
     futureDate.setFullYear(futureDate.getFullYear() + 1)
 
+    const eventType = await prisma.eventType.upsert({
+      where: { name: 'road_race' },
+      update: {},
+      create: { name: 'road_race' },
+    })
+
     const event = await prisma.event.create({
       data: {
         name: 'E2E Photos Test Event',
         event_date: futureDate,
+        event_type_id: eventType.id,
       },
     })
     testEventId = event.id
@@ -67,9 +74,9 @@ describe('Photos Module (e2e)', () => {
 
   afterAll(async () => {
     // Clean up test data respecting FK order
-    await prisma.equipmentColor.deleteMany()
-    await prisma.plateNumber.deleteMany()
-    await prisma.detectedCyclist.deleteMany()
+    await prisma.gearColor.deleteMany()
+    await prisma.participantIdentifier.deleteMany()
+    await prisma.detectedParticipant.deleteMany()
     await prisma.photo.deleteMany()
     await prisma.event.deleteMany()
     await app.close()
@@ -169,8 +176,8 @@ describe('Photos Module (e2e)', () => {
       expect(photo).toHaveProperty('filename', 'race-photo-001.jpg')
       expect(photo).toHaveProperty('mimeType', 'image/jpeg')
       expect(photo).toHaveProperty('status', 'pending')
-      expect(photo).toHaveProperty('detectedCyclists')
-      expect(photo.detectedCyclists).toEqual([])
+      expect(photo).toHaveProperty('detectedParticipants')
+      expect(photo.detectedParticipants).toEqual([])
     })
 
     it('PATCH /api/v1/photos/:id/classify — should classify photo with cyclist data', async () => {
@@ -208,15 +215,15 @@ describe('Photos Module (e2e)', () => {
       const photo = response.body.data
       expect(photo.status).toBe('completed')
       expect(photo.processedAt).not.toBeNull()
-      expect(photo.detectedCyclists).toHaveLength(1)
+      expect(photo.detectedParticipants).toHaveLength(1)
 
-      const cyclist = photo.detectedCyclists[0]
-      expect(cyclist).toHaveProperty('confidenceScore', 0.95)
-      expect(cyclist).toHaveProperty('boundingBox')
-      expect(cyclist.plateNumber).toHaveProperty('number', 42)
-      expect(cyclist.equipmentColors).toHaveLength(1)
-      expect(cyclist.equipmentColors[0]).toHaveProperty('itemType', 'jersey')
-      expect(cyclist.equipmentColors[0]).toHaveProperty('colorName', 'Red')
+      const participant = photo.detectedParticipants[0]
+      expect(participant).toHaveProperty('confidenceScore', 0.95)
+      expect(participant).toHaveProperty('boundingBox')
+      expect(participant.participantIdentifier).toHaveProperty('value', '42')
+      expect(participant.gearColors).toHaveLength(1)
+      expect(participant.gearColors[0]).toHaveProperty('gearTypeName', 'jersey')
+      expect(participant.gearColors[0]).toHaveProperty('colorName', 'Red')
     })
 
     it('GET /api/v1/photos/search?plateNumber=42 — should find photo by plate number', async () => {
@@ -328,8 +335,9 @@ describe('Photos Module (e2e)', () => {
       const futureDate = new Date()
       futureDate.setFullYear(futureDate.getFullYear() + 1)
 
+      const eventType = await prisma.eventType.findFirst({ where: { name: 'road_race' } })
       const emptyEvent = await prisma.event.create({
-        data: { name: 'Empty Event', event_date: futureDate },
+        data: { name: 'Empty Event', event_date: futureDate, event_type_id: eventType!.id },
       })
 
       const response = await request(app.getHttpServer())

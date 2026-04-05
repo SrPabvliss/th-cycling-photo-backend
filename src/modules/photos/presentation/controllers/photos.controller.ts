@@ -17,6 +17,7 @@ import {
 import {
   ConfirmBatchProjection,
   DownloadUrlProjection,
+  PendingRetouchOrderProjection,
   PhotoDetailProjection,
   PhotoListProjection,
   PresignedUrlProjection,
@@ -24,6 +25,7 @@ import {
 } from '@photos/application/projections'
 import {
   FindSimilarPhotosQuery,
+  GetPendingRetouchQuery,
   GetPhotoDetailQuery,
   GetPhotoDownloadUrlQuery,
   GetPhotosListDto,
@@ -97,6 +99,21 @@ export class PhotosController {
     const { page, limit, ...filters } = dto
     const query = new SearchPhotosQuery(filters, pagination)
     return this.queryBus.execute(query)
+  }
+
+  /** Returns paid orders with photos pending retouching, ordered FIFO. */
+  @Roles('admin')
+  @Get('photos/pending-retouch')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'Get photos pending retouching grouped by order' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Pending retouch orders',
+    type: PendingRetouchOrderProjection,
+    isArray: true,
+  })
+  async getPendingRetouch() {
+    return this.queryBus.execute(new GetPendingRetouchQuery())
   }
 
   /** Finds visually similar photos within the same event using vector embeddings. */

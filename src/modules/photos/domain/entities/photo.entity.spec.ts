@@ -98,10 +98,10 @@ describe('Photo Entity', () => {
     it('should set status to failed with reason and processedAt', () => {
       const photo = Photo.create(validData)
 
-      photo.markAsFailed('no_cyclist')
+      photo.markAsFailed('no_participant')
 
       expect(photo.status).toBe('failed')
-      expect(photo.unclassifiedReason).toBe('no_cyclist')
+      expect(photo.unclassifiedReason).toBe('no_participant')
       expect(photo.processedAt).toBeInstanceOf(Date)
     })
   })

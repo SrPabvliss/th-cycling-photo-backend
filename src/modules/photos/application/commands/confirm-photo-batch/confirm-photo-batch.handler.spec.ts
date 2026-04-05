@@ -25,6 +25,7 @@ describe('ConfirmPhotoBatchHandler', () => {
     location: 'Ambato',
     provinceId: null,
     cantonId: null,
+    eventTypeId: 1,
     status: 'active',
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -48,6 +49,8 @@ describe('ConfirmPhotoBatchHandler', () => {
       countAll: jest.fn(),
       getPublicEventsList: jest.fn(),
       getPublicEventDetail: jest.fn(),
+      getPublicPhotos: jest.fn(),
+      existsActiveEvent: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoWriteRepo = {

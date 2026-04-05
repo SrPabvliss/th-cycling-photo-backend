@@ -1,16 +1,21 @@
-import type { Prisma, PhotoCategory as PrismaPhotoCategory } from '@generated/prisma/client'
+import { Prisma, type PhotoCategory as PrismaPhotoCategory } from '@generated/prisma/client'
 import type { PhotoCategoryProjection } from '../../application/projections'
 import { PhotoCategory } from '../../domain/entities'
 
-type PhotoCategorySelect = {
-  id: string
-  name: string
-  _count: { photos: number }
-}
+export const photoCategorySelectConfig = {
+  id: true,
+  name: true,
+  _count: { select: { photos: true } },
+} satisfies Prisma.PhotoCategorySelect
 
-export function toPersistence(entity: PhotoCategory): Prisma.PhotoCategoryUncheckedCreateInput {
+export type PhotoCategorySelect = Prisma.PhotoCategoryGetPayload<{
+  select: typeof photoCategorySelectConfig
+}>
+
+export function toPersistence(
+  entity: PhotoCategory,
+): Omit<Prisma.PhotoCategoryUncheckedCreateInput, 'id'> {
   return {
-    id: entity.id,
     name: entity.name,
     created_at: entity.createdAt,
   }

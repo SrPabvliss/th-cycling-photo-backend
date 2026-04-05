@@ -60,8 +60,8 @@ async function seedLocations() {
   for (const province of provincesData) {
     const upserted = await prisma.province.upsert({
       where: { code: province.code },
-      update: { name: province.name, country_id: ecuador?.id ?? null },
-      create: { name: province.name, code: province.code, country_id: ecuador?.id ?? null },
+      update: { name: province.name, country_id: ecuador!.id },
+      create: { name: province.name, code: province.code, country_id: ecuador!.id },
     })
 
     provincesCount++
@@ -87,6 +87,80 @@ async function seedLocations() {
   console.log(`Seeded ${provincesCount} provinces and ${cantonsCount} cantons`)
 }
 
+async function seedEventTypes() {
+  const types = ['Downhill', 'Ruta', 'Trail', 'Rally', 'Triatlón']
+
+  for (const name of types) {
+    await prisma.eventType.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    })
+  }
+
+  console.log(`Seeded ${types.length} event types`)
+}
+
+async function seedParticipantCategories() {
+  const downhill = await prisma.eventType.findUnique({ where: { name: 'Downhill' } })
+  if (!downhill) {
+    console.log('Downhill event type not found — skipping participant categories')
+    return
+  }
+
+  const categories = [
+    'Pre Infantil',
+    'Infantil',
+    'Pre Juvenil',
+    'Juvenil',
+    'Damas Abiertas',
+    'Damas Elite',
+    'Novatos Dobles',
+    'Novatos Rígidos',
+    'Master A',
+    'Master B',
+    'Master C',
+    'E-Bike',
+    'Enduro A',
+    'Enduro B',
+    'Rígidas',
+    'Elite',
+    'Pro Elite',
+  ]
+
+  let count = 0
+  for (const name of categories) {
+    await prisma.participantCategory.upsert({
+      where: { name_event_type_id: { name, event_type_id: downhill.id } },
+      update: {},
+      create: { name, event_type_id: downhill.id },
+    })
+    count++
+  }
+
+  console.log(`Seeded ${count} participant categories (Downhill)`)
+}
+
+async function seedGearTypes() {
+  const downhill = await prisma.eventType.findUnique({ where: { name: 'Downhill' } })
+  if (!downhill) {
+    console.log('Downhill event type not found — skipping gear types')
+    return
+  }
+
+  const gearTypes = ['headwear', 'clothing', 'vehicle']
+
+  for (const name of gearTypes) {
+    await prisma.gearType.upsert({
+      where: { name_event_type_id: { name, event_type_id: downhill.id } },
+      update: {},
+      create: { name, event_type_id: downhill.id },
+    })
+  }
+
+  console.log(`Seeded ${gearTypes.length} gear types (Downhill)`)
+}
+
 async function seedPhotoCategories() {
   const categories = [
     'Reconocimiento de pista',
@@ -108,14 +182,14 @@ async function seedPhotoCategories() {
 }
 
 async function seedRoles() {
-  for (const roleName of ['admin', 'classifier'] as const) {
+  for (const roleName of ['admin', 'classifier', 'customer'] as const) {
     await prisma.role.upsert({
       where: { name: roleName },
       update: {},
       create: { name: roleName },
     })
   }
-  console.log('Seeded roles: admin, classifier')
+  console.log('Seeded roles: admin, classifier, customer')
 }
 
 async function seedAdminUser() {
@@ -180,10 +254,13 @@ async function seedDemoData() {
     return
   }
 
+  const downhill = await prisma.eventType.findUnique({ where: { name: 'Downhill' } })
+
   const event = await prisma.event.create({
     data: {
       name: eventName,
       event_date: new Date('2026-03-15'),
+      event_type_id: downhill!.id,
       location: 'Ambato, Ecuador',
       province_id: tungurahua?.id ?? null,
       canton_id: ambato?.id ?? null,
@@ -214,7 +291,6 @@ async function seedDemoData() {
 }
 
 async function seedCommercialFlowData() {
-  // Requires demo event and photos to exist
   const event = await prisma.event.findFirst({
     where: { name: 'Vuelta Ciclística del Ecuador 2026' },
   })
@@ -223,13 +299,6 @@ async function seedCommercialFlowData() {
     return
   }
 
-  const existingCustomer = await prisma.customer.findFirst({ where: { whatsapp: '+593987654321' } })
-  if (existingCustomer) {
-    console.log('Commercial flow data already exists — skipping')
-    return
-  }
-
-  // Find admin user for created_by references
   const adminUser = await prisma.user.findFirst({
     where: { user_roles: { some: { role: { name: 'admin' } } } },
   })
@@ -238,7 +307,13 @@ async function seedCommercialFlowData() {
     return
   }
 
-  // Get first 5 photos from the demo event
+  // Check if demo order already exists
+  const existingOrder = await prisma.order.findFirst({ where: { event_id: event.id } })
+  if (existingOrder) {
+    console.log('Commercial flow data already exists — skipping')
+    return
+  }
+
   const photos = await prisma.photo.findMany({
     where: { event_id: event.id },
     take: 5,
@@ -249,23 +324,13 @@ async function seedCommercialFlowData() {
     return
   }
 
-  // 1. Customer
-  const customer = await prisma.customer.create({
-    data: {
-      first_name: 'Carlos',
-      last_name: 'Mendoza',
-      whatsapp: '+593987654321',
-      email: 'carlos.mendoza@example.com',
-    },
-  })
-
-  // 2. PreviewLink with photos
+  // 1. PreviewLink with photos
   const previewLink = await prisma.previewLink.create({
     data: {
       token: crypto.randomBytes(32).toString('hex'),
       event_id: event.id,
       status: 'converted',
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       viewed_at: new Date(),
       created_by_id: adminUser.id,
       photos: {
@@ -274,34 +339,37 @@ async function seedCommercialFlowData() {
     },
   })
 
-  // 3. Order with a subset of photos (first 3)
+  // 2. Order (user_id = admin user for demo)
   const selectedPhotos = photos.slice(0, 3)
   const order = await prisma.order.create({
     data: {
       preview_link_id: previewLink.id,
       event_id: event.id,
-      customer_id: customer.id,
+      user_id: adminUser.id,
       status: 'paid',
       paid_at: new Date(),
       confirmed_by_id: adminUser.id,
-      photos: {
+      snap_first_name: adminUser.first_name,
+      snap_last_name: adminUser.last_name,
+      snap_email: adminUser.email,
+      items: {
         create: selectedPhotos.map((photo) => ({ photo_id: photo.id })),
       },
     },
   })
 
-  // 4. DeliveryLink
+  // 3. DeliveryLink
   await prisma.deliveryLink.create({
     data: {
       order_id: order.id,
       token: crypto.randomBytes(32).toString('hex'),
       status: 'active',
-      expires_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days
+      expires_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
     },
   })
 
   console.log(
-    'Seeded commercial flow: 1 customer, 1 preview link (5 photos), 1 order (3 photos), 1 delivery link',
+    'Seeded commercial flow: 1 preview link (5 photos), 1 order (3 items), 1 delivery link',
   )
 }
 
@@ -310,6 +378,9 @@ async function main() {
 
   await seedCountries()
   await seedLocations()
+  await seedEventTypes()
+  await seedParticipantCategories()
+  await seedGearTypes()
   await seedPhotoCategories()
   await seedRoles()
   await seedAdminUser()

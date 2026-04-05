@@ -1,6 +1,7 @@
-import type { ClassificationDetailSelect } from '@classifications/infrastructure/constants'
-import { toDetectedCyclistProjection } from '@classifications/infrastructure/mappers/classification-projection.mapper'
-import type { Prisma, Photo as PrismaPhoto } from '@generated/prisma/client'
+import { toDetectedParticipantProjection } from '@classifications/infrastructure/mappers/classification-projection.mapper'
+import type { ClassificationDetailSelect } from '@classifications/infrastructure/mappers/cyclist.mapper'
+import { classificationDetailSelectConfig } from '@classifications/infrastructure/mappers/cyclist.mapper'
+import { Prisma, type Photo as PrismaPhoto } from '@generated/prisma/client'
 import type { PhotoDetailProjection, PhotoListProjection } from '@photos/application/projections'
 import { Photo } from '@photos/domain/entities'
 import type { PhotoStatusType } from '@photos/domain/value-objects/photo-status.vo'
@@ -8,38 +9,42 @@ import type { UnclassifiedReasonType } from '@photos/domain/value-objects/unclas
 
 // --- Select shapes for Prisma queries ---
 
-export type PhotoListSelect = {
-  id: string
-  event_id: string
-  filename: string
-  storage_key: string
-  status: string
-  width: number | null
-  height: number | null
-  uploaded_at: Date
-  classified_at: Date | null
-}
+export const photoListSelectConfig = {
+  id: true,
+  event_id: true,
+  filename: true,
+  storage_key: true,
+  status: true,
+  width: true,
+  height: true,
+  uploaded_at: true,
+  classified_at: true,
+} satisfies Prisma.PhotoSelect
 
-export type PhotoDetailSelect = {
-  id: string
-  event_id: string
-  filename: string
-  storage_key: string
-  file_size: bigint
-  mime_type: string
-  width: number | null
-  height: number | null
-  status: string
-  unclassified_reason: string | null
-  retouched_storage_key: string | null
-  retouched_file_size: bigint | null
-  retouched_at: Date | null
-  captured_at: Date | null
-  uploaded_at: Date
-  processed_at: Date | null
-  classified_at: Date | null
-  detected_cyclists: ClassificationDetailSelect[]
-}
+export type PhotoListSelect = Prisma.PhotoGetPayload<{ select: typeof photoListSelectConfig }>
+
+export const photoDetailSelectConfig = {
+  id: true,
+  event_id: true,
+  filename: true,
+  storage_key: true,
+  file_size: true,
+  mime_type: true,
+  width: true,
+  height: true,
+  status: true,
+  unclassified_reason: true,
+  retouched_storage_key: true,
+  retouched_file_size: true,
+  retouched_at: true,
+  captured_at: true,
+  uploaded_at: true,
+  processed_at: true,
+  classified_at: true,
+  ...classificationDetailSelectConfig,
+} satisfies Prisma.PhotoSelect
+
+export type PhotoDetailSelect = Prisma.PhotoGetPayload<{ select: typeof photoDetailSelectConfig }>
 
 // --- Entity mappers ---
 
@@ -127,6 +132,6 @@ export function toDetailProjection(record: PhotoDetailSelect): PhotoDetailProjec
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
     classifiedAt: record.classified_at,
-    detectedCyclists: record.detected_cyclists.map(toDetectedCyclistProjection),
+    detectedParticipants: record.detected_participants.map(toDetectedParticipantProjection),
   }
 }

@@ -1,3 +1,3 @@
-export { DetectedCyclist } from './detected-cyclist.entity'
-export { EquipmentColor } from './equipment-color.entity'
-export { PlateNumber } from './plate-number.entity'
+export { DetectedParticipant } from './detected-participant.entity'
+export { GearColor } from './gear-color.entity'
+export { ParticipantIdentifier } from './participant-identifier.entity'

@@ -25,6 +25,8 @@ describe('DeleteEventHandler', () => {
       countAll: jest.fn(),
       getPublicEventsList: jest.fn(),
       getPublicEventDetail: jest.fn(),
+      getPublicPhotos: jest.fn(),
+      existsActiveEvent: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     handler = new DeleteEventHandler(writeRepo, readRepo)
@@ -39,6 +41,7 @@ describe('DeleteEventHandler', () => {
       location: 'Ambato',
       provinceId: null,
       cantonId: null,
+      eventTypeId: 1,
       status: 'active',
       createdAt: new Date(),
       updatedAt: new Date(),

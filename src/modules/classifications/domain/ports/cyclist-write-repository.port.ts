@@ -1,20 +1,20 @@
-import type { DetectedCyclist, EquipmentColor, PlateNumber } from '../entities'
+import type { DetectedParticipant, GearColor, ParticipantIdentifier } from '../entities'
 
 export interface BulkClassifyInput {
   photoIds: string[]
-  cyclists: DetectedCyclist[]
-  plateNumbers: PlateNumber[]
-  colors: EquipmentColor[]
+  participants: DetectedParticipant[]
+  identifiers: ParticipantIdentifier[]
+  colors: GearColor[]
 }
 
-export interface ICyclistWriteRepository {
-  saveCyclist(cyclist: DetectedCyclist): Promise<DetectedCyclist>
-  savePlateNumber(plate: PlateNumber): Promise<PlateNumber>
-  saveColors(colors: EquipmentColor[]): Promise<void>
-  deleteColorsByCyclist(cyclistId: string): Promise<void>
-  deletePlateNumberByCyclist(cyclistId: string): Promise<void>
-  deleteCyclist(id: string): Promise<void>
+export interface IParticipantWriteRepository {
+  saveParticipant(participant: DetectedParticipant): Promise<DetectedParticipant>
+  saveIdentifier(identifier: ParticipantIdentifier): Promise<ParticipantIdentifier>
+  saveColors(colors: GearColor[]): Promise<void>
+  deleteColorsByParticipant(participantId: string): Promise<void>
+  deleteIdentifierByParticipant(participantId: string): Promise<void>
+  deleteParticipant(id: string): Promise<void>
   bulkClassify(input: BulkClassifyInput): Promise<void>
 }
 
-export const CYCLIST_WRITE_REPOSITORY = Symbol('CYCLIST_WRITE_REPOSITORY')
+export const PARTICIPANT_WRITE_REPOSITORY = Symbol('PARTICIPANT_WRITE_REPOSITORY')

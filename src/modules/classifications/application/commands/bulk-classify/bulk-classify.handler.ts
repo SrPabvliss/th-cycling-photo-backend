@@ -1,9 +1,12 @@
-import { DetectedCyclist, EquipmentColor, PlateNumber } from '@classifications/domain/entities'
 import {
-  CYCLIST_WRITE_REPOSITORY,
-  type ICyclistWriteRepository,
+  DetectedParticipant,
+  GearColor,
+  ParticipantIdentifier,
+} from '@classifications/domain/entities'
+import {
+  type IParticipantWriteRepository,
+  PARTICIPANT_WRITE_REPOSITORY,
 } from '@classifications/domain/ports'
-import type { EquipmentItemType } from '@classifications/domain/value-objects/equipment-item.vo'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain/ports'
@@ -13,7 +16,7 @@ import { BulkClassifyCommand } from './bulk-classify.command'
 @CommandHandler(BulkClassifyCommand)
 export class BulkClassifyHandler implements ICommandHandler<BulkClassifyCommand> {
   constructor(
-    @Inject(CYCLIST_WRITE_REPOSITORY) private readonly writeRepo: ICyclistWriteRepository,
+    @Inject(PARTICIPANT_WRITE_REPOSITORY) private readonly writeRepo: IParticipantWriteRepository,
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
   ) {}
 
@@ -28,28 +31,28 @@ export class BulkClassifyHandler implements ICommandHandler<BulkClassifyCommand>
     }
 
     // Build domain entities for each photo
-    const cyclists: DetectedCyclist[] = []
-    const plateNumbers: PlateNumber[] = []
-    const colors: EquipmentColor[] = []
+    const participants: DetectedParticipant[] = []
+    const identifiers: ParticipantIdentifier[] = []
+    const colors: GearColor[] = []
 
     for (const photoId of uniqueIds) {
-      const cyclist = DetectedCyclist.create({ photoId })
-      cyclists.push(cyclist)
+      const participant = DetectedParticipant.create({ photoId })
+      participants.push(participant)
 
-      if (command.plateNumber !== null) {
-        plateNumbers.push(
-          PlateNumber.create({
-            detectedCyclistId: cyclist.id,
-            number: command.plateNumber,
+      if (command.identifier !== null) {
+        identifiers.push(
+          ParticipantIdentifier.create({
+            detectedParticipantId: participant.id,
+            value: command.identifier,
           }),
         )
       }
 
       for (const c of command.colors) {
         colors.push(
-          EquipmentColor.create({
-            detectedCyclistId: cyclist.id,
-            itemType: c.itemType as EquipmentItemType,
+          GearColor.create({
+            detectedParticipantId: participant.id,
+            gearTypeId: c.gearTypeId,
             colorName: c.colorName,
             colorHex: c.colorHex,
           }),
@@ -59,8 +62,8 @@ export class BulkClassifyHandler implements ICommandHandler<BulkClassifyCommand>
 
     await this.writeRepo.bulkClassify({
       photoIds: uniqueIds,
-      cyclists,
-      plateNumbers,
+      participants,
+      identifiers,
       colors,
     })
 

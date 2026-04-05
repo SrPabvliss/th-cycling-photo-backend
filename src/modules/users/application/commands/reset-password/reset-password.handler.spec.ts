@@ -15,7 +15,6 @@ describe('ResetPasswordHandler', () => {
     passwordHash: '$2b$10$oldhashvalue',
     firstName: 'Test',
     lastName: 'User',
-    phone: null,
     avatarUrl: null,
     avatarStorageKey: null,
     isActive: true,
@@ -30,6 +29,7 @@ describe('ResetPasswordHandler', () => {
       getUsersList: jest.fn(),
       getUserDetail: jest.fn(),
       findActiveAdminIds: jest.fn(),
+      getBuyersList: jest.fn(),
     } as jest.Mocked<IUserReadRepository>
 
     writeRepo = {

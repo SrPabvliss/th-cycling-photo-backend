@@ -1,3 +1,3 @@
-export class GetCyclistDetailQuery {
-  constructor(public readonly cyclistId: string) {}
+export class GetParticipantDetailQuery {
+  constructor(public readonly participantId: string) {}
 }

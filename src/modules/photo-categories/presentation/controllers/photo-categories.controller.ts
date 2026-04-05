@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { EntityIdProjection } from '@shared/application'
@@ -82,10 +92,10 @@ export class PhotoCategoriesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Unassign a category from an event' })
   @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
-  @ApiParam({ name: 'photoCategoryId', description: 'Photo Category UUID', format: 'uuid' })
+  @ApiParam({ name: 'photoCategoryId', description: 'Photo Category ID', type: Number })
   async unassignFromEvent(
     @Param('eventId') eventId: string,
-    @Param('photoCategoryId') photoCategoryId: string,
+    @Param('photoCategoryId', ParseIntPipe) photoCategoryId: number,
   ) {
     await this.commandBus.execute(new UnassignCategoryFromEventCommand(eventId, photoCategoryId))
   }

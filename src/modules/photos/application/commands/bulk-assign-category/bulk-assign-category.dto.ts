@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsOptional, IsUUID } from 'class-validator'
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsUUID,
+  Min,
+} from 'class-validator'
 
 export class BulkAssignCategoryDto {
   @ApiProperty({ description: 'Photo UUIDs to update', type: [String] })
@@ -10,10 +18,11 @@ export class BulkAssignCategoryDto {
   photoIds: string[]
 
   @ApiPropertyOptional({
-    description: 'Category UUID to assign, or null to unassign',
-    format: 'uuid',
+    description: 'Category ID to assign, or null to unassign',
+    example: 1,
   })
   @IsOptional()
-  @IsUUID()
-  photoCategoryId?: string | null
+  @IsInt()
+  @Min(1)
+  photoCategoryId?: number | null
 }

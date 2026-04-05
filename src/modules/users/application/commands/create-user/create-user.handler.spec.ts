@@ -20,6 +20,7 @@ describe('CreateUserHandler', () => {
       getUsersList: jest.fn(),
       getUserDetail: jest.fn(),
       findActiveAdminIds: jest.fn(),
+      getBuyersList: jest.fn(),
     } as jest.Mocked<IUserReadRepository>
 
     handler = new CreateUserHandler(writeRepo, readRepo)
@@ -30,7 +31,6 @@ describe('CreateUserHandler', () => {
       'Pablo',
       'Villacres',
       'pablo@test.com',
-      null,
       'admin',
       'SecurePass123!',
     )
@@ -62,7 +62,6 @@ describe('CreateUserHandler', () => {
       'Pablo',
       'Villacres',
       'existing@test.com',
-      null,
       'admin',
       'SecurePass123!',
     )
@@ -74,7 +73,6 @@ describe('CreateUserHandler', () => {
         passwordHash: 'hash',
         firstName: 'Existing',
         lastName: 'User',
-        phone: null,
         avatarUrl: null,
         avatarStorageKey: null,
         isActive: true,
@@ -92,7 +90,6 @@ describe('CreateUserHandler', () => {
       'Pablo',
       'Villacres',
       'not-an-email',
-      null,
       'admin',
       'SecurePass123!',
     )

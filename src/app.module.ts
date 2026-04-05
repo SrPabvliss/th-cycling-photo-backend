@@ -11,8 +11,8 @@ import configuration from './config/configuration'
 import { validate } from './config/env.validation'
 import { AuthModule } from './modules/auth/auth.module'
 import { JwtAuthGuard } from './modules/auth/infrastructure/guards/jwt-auth.guard'
+import { CartModule } from './modules/cart/cart.module'
 import { ClassificationsModule } from './modules/classifications/classifications.module'
-import { CustomersModule } from './modules/customers/customers.module'
 import { DeliveriesModule } from './modules/deliveries/deliveries.module'
 import { EventAssetsModule } from './modules/event-assets/event-assets.module'
 import { EventsModule } from './modules/events/events.module'
@@ -59,8 +59,8 @@ import { StorageModule } from './shared/storage/storage.module'
     StorageModule,
     NotificationsModule,
     EmbeddingsModule,
+    CartModule,
     ClassificationsModule,
-    CustomersModule,
     DeliveriesModule,
     EventAssetsModule,
     EventsModule,

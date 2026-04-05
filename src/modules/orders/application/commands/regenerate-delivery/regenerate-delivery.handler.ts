@@ -43,7 +43,7 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
     // 5. Build WhatsApp template
     const detail = await this.orderReadRepo.getDetail(order.id)
     const photoCount = detail?.photos.length ?? 0
-    const customerFirstName = detail?.customer?.firstName ?? ''
+    const customerFirstName = detail?.snapFirstName ?? ''
     const whatsappTemplate = `¡Hola ${customerFirstName}! 🔄 Te enviamos un nuevo enlace de descarga para tus ${photoCount} fotos: ${deliveryResult.deliveryUrl}. Estará disponible por 7 días. ¡Gracias! 🎉`
 
     return {

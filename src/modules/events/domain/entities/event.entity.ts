@@ -10,6 +10,7 @@ export class Event {
     public location: string | null,
     public provinceId: number | null,
     public cantonId: number | null,
+    public eventTypeId: number,
     public status: EventStatusType,
     public readonly audit: AuditFields,
   ) {}
@@ -25,6 +26,7 @@ export class Event {
     location: string | null
     provinceId: number | null
     cantonId: number | null
+    eventTypeId: number
   }): Event {
     Event.validateName(data.name)
     Event.validateDate(data.date)
@@ -37,6 +39,7 @@ export class Event {
       data.location,
       data.provinceId,
       data.cantonId,
+      data.eventTypeId,
       EventStatus.ACTIVE,
       AuditFields.initialize(),
     )
@@ -52,6 +55,7 @@ export class Event {
     location?: string | null
     provinceId?: number | null
     cantonId?: number | null
+    eventTypeId?: number
   }): void {
     if (data.name !== undefined) {
       Event.validateName(data.name)
@@ -68,6 +72,7 @@ export class Event {
     if (data.location !== undefined) this.location = data.location
     if (data.provinceId !== undefined) this.provinceId = data.provinceId
     if (data.cantonId !== undefined) this.cantonId = data.cantonId
+    if (data.eventTypeId !== undefined) this.eventTypeId = data.eventTypeId
 
     this.audit.markUpdated()
   }
@@ -115,6 +120,7 @@ export class Event {
     location: string | null
     provinceId: number | null
     cantonId: number | null
+    eventTypeId: number
     status: EventStatusType
     createdAt: Date
     updatedAt: Date
@@ -130,6 +136,7 @@ export class Event {
       data.location,
       data.provinceId,
       data.cantonId,
+      data.eventTypeId,
       data.status,
       AuditFields.fromPersistence({
         createdAt: data.createdAt,

@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger'
 
 export class PhotoCategoryProjection {
-  @ApiProperty({ description: 'Category UUID' })
-  id: string
+  @ApiProperty({ description: 'Category ID' })
+  id: number
 
   @ApiProperty({ description: 'Category name' })
   name: string

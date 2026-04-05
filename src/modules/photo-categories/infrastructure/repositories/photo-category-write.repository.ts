@@ -11,16 +11,19 @@ export class PhotoCategoryWriteRepository implements IPhotoCategoryWriteReposito
   async save(category: PhotoCategory): Promise<PhotoCategory> {
     const data = PhotoCategoryMapper.toPersistence(category)
 
-    const saved = await this.prisma.photoCategory.upsert({
-      where: { id: category.id },
-      create: data,
-      update: { name: data.name },
-    })
+    if (category.id) {
+      const saved = await this.prisma.photoCategory.update({
+        where: { id: category.id },
+        data: { name: data.name },
+      })
+      return PhotoCategoryMapper.toEntity(saved)
+    }
 
+    const saved = await this.prisma.photoCategory.create({ data })
     return PhotoCategoryMapper.toEntity(saved)
   }
 
-  async assignToEvent(eventId: string, photoCategoryId: string): Promise<string> {
+  async assignToEvent(eventId: string, photoCategoryId: number): Promise<string> {
     const record = await this.prisma.eventPhotoCategory.upsert({
       where: {
         event_id_photo_category_id: { event_id: eventId, photo_category_id: photoCategoryId },
@@ -31,7 +34,7 @@ export class PhotoCategoryWriteRepository implements IPhotoCategoryWriteReposito
     return record.id
   }
 
-  async unassignFromEvent(eventId: string, photoCategoryId: string): Promise<void> {
+  async unassignFromEvent(eventId: string, photoCategoryId: number): Promise<void> {
     await this.prisma.eventPhotoCategory.deleteMany({
       where: { event_id: eventId, photo_category_id: photoCategoryId },
     })
