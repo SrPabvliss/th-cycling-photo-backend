@@ -14,7 +14,7 @@ import {
   SUCCESS_MESSAGE_KEY,
   type SuccessMessageMetadata,
 } from '../decorators/success-message.decorator'
-import type { ApiSuccessResponse } from '../interfaces/api-response.interface'
+import type { ApiSuccessResponse } from '../dto/api-response.dto'
 
 /**
  * Global interceptor that wraps all successful responses

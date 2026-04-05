@@ -10,7 +10,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client'
 import type { Request, Response } from 'express'
 import { I18nContext } from 'nestjs-i18n'
 import { AppException, ErrorCode } from '../../domain/exceptions/app.exception'
-import type { ApiErrorResponse } from '../interfaces/api-response.interface'
+import type { ApiErrorResponse } from '../dto/api-response.dto'
 
 /**
  * Global exception filter that catches all exceptions and formats

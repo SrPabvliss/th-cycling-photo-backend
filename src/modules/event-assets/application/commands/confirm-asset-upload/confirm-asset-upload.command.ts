@@ -1,4 +1,4 @@
-import type { EventAssetType } from '@generated/prisma/client'
+import type { EventAssetType } from '../../../domain/value-objects/event-asset-type.enum'
 
 export class ConfirmAssetUploadCommand {
   constructor(

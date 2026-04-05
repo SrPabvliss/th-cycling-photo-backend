@@ -1,20 +1,24 @@
-import type {
-  EventAssetType,
+import {
+  type EventAssetType,
   Prisma,
-  EventAsset as PrismaEventAsset,
+  type EventAsset as PrismaEventAsset,
 } from '@generated/prisma/client'
 import type { EventAssetProjection } from '../../application/projections'
 import { EventAsset } from '../../domain/entities'
 
-type EventAssetSelect = {
-  id: string
-  event_id: string
-  asset_type: EventAssetType
-  storage_key: string
-  file_size: bigint | null
-  mime_type: string | null
-  uploaded_at: Date
-}
+export const eventAssetSelectConfig = {
+  id: true,
+  event_id: true,
+  asset_type: true,
+  storage_key: true,
+  file_size: true,
+  mime_type: true,
+  uploaded_at: true,
+} satisfies Prisma.EventAssetSelect
+
+export type EventAssetSelect = Prisma.EventAssetGetPayload<{
+  select: typeof eventAssetSelectConfig
+}>
 
 export function toPersistence(entity: EventAsset): Prisma.EventAssetUncheckedCreateInput {
   return {

@@ -1,5 +1,5 @@
-import type { EventAssetType } from '@generated/prisma/client'
 import { AppException } from '@shared/domain'
+import type { EventAssetType } from '../value-objects/event-asset-type.enum'
 
 export class EventAsset {
   constructor(

@@ -1,6 +1,6 @@
 import { applyDecorators, type Type } from '@nestjs/common'
 import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger'
-import { ApiErrorResponseSchema, ApiMetaSchema } from './api-response.schema'
+import { ApiErrorResponse, ApiMeta } from '../dto/api-response.dto'
 
 /** Documents a successful response wrapped in the ADR-002 envelope `{ data: T, meta }`. */
 export const ApiEnvelopeResponse = <T extends Type>(options: {
@@ -14,7 +14,7 @@ export const ApiEnvelopeResponse = <T extends Type>(options: {
     : { $ref: getSchemaPath(options.type) }
 
   return applyDecorators(
-    ApiExtraModels(options.type, ApiMetaSchema),
+    ApiExtraModels(options.type, ApiMeta),
     ApiResponse({
       status: options.status,
       description: options.description,
@@ -22,7 +22,7 @@ export const ApiEnvelopeResponse = <T extends Type>(options: {
         type: 'object',
         properties: {
           data: dataSchema,
-          meta: { $ref: getSchemaPath(ApiMetaSchema) },
+          meta: { $ref: getSchemaPath(ApiMeta) },
         },
         required: ['data', 'meta'],
       },
@@ -33,11 +33,11 @@ export const ApiEnvelopeResponse = <T extends Type>(options: {
 /** Documents an error response in the ADR-002 envelope `{ error, meta }`. */
 export const ApiEnvelopeErrorResponse = (options: { status: number; description: string }) => {
   return applyDecorators(
-    ApiExtraModels(ApiErrorResponseSchema),
+    ApiExtraModels(ApiErrorResponse),
     ApiResponse({
       status: options.status,
       description: options.description,
-      schema: { $ref: getSchemaPath(ApiErrorResponseSchema) },
+      schema: { $ref: getSchemaPath(ApiErrorResponse) },
     }),
   )
 }
