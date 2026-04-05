@@ -1,10 +1,9 @@
-import * as crypto from 'node:crypto'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { JwtService } from '@nestjs/jwt'
 import { AppException } from '@shared/domain'
-import type { IRefreshTokenRepository } from '../../../domain/ports'
-import { REFRESH_TOKEN_REPOSITORY } from '../../../domain/ports'
+import type { IRefreshTokenRepository, ITokenHashService } from '../../../domain/ports'
+import { REFRESH_TOKEN_REPOSITORY, TOKEN_HASH_SERVICE } from '../../../domain/ports'
 import type { AuthTokensProjection } from '../../projections'
 import { RefreshCommand } from './refresh.command'
 
@@ -12,11 +11,12 @@ import { RefreshCommand } from './refresh.command'
 export class RefreshHandler implements ICommandHandler<RefreshCommand> {
   constructor(
     @Inject(REFRESH_TOKEN_REPOSITORY) private readonly refreshTokenRepo: IRefreshTokenRepository,
+    @Inject(TOKEN_HASH_SERVICE) private readonly tokenHashService: ITokenHashService,
     private readonly jwtService: JwtService,
   ) {}
 
   async execute(command: RefreshCommand): Promise<AuthTokensProjection> {
-    const tokenHash = crypto.createHash('sha256').update(command.refreshToken).digest('hex')
+    const tokenHash = this.tokenHashService.hash(command.refreshToken)
 
     const storedToken = await this.refreshTokenRepo.findByHash(tokenHash)
 

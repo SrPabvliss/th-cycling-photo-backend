@@ -1,5 +1,4 @@
-import * as crypto from 'node:crypto'
-import type { IRefreshTokenRepository } from '../../../domain/ports'
+import type { IRefreshTokenRepository, ITokenHashService } from '../../../domain/ports'
 import type { StoredRefreshTokenProjection } from '../../projections'
 import { RefreshCommand } from './refresh.command'
 import { RefreshHandler } from './refresh.handler'
@@ -7,9 +6,10 @@ import { RefreshHandler } from './refresh.handler'
 describe('RefreshHandler', () => {
   let handler: RefreshHandler
   let refreshTokenRepo: jest.Mocked<IRefreshTokenRepository>
+  let tokenHashService: jest.Mocked<ITokenHashService>
   let jwtService: { sign: jest.Mock }
 
-  const rawToken = crypto.randomUUID()
+  const rawToken = 'test-raw-uuid-token'
   const futureDate = new Date()
   futureDate.setDate(futureDate.getDate() + 30)
 
@@ -29,9 +29,14 @@ describe('RefreshHandler', () => {
       revokeByHash: jest.fn(),
     } as jest.Mocked<IRefreshTokenRepository>
 
+    tokenHashService = {
+      hash: jest.fn().mockReturnValue('hashed-token'),
+      generateToken: jest.fn().mockReturnValue('new-raw-uuid'),
+    } as jest.Mocked<ITokenHashService>
+
     jwtService = { sign: jest.fn().mockReturnValue('new-jwt-token') }
 
-    handler = new RefreshHandler(refreshTokenRepo, jwtService as any)
+    handler = new RefreshHandler(refreshTokenRepo, tokenHashService, jwtService as any)
   })
 
   it('should issue new access token for valid refresh token', async () => {
@@ -39,6 +44,8 @@ describe('RefreshHandler', () => {
 
     const result = await handler.execute(new RefreshCommand(rawToken))
 
+    expect(tokenHashService.hash).toHaveBeenCalledWith(rawToken)
+    expect(refreshTokenRepo.findByHash).toHaveBeenCalledWith('hashed-token')
     expect(result.accessToken).toBe('new-jwt-token')
     expect(jwtService.sign).toHaveBeenCalledWith(
       expect.objectContaining({ sub: 'user-1', email: 'user@test.com', role: 'admin' }),

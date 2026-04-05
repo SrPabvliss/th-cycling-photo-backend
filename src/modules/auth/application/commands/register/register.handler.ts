@@ -1,24 +1,23 @@
+import { LocationValidator } from '@locations/application/services'
 import { Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { JwtService } from '@nestjs/jwt'
 import { AppException } from '@shared/domain'
-import { compareSync } from 'bcryptjs'
-import type {
-  IAuthUserRepository,
-  IRefreshTokenRepository,
-  ITokenHashService,
-} from '../../../domain/ports'
+import { hashSync } from 'bcryptjs'
 import {
   AUTH_USER_REPOSITORY,
+  type IAuthUserRepository,
+  type IRefreshTokenRepository,
+  type ITokenHashService,
   REFRESH_TOKEN_REPOSITORY,
   TOKEN_HASH_SERVICE,
 } from '../../../domain/ports'
 import type { AuthTokensProjection } from '../../projections'
-import { LoginCommand } from './login.command'
+import { RegisterCommand } from './register.command'
 
-@CommandHandler(LoginCommand)
-export class LoginHandler implements ICommandHandler<LoginCommand> {
+@CommandHandler(RegisterCommand)
+export class RegisterHandler implements ICommandHandler<RegisterCommand> {
   private readonly refreshExpiryDays: number
 
   constructor(
@@ -26,23 +25,39 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
     @Inject(REFRESH_TOKEN_REPOSITORY) private readonly refreshTokenRepo: IRefreshTokenRepository,
     @Inject(TOKEN_HASH_SERVICE) private readonly tokenHashService: ITokenHashService,
     private readonly jwtService: JwtService,
+    private readonly locationValidator: LocationValidator,
     configService: ConfigService,
   ) {
     this.refreshExpiryDays = configService.get<number>('jwt.refreshExpiryDays', 30)
   }
 
   async execute(
-    command: LoginCommand,
+    command: RegisterCommand,
   ): Promise<{ tokens: AuthTokensProjection; refreshToken: string }> {
-    const user = await this.authUserRepo.findByEmail(command.email)
-    if (!user) throw AppException.businessRule('auth.invalid_credentials')
+    const exists = await this.authUserRepo.findByEmailExists(command.email)
+    if (exists) throw AppException.conflict('auth.email_already_exists')
 
-    if (!user.isActive) throw AppException.businessRule('auth.account_deactivated')
+    await this.locationValidator.validateFull(
+      command.countryId,
+      command.provinceId,
+      command.cantonId,
+    )
 
-    const passwordValid = compareSync(command.password, user.passwordHash)
-    if (!passwordValid) throw AppException.businessRule('auth.invalid_credentials')
+    const passwordHash = hashSync(command.password, 10)
 
-    const payload = { sub: user.id, email: user.email, role: user.role }
+    const user = await this.authUserRepo.register({
+      email: command.email,
+      passwordHash,
+      firstName: command.firstName,
+      lastName: command.lastName,
+      countryId: command.countryId,
+      provinceId: command.provinceId,
+      cantonId: command.cantonId,
+      phoneNumber: command.phoneNumber,
+    })
+
+    const role = 'customer'
+    const payload = { sub: user.id, email: user.email, role }
     const accessToken = this.jwtService.sign(payload)
 
     const rawToken = this.tokenHashService.generateToken()
@@ -50,8 +65,13 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + this.refreshExpiryDays)
 
-    await this.refreshTokenRepo.create({ tokenHash, userId: user.id, expiresAt })
-    await this.authUserRepo.updateLastLogin(user.id)
+    await this.refreshTokenRepo.create({
+      tokenHash,
+      userId: user.id,
+      expiresAt,
+      ipAddress: command.ipAddress,
+      userAgent: command.userAgent,
+    })
 
     return {
       tokens: { accessToken },

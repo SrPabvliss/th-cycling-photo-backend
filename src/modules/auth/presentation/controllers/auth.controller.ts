@@ -6,7 +6,14 @@ import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
 import { AppException } from '@shared/domain'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import type { CookieOptions, Request, Response } from 'express'
-import { LoginCommand, LoginDto, LogoutCommand, RefreshCommand } from '../../application/commands'
+import {
+  LoginCommand,
+  LoginDto,
+  LogoutCommand,
+  RefreshCommand,
+  RegisterCommand,
+  RegisterDto,
+} from '../../application/commands'
 import { AuthTokensProjection, MeProjection } from '../../application/projections'
 import { GetMeQuery } from '../../application/queries'
 
@@ -32,6 +39,46 @@ export class AuthController {
       sameSite: 'strict',
       path: '/api/v1/auth',
     }
+  }
+
+  @Public()
+  @Post('register')
+  @SuccessMessage('success.CREATED', { entity: 'entities.user' })
+  @ApiOperation({ summary: 'Register a new customer account' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Registration successful, access token returned and refresh token set in cookie',
+    type: AuthTokensProjection,
+  })
+  @ApiEnvelopeErrorResponse({
+    status: 409,
+    description: 'Email already exists',
+  })
+  async register(
+    @Body() dto: RegisterDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const command = new RegisterCommand(
+      dto.email,
+      dto.password,
+      dto.firstName,
+      dto.lastName,
+      dto.phoneNumber,
+      dto.countryId,
+      dto.provinceId ?? null,
+      dto.cantonId ?? null,
+      req.ip ?? null,
+      req.headers['user-agent'] ?? null,
+    )
+    const result = await this.commandBus.execute(command)
+
+    res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
+      ...this.cookieOptions,
+      maxAge: this.refreshCookieMaxAge,
+    })
+
+    return result.tokens
   }
 
   @Public()
