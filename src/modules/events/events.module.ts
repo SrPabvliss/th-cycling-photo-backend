@@ -8,6 +8,7 @@ import { GetEventDetailHandler } from '@events/application/queries/get-event-det
 import { GetEventsListHandler } from '@events/application/queries/get-events-list/get-events-list.handler'
 import { GetEventsStatsHandler } from '@events/application/queries/get-events-stats/get-events-stats.handler'
 import { GetPublicEventDetailHandler } from '@events/application/queries/get-public-event-detail/get-public-event-detail.handler'
+import { GetPublicEventPhotosHandler } from '@events/application/queries/get-public-event-photos/get-public-event-photos.handler'
 import { GetPublicEventsListHandler } from '@events/application/queries/get-public-events-list/get-public-events-list.handler'
 import { EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY } from '@events/domain/ports'
 import { EventReadRepository } from '@events/infrastructure/repositories/event-read.repository'
@@ -33,6 +34,7 @@ const QueryHandlers = [
   GetEventsStatsHandler,
   GetPublicEventsListHandler,
   GetPublicEventDetailHandler,
+  GetPublicEventPhotosHandler,
 ]
 
 @Module({

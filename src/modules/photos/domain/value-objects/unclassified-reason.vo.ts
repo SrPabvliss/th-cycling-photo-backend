@@ -1,5 +1,5 @@
 export const UnclassifiedReason = {
-  NO_CYCLIST: 'no_cyclist',
+  NO_PARTICIPANT: 'no_participant',
   OCR_FAILED: 'ocr_failed',
   LOW_CONFIDENCE: 'low_confidence',
   PROCESSING_ERROR: 'processing_error',

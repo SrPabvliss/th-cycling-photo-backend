@@ -62,4 +62,14 @@ export class UpdateEventDto {
   @IsOptional()
   @Type(() => Number)
   cantonId?: number | null
+
+  @ApiPropertyOptional({
+    description: 'Event type ID',
+    example: 1,
+  })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  @Type(() => Number)
+  eventTypeId?: number
 }

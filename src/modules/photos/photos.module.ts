@@ -1,6 +1,7 @@
 import { BullModule } from '@nestjs/bullmq'
 import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
+import { OrdersModule } from '@orders/orders.module'
 import { BulkAssignCategoryHandler } from '@photos/application/commands/bulk-assign-category/bulk-assign-category.handler'
 import { ConfirmPhotoBatchHandler } from '@photos/application/commands/confirm-photo-batch/confirm-photo-batch.handler'
 import { ConfirmRetouchedUploadHandler } from '@photos/application/commands/confirm-retouched-upload/confirm-retouched-upload.handler'
@@ -8,6 +9,7 @@ import { GeneratePresignedUrlHandler } from '@photos/application/commands/genera
 import { GenerateRetouchedPresignedUrlHandler } from '@photos/application/commands/generate-retouched-presigned-url/generate-retouched-presigned-url.handler'
 import { FindSimilarPhotosHandler } from '@photos/application/queries/find-similar-photos/find-similar-photos.handler'
 import { GetDownloadManifestHandler } from '@photos/application/queries/get-download-manifest/get-download-manifest.handler'
+import { GetPendingRetouchHandler } from '@photos/application/queries/get-pending-retouch/get-pending-retouch.handler'
 import { GetPhotoDetailHandler } from '@photos/application/queries/get-photo-detail/get-photo-detail.handler'
 import { GetPhotoDownloadUrlHandler } from '@photos/application/queries/get-photo-download-url/get-photo-download-url.handler'
 import { GetPhotosListHandler } from '@photos/application/queries/get-photos-list/get-photos-list.handler'
@@ -35,6 +37,7 @@ const QueryHandlers = [
   GetResumePointHandler,
   GetDownloadManifestHandler,
   SearchPhotosHandler,
+  GetPendingRetouchHandler,
 ]
 
 @Module({
@@ -42,6 +45,7 @@ const QueryHandlers = [
     CqrsModule,
     BullModule.registerQueue({ name: 'embedding-generation' }),
     forwardRef(() => EventsModule),
+    forwardRef(() => OrdersModule),
   ],
   controllers: [PhotosController],
   providers: [

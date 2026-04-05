@@ -28,7 +28,6 @@ export class CreateUserHandler implements ICommandHandler<CreateUserCommand> {
       passwordHash,
       firstName: command.firstName,
       lastName: command.lastName,
-      phone: command.phone,
     })
 
     const saved = await this.writeRepo.save(user, command.role)

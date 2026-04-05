@@ -25,6 +25,6 @@ export class CreatePhotoCategoryHandler implements ICommandHandler<CreatePhotoCa
 
     const category = PhotoCategory.create({ name: command.name })
     const saved = await this.writeRepo.save(category)
-    return { id: saved.id }
+    return { id: String(saved.id) }
   }
 }

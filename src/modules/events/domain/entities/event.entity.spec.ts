@@ -12,6 +12,7 @@ describe('Event Entity', () => {
     location: 'Ambato, Ecuador',
     provinceId: 18 as number | null,
     cantonId: 1 as number | null,
+    eventTypeId: 1,
   }
 
   describe('create', () => {
@@ -197,6 +198,7 @@ describe('Event Entity', () => {
         location: null,
         provinceId: null,
         cantonId: null,
+        eventTypeId: 1,
         status: 'active',
         createdAt: new Date('2020-01-01'),
         updatedAt: new Date('2020-06-01'),
@@ -221,6 +223,7 @@ describe('Event Entity', () => {
         location: null,
         provinceId: 18,
         cantonId: 1,
+        eventTypeId: 1,
         status: 'archived',
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date('2024-06-15'),

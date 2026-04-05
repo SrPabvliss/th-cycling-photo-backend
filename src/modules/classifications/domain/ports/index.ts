@@ -1,9 +1,9 @@
 export {
-  CYCLIST_READ_REPOSITORY,
-  type ICyclistReadRepository,
+  type IParticipantReadRepository,
+  PARTICIPANT_READ_REPOSITORY,
 } from './cyclist-read-repository.port'
 export {
   type BulkClassifyInput,
-  CYCLIST_WRITE_REPOSITORY,
-  type ICyclistWriteRepository,
+  type IParticipantWriteRepository,
+  PARTICIPANT_WRITE_REPOSITORY,
 } from './cyclist-write-repository.port'

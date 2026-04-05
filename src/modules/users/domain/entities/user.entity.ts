@@ -7,7 +7,6 @@ export class User {
     public passwordHash: string,
     public firstName: string | null,
     public lastName: string | null,
-    public phone: string | null,
     public avatarUrl: string | null,
     public avatarStorageKey: string | null,
     public isActive: boolean,
@@ -20,7 +19,6 @@ export class User {
     passwordHash: string
     firstName: string
     lastName: string
-    phone: string | null
   }): User {
     User.validateEmail(data.email)
     User.validateName(data.firstName, 'first_name')
@@ -32,7 +30,6 @@ export class User {
       data.passwordHash,
       data.firstName,
       data.lastName,
-      data.phone,
       null,
       null,
       true,
@@ -41,7 +38,7 @@ export class User {
     )
   }
 
-  update(data: { firstName?: string; lastName?: string; phone?: string | null }): void {
+  update(data: { firstName?: string; lastName?: string }): void {
     if (data.firstName !== undefined) {
       User.validateName(data.firstName, 'first_name')
       this.firstName = data.firstName
@@ -50,7 +47,6 @@ export class User {
       User.validateName(data.lastName, 'last_name')
       this.lastName = data.lastName
     }
-    if (data.phone !== undefined) this.phone = data.phone
   }
 
   deactivate(): void {
@@ -100,7 +96,6 @@ export class User {
     passwordHash: string
     firstName: string | null
     lastName: string | null
-    phone: string | null
     avatarUrl: string | null
     avatarStorageKey: string | null
     isActive: boolean
@@ -113,7 +108,6 @@ export class User {
       data.passwordHash,
       data.firstName,
       data.lastName,
-      data.phone,
       data.avatarUrl,
       data.avatarStorageKey,
       data.isActive,

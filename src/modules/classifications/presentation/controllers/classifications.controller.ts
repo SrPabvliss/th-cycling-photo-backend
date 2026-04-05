@@ -1,24 +1,39 @@
 import {
   BulkClassifyCommand,
   BulkClassifyDto,
-  CreateCyclistCommand,
-  CreateCyclistDto,
-  DeleteCyclistCommand,
+  CreateParticipantCommand,
+  CreateParticipantDto,
+  DeleteParticipantCommand,
   MarkPhotoClassifiedCommand,
-  UpdateCyclistCommand,
-  UpdateCyclistDto,
+  UpdateParticipantCommand,
+  UpdateParticipantDto,
 } from '@classifications/application/commands'
 import {
   BulkClassifyResultProjection,
-  CyclistDetailProjection,
-  CyclistListProjection,
+  ParticipantDetailProjection,
+  ParticipantListProjection,
 } from '@classifications/application/projections'
-import { GetCyclistDetailQuery, GetPhotoCyclistsQuery } from '@classifications/application/queries'
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common'
+import {
+  GetGearTypesQuery,
+  GetParticipantCategoriesQuery,
+  GetParticipantDetailQuery,
+  GetPhotoParticipantsQuery,
+} from '@classifications/application/queries'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { AuditContext, EntityIdProjection } from '@shared/application'
-import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Classifications')
@@ -30,92 +45,123 @@ export class ClassificationsController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  /** Lists all detected cyclists for a given photo. */
-  @Get('photos/:photoId/cyclists')
+  /** Lists gear types filtered by event type. */
+  @Get('gear-types')
   @SuccessMessage('success.LIST')
-  @ApiOperation({ summary: 'List detected cyclists for a photo' })
+  @ApiOperation({ summary: 'List gear types for an event type' })
+  @ApiQuery({ name: 'eventTypeId', description: 'Event Type ID', type: Number, required: true })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Gear types retrieved',
+    type: Object,
+    isArray: true,
+  })
+  async getGearTypes(@Query('eventTypeId', ParseIntPipe) eventTypeId: number) {
+    return this.queryBus.execute(new GetGearTypesQuery(eventTypeId))
+  }
+
+  /** Lists participant categories filtered by event type. */
+  @Public()
+  @Get('participant-categories')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'List participant categories for an event type' })
+  @ApiQuery({ name: 'eventTypeId', description: 'Event Type ID', type: Number, required: true })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Participant categories retrieved',
+    type: Object,
+    isArray: true,
+  })
+  async getParticipantCategories(@Query('eventTypeId', ParseIntPipe) eventTypeId: number) {
+    return this.queryBus.execute(new GetParticipantCategoriesQuery(eventTypeId))
+  }
+
+  /** Lists all detected participants for a given photo. */
+  @Get('photos/:photoId/participants')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'List detected participants for a photo' })
   @ApiParam({ name: 'photoId', description: 'Photo UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
     status: 200,
-    description: 'Cyclists list for the photo',
-    type: CyclistListProjection,
+    description: 'Participants list for the photo',
+    type: ParticipantListProjection,
     isArray: true,
   })
   async findAll(@Param('photoId') photoId: string) {
-    return this.queryBus.execute(new GetPhotoCyclistsQuery(photoId))
+    return this.queryBus.execute(new GetPhotoParticipantsQuery(photoId))
   }
 
-  /** Retrieves detailed information for a specific cyclist. */
-  @Get('cyclists/:id')
-  @SuccessMessage('success.FETCHED', { entity: 'entities.cyclist' })
-  @ApiOperation({ summary: 'Get cyclist detail by ID' })
-  @ApiParam({ name: 'id', description: 'Cyclist UUID', format: 'uuid' })
+  /** Retrieves detailed information for a specific participant. */
+  @Get('participants/:id')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.participant' })
+  @ApiOperation({ summary: 'Get participant detail by ID' })
+  @ApiParam({ name: 'id', description: 'Participant UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
     status: 200,
-    description: 'Cyclist detail retrieved',
-    type: CyclistDetailProjection,
+    description: 'Participant detail retrieved',
+    type: ParticipantDetailProjection,
   })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Cyclist not found' })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Participant not found' })
   async findOne(@Param('id') id: string) {
-    return this.queryBus.execute(new GetCyclistDetailQuery(id))
+    return this.queryBus.execute(new GetParticipantDetailQuery(id))
   }
 
-  /** Creates a new cyclist classification for a photo. */
-  @Post('photos/:photoId/cyclists')
-  @SuccessMessage('success.CREATED', { entity: 'entities.cyclist' })
-  @ApiOperation({ summary: 'Create a cyclist classification for a photo' })
+  /** Creates a new participant classification for a photo. */
+  @Post('photos/:photoId/participants')
+  @SuccessMessage('success.CREATED', { entity: 'entities.participant' })
+  @ApiOperation({ summary: 'Create a participant classification for a photo' })
   @ApiParam({ name: 'photoId', description: 'Photo UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
     status: 201,
-    description: 'Cyclist created',
+    description: 'Participant created',
     type: EntityIdProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
   async create(
     @Param('photoId') photoId: string,
-    @Body() dto: CreateCyclistDto,
+    @Body() dto: CreateParticipantDto,
     @CurrentUser() user: ICurrentUser,
   ) {
-    const command = new CreateCyclistCommand(
+    const command = new CreateParticipantCommand(
       photoId,
-      dto.plateNumber ?? null,
+      dto.identifier ?? null,
       dto.colors,
       new AuditContext(user.userId),
     )
     return this.commandBus.execute(command)
   }
 
-  /** Updates an existing cyclist classification. */
-  @Patch('cyclists/:id')
-  @SuccessMessage('success.UPDATED', { entity: 'entities.cyclist' })
-  @ApiOperation({ summary: 'Update a cyclist classification' })
-  @ApiParam({ name: 'id', description: 'Cyclist UUID', format: 'uuid' })
+  /** Updates an existing participant classification. */
+  @Patch('participants/:id')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.participant' })
+  @ApiOperation({ summary: 'Update a participant classification' })
+  @ApiParam({ name: 'id', description: 'Participant UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
     status: 200,
-    description: 'Cyclist updated',
+    description: 'Participant updated',
     type: EntityIdProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Cyclist not found' })
-  async update(@Param('id') id: string, @Body() dto: UpdateCyclistDto) {
-    const command = new UpdateCyclistCommand(id, dto.plateNumber, dto.colors)
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Participant not found' })
+  async update(@Param('id') id: string, @Body() dto: UpdateParticipantDto) {
+    const command = new UpdateParticipantCommand(id, dto.identifier, dto.colors)
     return this.commandBus.execute(command)
   }
 
-  /** Deletes a cyclist classification. */
-  @Delete('cyclists/:id')
-  @SuccessMessage('success.DELETED', { entity: 'entities.cyclist' })
-  @ApiOperation({ summary: 'Delete a cyclist classification' })
-  @ApiParam({ name: 'id', description: 'Cyclist UUID', format: 'uuid' })
+  /** Deletes a participant classification. */
+  @Delete('participants/:id')
+  @SuccessMessage('success.DELETED', { entity: 'entities.participant' })
+  @ApiOperation({ summary: 'Delete a participant classification' })
+  @ApiParam({ name: 'id', description: 'Participant UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
     status: 200,
-    description: 'Cyclist deleted',
+    description: 'Participant deleted',
     type: EntityIdProjection,
   })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Cyclist not found' })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Participant not found' })
   async remove(@Param('id') id: string) {
-    return this.commandBus.execute(new DeleteCyclistCommand(id))
+    return this.commandBus.execute(new DeleteParticipantCommand(id))
   }
 
   /** Marks a photo as classified. */
@@ -138,7 +184,7 @@ export class ClassificationsController {
   /** Applies the same classification to multiple photos atomically. */
   @Post('photos/bulk-classify')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
-  @ApiOperation({ summary: 'Bulk classify multiple photos with the same cyclist data' })
+  @ApiOperation({ summary: 'Bulk classify multiple photos with the same participant data' })
   @ApiEnvelopeResponse({
     status: 200,
     description: 'All photos classified successfully',
@@ -147,7 +193,7 @@ export class ClassificationsController {
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
   @ApiEnvelopeErrorResponse({ status: 422, description: 'Some photos not found' })
   async bulkClassify(@Body() dto: BulkClassifyDto) {
-    const command = new BulkClassifyCommand(dto.photoIds, dto.plateNumber ?? null, dto.colors)
+    const command = new BulkClassifyCommand(dto.photoIds, dto.identifier ?? null, dto.colors)
     return this.commandBus.execute(command)
   }
 }

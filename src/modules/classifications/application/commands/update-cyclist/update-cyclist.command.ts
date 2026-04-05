@@ -1,13 +1,13 @@
 export interface ColorInput {
-  itemType: string
+  gearTypeId: number
   colorName: string
   colorHex: string
 }
 
-export class UpdateCyclistCommand {
+export class UpdateParticipantCommand {
   constructor(
-    public readonly cyclistId: string,
-    public readonly plateNumber: number | null | undefined,
+    public readonly participantId: string,
+    public readonly identifier: string | null | undefined,
     public readonly colors: ColorInput[] | undefined,
   ) {}
 }

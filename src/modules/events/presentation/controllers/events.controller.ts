@@ -96,6 +96,7 @@ export class EventsController {
       dto.location ?? null,
       dto.provinceId ?? null,
       dto.cantonId ?? null,
+      dto.eventTypeId,
       new AuditContext(user.userId),
     )
     return this.commandBus.execute(command)
@@ -126,6 +127,7 @@ export class EventsController {
       dto.location,
       dto.provinceId,
       dto.cantonId,
+      dto.eventTypeId,
       new AuditContext(user.userId),
     )
     return this.commandBus.execute(command)

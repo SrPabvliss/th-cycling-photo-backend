@@ -8,7 +8,7 @@ import type {
 import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
-import { PHOTO_DETAIL_SELECT, PHOTO_LIST_SELECT } from '@photos/infrastructure/constants'
+
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { PrismaService } from '@shared/infrastructure'
 import * as PhotoMapper from '../mappers/photo.mapper'
@@ -37,7 +37,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     eventId: string,
     pagination: Pagination,
     classified?: boolean,
-    photoCategoryId?: string,
+    photoCategoryId?: number,
   ): Promise<PaginatedResult<PhotoListProjection>> {
     const where: Prisma.PhotoWhereInput = { event_id: eventId }
     if (classified === true) where.classified_at = { not: null }
@@ -47,7 +47,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     const [photos, total] = await Promise.all([
       this.prisma.photo.findMany({
         where,
-        select: PHOTO_LIST_SELECT,
+        select: PhotoMapper.photoListSelectConfig,
         orderBy: { filename: 'asc' },
         skip: pagination.skip,
         take: pagination.take,
@@ -62,7 +62,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   async getPhotoDetail(id: string): Promise<PhotoDetailProjection | null> {
     const record = await this.prisma.photo.findUnique({
       where: { id },
-      select: PHOTO_DETAIL_SELECT,
+      select: PhotoMapper.photoDetailSelectConfig,
     })
 
     return record ? PhotoMapper.toDetailProjection(record) : null
@@ -78,7 +78,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     const [photos, total] = await Promise.all([
       this.prisma.photo.findMany({
         where,
-        select: PHOTO_LIST_SELECT,
+        select: PhotoMapper.photoListSelectConfig,
         orderBy: { filename: 'asc' },
         skip: pagination.skip,
         take: pagination.take,
@@ -207,6 +207,17 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return this.prisma.photo.count({ where: { id: { in: ids } } })
   }
 
+  /** Counts how many of the given IDs belong to a specific event and are completed. */
+  async countByIdsAndEvent(photoIds: string[], eventId: string): Promise<number> {
+    return this.prisma.photo.count({
+      where: {
+        id: { in: photoIds },
+        event_id: eventId,
+        status: 'completed',
+      },
+    })
+  }
+
   /** Finds visually similar photos using vector cosine similarity. */
   async findSimilar(
     photoId: string,
@@ -231,7 +242,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     >(
       `SELECT p.id, p.filename, p.storage_key,
         1 - (p.embedding <=> (SELECT embedding FROM photos WHERE id = $1::uuid)) as similarity,
-        EXISTS(SELECT 1 FROM detected_cyclists dc WHERE dc.photo_id = p.id) as has_classifications
+        EXISTS(SELECT 1 FROM detected_participants dp WHERE dp.photo_id = p.id) as has_classifications
       FROM photos p
       WHERE p.event_id = $2::uuid
         AND p.id != $1::uuid
@@ -259,42 +270,45 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     if (filters.eventId) where.event_id = filters.eventId
     if (filters.status) where.status = filters.status as Prisma.EnumPhotoStatusFilter
 
-    const cyclistConditions: Prisma.DetectedCyclistWhereInput[] = []
+    const participantConditions: Prisma.DetectedParticipantWhereInput[] = []
 
     if (filters.plateNumber !== undefined) {
-      cyclistConditions.push({ plate_number: { number: filters.plateNumber } })
+      participantConditions.push({ identifier: { value: String(filters.plateNumber) } })
     }
 
     if (filters.helmetColor) {
       const colors = filters.helmetColor.split(',').map((c) => c.trim())
-      cyclistConditions.push({
-        equipment_colors: {
-          some: { item_type: 'helmet', color_name: { in: colors, mode: 'insensitive' } },
+      participantConditions.push({
+        gear_colors: {
+          some: { gear_type: { name: 'helmet' }, color_name: { in: colors, mode: 'insensitive' } },
         },
       })
     }
 
     if (filters.clothingColor) {
       const colors = filters.clothingColor.split(',').map((c) => c.trim())
-      cyclistConditions.push({
-        equipment_colors: {
-          some: { item_type: 'clothing', color_name: { in: colors, mode: 'insensitive' } },
+      participantConditions.push({
+        gear_colors: {
+          some: {
+            gear_type: { name: 'clothing' },
+            color_name: { in: colors, mode: 'insensitive' },
+          },
         },
       })
     }
 
     if (filters.bikeColor) {
       const colors = filters.bikeColor.split(',').map((c) => c.trim())
-      cyclistConditions.push({
-        equipment_colors: {
-          some: { item_type: 'bike', color_name: { in: colors, mode: 'insensitive' } },
+      participantConditions.push({
+        gear_colors: {
+          some: { gear_type: { name: 'bike' }, color_name: { in: colors, mode: 'insensitive' } },
         },
       })
     }
 
-    if (cyclistConditions.length > 0) {
-      where.detected_cyclists = {
-        some: { AND: cyclistConditions },
+    if (participantConditions.length > 0) {
+      where.detected_participants = {
+        some: { AND: participantConditions },
       }
     }
 

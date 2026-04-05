@@ -1,8 +1,8 @@
-export class EquipmentColorProjection {
-  /** EquipmentColor UUID */
+export class GearColorProjection {
+  /** GearColor UUID */
   id: string
-  /** Equipment category: 'helmet', 'clothing', or 'bike' */
-  itemType: string
+  /** Gear type ID (FK to gear_types table) */
+  gearTypeId: number
   /** W3C color name */
   colorName: string
   /** W3C hex code */

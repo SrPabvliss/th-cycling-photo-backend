@@ -79,7 +79,6 @@ export class UsersController {
       dto.firstName,
       dto.lastName,
       dto.email,
-      dto.phone ?? null,
       dto.role,
       dto.password,
     )
@@ -97,7 +96,7 @@ export class UsersController {
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'User not found' })
   async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    const command = new UpdateUserCommand(id, dto.firstName, dto.lastName, dto.phone)
+    const command = new UpdateUserCommand(id, dto.firstName, dto.lastName)
     return this.commandBus.execute(command)
   }
 

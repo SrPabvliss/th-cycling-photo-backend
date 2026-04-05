@@ -1,18 +1,56 @@
-import { CantonProjection, ProvinceProjection } from '@locations/application/projections'
-import { GetCantonsByProvinceQuery, GetProvincesQuery } from '@locations/application/queries'
+import {
+  CantonProjection,
+  CountryProjection,
+  ProvinceProjection,
+} from '@locations/application/projections'
+import {
+  GetCantonsByProvinceQuery,
+  GetCountriesQuery,
+  GetProvincesByCountryQuery,
+  GetProvincesQuery,
+} from '@locations/application/queries'
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common'
 import { QueryBus } from '@nestjs/cqrs'
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { Public } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Locations')
-@ApiBearerAuth()
-@Controller('locations')
+@Controller()
 export class LocationsController {
   constructor(private readonly queryBus: QueryBus) {}
 
-  /** Lists all Ecuador provinces sorted alphabetically. */
-  @Get('provinces')
+  @Public()
+  @Get('countries')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'List all countries alphabetically' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'All countries sorted alphabetically',
+    type: CountryProjection,
+    isArray: true,
+  })
+  async findAllCountries() {
+    return this.queryBus.execute(new GetCountriesQuery())
+  }
+
+  @Public()
+  @Get('countries/:countryId/provinces')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'List provinces for a country' })
+  @ApiParam({ name: 'countryId', description: 'Country ID', type: Number })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Provinces for the country sorted alphabetically',
+    type: ProvinceProjection,
+    isArray: true,
+  })
+  async findProvincesByCountry(@Param('countryId', ParseIntPipe) countryId: number) {
+    return this.queryBus.execute(new GetProvincesByCountryQuery(countryId))
+  }
+
+  @Public()
+  @Get('locations/provinces')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List all provinces' })
   @ApiEnvelopeResponse({
@@ -25,8 +63,8 @@ export class LocationsController {
     return this.queryBus.execute(new GetProvincesQuery())
   }
 
-  /** Lists cantons for a given province sorted alphabetically. */
-  @Get('provinces/:provinceId/cantons')
+  @Public()
+  @Get('locations/provinces/:provinceId/cantons')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List cantons by province' })
   @ApiParam({ name: 'provinceId', description: 'Province ID', type: Number })

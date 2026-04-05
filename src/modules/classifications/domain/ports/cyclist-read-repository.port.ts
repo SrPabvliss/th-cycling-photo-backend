@@ -1,13 +1,15 @@
 import type {
-  CyclistDetailProjection,
-  CyclistListProjection,
+  ParticipantDetailProjection,
+  ParticipantListProjection,
 } from '@classifications/application/projections'
-import type { DetectedCyclist } from '../entities'
+import type { DetectedParticipant } from '../entities'
 
-export interface ICyclistReadRepository {
-  findById(id: string): Promise<DetectedCyclist | null>
-  getCyclistsByPhoto(photoId: string): Promise<CyclistListProjection[]>
-  getCyclistDetail(id: string): Promise<CyclistDetailProjection | null>
+export interface IParticipantReadRepository {
+  findById(id: string): Promise<DetectedParticipant | null>
+  getParticipantsByPhoto(photoId: string): Promise<ParticipantListProjection[]>
+  getParticipantDetail(id: string): Promise<ParticipantDetailProjection | null>
+  getParticipantCategories(eventTypeId: number): Promise<Array<{ id: number; name: string }>>
+  getGearTypes(eventTypeId: number): Promise<Array<{ id: number; name: string }>>
 }
 
-export const CYCLIST_READ_REPOSITORY = Symbol('CYCLIST_READ_REPOSITORY')
+export const PARTICIPANT_READ_REPOSITORY = Symbol('PARTICIPANT_READ_REPOSITORY')

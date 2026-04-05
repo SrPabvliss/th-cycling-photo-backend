@@ -4,11 +4,13 @@ import { OrderStatus, type OrderStatusType } from '../value-objects/order-status
 export class Order {
   constructor(
     public readonly id: string,
-    public readonly previewLinkId: string,
+    public readonly previewLinkId: string | null,
     public readonly eventId: string,
-    public readonly customerId: string,
+    public readonly userId: string,
     public status: OrderStatusType,
     public readonly notes: string | null,
+    public readonly bibNumber: string | null,
+    public readonly subtotal: number | null,
     public readonly createdAt: Date,
     public paidAt: Date | null,
     public deliveredAt: Date | null,
@@ -21,18 +23,22 @@ export class Order {
    * Status starts as pending.
    */
   static create(data: {
-    previewLinkId: string
+    previewLinkId: string | null
     eventId: string
-    customerId: string
+    userId: string
     notes: string | null
+    bibNumber?: string | null
+    subtotal?: number | null
   }): Order {
     return new Order(
       crypto.randomUUID(),
       data.previewLinkId,
       data.eventId,
-      data.customerId,
+      data.userId,
       OrderStatus.PENDING,
       data.notes,
+      data.bibNumber ?? null,
+      data.subtotal ?? null,
       new Date(),
       null,
       null,
@@ -47,11 +53,13 @@ export class Order {
    */
   static fromPersistence(data: {
     id: string
-    previewLinkId: string
+    previewLinkId: string | null
     eventId: string
-    customerId: string
+    userId: string
     status: OrderStatusType
     notes: string | null
+    bibNumber: string | null
+    subtotal: number | null
     createdAt: Date
     paidAt: Date | null
     deliveredAt: Date | null
@@ -62,9 +70,11 @@ export class Order {
       data.id,
       data.previewLinkId,
       data.eventId,
-      data.customerId,
+      data.userId,
       data.status,
       data.notes,
+      data.bibNumber,
+      data.subtotal,
       data.createdAt,
       data.paidAt,
       data.deliveredAt,

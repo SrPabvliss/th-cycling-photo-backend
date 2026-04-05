@@ -9,6 +9,7 @@ export class UpdateEventCommand {
     public readonly location?: string | null,
     public readonly provinceId?: number | null,
     public readonly cantonId?: number | null,
+    public readonly eventTypeId?: number,
     public readonly audit?: AuditContext,
   ) {}
 }

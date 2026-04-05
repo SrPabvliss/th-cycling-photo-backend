@@ -1,0 +1,8 @@
+{
+  "photo_not_found": "Foto no encontrada",
+  "photo_already_in_cart": "La foto ya está en el carrito",
+  "no_active_cart": "No se encontró un carrito activo",
+  "cart_empty": "El carrito está vacío",
+  "event_not_in_cart": "Evento no encontrado en el carrito",
+  "checkout_failed": "Error al procesar el pedido"
+}

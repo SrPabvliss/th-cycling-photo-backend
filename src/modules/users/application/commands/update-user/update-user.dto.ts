@@ -15,10 +15,4 @@ export class UpdateUserDto {
   @MinLength(1)
   @MaxLength(100)
   lastName?: string
-
-  @ApiPropertyOptional({ description: 'Phone number (null to remove)', example: '+593999999999' })
-  @IsString()
-  @IsOptional()
-  @MaxLength(20)
-  phone?: string | null
 }

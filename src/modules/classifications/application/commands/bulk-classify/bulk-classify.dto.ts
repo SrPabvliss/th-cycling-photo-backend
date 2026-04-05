@@ -3,11 +3,10 @@ import { Type } from 'class-transformer'
 import {
   ArrayMinSize,
   IsArray,
-  IsInt,
+  IsNotEmpty,
   IsOptional,
+  IsString,
   IsUUID,
-  Max,
-  Min,
   ValidateNested,
 } from 'class-validator'
 import { ColorInputDto } from '../create-cyclist/create-cyclist.dto'
@@ -23,17 +22,16 @@ export class BulkClassifyDto {
   @IsUUID('4', { each: true })
   photoIds: string[]
 
-  @ApiPropertyOptional({ description: 'Plate number (1-9999)', example: 42 })
+  @ApiPropertyOptional({ description: 'Participant identifier value', example: '42' })
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(9999)
-  plateNumber?: number
+  @IsString()
+  @IsNotEmpty()
+  identifier?: string
 
   @ApiProperty({
-    description: 'Equipment colors for the cyclist',
+    description: 'Gear colors for the participant',
     type: [ColorInputDto],
-    example: [{ itemType: 'helmet', colorName: 'Red', colorHex: '#FF0000' }],
+    example: [{ gearTypeId: 1, colorName: 'Red', colorHex: '#FF0000' }],
   })
   @IsArray()
   @ValidateNested({ each: true })

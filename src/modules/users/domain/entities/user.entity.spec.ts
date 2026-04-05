@@ -7,7 +7,6 @@ describe('User Entity', () => {
     passwordHash: '$2b$10$somehash',
     firstName: 'Pablo',
     lastName: 'Villacres',
-    phone: null,
   }
 
   describe('create', () => {
@@ -43,12 +42,6 @@ describe('User Entity', () => {
 
       expect(user.firstName).toBe('Updated')
       expect(user.lastName).toBe('Name')
-    })
-
-    it('should update phone', () => {
-      const user = User.create(validData)
-      user.update({ phone: '+593999999999' })
-      expect(user.phone).toBe('+593999999999')
     })
   })
 
@@ -105,7 +98,6 @@ describe('User Entity', () => {
         passwordHash: 'hash',
         firstName: null,
         lastName: null,
-        phone: null,
         avatarUrl: null,
         avatarStorageKey: null,
         isActive: false,

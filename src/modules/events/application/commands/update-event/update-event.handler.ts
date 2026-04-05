@@ -36,6 +36,7 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
       location: command.location,
       provinceId: command.provinceId,
       cantonId: command.cantonId,
+      eventTypeId: command.eventTypeId,
     })
 
     if (command.audit) event.audit.setUpdatedBy(command.audit.userId)

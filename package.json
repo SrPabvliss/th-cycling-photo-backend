@@ -119,11 +119,12 @@
       "^@classifications/(.*)$": "<rootDir>/modules/classifications/$1",
       "^@locations/(.*)$": "<rootDir>/modules/locations/$1",
       "^@users/(.*)$": "<rootDir>/modules/users/$1",
-      "^@customers/(.*)$": "<rootDir>/modules/customers/$1",
       "^@previews/(.*)$": "<rootDir>/modules/previews/$1",
       "^@deliveries/(.*)$": "<rootDir>/modules/deliveries/$1",
       "^@orders/(.*)$": "<rootDir>/modules/orders/$1",
       "^@notifications/(.*)$": "<rootDir>/modules/notifications/$1",
+      "^@auth/(.*)$": "<rootDir>/modules/auth/$1",
+      "^@cart/(.*)$": "<rootDir>/modules/cart/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "collectCoverageFrom": [

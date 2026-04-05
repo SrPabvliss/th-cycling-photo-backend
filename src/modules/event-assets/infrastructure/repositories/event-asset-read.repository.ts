@@ -24,6 +24,7 @@ export class EventAssetReadRepository implements IEventAssetReadRepository {
   async getByEvent(eventId: string): Promise<EventAssetProjection[]> {
     const records = await this.prisma.eventAsset.findMany({
       where: { event_id: eventId },
+      select: EventAssetMapper.eventAssetSelectConfig,
       orderBy: { uploaded_at: 'asc' },
     })
 

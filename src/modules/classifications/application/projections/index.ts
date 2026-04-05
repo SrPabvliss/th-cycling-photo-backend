@@ -1,8 +1,8 @@
 export { BulkClassifyResultProjection } from './bulk-classify-result.projection'
 export {
-  CyclistDetailProjection,
-  CyclistDetailProjection as DetectedCyclistProjection,
+  ParticipantDetailProjection,
+  ParticipantDetailProjection as DetectedParticipantProjection,
 } from './cyclist-detail.projection'
-export { CyclistListProjection } from './cyclist-list.projection'
-export { EquipmentColorProjection } from './equipment-color.projection'
-export { PlateNumberProjection } from './plate-number.projection'
+export { ParticipantListProjection } from './cyclist-list.projection'
+export { GearColorProjection } from './equipment-color.projection'
+export { IdentifierProjection } from './plate-number.projection'

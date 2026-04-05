@@ -1,8 +1,8 @@
-export class PlateNumberProjection {
-  /** PlateNumber UUID */
+export class IdentifierProjection {
+  /** ParticipantIdentifier UUID */
   id: string
-  /** Detected plate number (1-9999) */
-  number: number
+  /** Detected identifier value */
+  value: string
   /** AI confidence score (null for manual) */
   confidenceScore: number | null
   /** Whether an operator corrected this value */

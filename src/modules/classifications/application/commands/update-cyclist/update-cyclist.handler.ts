@@ -1,46 +1,45 @@
-import { EquipmentColor, PlateNumber } from '@classifications/domain/entities'
+import { GearColor, ParticipantIdentifier } from '@classifications/domain/entities'
 import {
-  CYCLIST_READ_REPOSITORY,
-  CYCLIST_WRITE_REPOSITORY,
-  type ICyclistReadRepository,
-  type ICyclistWriteRepository,
+  type IParticipantReadRepository,
+  type IParticipantWriteRepository,
+  PARTICIPANT_READ_REPOSITORY,
+  PARTICIPANT_WRITE_REPOSITORY,
 } from '@classifications/domain/ports'
-import type { EquipmentItemType } from '@classifications/domain/value-objects/equipment-item.vo'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
-import { UpdateCyclistCommand } from './update-cyclist.command'
+import { UpdateParticipantCommand } from './update-cyclist.command'
 
-@CommandHandler(UpdateCyclistCommand)
-export class UpdateCyclistHandler implements ICommandHandler<UpdateCyclistCommand> {
+@CommandHandler(UpdateParticipantCommand)
+export class UpdateParticipantHandler implements ICommandHandler<UpdateParticipantCommand> {
   constructor(
-    @Inject(CYCLIST_WRITE_REPOSITORY) private readonly writeRepo: ICyclistWriteRepository,
-    @Inject(CYCLIST_READ_REPOSITORY) private readonly readRepo: ICyclistReadRepository,
+    @Inject(PARTICIPANT_WRITE_REPOSITORY) private readonly writeRepo: IParticipantWriteRepository,
+    @Inject(PARTICIPANT_READ_REPOSITORY) private readonly readRepo: IParticipantReadRepository,
   ) {}
 
-  async execute(command: UpdateCyclistCommand): Promise<EntityIdProjection> {
-    const cyclist = await this.readRepo.findById(command.cyclistId)
-    if (!cyclist) throw AppException.notFound('Cyclist', command.cyclistId)
+  async execute(command: UpdateParticipantCommand): Promise<EntityIdProjection> {
+    const participant = await this.readRepo.findById(command.participantId)
+    if (!participant) throw AppException.notFound('Participant', command.participantId)
 
-    if (command.plateNumber !== undefined) {
-      await this.writeRepo.deletePlateNumberByCyclist(cyclist.id)
-      if (command.plateNumber !== null) {
-        const plate = PlateNumber.create({
-          detectedCyclistId: cyclist.id,
-          number: command.plateNumber,
+    if (command.identifier !== undefined) {
+      await this.writeRepo.deleteIdentifierByParticipant(participant.id)
+      if (command.identifier !== null) {
+        const identifier = ParticipantIdentifier.create({
+          detectedParticipantId: participant.id,
+          value: command.identifier,
         })
-        await this.writeRepo.savePlateNumber(plate)
+        await this.writeRepo.saveIdentifier(identifier)
       }
     }
 
     if (command.colors !== undefined) {
-      await this.writeRepo.deleteColorsByCyclist(cyclist.id)
+      await this.writeRepo.deleteColorsByParticipant(participant.id)
       if (command.colors.length > 0) {
         const colors = command.colors.map((c) =>
-          EquipmentColor.create({
-            detectedCyclistId: cyclist.id,
-            itemType: c.itemType as EquipmentItemType,
+          GearColor.create({
+            detectedParticipantId: participant.id,
+            gearTypeId: c.gearTypeId,
             colorName: c.colorName,
             colorHex: c.colorHex,
           }),
@@ -49,9 +48,9 @@ export class UpdateCyclistHandler implements ICommandHandler<UpdateCyclistComman
       }
     }
 
-    cyclist.markUpdated()
-    await this.writeRepo.saveCyclist(cyclist)
+    participant.markUpdated()
+    await this.writeRepo.saveParticipant(participant)
 
-    return { id: cyclist.id }
+    return { id: participant.id }
   }
 }

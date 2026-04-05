@@ -1,11 +1,3 @@
-export class OrderCustomerProjection {
-  id: string
-  firstName: string
-  lastName: string
-  whatsapp: string
-  email: string | null
-}
-
 export class OrderPhotoProjection {
   id: string
   filename: string
@@ -34,12 +26,22 @@ export class OrderDetailProjection {
   deliveredAt: Date | null
   /** When the order was cancelled */
   cancelledAt: Date | null
-  /** Customer data */
-  customer: OrderCustomerProjection
+  /** User display name (from user relation) */
+  userName: string
+  /** Snap first name at time of order */
+  snapFirstName: string | null
+  /** Snap last name at time of order */
+  snapLastName: string | null
+  /** Snap WhatsApp at time of order */
+  snapWhatsapp: string | null
+  /** Snap email at time of order */
+  snapEmail: string | null
   /** Event name */
   eventName: string
-  /** Preview link token that originated this order */
-  previewLinkToken: string
+  /** Preview link token that originated this order (nullable) */
+  previewLinkToken: string | null
+  /** Retouch progress for the order */
+  retouchProgress: { total: number; retouched: number }
   /** Photos in the order */
   photos: OrderPhotoProjection[]
   /** Delivery link (null if not yet generated) */

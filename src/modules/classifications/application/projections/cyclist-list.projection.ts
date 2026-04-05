@@ -1,16 +1,16 @@
-export class CyclistListProjection {
-  /** Cyclist UUID */
+export class ParticipantListProjection {
+  /** Participant UUID */
   id: string
-  /** Photo UUID this cyclist belongs to */
+  /** Photo UUID this participant belongs to */
   photoId: string
   /** Classification source: 'manual' or 'ai' */
   source: string
-  /** Plate number (if detected) */
-  plateNumber: number | null
-  /** Number of colors associated with this cyclist */
+  /** Identifier value (if detected) */
+  identifier: string | null
+  /** Number of colors associated with this participant */
   colorCount: number
-  /** When this cyclist was classified */
+  /** When this participant was classified */
   createdAt: Date
-  /** When this cyclist was last updated */
+  /** When this participant was last updated */
   updatedAt: Date
 }

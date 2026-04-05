@@ -1,15 +1,15 @@
 import type { AuditContext } from '@shared/application'
 
 export interface ColorInput {
-  itemType: string
+  gearTypeId: number
   colorName: string
   colorHex: string
 }
 
-export class CreateCyclistCommand {
+export class CreateParticipantCommand {
   constructor(
     public readonly photoId: string,
-    public readonly plateNumber: number | null,
+    public readonly identifier: string | null,
     public readonly colors: ColorInput[],
     public readonly audit?: AuditContext,
   ) {}

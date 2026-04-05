@@ -1,4 +1,3 @@
-import type { EventAssetType } from '@generated/prisma/client'
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
@@ -14,6 +13,7 @@ import {
 } from '../../application/commands'
 import { AssetPresignedUrlProjection, EventAssetProjection } from '../../application/projections'
 import { GetEventAssetsQuery } from '../../application/queries'
+import type { EventAssetType } from '../../domain/value-objects/event-asset-type.enum'
 
 @ApiTags('Event Assets')
 @ApiBearerAuth()

@@ -7,8 +7,6 @@ export class UserDetailProjection {
   firstName: string | null
   /** Last name */
   lastName: string | null
-  /** Phone number */
-  phone: string | null
   /** Avatar URL (real or DiceBear fallback) */
   avatarUrl: string
   /** Whether the user account is active */

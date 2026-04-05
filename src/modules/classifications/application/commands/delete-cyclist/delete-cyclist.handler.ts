@@ -1,28 +1,28 @@
 import {
-  CYCLIST_READ_REPOSITORY,
-  CYCLIST_WRITE_REPOSITORY,
-  type ICyclistReadRepository,
-  type ICyclistWriteRepository,
+  type IParticipantReadRepository,
+  type IParticipantWriteRepository,
+  PARTICIPANT_READ_REPOSITORY,
+  PARTICIPANT_WRITE_REPOSITORY,
 } from '@classifications/domain/ports'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
-import { DeleteCyclistCommand } from './delete-cyclist.command'
+import { DeleteParticipantCommand } from './delete-cyclist.command'
 
-@CommandHandler(DeleteCyclistCommand)
-export class DeleteCyclistHandler implements ICommandHandler<DeleteCyclistCommand> {
+@CommandHandler(DeleteParticipantCommand)
+export class DeleteParticipantHandler implements ICommandHandler<DeleteParticipantCommand> {
   constructor(
-    @Inject(CYCLIST_WRITE_REPOSITORY) private readonly writeRepo: ICyclistWriteRepository,
-    @Inject(CYCLIST_READ_REPOSITORY) private readonly readRepo: ICyclistReadRepository,
+    @Inject(PARTICIPANT_WRITE_REPOSITORY) private readonly writeRepo: IParticipantWriteRepository,
+    @Inject(PARTICIPANT_READ_REPOSITORY) private readonly readRepo: IParticipantReadRepository,
   ) {}
 
-  async execute(command: DeleteCyclistCommand): Promise<EntityIdProjection> {
-    const cyclist = await this.readRepo.findById(command.cyclistId)
-    if (!cyclist) throw AppException.notFound('Cyclist', command.cyclistId)
+  async execute(command: DeleteParticipantCommand): Promise<EntityIdProjection> {
+    const participant = await this.readRepo.findById(command.participantId)
+    if (!participant) throw AppException.notFound('Participant', command.participantId)
 
-    await this.writeRepo.deleteCyclist(command.cyclistId)
+    await this.writeRepo.deleteParticipant(command.participantId)
 
-    return { id: command.cyclistId }
+    return { id: command.participantId }
   }
 }

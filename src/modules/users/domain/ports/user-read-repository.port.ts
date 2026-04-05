@@ -1,5 +1,9 @@
 import type { PaginatedResult, Pagination } from '@shared/application'
-import type { UserDetailProjection, UserListProjection } from '../../application/projections'
+import type {
+  BuyerListProjection,
+  UserDetailProjection,
+  UserListProjection,
+} from '../../application/projections'
 import type { User } from '../entities'
 
 export interface IUserReadRepository {
@@ -11,6 +15,10 @@ export interface IUserReadRepository {
   ): Promise<PaginatedResult<UserListProjection>>
   getUserDetail(id: string): Promise<UserDetailProjection | null>
   findActiveAdminIds(): Promise<string[]>
+  getBuyersList(
+    pagination: Pagination,
+    search?: string,
+  ): Promise<PaginatedResult<BuyerListProjection>>
 }
 
 export const USER_READ_REPOSITORY = Symbol('USER_READ_REPOSITORY')

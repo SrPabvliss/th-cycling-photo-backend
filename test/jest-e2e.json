@@ -13,6 +13,9 @@
     "^@events/(.*)$": "<rootDir>/../src/modules/events/$1",
     "^@photos/(.*)$": "<rootDir>/../src/modules/photos/$1",
     "^@classifications/(.*)$": "<rootDir>/../src/modules/classifications/$1",
+    "^@auth/(.*)$": "<rootDir>/../src/modules/auth/$1",
+    "^@orders/(.*)$": "<rootDir>/../src/modules/orders/$1",
+    "^@users/(.*)$": "<rootDir>/../src/modules/users/$1",
     "^(\\.{1,2}/.*)\\.js$": "$1"
   }
 }

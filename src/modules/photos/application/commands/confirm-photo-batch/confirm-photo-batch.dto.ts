@@ -4,11 +4,11 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsIn,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
   Min,
   ValidateNested,
@@ -50,10 +50,11 @@ export class ConfirmPhotoBatchDto {
   photos: PhotoBatchItemDto[]
 
   @ApiPropertyOptional({
-    description: 'Photo category to assign to all photos in this batch',
-    format: 'uuid',
+    description: 'Photo category ID to assign to all photos in this batch',
+    example: 1,
   })
   @IsOptional()
-  @IsUUID()
-  photoCategoryId?: string
+  @IsInt()
+  @Min(1)
+  photoCategoryId?: number
 }

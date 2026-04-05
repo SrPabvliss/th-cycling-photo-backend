@@ -11,10 +11,16 @@
   "session": "Session",
   "access_token": "Access token",
   "customer": "Customer",
+  "buyer": "Buyer",
+  "participant": "Participant",
+  "gear_type": "Gear type",
+  "user_phone": "Phone",
+  "event_type": "Event type",
   "preview_link": "Preview link",
   "delivery_link": "Delivery link",
   "order": "Order",
   "notification": "Notification",
   "event_asset": "Event asset",
-  "photo_category": "Photo category"
+  "photo_category": "Photo category",
+  "cart": "Cart"
 }

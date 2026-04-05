@@ -1,18 +1,21 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
 import type { StoredRefreshTokenProjection } from '../../application/projections'
+import type { CreateRefreshTokenPayload } from '../../domain/payloads'
 import type { IRefreshTokenRepository } from '../../domain/ports'
 
 @Injectable()
 export class RefreshTokenRepository implements IRefreshTokenRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: { tokenHash: string; userId: string; expiresAt: Date }): Promise<void> {
+  async create(payload: CreateRefreshTokenPayload): Promise<void> {
     await this.prisma.refreshToken.create({
       data: {
-        token_hash: data.tokenHash,
-        user_id: data.userId,
-        expires_at: data.expiresAt,
+        token_hash: payload.tokenHash,
+        user_id: payload.userId,
+        expires_at: payload.expiresAt,
+        ip_address: payload.ipAddress ?? null,
+        user_agent: payload.userAgent ?? null,
       },
     })
   }

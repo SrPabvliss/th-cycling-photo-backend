@@ -1,3 +1,3 @@
-export class DeleteCyclistCommand {
-  constructor(public readonly cyclistId: string) {}
+export class DeleteParticipantCommand {
+  constructor(public readonly participantId: string) {}
 }

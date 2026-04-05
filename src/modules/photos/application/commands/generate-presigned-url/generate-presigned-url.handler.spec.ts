@@ -23,6 +23,7 @@ describe('GeneratePresignedUrlHandler', () => {
     location: 'Ambato',
     provinceId: null,
     cantonId: null,
+    eventTypeId: 1,
     status: 'active',
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -37,6 +38,8 @@ describe('GeneratePresignedUrlHandler', () => {
       countAll: jest.fn(),
       getPublicEventsList: jest.fn(),
       getPublicEventDetail: jest.fn(),
+      getPublicPhotos: jest.fn(),
+      existsActiveEvent: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoReadRepo = {
@@ -57,6 +60,7 @@ describe('GeneratePresignedUrlHandler', () => {
       sumAllFileSize: jest.fn(),
       countByIds: jest.fn(),
       findSimilar: jest.fn(),
+      countByIdsAndEvent: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
     storageAdapter = {

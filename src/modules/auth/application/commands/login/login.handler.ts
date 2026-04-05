@@ -1,12 +1,19 @@
-import * as crypto from 'node:crypto'
 import { Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { JwtService } from '@nestjs/jwt'
 import { AppException } from '@shared/domain'
 import { compareSync } from 'bcryptjs'
-import type { IAuthUserRepository, IRefreshTokenRepository } from '../../../domain/ports'
-import { AUTH_USER_REPOSITORY, REFRESH_TOKEN_REPOSITORY } from '../../../domain/ports'
+import type {
+  IAuthUserRepository,
+  IRefreshTokenRepository,
+  ITokenHashService,
+} from '../../../domain/ports'
+import {
+  AUTH_USER_REPOSITORY,
+  REFRESH_TOKEN_REPOSITORY,
+  TOKEN_HASH_SERVICE,
+} from '../../../domain/ports'
 import type { AuthTokensProjection } from '../../projections'
 import { LoginCommand } from './login.command'
 
@@ -17,6 +24,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
   constructor(
     @Inject(AUTH_USER_REPOSITORY) private readonly authUserRepo: IAuthUserRepository,
     @Inject(REFRESH_TOKEN_REPOSITORY) private readonly refreshTokenRepo: IRefreshTokenRepository,
+    @Inject(TOKEN_HASH_SERVICE) private readonly tokenHashService: ITokenHashService,
     private readonly jwtService: JwtService,
     configService: ConfigService,
   ) {
@@ -37,8 +45,8 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
     const payload = { sub: user.id, email: user.email, role: user.role }
     const accessToken = this.jwtService.sign(payload)
 
-    const rawToken = crypto.randomUUID()
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
+    const rawToken = this.tokenHashService.generateToken()
+    const tokenHash = this.tokenHashService.hash(rawToken)
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + this.refreshExpiryDays)
 

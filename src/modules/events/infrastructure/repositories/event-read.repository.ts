@@ -1,4 +1,6 @@
+import type { Prisma } from '@generated/prisma/client'
 import { Inject, Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { PrismaService } from '@shared/infrastructure'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
@@ -7,45 +9,23 @@ import type {
   EventListProjection,
   PublicEventDetailProjection,
   PublicEventListProjection,
+  PublicPhotoProjection,
 } from '../../application/projections'
 import type { Event } from '../../domain/entities'
 import type { IEventReadRepository } from '../../domain/ports'
 import * as EventMapper from '../mappers/event.mapper'
 
-const COVER_IMAGE_ASSET_SELECT = {
-  select: { storage_key: true },
-  where: { asset_type: 'cover_image' as const },
-  take: 1,
-}
-
-const EVENT_LIST_SELECT = {
-  id: true,
-  name: true,
-  description: true,
-  event_date: true,
-  location: true,
-  province: { select: { name: true } },
-  canton: { select: { name: true } },
-  is_featured: true,
-  status: true,
-  _count: { select: { photos: true } },
-  assets: COVER_IMAGE_ASSET_SELECT,
-} as const
-
-const EVENT_DETAIL_SELECT = {
-  ...EVENT_LIST_SELECT,
-  province_id: true,
-  canton_id: true,
-  created_at: true,
-  updated_at: true,
-} as const
-
 @Injectable()
 export class EventReadRepository implements IEventReadRepository {
+  private readonly watermarkBaseUrl: string
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.watermarkBaseUrl = config.getOrThrow<string>('watermark.baseUrl')
+  }
 
   /** Finds an event entity by ID. Excludes archived by default. */
   async findById(id: string, includeArchived = false): Promise<Event | null> {
@@ -68,7 +48,7 @@ export class EventReadRepository implements IEventReadRepository {
     const [events, total] = await Promise.all([
       this.prisma.event.findMany({
         where,
-        select: EVENT_LIST_SELECT,
+        select: EventMapper.eventListSelectConfig,
         orderBy: { event_date: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
@@ -87,7 +67,7 @@ export class EventReadRepository implements IEventReadRepository {
   async getEventDetail(id: string): Promise<EventDetailProjection | null> {
     const record = await this.prisma.event.findFirst({
       where: { id },
-      select: EVENT_DETAIL_SELECT,
+      select: EventMapper.eventDetailSelectConfig,
     })
 
     return record
@@ -109,17 +89,7 @@ export class EventReadRepository implements IEventReadRepository {
     const [events, total] = await Promise.all([
       this.prisma.event.findMany({
         where,
-        select: {
-          id: true,
-          name: true,
-          event_date: true,
-          location: true,
-          province: { select: { name: true } },
-          canton: { select: { name: true } },
-          is_featured: true,
-          _count: { select: { photos: true } },
-          assets: { select: { asset_type: true, storage_key: true } },
-        },
+        select: EventMapper.publicEventListSelectConfig,
         orderBy: { event_date: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
@@ -127,20 +97,9 @@ export class EventReadRepository implements IEventReadRepository {
       this.prisma.event.count({ where }),
     ])
 
-    const items: PublicEventListProjection[] = events.map((e) => ({
-      id: e.id,
-      name: e.name,
-      date: e.event_date,
-      location: e.location,
-      provinceName: e.province?.name ?? null,
-      cantonName: e.canton?.name ?? null,
-      isFeatured: e.is_featured,
-      photoCount: e._count.photos,
-      assets: e.assets.map((a) => ({
-        assetType: a.asset_type,
-        url: this.storage.getPublicUrl(a.storage_key),
-      })),
-    }))
+    const items = events.map((e) =>
+      EventMapper.toPublicListProjection(e, (key) => this.storage.getPublicUrl(key)),
+    )
 
     return new PaginatedResult(items, total, pagination)
   }
@@ -149,44 +108,56 @@ export class EventReadRepository implements IEventReadRepository {
   async getPublicEventDetail(eventId: string): Promise<PublicEventDetailProjection | null> {
     const event = await this.prisma.event.findFirst({
       where: { id: eventId, deleted_at: null, status: 'active' },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        event_date: true,
-        location: true,
-        province: { select: { name: true } },
-        canton: { select: { name: true } },
-        is_featured: true,
-        _count: { select: { photos: true } },
-        assets: { select: { asset_type: true, storage_key: true } },
-        photo_categories: {
-          select: { photo_category: { select: { id: true, name: true } } },
-          orderBy: { photo_category: { name: 'asc' } },
-        },
-      },
+      select: EventMapper.publicEventDetailSelectConfig,
     })
 
     if (!event) return null
 
-    return {
-      id: event.id,
-      name: event.name,
-      description: event.description,
-      date: event.event_date,
-      location: event.location,
-      provinceName: event.province?.name ?? null,
-      cantonName: event.canton?.name ?? null,
-      isFeatured: event.is_featured,
-      photoCount: event._count.photos,
-      assets: event.assets.map((a) => ({
-        assetType: a.asset_type,
-        url: this.storage.getPublicUrl(a.storage_key),
-      })),
-      photoCategories: event.photo_categories.map((c) => ({
-        id: c.photo_category.id,
-        name: c.photo_category.name,
-      })),
+    return EventMapper.toPublicDetailProjection(event, (key) => this.storage.getPublicUrl(key))
+  }
+
+  /** Returns watermarked public photos for a given active event, paginated. */
+  async getPublicPhotos(
+    eventId: string,
+    pagination: Pagination,
+    photoCategoryId?: number | null,
+  ): Promise<PaginatedResult<PublicPhotoProjection>> {
+    const where: Prisma.PhotoWhereInput = {
+      event_id: eventId,
     }
+
+    if (photoCategoryId) {
+      where.photo_category_id = photoCategoryId
+    }
+
+    const [photos, total] = await Promise.all([
+      this.prisma.photo.findMany({
+        where,
+        select: { id: true, storage_key: true, width: true, height: true },
+        orderBy: { uploaded_at: 'desc' },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+      this.prisma.photo.count({ where }),
+    ])
+
+    return new PaginatedResult(
+      photos.map((p) => ({
+        id: p.id,
+        url: `${this.watermarkBaseUrl}/${p.storage_key}`,
+        width: p.width,
+        height: p.height,
+      })),
+      total,
+      pagination,
+    )
+  }
+
+  /** Checks if an active event exists and returns its id and name. */
+  async existsActiveEvent(eventId: string): Promise<{ id: string; name: string } | null> {
+    return this.prisma.event.findFirst({
+      where: { id: eventId, status: 'active', deleted_at: null },
+      select: { id: true, name: true },
+    })
   }
 }

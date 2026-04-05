@@ -9,16 +9,6 @@ import { PaginatedResult, type Pagination } from '@shared/application'
 import { PrismaService } from '@shared/infrastructure'
 import * as PreviewLinkMapper from '../mappers/preview-link.mapper'
 
-const PREVIEW_LINK_LIST_SELECT = {
-  id: true,
-  token: true,
-  status: true,
-  expires_at: true,
-  viewed_at: true,
-  created_at: true,
-  _count: { select: { photos: true, orders: true } },
-} as const
-
 @Injectable()
 export class PreviewLinkReadRepository implements IPreviewLinkReadRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -41,7 +31,7 @@ export class PreviewLinkReadRepository implements IPreviewLinkReadRepository {
     const [previewLinks, total] = await Promise.all([
       this.prisma.previewLink.findMany({
         where,
-        select: PREVIEW_LINK_LIST_SELECT,
+        select: PreviewLinkMapper.previewLinkListSelectConfig,
         orderBy: { created_at: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
@@ -50,7 +40,7 @@ export class PreviewLinkReadRepository implements IPreviewLinkReadRepository {
     ])
 
     return new PaginatedResult(
-      previewLinks.map((pl) => PreviewLinkMapper.toListProjection(pl)),
+      previewLinks.map(PreviewLinkMapper.toListProjection),
       total,
       pagination,
     )
@@ -60,31 +50,11 @@ export class PreviewLinkReadRepository implements IPreviewLinkReadRepository {
   async getPreviewData(token: string): Promise<PreviewDataProjection | null> {
     const record = await this.prisma.previewLink.findFirst({
       where: { token },
-      select: {
-        token: true,
-        status: true,
-        expires_at: true,
-        event: { select: { name: true, event_date: true } },
-        photos: {
-          select: {
-            photo: { select: { id: true, storage_key: true } },
-          },
-        },
-      },
+      select: PreviewLinkMapper.previewDataSelectConfig,
     })
 
     if (!record) return null
 
-    return {
-      token: record.token,
-      eventName: record.event.name,
-      eventDate: record.event.event_date,
-      status: record.status,
-      expiresAt: record.expires_at,
-      photos: record.photos.map((plp) => ({
-        id: plp.photo.id,
-        url: plp.photo.storage_key,
-      })),
-    }
+    return PreviewLinkMapper.toPreviewDataProjection(record)
   }
 }

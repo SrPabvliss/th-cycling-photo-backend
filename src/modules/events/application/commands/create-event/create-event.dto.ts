@@ -63,4 +63,13 @@ export class CreateEventDto {
   @IsOptional()
   @Type(() => Number)
   cantonId?: number
+
+  @ApiProperty({
+    description: 'Event type ID',
+    example: 1,
+  })
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  eventTypeId: number
 }

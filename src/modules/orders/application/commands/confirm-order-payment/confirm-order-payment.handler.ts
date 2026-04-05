@@ -37,9 +37,7 @@ export class ConfirmOrderPaymentHandler implements ICommandHandler<ConfirmOrderP
     this.notifications.emitOrderPaid({
       orderId: order.id,
       eventName: detail?.eventName ?? '',
-      customerName: detail?.customer
-        ? `${detail.customer.firstName} ${detail.customer.lastName}`
-        : '',
+      customerName: detail?.userName ?? '',
       confirmedBy: command.audit.userId,
       paidAt: order.paidAt!,
     })

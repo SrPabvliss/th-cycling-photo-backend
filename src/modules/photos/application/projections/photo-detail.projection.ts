@@ -1,4 +1,4 @@
-import type { DetectedCyclistProjection } from '@classifications/application/projections'
+import type { DetectedParticipantProjection } from '@classifications/application/projections'
 
 export class PhotoDetailProjection {
   /** Photo UUID */
@@ -35,6 +35,6 @@ export class PhotoDetailProjection {
   processedAt: Date | null
   /** When an operator marked this photo as classified */
   classifiedAt: Date | null
-  /** Detected cyclists with plate numbers and equipment colors */
-  detectedCyclists: DetectedCyclistProjection[]
+  /** Detected participants with identifiers and gear colors */
+  detectedParticipants: DetectedParticipantProjection[]
 }

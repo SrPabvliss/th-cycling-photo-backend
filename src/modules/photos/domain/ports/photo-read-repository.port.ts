@@ -14,7 +14,7 @@ export interface IPhotoReadRepository {
     eventId: string,
     pagination: Pagination,
     classified?: boolean,
-    photoCategoryId?: string,
+    photoCategoryId?: number,
   ): Promise<PaginatedResult<PhotoListProjection>>
   getPhotoDetail(id: string): Promise<PhotoDetailProjection | null>
   searchPhotos(
@@ -32,6 +32,7 @@ export interface IPhotoReadRepository {
   ): Promise<Array<{ filename: string; storageKey: string; fileSize: number }>>
   getResumePoint(eventId: string, limit: number): Promise<{ photoId: string | null; page: number }>
   countByIds(ids: string[]): Promise<number>
+  countByIdsAndEvent(photoIds: string[], eventId: string): Promise<number>
   findSimilar(photoId: string, eventId: string, limit: number): Promise<SimilarPhotoProjection[]>
   countAll(): Promise<number>
   sumAllFileSize(): Promise<number>

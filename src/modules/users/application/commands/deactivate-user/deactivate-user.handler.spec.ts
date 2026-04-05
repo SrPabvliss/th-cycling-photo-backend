@@ -15,7 +15,7 @@ describe('DeactivateUserHandler', () => {
     passwordHash: 'hash',
     firstName: 'Test',
     lastName: 'User',
-    phone: null,
+
     avatarUrl: null,
     avatarStorageKey: null,
     isActive: true,
@@ -29,7 +29,7 @@ describe('DeactivateUserHandler', () => {
     passwordHash: 'hash',
     firstName: 'Inactive',
     lastName: 'User',
-    phone: null,
+
     avatarUrl: null,
     avatarStorageKey: null,
     isActive: false,
@@ -44,6 +44,7 @@ describe('DeactivateUserHandler', () => {
       getUsersList: jest.fn(),
       getUserDetail: jest.fn(),
       findActiveAdminIds: jest.fn(),
+      getBuyersList: jest.fn(),
     } as jest.Mocked<IUserReadRepository>
 
     writeRepo = {

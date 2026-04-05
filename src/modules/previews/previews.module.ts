@@ -1,9 +1,7 @@
-import { CustomersModule } from '@customers/customers.module'
 import { EventsModule } from '@events/events.module'
-import { Module } from '@nestjs/common'
+import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { CreatePreviewLinkHandler } from '@previews/application/commands/create-preview-link/create-preview-link.handler'
-import { GetCustomerByWhatsAppHandler } from '@previews/application/queries/get-customer-by-whatsapp/get-customer-by-whatsapp.handler'
 import { GetPreviewByTokenHandler } from '@previews/application/queries/get-preview-by-token/get-preview-by-token.handler'
 import { GetPreviewLinksListHandler } from '@previews/application/queries/get-preview-links-list/get-preview-links-list.handler'
 import { WatermarkUrlService } from '@previews/application/services/watermark-url.service'
@@ -15,14 +13,10 @@ import { PreviewPublicController } from '@previews/presentation/controllers/prev
 import { PhotosModule } from '../photos/photos.module'
 
 const CommandHandlers = [CreatePreviewLinkHandler]
-const QueryHandlers = [
-  GetCustomerByWhatsAppHandler,
-  GetPreviewByTokenHandler,
-  GetPreviewLinksListHandler,
-]
+const QueryHandlers = [GetPreviewByTokenHandler, GetPreviewLinksListHandler]
 
 @Module({
-  imports: [CqrsModule, CustomersModule, EventsModule, PhotosModule],
+  imports: [CqrsModule, forwardRef(() => EventsModule), forwardRef(() => PhotosModule)],
   controllers: [PreviewLinksController, PreviewPublicController],
   providers: [
     ...CommandHandlers,

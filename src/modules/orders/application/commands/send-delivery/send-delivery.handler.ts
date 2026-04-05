@@ -39,21 +39,22 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
       DeliveryLinkCreatedProjection
     >(new CreateDeliveryLinkCommand(order.id))
 
-    // 4. Mark as delivered (paid → delivered)
+    // 4. Set delivered_as on each order item based on retouched status
+    await this.writeRepo.updateItemsDeliveredAs(order.id)
+
+    // 5. Mark as delivered (paid → delivered)
     order.markDelivered()
 
-    // 5. Save order
+    // 6. Save order
     await this.writeRepo.save(order)
 
-    // 6. Get detail for notification + template
+    // 7. Get detail for notification + template
     const detail = await this.readRepo.getDetail(order.id)
     const photoCount = detail?.photos.length ?? 0
-    const customerFirstName = detail?.customer?.firstName ?? ''
-    const customerName = detail?.customer
-      ? `${detail.customer.firstName} ${detail.customer.lastName}`
-      : ''
+    const customerFirstName = detail?.snapFirstName ?? ''
+    const customerName = detail?.userName ?? ''
 
-    // 7. Emit notification
+    // 8. Emit notification
     this.notifications.emitOrderDelivered({
       orderId: order.id,
       eventName: detail?.eventName ?? '',
@@ -61,7 +62,7 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
       deliveredAt: order.deliveredAt!,
     })
 
-    // 8. Build WhatsApp template
+    // 9. Build WhatsApp template
     const whatsappTemplate = `¡Hola ${customerFirstName}! ✅ Tu pago fue confirmado. Aquí tienes tus ${photoCount} fotos en alta calidad: ${deliveryResult.deliveryUrl}. El link estará disponible por 7 días. ¡Gracias por tu compra! 🎉`
 
     return {

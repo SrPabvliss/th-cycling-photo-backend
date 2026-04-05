@@ -9,10 +9,10 @@ export class OrderListProjection {
   paidAt: Date | null
   /** When photos were delivered (null if not yet) */
   deliveredAt: Date | null
-  /** Customer full name */
-  customerName: string
-  /** Customer WhatsApp number */
-  customerWhatsapp: string
+  /** User display name */
+  userName: string
+  /** Snap WhatsApp at time of order */
+  snapWhatsapp: string | null
   /** Event name */
   eventName: string
   /** Number of photos in the order */

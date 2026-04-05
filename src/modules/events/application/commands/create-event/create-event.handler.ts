@@ -24,6 +24,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       location: command.location,
       provinceId: command.provinceId,
       cantonId: command.cantonId,
+      eventTypeId: command.eventTypeId,
     })
 
     if (command.audit) event.audit.setCreatedBy(command.audit.userId)

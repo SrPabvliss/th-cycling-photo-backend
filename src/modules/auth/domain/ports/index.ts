@@ -6,3 +6,7 @@ export {
   type IRefreshTokenRepository,
   REFRESH_TOKEN_REPOSITORY,
 } from './refresh-token-repository.port'
+export {
+  type ITokenHashService,
+  TOKEN_HASH_SERVICE,
+} from './token-hash.service.port'

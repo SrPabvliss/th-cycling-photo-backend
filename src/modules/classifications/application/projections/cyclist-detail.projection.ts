@@ -1,19 +1,19 @@
-import type { EquipmentColorProjection } from './equipment-color.projection'
-import type { PlateNumberProjection } from './plate-number.projection'
+import type { GearColorProjection } from './equipment-color.projection'
+import type { IdentifierProjection } from './plate-number.projection'
 
-export class CyclistDetailProjection {
-  /** Cyclist UUID */
+export class ParticipantDetailProjection {
+  /** Participant UUID */
   id: string
-  /** Photo UUID this cyclist belongs to */
+  /** Photo UUID this participant belongs to */
   photoId: string
   /** Classification source: 'manual' or 'ai' */
   source: string
-  /** Plate number details (null if not detected) */
-  plateNumber: PlateNumberProjection | null
-  /** Equipment colors associated with this cyclist */
-  equipmentColors: EquipmentColorProjection[]
-  /** When this cyclist was classified */
+  /** Identifier details (null if not detected) */
+  identifier: IdentifierProjection | null
+  /** Gear colors associated with this participant */
+  gearColors: GearColorProjection[]
+  /** When this participant was classified */
   createdAt: Date
-  /** When this cyclist was last updated */
+  /** When this participant was last updated */
   updatedAt: Date
 }

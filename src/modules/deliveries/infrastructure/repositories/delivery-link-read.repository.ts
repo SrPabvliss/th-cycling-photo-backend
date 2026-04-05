@@ -29,11 +29,19 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
         order: {
           select: {
             event: { select: { name: true } },
-            customer: { select: { first_name: true, last_name: true } },
-            photos: {
+            snap_first_name: true,
+            snap_last_name: true,
+            items: {
               select: {
                 photo: {
-                  select: { id: true, filename: true, storage_key: true, file_size: true },
+                  select: {
+                    id: true,
+                    filename: true,
+                    storage_key: true,
+                    file_size: true,
+                    retouched_storage_key: true,
+                    retouched_file_size: true,
+                  },
                 },
               },
             },
@@ -47,15 +55,20 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
     return {
       token: record.token,
       eventName: record.order.event.name,
-      customerName: `${record.order.customer.first_name} ${record.order.customer.last_name}`,
+      customerName:
+        `${record.order.snap_first_name ?? ''} ${record.order.snap_last_name ?? ''}`.trim(),
       status: record.status,
       expiresAt: record.expires_at,
       downloadCount: record.download_count,
-      photos: record.order.photos.map((op) => ({
-        id: op.photo.id,
-        filename: op.photo.filename,
-        storageKey: op.photo.storage_key,
-        fileSize: Number(op.photo.file_size),
+      photos: record.order.items.map((oi) => ({
+        id: oi.photo.id,
+        filename: oi.photo.filename,
+        storageKey: oi.photo.retouched_storage_key ?? oi.photo.storage_key,
+        fileSize: Number(
+          oi.photo.retouched_storage_key
+            ? (oi.photo.retouched_file_size ?? oi.photo.file_size)
+            : oi.photo.file_size,
+        ),
       })),
     }
   }

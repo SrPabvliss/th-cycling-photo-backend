@@ -3,26 +3,20 @@ import { Type } from 'class-transformer'
 import {
   IsArray,
   IsHexColor,
-  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
-  Max,
-  Min,
   ValidateNested,
 } from 'class-validator'
 
 export class ColorInputDto {
   @ApiProperty({
-    description: 'Equipment category',
-    example: 'helmet',
-    enum: ['helmet', 'clothing', 'bike'],
+    description: 'Gear type ID (FK to gear_types table)',
+    example: 1,
   })
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['helmet', 'clothing', 'bike'])
-  itemType: string
+  @IsInt()
+  gearTypeId: number
 
   @ApiProperty({ description: 'Color name from the predefined palette', example: 'Red' })
   @IsString()
@@ -34,18 +28,17 @@ export class ColorInputDto {
   colorHex: string
 }
 
-export class CreateCyclistDto {
-  @ApiPropertyOptional({ description: 'Plate number (1-9999)', example: 42 })
+export class CreateParticipantDto {
+  @ApiPropertyOptional({ description: 'Participant identifier value', example: '42' })
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(9999)
-  plateNumber?: number
+  @IsString()
+  @IsNotEmpty()
+  identifier?: string
 
   @ApiProperty({
-    description: 'Equipment colors for this cyclist',
+    description: 'Gear colors for this participant',
     type: [ColorInputDto],
-    example: [{ itemType: 'helmet', colorName: 'Red', colorHex: '#FF0000' }],
+    example: [{ gearTypeId: 1, colorName: 'Red', colorHex: '#FF0000' }],
   })
   @IsArray()
   @ValidateNested({ each: true })
