@@ -64,6 +64,7 @@ export function toPersistence(entity: Photo): Prisma.PhotoUncheckedCreateInput {
     retouched_storage_key: entity.retouchedStorageKey,
     retouched_file_size: entity.retouchedFileSize,
     retouched_at: entity.retouchedAt,
+    retouched_by_id: entity.retouchedById,
     captured_at: entity.capturedAt,
     uploaded_at: entity.uploadedAt,
     processed_at: entity.processedAt,
@@ -91,6 +92,7 @@ export function toEntity(record: PrismaPhoto): Photo {
     retouchedStorageKey: record.retouched_storage_key,
     retouchedFileSize: record.retouched_file_size,
     retouchedAt: record.retouched_at,
+    retouchedById: record.retouched_by_id,
     photoCategoryId: record.photo_category_id,
   })
 }

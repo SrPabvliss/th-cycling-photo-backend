@@ -237,8 +237,12 @@ export class PhotosController {
   })
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Invalid object key prefix' })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
-  async confirmRetouchedUpload(@Param('id') id: string, @Body() dto: ConfirmRetouchedUploadDto) {
-    const command = new ConfirmRetouchedUploadCommand(id, dto.objectKey, dto.fileSize)
+  async confirmRetouchedUpload(
+    @Param('id') id: string,
+    @Body() dto: ConfirmRetouchedUploadDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    const command = new ConfirmRetouchedUploadCommand(id, dto.objectKey, dto.fileSize, user.userId)
     return this.commandBus.execute(command)
   }
 

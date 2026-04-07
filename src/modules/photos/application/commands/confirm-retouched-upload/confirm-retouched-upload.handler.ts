@@ -39,7 +39,7 @@ export class ConfirmRetouchedUploadHandler
       }
     }
 
-    photo.setRetouched(command.objectKey, BigInt(command.fileSize))
+    photo.setRetouched(command.objectKey, BigInt(command.fileSize), command.retouchedById)
     await this.photoWriteRepo.save(photo)
 
     return { confirmed: true }
