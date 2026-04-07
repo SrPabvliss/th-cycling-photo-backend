@@ -6,6 +6,7 @@ import {
   type OrderCreatedPayload,
   type OrderDeliveredPayload,
   type OrderPaidPayload,
+  type OrderRetouchCompletedPayload,
   type PreviewViewedPayload,
 } from '@notifications/application/services/notification-events'
 import {
@@ -113,6 +114,16 @@ export class WsEventBridge {
     await this.persistAndBroadcast(
       NotificationEvent.ORDER_DELIVERED,
       'order:delivered',
+      payload as unknown as Record<string, unknown>,
+    )
+  }
+
+  @OnEvent(NotificationEvent.ORDER_RETOUCH_COMPLETED, { async: true })
+  async handleOrderRetouchCompleted(payload: OrderRetouchCompletedPayload): Promise<void> {
+    this.logger.debug(`Processing order:retouch_completed for ${payload.orderId}`)
+    await this.persistAndBroadcast(
+      NotificationEvent.ORDER_RETOUCH_COMPLETED,
+      'order:retouch_completed',
       payload as unknown as Record<string, unknown>,
     )
   }
