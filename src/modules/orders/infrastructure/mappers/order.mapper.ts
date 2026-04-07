@@ -1,4 +1,5 @@
 import type { Prisma, Order as PrismaOrder } from '@generated/prisma/client'
+import type { RetouchCompletedOrderProjection } from '@orders/application/projections'
 import { Order } from '@orders/domain/entities'
 import type { OrderStatusType } from '@orders/domain/value-objects/order-status.vo'
 
@@ -38,4 +39,22 @@ export function toEntity(record: PrismaOrder): Order {
     cancelledAt: record.cancelled_at,
     confirmedById: record.confirmed_by_id,
   })
+}
+
+/** Maps a Prisma order record to a retouch-completed projection. */
+export function toRetouchCompletedProjection(record: {
+  id: string
+  event_id: string
+  event: { name: string }
+  snap_first_name: string | null
+  snap_last_name: string | null
+  _count: { items: number }
+}): RetouchCompletedOrderProjection {
+  return {
+    orderId: record.id,
+    eventId: record.event_id,
+    eventName: record.event.name,
+    customerName: [record.snap_first_name, record.snap_last_name].filter(Boolean).join(' '),
+    photoCount: record._count.items,
+  }
 }

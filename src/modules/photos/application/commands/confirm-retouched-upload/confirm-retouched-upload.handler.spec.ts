@@ -1,3 +1,4 @@
+import type { IOrderReadRepository } from '@orders/domain/ports'
 import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository, IPhotoWriteRepository } from '@photos/domain/ports'
 import { AppException } from '@shared/domain'
@@ -10,6 +11,8 @@ describe('ConfirmRetouchedUploadHandler', () => {
   let photoReadRepo: jest.Mocked<IPhotoReadRepository>
   let photoWriteRepo: jest.Mocked<IPhotoWriteRepository>
   let storageAdapter: jest.Mocked<IStorageAdapter>
+  let orderReadRepo: jest.Mocked<Pick<IOrderReadRepository, 'findOrdersFullyRetouchedByPhoto'>>
+  let eventEmitter: { emit: jest.Mock }
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -71,7 +74,19 @@ describe('ConfirmRetouchedUploadHandler', () => {
       delete: jest.fn(),
     } as jest.Mocked<IStorageAdapter>
 
-    handler = new ConfirmRetouchedUploadHandler(photoReadRepo, photoWriteRepo, storageAdapter)
+    orderReadRepo = {
+      findOrdersFullyRetouchedByPhoto: jest.fn().mockResolvedValue([]),
+    } as jest.Mocked<Pick<IOrderReadRepository, 'findOrdersFullyRetouchedByPhoto'>>
+
+    eventEmitter = { emit: jest.fn() }
+
+    handler = new ConfirmRetouchedUploadHandler(
+      photoReadRepo,
+      photoWriteRepo,
+      storageAdapter,
+      orderReadRepo as unknown as jest.Mocked<IOrderReadRepository>,
+      eventEmitter as any,
+    )
   })
 
   it('should throw NOT_FOUND when photo does not exist', async () => {

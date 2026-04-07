@@ -1,5 +1,11 @@
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import { EventEmitter2 } from '@nestjs/event-emitter'
+import {
+  NotificationEvent,
+  type OrderRetouchCompletedPayload,
+} from '@notifications/application/services/notification-events'
+import { type IOrderReadRepository, ORDER_READ_REPOSITORY } from '@orders/domain/ports'
 import {
   type IPhotoReadRepository,
   type IPhotoWriteRepository,
@@ -20,6 +26,8 @@ export class ConfirmRetouchedUploadHandler
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(PHOTO_WRITE_REPOSITORY) private readonly photoWriteRepo: IPhotoWriteRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
+    @Inject(ORDER_READ_REPOSITORY) private readonly orderReadRepo: IOrderReadRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(command: ConfirmRetouchedUploadCommand): Promise<{ confirmed: boolean }> {
@@ -41,6 +49,26 @@ export class ConfirmRetouchedUploadHandler
 
     photo.setRetouched(command.objectKey, BigInt(command.fileSize), command.retouchedById)
     await this.photoWriteRepo.save(photo)
+
+    const completedOrders = await this.orderReadRepo.findOrdersFullyRetouchedByPhoto(
+      command.photoId,
+    )
+
+    completedOrders
+      .map<OrderRetouchCompletedPayload>((order) => ({
+        orderId: order.orderId,
+        eventId: order.eventId,
+        eventName: order.eventName,
+        customerName: order.customerName,
+        photoCount: order.photoCount,
+        completedAt: new Date(),
+      }))
+      .forEach((payload) => {
+        this.eventEmitter.emit(NotificationEvent.ORDER_RETOUCH_COMPLETED, payload)
+        this.logger.log(
+          `Order ${payload.orderId} retouch completed — all ${payload.photoCount} photos retouched`,
+        )
+      })
 
     return { confirmed: true }
   }
