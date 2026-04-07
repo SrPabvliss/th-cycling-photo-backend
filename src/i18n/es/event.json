@@ -6,5 +6,6 @@
   "province_not_found": "La provincia especificada no existe",
   "canton_not_in_province": "El cantón especificado no pertenece a la provincia seleccionada",
   "canton_requires_province": "Se debe especificar una provincia al seleccionar un cantón",
-  "invalid_cover_storage_key": "La clave de almacenamiento no corresponde a la ruta de imagen de portada de este evento"
+  "invalid_cover_storage_key": "La clave de almacenamiento no corresponde a la ruta de imagen de portada de este evento",
+  "operator_already_assigned": "Este operador ya está asignado al evento"
 }
