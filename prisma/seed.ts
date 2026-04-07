@@ -182,14 +182,14 @@ async function seedPhotoCategories() {
 }
 
 async function seedRoles() {
-  for (const roleName of ['admin', 'classifier', 'customer'] as const) {
+  for (const roleName of ['admin', 'operator', 'customer'] as const) {
     await prisma.role.upsert({
       where: { name: roleName },
       update: {},
       create: { name: roleName },
     })
   }
-  console.log('Seeded roles: admin, classifier, customer')
+  console.log('Seeded roles: admin, operator, customer')
 }
 
 async function seedAdminUser() {
@@ -237,6 +237,71 @@ async function seedAdminUser() {
     console.log(`Generated password: ${password}`)
     console.log('Set ADMIN_SEED_PASSWORD env var to use a specific password.')
   }
+}
+
+async function seedProtectedUser(
+  envEmailKey: string,
+  envPasswordKey: string,
+  roleName: 'operator' | 'customer',
+  defaults: { firstName: string; lastName: string },
+) {
+  const email = process.env[envEmailKey]
+  if (!email) {
+    console.log(`${envEmailKey} not set — skipping ${roleName} user seed`)
+    return
+  }
+
+  const existing = await prisma.user.findFirst({ where: { email } })
+  if (existing) {
+    console.log(`${roleName} user already exists: ${email}`)
+    return
+  }
+
+  let password = process.env[envPasswordKey]
+  let generated = false
+
+  if (!password) {
+    password = crypto.randomBytes(16).toString('base64url')
+    generated = true
+  }
+
+  const passwordHash = hashSync(password, 10)
+
+  const user = await prisma.user.create({
+    data: {
+      email,
+      password_hash: passwordHash,
+      first_name: defaults.firstName,
+      last_name: defaults.lastName,
+      is_active: true,
+    },
+  })
+
+  const role = await prisma.role.findUnique({ where: { name: roleName } })
+  if (role) {
+    await prisma.userRole.create({
+      data: { user_id: user.id, role_id: role.id },
+    })
+  }
+
+  console.log(`Created ${roleName} user: ${email}`)
+  if (generated) {
+    console.log(`Generated password: ${password}`)
+  }
+}
+
+async function seedOperatorUser() {
+  await seedProtectedUser('OPERATOR_SEED_EMAIL', 'OPERATOR_SEED_PASSWORD', 'operator', {
+    firstName: 'Operator',
+    lastName: 'TitanTV',
+  })
+}
+
+async function seedConsumerUser() {
+  await seedProtectedUser('CONSUMER_SEED_EMAIL', 'CONSUMER_SEED_PASSWORD', 'customer', {
+    firstName: 'Consumer',
+    lastName: 'TitanTV',
+  })
 }
 
 async function seedDemoData() {
@@ -384,6 +449,8 @@ async function main() {
   await seedPhotoCategories()
   await seedRoles()
   await seedAdminUser()
+  await seedOperatorUser()
+  await seedConsumerUser()
   await seedDemoData()
   await seedCommercialFlowData()
 
