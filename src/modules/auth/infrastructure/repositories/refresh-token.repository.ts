@@ -31,7 +31,7 @@ export class RefreshTokenRepository implements IRefreshTokenRepository {
     return {
       userId: record.user.id,
       email: record.user.email,
-      role: record.user.user_roles[0]?.role.name ?? 'classifier',
+      role: record.user.user_roles[0]?.role.name ?? 'operator',
       isActive: record.user.is_active,
       revokedAt: record.revoked_at,
       expiresAt: record.expires_at,

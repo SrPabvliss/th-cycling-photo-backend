@@ -27,7 +27,7 @@ export class AuthUserRepository implements IAuthUserRepository {
       email: record.email,
       passwordHash: record.password_hash,
       isActive: record.is_active,
-      role: record.user_roles[0]?.role.name ?? 'classifier',
+      role: record.user_roles[0]?.role.name ?? 'operator',
     }
   }
 

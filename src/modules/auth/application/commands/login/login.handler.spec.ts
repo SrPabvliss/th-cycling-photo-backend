@@ -101,7 +101,7 @@ describe('LoginHandler', () => {
       email: 'inactive@test.com',
       passwordHash: 'hash',
       isActive: false,
-      role: 'classifier',
+      role: 'operator',
     })
 
     await expect(handler.execute(new LoginCommand('inactive@test.com', 'any'))).rejects.toThrow(
