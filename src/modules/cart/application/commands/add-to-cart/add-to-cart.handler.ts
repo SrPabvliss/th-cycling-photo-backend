@@ -45,7 +45,7 @@ export class AddToCartHandler implements ICommandHandler<AddToCartCommand> {
 
       const cartId = await this.cartWriteRepo.createCart({
         userId: command.userId ?? undefined,
-        sessionId: command.sessionId ?? undefined,
+        sessionId: command.userId ? undefined : (command.sessionId ?? undefined),
         expiresAt,
       })
 

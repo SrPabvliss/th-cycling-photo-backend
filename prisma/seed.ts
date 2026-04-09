@@ -253,6 +253,19 @@ async function seedProtectedUser(
 
   const existing = await prisma.user.findFirst({ where: { email } })
   if (existing) {
+    // Ensure customer profile exists for customer users
+    if (roleName === 'customer') {
+      const hasProfile = await prisma.customerProfile.findFirst({ where: { user_id: existing.id } })
+      if (!hasProfile) {
+        const ecuador = await prisma.country.findFirst({ where: { iso_code: 'EC' } })
+        if (ecuador) {
+          await prisma.customerProfile.create({
+            data: { user_id: existing.id, country_id: ecuador.id },
+          })
+          console.log(`Created customer profile for existing user: ${email}`)
+        }
+      }
+    }
     console.log(`${roleName} user already exists: ${email}`)
     return
   }
@@ -282,6 +295,16 @@ async function seedProtectedUser(
     await prisma.userRole.create({
       data: { user_id: user.id, role_id: role.id },
     })
+  }
+
+  // Create customer profile for customer users (required for checkout)
+  if (roleName === 'customer') {
+    const ecuador = await prisma.country.findFirst({ where: { iso_code: 'EC' } })
+    if (ecuador) {
+      await prisma.customerProfile.create({
+        data: { user_id: user.id, country_id: ecuador.id },
+      })
+    }
   }
 
   console.log(`Created ${roleName} user: ${email}`)

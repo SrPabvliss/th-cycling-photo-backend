@@ -1,3 +1,7 @@
+import {
+  EVENT_OPERATOR_REPOSITORY,
+  type IEventOperatorRepository,
+} from '@events/domain/ports/event-operator-repository.port'
 import type { Prisma } from '@generated/prisma/client'
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { OnEvent } from '@nestjs/event-emitter'
@@ -27,12 +31,15 @@ export class WsEventBridge {
     private readonly notificationWriteRepo: INotificationWriteRepository,
     @Inject(USER_READ_REPOSITORY)
     private readonly userReadRepo: IUserReadRepository,
+    @Inject(EVENT_OPERATOR_REPOSITORY)
+    private readonly operatorRepo: IEventOperatorRepository,
   ) {}
 
   private async persistAndBroadcast(
     eventType: string,
     wsEvent: string,
     payload: Record<string, unknown>,
+    extraUserIds: string[] = [],
   ): Promise<void> {
     const template = NOTIFICATION_TEMPLATES[eventType]
     if (!template) {
@@ -45,9 +52,10 @@ export class WsEventBridge {
 
     try {
       const adminIds = await this.userReadRepo.findActiveAdminIds()
-      if (adminIds.length === 0) return
+      const allUserIds = [...new Set([...adminIds, ...extraUserIds])]
+      if (allUserIds.length === 0) return
 
-      const notifications = adminIds.map((userId) => ({
+      const notifications = allUserIds.map((userId) => ({
         userId,
         type: eventType,
         title,
@@ -78,6 +86,11 @@ export class WsEventBridge {
     }
   }
 
+  private async getOperatorIdsForEvent(eventId: string): Promise<string[]> {
+    const operators = await this.operatorRepo.findByEvent(eventId)
+    return operators.map((op) => op.userId)
+  }
+
   @OnEvent(NotificationEvent.PREVIEW_VIEWED, { async: true })
   async handlePreviewViewed(payload: PreviewViewedPayload): Promise<void> {
     this.logger.debug(`Processing preview:viewed for ${payload.previewLinkId}`)
@@ -101,10 +114,12 @@ export class WsEventBridge {
   @OnEvent(NotificationEvent.ORDER_PAID, { async: true })
   async handleOrderPaid(payload: OrderPaidPayload): Promise<void> {
     this.logger.debug(`Processing order:paid for ${payload.orderId}`)
+    const operatorIds = await this.getOperatorIdsForEvent(payload.eventId)
     await this.persistAndBroadcast(
       NotificationEvent.ORDER_PAID,
       'order:paid',
       payload as unknown as Record<string, unknown>,
+      operatorIds,
     )
   }
 

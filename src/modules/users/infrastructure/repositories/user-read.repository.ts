@@ -1,4 +1,4 @@
-import type { Prisma } from '@generated/prisma/client'
+import { type Prisma, RoleType } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { PrismaService } from '@shared/infrastructure'
@@ -34,8 +34,22 @@ export class UserReadRepository implements IUserReadRepository {
   async getUsersList(
     pagination: Pagination,
     includeInactive = false,
+    role?: string,
+    search?: string,
   ): Promise<PaginatedResult<UserListProjection>> {
-    const where = includeInactive ? {} : { is_active: true }
+    const where: Prisma.UserWhereInput = includeInactive ? {} : { is_active: true }
+
+    if (role && Object.values(RoleType).includes(role as RoleType)) {
+      where.user_roles = { some: { role: { name: role as RoleType } } }
+    }
+
+    if (search) {
+      where.OR = [
+        { first_name: { contains: search, mode: 'insensitive' } },
+        { last_name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ]
+    }
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({

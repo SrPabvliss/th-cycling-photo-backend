@@ -36,9 +36,11 @@ export class ConfirmOrderPaymentHandler implements ICommandHandler<ConfirmOrderP
     // 5. Emit notification
     this.notifications.emitOrderPaid({
       orderId: order.id,
+      eventId: order.eventId,
       eventName: detail?.eventName ?? '',
       customerName: detail?.userName ?? '',
       confirmedBy: command.audit.userId,
+      photoCount: detail?.photos?.length ?? 0,
       paidAt: order.paidAt!,
     })
 

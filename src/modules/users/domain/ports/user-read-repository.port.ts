@@ -12,6 +12,8 @@ export interface IUserReadRepository {
   getUsersList(
     pagination: Pagination,
     includeInactive?: boolean,
+    role?: string,
+    search?: string,
   ): Promise<PaginatedResult<UserListProjection>>
   getUserDetail(id: string): Promise<UserDetailProjection | null>
   findActiveAdminIds(): Promise<string[]>

@@ -23,9 +23,11 @@ export interface OrderCreatedPayload {
 
 export interface OrderPaidPayload {
   orderId: string
+  eventId: string
   eventName: string
   customerName: string
   confirmedBy: string
+  photoCount: number
   paidAt: Date
 }
 

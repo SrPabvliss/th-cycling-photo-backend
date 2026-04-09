@@ -15,6 +15,7 @@ import { NotificationReadRepository } from '@notifications/infrastructure/reposi
 import { NotificationWriteRepository } from '@notifications/infrastructure/repositories/notification-write.repository'
 import { NotificationsController } from '@notifications/presentation/controllers/notifications.controller'
 import { AuthModule } from '../auth/auth.module'
+import { EventsModule } from '../events/events.module'
 import { UsersModule } from '../users/users.module'
 
 const CommandHandlers = [MarkAsReadHandler, MarkAllReadHandler]
@@ -22,7 +23,7 @@ const QueryHandlers = [GetNotificationsListHandler, GetUnreadCountHandler]
 
 @Global()
 @Module({
-  imports: [CqrsModule, AuthModule, UsersModule],
+  imports: [CqrsModule, AuthModule, UsersModule, EventsModule],
   controllers: [NotificationsController],
   providers: [
     ...CommandHandlers,
