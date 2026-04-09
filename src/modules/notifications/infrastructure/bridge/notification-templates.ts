@@ -2,6 +2,7 @@ import type {
   OrderCreatedPayload,
   OrderDeliveredPayload,
   OrderPaidPayload,
+  OrderRetouchCompletedPayload,
   PreviewViewedPayload,
 } from '@notifications/application/services/notification-events'
 import { NotificationEvent } from '@notifications/application/services/notification-events'
@@ -30,7 +31,7 @@ export const NOTIFICATION_TEMPLATES: Record<string, TemplateConfig> = {
     title: 'Pago confirmado',
     message: (p) => {
       const payload = p as OrderPaidPayload
-      return `Pago confirmado para ${payload.customerName} (${payload.eventName})`
+      return `Pago confirmado: ${payload.photoCount} fotos de ${payload.customerName} listas para retoque (${payload.eventName})`
     },
   },
   [NotificationEvent.ORDER_DELIVERED]: {
@@ -38,6 +39,13 @@ export const NOTIFICATION_TEMPLATES: Record<string, TemplateConfig> = {
     message: (p) => {
       const payload = p as OrderDeliveredPayload
       return `Fotos entregadas a ${payload.customerName} (${payload.eventName})`
+    },
+  },
+  [NotificationEvent.ORDER_RETOUCH_COMPLETED]: {
+    title: 'Retoque completado',
+    message: (p) => {
+      const payload = p as OrderRetouchCompletedPayload
+      return `Todas las ${payload.photoCount} fotos del pedido de ${payload.customerName} (${payload.eventName}) están retocadas`
     },
   },
 }

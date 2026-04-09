@@ -22,5 +22,7 @@
   "notification": "Notificación",
   "event_asset": "Recurso del evento",
   "photo_category": "Categoría de fotos",
-  "cart": "Carrito"
+  "cart": "Carrito",
+  "event_operator": "Operador de evento",
+  "dashboard": "Panel de control"
 }

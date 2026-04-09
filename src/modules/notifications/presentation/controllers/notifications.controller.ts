@@ -24,7 +24,7 @@ export class NotificationsController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List notifications for the current user' })
@@ -39,7 +39,7 @@ export class NotificationsController {
     return this.queryBus.execute(new GetNotificationsListQuery(user.userId, pagination, dto.isRead))
   }
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Get('unread-count')
   @SuccessMessage('success.FETCHED')
   @ApiOperation({ summary: 'Get unread notification count' })
@@ -52,7 +52,7 @@ export class NotificationsController {
     return this.queryBus.execute(new GetUnreadCountQuery(user.userId))
   }
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Patch('read-all')
   @SuccessMessage('success.UPDATED')
   @ApiOperation({ summary: 'Mark all notifications as read' })
@@ -60,7 +60,7 @@ export class NotificationsController {
     return this.commandBus.execute(new MarkAllReadCommand(user.userId))
   }
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Patch(':id/read')
   @SuccessMessage('success.UPDATED')
   @ApiOperation({ summary: 'Mark a notification as read' })

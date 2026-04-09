@@ -1,3 +1,4 @@
+import type { IOrderReadRepository } from '@orders/domain/ports'
 import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository, IPhotoWriteRepository } from '@photos/domain/ports'
 import { AppException } from '@shared/domain'
@@ -10,6 +11,8 @@ describe('ConfirmRetouchedUploadHandler', () => {
   let photoReadRepo: jest.Mocked<IPhotoReadRepository>
   let photoWriteRepo: jest.Mocked<IPhotoWriteRepository>
   let storageAdapter: jest.Mocked<IStorageAdapter>
+  let orderReadRepo: jest.Mocked<Pick<IOrderReadRepository, 'findOrdersFullyRetouchedByPhoto'>>
+  let eventEmitter: { emit: jest.Mock }
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -71,7 +74,19 @@ describe('ConfirmRetouchedUploadHandler', () => {
       delete: jest.fn(),
     } as jest.Mocked<IStorageAdapter>
 
-    handler = new ConfirmRetouchedUploadHandler(photoReadRepo, photoWriteRepo, storageAdapter)
+    orderReadRepo = {
+      findOrdersFullyRetouchedByPhoto: jest.fn().mockResolvedValue([]),
+    } as jest.Mocked<Pick<IOrderReadRepository, 'findOrdersFullyRetouchedByPhoto'>>
+
+    eventEmitter = { emit: jest.fn() }
+
+    handler = new ConfirmRetouchedUploadHandler(
+      photoReadRepo,
+      photoWriteRepo,
+      storageAdapter,
+      orderReadRepo as unknown as jest.Mocked<IOrderReadRepository>,
+      eventEmitter as any,
+    )
   })
 
   it('should throw NOT_FOUND when photo does not exist', async () => {
@@ -81,6 +96,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
       'non-existent',
       `events/${eventId}/retouched/uuid-file.jpg`,
       5000,
+      'operator-001',
     )
 
     const error = await handler.execute(command).catch((e) => e)
@@ -95,6 +111,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
       'photo-001',
       'events/wrong-event/retouched/uuid-file.jpg',
       5000,
+      'operator-001',
     )
 
     const error = await handler.execute(command).catch((e) => e)
@@ -108,7 +125,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
     photoWriteRepo.save.mockResolvedValueOnce(photo)
 
     const objectKey = `events/${eventId}/retouched/uuid-retouched.jpg`
-    const command = new ConfirmRetouchedUploadCommand('photo-001', objectKey, 5000)
+    const command = new ConfirmRetouchedUploadCommand('photo-001', objectKey, 5000, 'operator-001')
 
     const result = await handler.execute(command)
 
@@ -129,7 +146,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
     photoWriteRepo.save.mockResolvedValueOnce(photo)
 
     const newKey = `events/${eventId}/retouched/new-uuid-retouched.jpg`
-    const command = new ConfirmRetouchedUploadCommand('photo-001', newKey, 6000)
+    const command = new ConfirmRetouchedUploadCommand('photo-001', newKey, 6000, 'operator-001')
 
     const result = await handler.execute(command)
 
@@ -151,7 +168,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
     storageAdapter.delete.mockRejectedValueOnce(new Error('S3 delete failed'))
 
     const newKey = `events/${eventId}/retouched/new-uuid.jpg`
-    const command = new ConfirmRetouchedUploadCommand('photo-001', newKey, 4000)
+    const command = new ConfirmRetouchedUploadCommand('photo-001', newKey, 4000, 'operator-001')
 
     const result = await handler.execute(command)
 

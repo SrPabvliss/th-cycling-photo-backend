@@ -11,6 +11,11 @@ export class GetUsersListHandler implements IQueryHandler<GetUsersListQuery> {
   constructor(@Inject(USER_READ_REPOSITORY) private readonly readRepo: IUserReadRepository) {}
 
   async execute(query: GetUsersListQuery): Promise<PaginatedResult<UserListProjection>> {
-    return this.readRepo.getUsersList(query.pagination, query.includeInactive)
+    return this.readRepo.getUsersList(
+      query.pagination,
+      query.includeInactive,
+      query.role,
+      query.search,
+    )
   }
 }

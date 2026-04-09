@@ -1,11 +1,14 @@
 import {
   ArchiveEventCommand,
+  AssignOperatorCommand,
+  AssignOperatorDto,
   CreateEventCommand,
   CreateEventDto,
   DeleteEventCommand,
   RestoreEventCommand,
   SetFeaturedEventCommand,
   SetFeaturedEventDto,
+  UnassignOperatorCommand,
   UpdateEventCommand,
   UpdateEventDto,
 } from '@events/application/commands'
@@ -16,11 +19,12 @@ import {
 } from '@events/application/projections'
 import {
   GetEventDetailQuery,
+  GetEventOperatorsQuery,
   GetEventsListDto,
   GetEventsListQuery,
   GetEventsStatsQuery,
 } from '@events/application/queries'
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
@@ -197,5 +201,42 @@ export class EventsController {
   async remove(@Param('id') id: string) {
     const command = new DeleteEventCommand(id)
     return this.commandBus.execute(command)
+  }
+
+  // ─── Event Operator Assignment ──────────────────────────────────────────────
+
+  @Roles('admin')
+  @Get(':id/operators')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'List operators assigned to an event' })
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  async getOperators(@Param('id') id: string) {
+    return this.queryBus.execute(new GetEventOperatorsQuery(id))
+  }
+
+  @Roles('admin')
+  @Post(':id/operators')
+  @SuccessMessage('success.CREATED', { entity: 'entities.event_operator' })
+  @ApiOperation({ summary: 'Assign an operator to an event' })
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  async assignOperator(
+    @Param('id') id: string,
+    @Body() dto: AssignOperatorDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    const command = new AssignOperatorCommand(id, dto.userId, user.userId)
+    await this.commandBus.execute(command)
+  }
+
+  @Roles('admin')
+  @Delete(':id/operators/:userId')
+  @HttpCode(200)
+  @SuccessMessage('success.DELETED', { entity: 'entities.event_operator' })
+  @ApiOperation({ summary: 'Unassign an operator from an event' })
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  @ApiParam({ name: 'userId', description: 'Operator user UUID', format: 'uuid' })
+  async unassignOperator(@Param('id') id: string, @Param('userId') userId: string) {
+    const command = new UnassignOperatorCommand(id, userId)
+    await this.commandBus.execute(command)
   }
 }

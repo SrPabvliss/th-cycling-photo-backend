@@ -18,6 +18,7 @@ import { EventAssetsModule } from './modules/event-assets/event-assets.module'
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
+import { OperatorModule } from './modules/operator/operator.module'
 import { OrdersModule } from './modules/orders/orders.module'
 import { PhotoCategoriesModule } from './modules/photo-categories/photo-categories.module'
 import { PhotosModule } from './modules/photos/photos.module'
@@ -65,6 +66,7 @@ import { StorageModule } from './shared/storage/storage.module'
     EventAssetsModule,
     EventsModule,
     LocationsModule,
+    OperatorModule,
     OrdersModule,
     PhotoCategoriesModule,
     PhotosModule,

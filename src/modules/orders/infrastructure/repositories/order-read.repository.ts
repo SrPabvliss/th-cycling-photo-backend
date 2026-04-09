@@ -1,6 +1,10 @@
 import type { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
-import type { OrderDetailProjection, OrderListProjection } from '@orders/application/projections'
+import type {
+  OrderDetailProjection,
+  OrderListProjection,
+  RetouchCompletedOrderProjection,
+} from '@orders/application/projections'
 import type { Order } from '@orders/domain/entities'
 import type { IOrderReadRepository, OrderListFilters } from '@orders/domain/ports'
 import type { PendingRetouchOrderProjection } from '@photos/application/projections'
@@ -218,5 +222,27 @@ export class OrderReadRepository implements IOrderReadRepository {
           isRetouched: !!i.photo.retouched_storage_key,
         })),
       }))
+  }
+
+  /** Finds orders containing this photo where ALL items are now retouched. */
+  async findOrdersFullyRetouchedByPhoto(
+    photoId: string,
+  ): Promise<RetouchCompletedOrderProjection[]> {
+    const orders = await this.prisma.order.findMany({
+      where: {
+        items: { some: { photo_id: photoId } },
+        NOT: { items: { some: { photo: { retouched_at: null } } } },
+      },
+      select: {
+        id: true,
+        event_id: true,
+        event: { select: { name: true } },
+        snap_first_name: true,
+        snap_last_name: true,
+        _count: { select: { items: true } },
+      },
+    })
+
+    return orders.map(OrderMapper.toRetouchCompletedProjection)
   }
 }

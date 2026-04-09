@@ -207,6 +207,7 @@ export class PhotosController {
   }
 
   /** Generates a presigned URL for retouched photo upload. */
+  @Roles('admin', 'operator')
   @Post('photos/:id/retouched/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate presigned URL for retouched photo upload' })
@@ -226,6 +227,7 @@ export class PhotosController {
   }
 
   /** Confirms a retouched photo upload. Replaces previous retouched if exists. */
+  @Roles('admin', 'operator')
   @Post('photos/:id/retouched/confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Confirm retouched photo upload' })
@@ -237,8 +239,12 @@ export class PhotosController {
   })
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Invalid object key prefix' })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
-  async confirmRetouchedUpload(@Param('id') id: string, @Body() dto: ConfirmRetouchedUploadDto) {
-    const command = new ConfirmRetouchedUploadCommand(id, dto.objectKey, dto.fileSize)
+  async confirmRetouchedUpload(
+    @Param('id') id: string,
+    @Body() dto: ConfirmRetouchedUploadDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    const command = new ConfirmRetouchedUploadCommand(id, dto.objectKey, dto.fileSize, user.userId)
     return this.commandBus.execute(command)
   }
 

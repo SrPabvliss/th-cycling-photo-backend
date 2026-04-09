@@ -3,6 +3,7 @@ import { HttpStatus } from '@nestjs/common'
 export enum ErrorCode {
   VALIDATION_FAILED = 'VALIDATION_FAILED',
   NOT_FOUND = 'NOT_FOUND',
+  FORBIDDEN = 'FORBIDDEN',
   CONFLICT = 'CONFLICT',
   BUSINESS_RULE = 'BUSINESS_RULE',
   EXTERNAL_SERVICE = 'EXTERNAL_SERVICE',
@@ -33,6 +34,11 @@ export class AppException extends Error {
       entity,
       id,
     })
+  }
+
+  /** Forbidden — insufficient permissions (403) */
+  static forbidden(messageKey: string, context?: Record<string, unknown>): AppException {
+    return new AppException(messageKey, HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, false, context)
   }
 
   /** Unique constraint conflict (409) */

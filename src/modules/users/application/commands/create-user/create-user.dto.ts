@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { IsEmail, IsIn, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator'
 
-const ALLOWED_ROLES = ['admin', 'classifier'] as const
+const ALLOWED_ROLES = ['admin', 'operator'] as const
 
 export class CreateUserDto {
   @ApiProperty({ description: 'First name', example: 'Pablo' })
@@ -23,7 +23,7 @@ export class CreateUserDto {
   @MaxLength(255)
   email: string
 
-  @ApiProperty({ description: 'Role to assign', example: 'classifier', enum: ALLOWED_ROLES })
+  @ApiProperty({ description: 'Role to assign', example: 'operator', enum: ALLOWED_ROLES })
   @IsString()
   @IsIn(ALLOWED_ROLES)
   role: string

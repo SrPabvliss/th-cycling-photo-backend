@@ -1,5 +1,6 @@
 import { Event } from '@events/domain/entities'
 import { IEventWriteRepository } from '@events/domain/ports'
+import type { IEventOperatorRepository } from '@events/domain/ports/event-operator-repository.port'
 import { LocationValidator } from '@locations/application/services'
 import { AppException } from '@shared/domain'
 import { CreateEventCommand } from './create-event.command'
@@ -8,6 +9,7 @@ import { CreateEventHandler } from './create-event.handler'
 describe('CreateEventHandler', () => {
   let handler: CreateEventHandler
   let writeRepo: jest.Mocked<IEventWriteRepository>
+  let operatorRepo: jest.Mocked<IEventOperatorRepository>
   let locationValidator: jest.Mocked<LocationValidator>
 
   const futureDate = new Date()
@@ -19,11 +21,19 @@ describe('CreateEventHandler', () => {
       setFeatured: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
 
+    operatorRepo = {
+      assign: jest.fn().mockResolvedValue(undefined),
+      unassign: jest.fn(),
+      findByEvent: jest.fn(),
+      isAssigned: jest.fn(),
+      findFirstOperatorId: jest.fn().mockResolvedValue(null),
+    } as jest.Mocked<IEventOperatorRepository>
+
     locationValidator = {
       validate: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<LocationValidator>
 
-    handler = new CreateEventHandler(writeRepo, locationValidator)
+    handler = new CreateEventHandler(writeRepo, operatorRepo, locationValidator)
   })
 
   it('should create and save event, returning id', async () => {

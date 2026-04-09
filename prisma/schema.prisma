@@ -71,7 +71,7 @@ enum ClassificationSource {
 
 enum RoleType {
   admin
-  classifier
+  operator
   customer
 
   @@map("role_type")
@@ -233,6 +233,7 @@ model User {
   events_updated              Event[]                @relation("EventUpdatedBy")
   photos_created              Photo[]                @relation("PhotoCreatedBy")
   photos_updated              Photo[]                @relation("PhotoUpdatedBy")
+  photos_retouched            Photo[]                @relation("PhotoRetouchedBy")
   participants_created        DetectedParticipant[]  @relation("ParticipantCreatedBy")
   participants_classified     DetectedParticipant[]  @relation("ParticipantClassifiedBy")
   identifiers_corrected       ParticipantIdentifier[] @relation("IdentifierCorrectedBy")
@@ -241,6 +242,8 @@ model User {
   orders_placed               Order[]                @relation("OrderUser")
   carts                       Cart[]
   notifications               Notification[]
+  assigned_events             EventOperator[]        @relation("EventOperatorUser")
+  event_assignments_made      EventOperator[]        @relation("EventOperatorAssignedBy")
 
   @@map("users")
 }
@@ -316,6 +319,7 @@ model Event {
   assets           EventAsset[]
   photo_categories EventPhotoCategory[]
   cart_items        CartItem[]
+  operators        EventOperator[]
 
   @@index([status])
   @@index([event_type_id])
@@ -326,6 +330,24 @@ model Event {
   @@index([created_by_id])
   @@index([updated_by_id])
   @@map("events")
+}
+
+model EventOperator {
+  id             String   @id @default(uuid()) @db.Uuid
+  event_id       String   @db.Uuid
+  user_id        String   @db.Uuid
+  assigned_at    DateTime @default(now()) @db.Timestamptz
+  assigned_by_id String   @db.Uuid
+
+  event       Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user        User  @relation("EventOperatorUser", fields: [user_id], references: [id], onDelete: Cascade)
+  assigned_by User  @relation("EventOperatorAssignedBy", fields: [assigned_by_id], references: [id], onDelete: Restrict)
+
+  @@unique([event_id, user_id])
+  @@index([event_id])
+  @@index([user_id])
+  @@index([assigned_by_id])
+  @@map("event_operators")
 }
 
 model Photo {
@@ -355,11 +377,13 @@ model Photo {
 
   created_by_id     String? @db.Uuid
   updated_by_id     String? @db.Uuid
+  retouched_by_id   String? @db.Uuid
   photo_category_id Int?
 
   event               Event               @relation(fields: [event_id], references: [id], onDelete: Cascade)
   created_by          User?               @relation("PhotoCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
   updated_by          User?               @relation("PhotoUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  retouched_by        User?               @relation("PhotoRetouchedBy", fields: [retouched_by_id], references: [id], onDelete: SetNull)
   photo_category      PhotoCategory?      @relation(fields: [photo_category_id], references: [id], onDelete: SetNull)
   detected_participants DetectedParticipant[]
   processing_jobs       ProcessingJob[]
@@ -373,6 +397,7 @@ model Photo {
   @@index([event_id, unclassified_reason], map: "idx_photos_unclassified")
   @@index([created_by_id])
   @@index([updated_by_id])
+  @@index([retouched_by_id])
   @@index([photo_category_id])
   // HNSW index for cosine similarity is created via raw SQL in the migration
   @@map("photos")

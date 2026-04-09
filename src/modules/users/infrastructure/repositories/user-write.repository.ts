@@ -20,7 +20,7 @@ export class UserWriteRepository implements IUserWriteRepository {
 
     if (roleName && saved.user_roles.length === 0) {
       const role = await this.prisma.role.findUnique({
-        where: { name: roleName as 'admin' | 'classifier' },
+        where: { name: roleName as 'admin' | 'operator' },
       })
       if (role) {
         await this.prisma.userRole.create({

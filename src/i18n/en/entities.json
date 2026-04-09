@@ -22,5 +22,7 @@
   "notification": "Notification",
   "event_asset": "Event asset",
   "photo_category": "Photo category",
-  "cart": "Cart"
+  "cart": "Cart",
+  "event_operator": "Event operator",
+  "dashboard": "Dashboard"
 }

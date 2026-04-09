@@ -46,7 +46,12 @@ export class UsersController {
   })
   async findAll(@Query() dto: GetUsersListDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetUsersListQuery(pagination, dto.includeInactive ?? false)
+    const query = new GetUsersListQuery(
+      pagination,
+      dto.includeInactive ?? false,
+      dto.role,
+      dto.search,
+    )
     return this.queryBus.execute(query)
   }
 

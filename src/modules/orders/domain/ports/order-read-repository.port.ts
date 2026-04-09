@@ -1,4 +1,8 @@
-import type { OrderDetailProjection, OrderListProjection } from '@orders/application/projections'
+import type {
+  OrderDetailProjection,
+  OrderListProjection,
+  RetouchCompletedOrderProjection,
+} from '@orders/application/projections'
 import type { PendingRetouchOrderProjection } from '@photos/application/projections'
 import type { PaginatedResult, Pagination } from '@shared/application'
 import type { Order } from '../entities'
@@ -20,6 +24,7 @@ export interface IOrderReadRepository {
   existsByPreviewLinkId(previewLinkId: string): Promise<boolean>
   getPreviewPhotoIds(previewLinkId: string): Promise<string[]>
   getPendingRetouch(cdnUrl: string | undefined): Promise<PendingRetouchOrderProjection[]>
+  findOrdersFullyRetouchedByPhoto(photoId: string): Promise<RetouchCompletedOrderProjection[]>
 }
 
 export const ORDER_READ_REPOSITORY = Symbol('ORDER_READ_REPOSITORY')

@@ -3,6 +3,7 @@ export const NotificationEvent = {
   ORDER_CREATED: 'order.created',
   ORDER_PAID: 'order.paid',
   ORDER_DELIVERED: 'order.delivered',
+  ORDER_RETOUCH_COMPLETED: 'order.retouch_completed',
 } as const
 
 export interface PreviewViewedPayload {
@@ -22,9 +23,11 @@ export interface OrderCreatedPayload {
 
 export interface OrderPaidPayload {
   orderId: string
+  eventId: string
   eventName: string
   customerName: string
   confirmedBy: string
+  photoCount: number
   paidAt: Date
 }
 
@@ -33,4 +36,13 @@ export interface OrderDeliveredPayload {
   eventName: string
   customerName: string
   deliveredAt: Date
+}
+
+export interface OrderRetouchCompletedPayload {
+  orderId: string
+  eventId: string
+  eventName: string
+  customerName: string
+  photoCount: number
+  completedAt: Date
 }
