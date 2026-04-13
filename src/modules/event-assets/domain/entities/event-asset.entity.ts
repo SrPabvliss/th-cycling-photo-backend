@@ -1,4 +1,5 @@
 import { AppException } from '@shared/domain'
+import { nanoid } from 'nanoid'
 import type { EventAssetType } from '../value-objects/event-asset-type.enum'
 
 export class EventAsset {
@@ -7,6 +8,7 @@ export class EventAsset {
     public readonly eventId: string,
     public readonly assetType: EventAssetType,
     public storageKey: string,
+    public readonly publicSlug: string,
     public fileSize: bigint | null,
     public mimeType: string | null,
     public uploadedAt: Date,
@@ -26,6 +28,7 @@ export class EventAsset {
       data.eventId,
       data.assetType,
       data.storageKey,
+      nanoid(),
       data.fileSize,
       data.mimeType,
       new Date(),
@@ -37,6 +40,7 @@ export class EventAsset {
     eventId: string
     assetType: EventAssetType
     storageKey: string
+    publicSlug: string
     fileSize: bigint | null
     mimeType: string | null
     uploadedAt: Date
@@ -46,6 +50,7 @@ export class EventAsset {
       data.eventId,
       data.assetType,
       data.storageKey,
+      data.publicSlug,
       data.fileSize,
       data.mimeType,
       data.uploadedAt,

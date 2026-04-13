@@ -13,10 +13,12 @@ export class EventListProjection {
   provinceName: string | null
   /** Canton name (resolved from relation) */
   cantonName: string | null
-  /** Cover image URL (manual upload URL or first photo storage key for fallback) */
+  /** Cover image public CDN URL (null if no cover uploaded). */
   coverImageUrl: string | null
-  /** Source of the cover image: 'manual', 'auto' (first photo), or null */
-  coverImageSource: 'manual' | 'auto' | null
+  /** Public slug of the cover asset — used to build cdn-cgi/image transform URLs. */
+  coverImageSlug: string | null
+  /** Source of the cover image (always 'manual' now; the photo fallback was removed). */
+  coverImageSource: 'manual' | null
   /** Whether this event is currently featured */
   isFeatured: boolean
   /** Current event status */

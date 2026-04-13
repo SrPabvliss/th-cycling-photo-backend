@@ -4,8 +4,11 @@ export class PublicEventAssetProjection {
   @ApiProperty({ description: 'Asset type', example: 'cover_image' })
   assetType: string
 
-  @ApiProperty({ description: 'Public CDN URL' })
+  @ApiProperty({ description: 'Public CDN URL (already points to /assets/)' })
   url: string
+
+  @ApiProperty({ description: 'Public slug — use to build cdn-cgi/image transform URLs' })
+  publicSlug: string
 }
 
 export class PublicEventListProjection {

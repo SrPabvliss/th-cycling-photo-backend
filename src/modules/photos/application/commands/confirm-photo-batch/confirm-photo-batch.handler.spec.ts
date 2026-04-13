@@ -10,6 +10,7 @@ describe('ConfirmPhotoBatchHandler', () => {
   let handler: ConfirmPhotoBatchHandler
   let eventReadRepo: jest.Mocked<IEventReadRepository>
   let photoWriteRepo: jest.Mocked<IPhotoWriteRepository>
+  let kvStorage: { writeBulk: jest.Mock }
   let embeddingQueue: { add: jest.Mock; addBulk: jest.Mock }
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
@@ -61,11 +62,13 @@ describe('ConfirmPhotoBatchHandler', () => {
       bulkUpdateCategory: jest.fn(),
     } as jest.Mocked<IPhotoWriteRepository>
 
+    kvStorage = { writeBulk: jest.fn().mockResolvedValue(undefined) }
     embeddingQueue = { add: jest.fn(), addBulk: jest.fn() }
 
     handler = new ConfirmPhotoBatchHandler(
       eventReadRepo,
       photoWriteRepo,
+      kvStorage as any,
       embeddingQueue as unknown as import('bullmq').Queue,
     )
   })

@@ -23,7 +23,7 @@ export interface IOrderReadRepository {
   countByStatus(): Promise<Record<string, number>>
   existsByPreviewLinkId(previewLinkId: string): Promise<boolean>
   getPreviewPhotoIds(previewLinkId: string): Promise<string[]>
-  getPendingRetouch(cdnUrl: string | undefined): Promise<PendingRetouchOrderProjection[]>
+  getPendingRetouch(): Promise<PendingRetouchOrderProjection[]>
   findOrdersFullyRetouchedByPhoto(photoId: string): Promise<RetouchCompletedOrderProjection[]>
 }
 

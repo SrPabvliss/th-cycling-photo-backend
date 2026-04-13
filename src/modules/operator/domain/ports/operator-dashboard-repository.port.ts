@@ -3,7 +3,7 @@ export interface AssignedEventRow {
   name: string
   eventDate: Date
   location: string
-  coverStorageKey: string | null
+  coverPublicSlug: string | null
 }
 
 export interface ClassificationProgress {

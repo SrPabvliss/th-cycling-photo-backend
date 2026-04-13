@@ -9,6 +9,7 @@ import type { Order } from '@orders/domain/entities'
 import type { IOrderReadRepository, OrderListFilters } from '@orders/domain/ports'
 import type { PendingRetouchOrderProjection } from '@photos/application/projections'
 import { PaginatedResult, type Pagination } from '@shared/application'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 import * as OrderMapper from '../mappers/order.mapper'
 
@@ -29,7 +30,10 @@ const ORDER_LIST_SELECT = {
 
 @Injectable()
 export class OrderReadRepository implements IOrderReadRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cdn: CdnUrlBuilder,
+  ) {}
 
   /** Finds an order entity by ID. */
   async findById(id: string): Promise<Order | null> {
@@ -105,7 +109,13 @@ export class OrderReadRepository implements IOrderReadRepository {
         items: {
           select: {
             photo: {
-              select: { id: true, filename: true, storage_key: true, retouched_storage_key: true },
+              select: {
+                id: true,
+                filename: true,
+                storage_key: true,
+                public_slug: true,
+                retouched_storage_key: true,
+              },
             },
           },
         },
@@ -140,6 +150,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         id: oi.photo.id,
         filename: oi.photo.filename,
         storageKey: oi.photo.storage_key,
+        publicSlug: oi.photo.public_slug,
       })),
       deliveryLink: record.delivery_link
         ? {
@@ -179,7 +190,7 @@ export class OrderReadRepository implements IOrderReadRepository {
   }
 
   /** Returns paid orders with at least one un-retouched photo, ordered FIFO. */
-  async getPendingRetouch(cdnUrl: string | undefined): Promise<PendingRetouchOrderProjection[]> {
+  async getPendingRetouch(): Promise<PendingRetouchOrderProjection[]> {
     const orders = await this.prisma.order.findMany({
       where: { status: 'paid' },
       orderBy: { created_at: 'asc' },
@@ -194,7 +205,7 @@ export class OrderReadRepository implements IOrderReadRepository {
               select: {
                 id: true,
                 filename: true,
-                storage_key: true,
+                public_slug: true,
                 retouched_storage_key: true,
               },
             },
@@ -202,11 +213,6 @@ export class OrderReadRepository implements IOrderReadRepository {
         },
       },
     })
-
-    const buildThumbnailUrl = (storageKey: string): string => {
-      if (cdnUrl) return `${cdnUrl}/${storageKey}`
-      return storageKey
-    }
 
     return orders
       .filter((o) => o.items.some((i) => !i.photo.retouched_storage_key))
@@ -218,7 +224,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         photos: o.items.map((i) => ({
           id: i.photo.id,
           filename: i.photo.filename,
-          thumbnailUrl: buildThumbnailUrl(i.photo.storage_key),
+          thumbnailUrl: this.cdn.internalUrl(i.photo.public_slug),
           isRetouched: !!i.photo.retouched_storage_key,
         })),
       }))

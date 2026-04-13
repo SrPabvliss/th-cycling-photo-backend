@@ -27,8 +27,14 @@ export class CartViewEventGroupProjection {
   @ApiProperty({ description: 'Event type ID' })
   eventTypeId: number
 
-  @ApiProperty({ description: 'Event cover URL', nullable: true })
+  @ApiProperty({ description: 'Event cover public /assets/ URL', nullable: true })
   coverUrl: string | null
+
+  @ApiProperty({
+    description: 'Cover asset public slug (for cdn-cgi/image transforms)',
+    nullable: true,
+  })
+  coverSlug: string | null
 
   @ApiProperty({ description: 'Photos in this event group', type: [CartViewPhotoProjection] })
   photos: CartViewPhotoProjection[]

@@ -15,6 +15,8 @@ export default () => {
   const { JWT_SECRET, JWT_ACCESS_EXPIRATION_SECONDS, JWT_REFRESH_EXPIRY_DAYS, CORS_ORIGIN } =
     process.env
 
+  const { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_KV_NAMESPACE_ID, CLOUDFLARE_API_TOKEN } = process.env
+
   const { WATERMARK_BASE_URL, PREVIEW_BASE_URL, DELIVERY_BASE_URL } = process.env
 
   let databaseUrl = `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
@@ -43,6 +45,11 @@ export default () => {
         region: B2_REGION,
       },
       cdnUrl: CLOUDFLARE_CDN_URL,
+    },
+    cloudflare: {
+      accountId: CLOUDFLARE_ACCOUNT_ID,
+      kvNamespaceId: CLOUDFLARE_KV_NAMESPACE_ID,
+      apiToken: CLOUDFLARE_API_TOKEN,
     },
     voyageAi: {
       apiKey: VOYAGE_API_KEY,

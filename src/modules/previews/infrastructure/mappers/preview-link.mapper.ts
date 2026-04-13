@@ -27,7 +27,7 @@ export const previewDataSelectConfig = {
   event: { select: { name: true, event_date: true } },
   photos: {
     select: {
-      photo: { select: { id: true, storage_key: true } },
+      photo: { select: { id: true, public_slug: true } },
     },
   },
 } satisfies Prisma.PreviewLinkSelect
@@ -88,7 +88,7 @@ export function toPreviewDataProjection(record: PreviewDataSelect): PreviewDataP
     expiresAt: record.expires_at,
     photos: record.photos.map((plp) => ({
       id: plp.photo.id,
-      url: plp.photo.storage_key,
+      url: plp.photo.public_slug,
     })),
   }
 }

@@ -7,11 +7,12 @@ import type {
 import { Event } from '@events/domain/entities'
 import type { EventStatusType } from '@events/domain/value-objects/event-status.vo'
 import { Prisma, type Event as PrismaEvent } from '@generated/prisma/client'
+import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 
 // --- Select shapes for Prisma queries ---
 
 export const coverImageAssetSelectConfig = {
-  storage_key: true,
+  public_slug: true,
 } satisfies Prisma.EventAssetSelect
 
 export const eventListSelectConfig = {
@@ -53,7 +54,7 @@ export const publicEventListSelectConfig = {
   canton: { select: { name: true } },
   is_featured: true,
   _count: { select: { photos: true } },
-  assets: { select: { asset_type: true, storage_key: true } },
+  assets: { select: { asset_type: true, public_slug: true } },
 } satisfies Prisma.EventSelect
 
 export type PublicEventListSelect = Prisma.EventGetPayload<{
@@ -70,7 +71,7 @@ export const publicEventDetailSelectConfig = {
   canton: { select: { name: true } },
   is_featured: true,
   _count: { select: { photos: true } },
-  assets: { select: { asset_type: true, storage_key: true } },
+  assets: { select: { asset_type: true, public_slug: true } },
   photo_categories: {
     select: { photo_category: { select: { id: true, name: true } } },
     orderBy: { photo_category: { name: 'asc' } },
@@ -125,22 +126,15 @@ export function toEntity(record: PrismaEvent): Event {
 
 // --- Projection mappers ---
 
-/** Extracts cover image URL from joined EventAsset (asset_type = cover_image). */
-function getCoverImageUrl(
-  assets: { storage_key: string }[],
-  getPublicUrl?: (key: string) => string,
-): string | null {
-  const cover = assets[0]
-  if (!cover) return null
-  return getPublicUrl ? getPublicUrl(cover.storage_key) : null
+/** Extracts the cover image slug from joined EventAsset rows. */
+function getCoverImageSlug(assets: { public_slug: string }[]): string | null {
+  return assets[0]?.public_slug ?? null
 }
 
 /** Converts a Prisma selected record to a list projection. */
-export function toListProjection(
-  record: EventListSelect,
-  getPublicUrl?: (key: string) => string,
-): EventListProjection {
-  const coverUrl = getCoverImageUrl(record.assets, getPublicUrl)
+export function toListProjection(record: EventListSelect, cdn: CdnUrlBuilder): EventListProjection {
+  const coverSlug = getCoverImageSlug(record.assets)
+  const coverUrl = coverSlug ? cdn.assetUrl(coverSlug) : null
   return {
     id: record.id,
     name: record.name,
@@ -150,6 +144,7 @@ export function toListProjection(
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
     coverImageUrl: coverUrl,
+    coverImageSlug: coverSlug,
     coverImageSource: coverUrl ? 'manual' : null,
     isFeatured: record.is_featured,
     status: record.status,
@@ -162,9 +157,10 @@ export function toListProjection(
 /** Converts a Prisma record to a detail projection. */
 export function toDetailProjection(
   record: EventDetailSelect,
-  getPublicUrl?: (key: string) => string,
+  cdn: CdnUrlBuilder,
 ): EventDetailProjection {
-  const coverUrl = getCoverImageUrl(record.assets, getPublicUrl)
+  const coverSlug = getCoverImageSlug(record.assets)
+  const coverUrl = coverSlug ? cdn.assetUrl(coverSlug) : null
   return {
     id: record.id,
     name: record.name,
@@ -176,6 +172,7 @@ export function toDetailProjection(
     provinceId: record.province_id,
     cantonId: record.canton_id,
     coverImageUrl: coverUrl,
+    coverImageSlug: coverSlug,
     coverImageSource: coverUrl ? 'manual' : null,
     isFeatured: record.is_featured,
     status: record.status,
@@ -190,7 +187,7 @@ export function toDetailProjection(
 /** Converts a Prisma record to a public list projection. */
 export function toPublicListProjection(
   record: PublicEventListSelect,
-  getPublicUrl: (key: string) => string,
+  cdn: CdnUrlBuilder,
 ): PublicEventListProjection {
   return {
     id: record.id,
@@ -203,7 +200,8 @@ export function toPublicListProjection(
     photoCount: record._count.photos,
     assets: record.assets.map((a) => ({
       assetType: a.asset_type,
-      url: getPublicUrl(a.storage_key),
+      url: cdn.assetUrl(a.public_slug),
+      publicSlug: a.public_slug,
     })),
   }
 }
@@ -211,7 +209,7 @@ export function toPublicListProjection(
 /** Converts a Prisma record to a public detail projection. */
 export function toPublicDetailProjection(
   record: PublicEventDetailSelect,
-  getPublicUrl: (key: string) => string,
+  cdn: CdnUrlBuilder,
 ): PublicEventDetailProjection {
   return {
     id: record.id,
@@ -225,7 +223,8 @@ export function toPublicDetailProjection(
     photoCount: record._count.photos,
     assets: record.assets.map((a) => ({
       assetType: a.asset_type,
-      url: getPublicUrl(a.storage_key),
+      url: cdn.assetUrl(a.public_slug),
+      publicSlug: a.public_slug,
     })),
     photoCategories: record.photo_categories.map((c) => ({
       id: c.photo_category.id,

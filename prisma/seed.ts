@@ -369,6 +369,7 @@ async function seedDemoData() {
           mime_type: 'image/jpeg',
           width: 4032,
           height: 3024,
+          public_slug: crypto.randomBytes(11).toString('base64url'),
           status: 'pending',
           captured_at: new Date(`2026-03-15T${String(8 + i).padStart(2, '0')}:00:00Z`),
         },

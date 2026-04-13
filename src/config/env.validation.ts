@@ -66,6 +66,19 @@ export class EnvironmentVariables {
   @IsString()
   CLOUDFLARE_CDN_URL?: string
 
+  // Cloudflare KV (for slug→path mapping)
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_ACCOUNT_ID?: string
+
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_KV_NAMESPACE_ID?: string
+
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_API_TOKEN?: string
+
   // Voyage AI
   @IsOptional()
   @IsString()

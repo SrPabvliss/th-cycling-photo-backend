@@ -21,8 +21,6 @@ export interface IPhotoReadRepository {
     filters: SearchPhotosFilters,
     pagination: Pagination,
   ): Promise<PaginatedResult<PhotoListProjection>>
-  findFirstStorageKeyByEvent(eventId: string): Promise<string | null>
-  findFirstStorageKeysByEventIds(eventIds: string[]): Promise<Map<string, string>>
   getTotalFileSizeByEvent(eventId: string): Promise<number>
   getTotalFileSizesByEventIds(eventIds: string[]): Promise<Map<string, number>>
   getClassifiedCountByEvent(eventId: string): Promise<number>

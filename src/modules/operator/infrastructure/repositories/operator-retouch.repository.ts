@@ -27,6 +27,7 @@ export class OperatorRetouchRepository implements IOperatorRetouchRepository {
               select: {
                 id: true,
                 storage_key: true,
+                public_slug: true,
                 retouched_storage_key: true,
               },
             },

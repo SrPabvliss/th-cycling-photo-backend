@@ -5,22 +5,16 @@ import type {
   CartViewProjection,
 } from '@cart/application/projections'
 import type { ICartReadRepository } from '@cart/domain/ports'
-import { Inject, Injectable } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
+import { Injectable } from '@nestjs/common'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
-import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage'
 
 @Injectable()
 export class CartReadRepository implements ICartReadRepository {
-  private readonly watermarkBaseUrl: string
-
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
-    config: ConfigService,
-  ) {
-    this.watermarkBaseUrl = config.getOrThrow<string>('watermark.baseUrl')
-  }
+    private readonly cdn: CdnUrlBuilder,
+  ) {}
 
   async findActiveByUserId(userId: string): Promise<ActiveCartProjection | null> {
     const cart = await this.prisma.cart.findFirst({
@@ -44,7 +38,7 @@ export class CartReadRepository implements ICartReadRepository {
     const items = await this.prisma.cartItem.findMany({
       where: { cart_id: cartId, removed_at: null },
       select: {
-        photo: { select: { id: true, storage_key: true, width: true, height: true } },
+        photo: { select: { id: true, public_slug: true, width: true, height: true } },
         event: {
           select: {
             id: true,
@@ -53,7 +47,7 @@ export class CartReadRepository implements ICartReadRepository {
             event_type_id: true,
             assets: {
               where: { asset_type: 'cover_image' },
-              select: { storage_key: true },
+              select: { public_slug: true },
               take: 1,
             },
           },
@@ -70,6 +64,7 @@ export class CartReadRepository implements ICartReadRepository {
         eventDate: Date
         eventTypeId: number
         coverUrl: string | null
+        coverSlug: string | null
         photos: { id: string; url: string; width: number | null; height: number | null }[]
       }
     >()
@@ -78,18 +73,21 @@ export class CartReadRepository implements ICartReadRepository {
       const eventId = item.event.id
       if (!eventMap.has(eventId)) {
         const coverAsset = item.event.assets[0]
+        const coverSlug = coverAsset?.public_slug ?? null
+        const coverUrl = coverSlug ? this.cdn.assetUrl(coverSlug) : null
         eventMap.set(eventId, {
           eventId,
           eventName: item.event.name,
           eventDate: item.event.event_date,
           eventTypeId: item.event.event_type_id,
-          coverUrl: coverAsset ? this.storage.getPublicUrl(coverAsset.storage_key) : null,
+          coverUrl,
+          coverSlug,
           photos: [],
         })
       }
       eventMap.get(eventId)?.photos.push({
         id: item.photo.id,
-        url: `${this.watermarkBaseUrl}/${item.photo.storage_key}`,
+        url: this.cdn.galleryUrl(item.photo.public_slug),
         width: item.photo.width,
         height: item.photo.height,
       })
