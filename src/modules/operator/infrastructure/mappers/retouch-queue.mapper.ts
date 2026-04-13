@@ -15,6 +15,7 @@ interface OrderRecord {
 interface PhotoRecord {
   id: string
   storage_key: string
+  public_slug: string
   retouched_storage_key: string | null
 }
 
@@ -22,6 +23,7 @@ function toItemProjection(photo: PhotoRecord): RetouchQueueItemProjection {
   return {
     photoId: photo.id,
     storageKey: photo.storage_key,
+    publicSlug: photo.public_slug,
     isRetouched: photo.retouched_storage_key !== null,
     retouchedStorageKey: photo.retouched_storage_key,
   }

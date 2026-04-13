@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger'
 export class RetouchQueueItemProjection {
   @ApiProperty() photoId: string
   @ApiProperty() storageKey: string
+  @ApiProperty() publicSlug: string
   @ApiProperty() isRetouched: boolean
   @ApiProperty({ nullable: true }) retouchedStorageKey: string | null
 }

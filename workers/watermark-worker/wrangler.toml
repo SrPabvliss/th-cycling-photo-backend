@@ -2,12 +2,27 @@ name = "watermark-worker"
 main = "src/index.js"
 compatibility_date = "2025-09-01"
 
-# Route: intercepts /photos/watermarked/* on your CDN domain
-# zone_name and pattern configured per environment
+# Routes:
+#  /gallery/*  — public, watermarked + degraded
+#  /internal/* — admin, originals (no watermark)
+#  /assets/*   — public event assets (covers, logos) — originals, no watermark
 [[routes]]
-pattern = "cdn.titantv.com.ec/photos/watermarked/*"
+pattern = "cdn.titantv.com.ec/gallery/*"
 zone_name = "titantv.com.ec"
 
+[[routes]]
+pattern = "cdn.titantv.com.ec/internal/*"
+zone_name = "titantv.com.ec"
+
+[[routes]]
+pattern = "cdn.titantv.com.ec/assets/*"
+zone_name = "titantv.com.ec"
+
+# Workers KV — slug → B2 object path mapping
+[[kv_namespaces]]
+binding = "IMAGE_MAP"
+id = "2d500704ffd7413ca3401e6c08b1f8f3"
+
 # All sensitive vars go in .dev.vars (local) or wrangler secret (production)
-# Required secrets: B2_ORIGIN_HOST, WATERMARK_URL,
+# Required secrets: B2_KEY_ID, B2_APP_KEY, B2_BUCKET, B2_REGION,
 #   WATERMARK_OPACITY, DEFAULT_QUALITY, QR_WORKER_HOST, PUBLIC_DOMAIN

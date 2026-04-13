@@ -25,6 +25,7 @@ import { PhotosModule } from './modules/photos/photos.module'
 import { PreviewsModule } from './modules/previews/previews.module'
 import { UsersModule } from './modules/users/users.module'
 import { RolesGuard } from './shared/auth'
+import { CloudflareModule } from './shared/cloudflare/cloudflare.module'
 import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
@@ -58,6 +59,7 @@ import { StorageModule } from './shared/storage/storage.module'
     EventEmitterModule.forRoot(),
     PrismaModule,
     StorageModule,
+    CloudflareModule,
     NotificationsModule,
     EmbeddingsModule,
     CartModule,

@@ -1,3 +1,4 @@
+import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import type {
   ActiveEventProjection,
   CompletedEventProjection,
@@ -100,8 +101,8 @@ export function toDashboardProjection(
   }
 }
 
-export function buildCoverUrl(storageKey: string | null, cdnUrl: string): string | null {
-  return storageKey ? `${cdnUrl}/${storageKey}` : null
+export function buildCoverUrl(publicSlug: string | null, cdn: CdnUrlBuilder): string | null {
+  return publicSlug ? cdn.assetUrl(publicSlug) : null
 }
 
 export function resolveCompletedAt(actions: LastActionDate | undefined, fallback: Date): Date {

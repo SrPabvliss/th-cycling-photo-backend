@@ -25,8 +25,6 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
       getPhotosList: jest.fn(),
       getPhotoDetail: jest.fn(),
       searchPhotos: jest.fn(),
-      findFirstStorageKeyByEvent: jest.fn(),
-      findFirstStorageKeysByEventIds: jest.fn(),
       getTotalFileSizeByEvent: jest.fn(),
       getTotalFileSizesByEventIds: jest.fn(),
       getClassifiedCountByEvent: jest.fn(),

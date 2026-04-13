@@ -29,7 +29,7 @@ export class OperatorDashboardRepository implements IOperatorDashboardRepository
             province: { select: { name: true } },
             assets: {
               where: { asset_type: 'cover_image' },
-              select: { storage_key: true },
+              select: { public_slug: true },
               take: 1,
             },
           },
@@ -42,7 +42,7 @@ export class OperatorDashboardRepository implements IOperatorDashboardRepository
       name: a.event.name,
       eventDate: a.event.event_date,
       location: [a.event.canton?.name, a.event.province?.name].filter(Boolean).join(', '),
-      coverStorageKey: a.event.assets[0]?.storage_key ?? null,
+      coverPublicSlug: a.event.assets[0]?.public_slug ?? null,
     }))
   }
 

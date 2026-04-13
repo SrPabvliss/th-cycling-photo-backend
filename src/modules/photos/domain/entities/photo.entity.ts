@@ -1,4 +1,5 @@
 import { AppException } from '@shared/domain'
+import { nanoid } from 'nanoid'
 import { PhotoStatus, type PhotoStatusType } from '../value-objects/photo-status.vo'
 import type { UnclassifiedReasonType } from '../value-objects/unclassified-reason.vo'
 
@@ -20,6 +21,7 @@ export class Photo {
     public readonly eventId: string,
     public readonly filename: string,
     public readonly storageKey: string,
+    public readonly publicSlug: string,
     public readonly fileSize: bigint,
     public readonly mimeType: string,
     public width: number | null,
@@ -56,6 +58,7 @@ export class Photo {
       data.eventId,
       data.filename,
       data.storageKey,
+      nanoid(),
       data.fileSize,
       data.mimeType,
       data.width ?? null,
@@ -121,6 +124,7 @@ export class Photo {
     eventId: string
     filename: string
     storageKey: string
+    publicSlug: string
     fileSize: bigint
     mimeType: string
     width: number | null
@@ -141,6 +145,7 @@ export class Photo {
       data.eventId,
       data.filename,
       data.storageKey,
+      data.publicSlug,
       data.fileSize,
       data.mimeType,
       data.width,

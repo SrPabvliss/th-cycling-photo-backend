@@ -9,6 +9,8 @@ export class PhotoDetailProjection {
   filename: string
   /** Storage key for CDN URL resolution */
   storageKey: string
+  /** Opaque public slug for gallery URL */
+  publicSlug: string
   /** File size in bytes */
   fileSize: number
   /** MIME type */

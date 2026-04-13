@@ -356,6 +356,7 @@ model Photo {
 
   filename    String @db.VarChar(255)
   storage_key String @unique @db.VarChar(500)
+  public_slug String @unique @db.VarChar(30)
   file_size   BigInt
   mime_type   String @default("image/jpeg") @db.VarChar(50)
   width       Int?
@@ -633,6 +634,7 @@ model EventAsset {
   event_id    String         @db.Uuid
   asset_type  EventAssetType
   storage_key String         @unique @db.VarChar(500)
+  public_slug String         @unique @db.VarChar(30)
   file_size   BigInt?
   mime_type   String?        @db.VarChar(50)
   uploaded_at DateTime       @default(now()) @db.Timestamptz

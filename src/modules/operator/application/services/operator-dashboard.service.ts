@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import type {
   ClassificationProgress,
   IOperatorDashboardRepository,
@@ -13,9 +14,10 @@ export class OperatorDashboardService {
   constructor(
     @Inject(OPERATOR_DASHBOARD_REPOSITORY)
     private readonly repo: IOperatorDashboardRepository,
+    private readonly cdn: CdnUrlBuilder,
   ) {}
 
-  async getDashboard(operatorId: string, cdnUrl: string): Promise<OperatorDashboardProjection> {
+  async getDashboard(operatorId: string): Promise<OperatorDashboardProjection> {
     const events = await this.repo.getAssignedEvents(operatorId)
     const eventIds = events.map((e) => e.eventId)
 
@@ -54,7 +56,7 @@ export class OperatorDashboardService {
       .map((event) => {
         const classification = classMap.get(event.eventId) ?? defaultClassification(event.eventId)
         const retouch = retouchMap.get(event.eventId) ?? defaultRetouch(event.eventId)
-        const coverUrl = DashboardMapper.buildCoverUrl(event.coverStorageKey, cdnUrl)
+        const coverUrl = DashboardMapper.buildCoverUrl(event.coverPublicSlug, this.cdn)
         return DashboardMapper.toActiveEventProjection(event, classification, retouch, coverUrl)
       })
 
@@ -70,7 +72,7 @@ export class OperatorDashboardService {
           actionMap.get(event.eventId),
           event.eventDate,
         )
-        const coverUrl = DashboardMapper.buildCoverUrl(event.coverStorageKey, cdnUrl)
+        const coverUrl = DashboardMapper.buildCoverUrl(event.coverPublicSlug, this.cdn)
         return DashboardMapper.toCompletedEventProjection(
           event,
           classification.classified,

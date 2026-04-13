@@ -4,6 +4,7 @@ import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { Photo } from '@photos/domain/entities'
 import { type IPhotoWriteRepository, PHOTO_WRITE_REPOSITORY } from '@photos/domain/ports'
+import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import type { Queue } from 'bullmq'
 import type { ConfirmBatchProjection } from '../../projections'
@@ -16,6 +17,7 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
   constructor(
     @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
     @Inject(PHOTO_WRITE_REPOSITORY) private readonly photoWriteRepo: IPhotoWriteRepository,
+    @Inject(KV_STORAGE_ADAPTER) private readonly kvStorage: IKvStorageAdapter,
     @InjectQueue('embedding-generation') private readonly embeddingQueue: Queue,
   ) {}
 
@@ -45,6 +47,18 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     })
 
     const confirmed = await this.photoWriteRepo.saveMany(photos)
+
+    // Register slug→path mappings in Workers KV for CDN resolution
+    const kvEntries = photos.map((photo) => ({
+      key: photo.publicSlug,
+      value: photo.storageKey,
+    }))
+    await this.kvStorage.writeBulk(kvEntries).catch((err) => {
+      this.logger.error(
+        'Failed to write KV mappings — photos saved but CDN slugs not registered',
+        err,
+      )
+    })
 
     await this.embeddingQueue.addBulk(
       photos.map((photo) => ({

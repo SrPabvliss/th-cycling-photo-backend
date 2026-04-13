@@ -28,7 +28,7 @@ export class ConfirmAvatarUploadHandler implements ICommandHandler<ConfirmAvatar
       await this.storage.delete(user.avatarStorageKey)
     }
 
-    const url = this.storage.getPublicUrl(command.storageKey)
+    const url = await this.storage.getPresignedDownloadUrl({ key: command.storageKey })
     user.setAvatar(url, command.storageKey)
     await this.writeRepo.save(user)
 

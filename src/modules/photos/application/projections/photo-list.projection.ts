@@ -7,6 +7,8 @@ export class PhotoListProjection {
   filename: string
   /** Storage key for CDN URL resolution */
   storageKey: string
+  /** Opaque public slug for gallery URL */
+  publicSlug: string
   /** Current processing status */
   status: string
   /** Image width in pixels */
