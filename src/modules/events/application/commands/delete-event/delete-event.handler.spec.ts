@@ -27,6 +27,7 @@ describe('DeleteEventHandler', () => {
       getPublicEventDetail: jest.fn(),
       getPublicPhotos: jest.fn(),
       existsActiveEvent: jest.fn(),
+      existsActiveEventBySlug: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     handler = new DeleteEventHandler(writeRepo, readRepo)
@@ -34,6 +35,7 @@ describe('DeleteEventHandler', () => {
 
   it('should archive an existing event and return its id', async () => {
     const existingEvent = Event.fromPersistence({
+      slug: 'test-event',
       id: '550e8400-e29b-41d4-a716-446655440000',
       name: 'Vuelta Ciclística',
       description: null,

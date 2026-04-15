@@ -46,15 +46,18 @@ export const eventDetailSelectConfig = {
 export type EventDetailSelect = Prisma.EventGetPayload<{ select: typeof eventDetailSelectConfig }>
 
 export const publicEventListSelectConfig = {
-  id: true,
+  slug: true,
   name: true,
   event_date: true,
-  location: true,
   province: { select: { name: true } },
   canton: { select: { name: true } },
   is_featured: true,
   _count: { select: { photos: true } },
-  assets: { select: { asset_type: true, public_slug: true } },
+  assets: {
+    select: { public_slug: true },
+    where: { asset_type: 'cover_image' },
+    take: 1,
+  },
 } satisfies Prisma.EventSelect
 
 export type PublicEventListSelect = Prisma.EventGetPayload<{
@@ -62,11 +65,10 @@ export type PublicEventListSelect = Prisma.EventGetPayload<{
 }>
 
 export const publicEventDetailSelectConfig = {
-  id: true,
   name: true,
+  slug: true,
   description: true,
   event_date: true,
-  location: true,
   province: { select: { name: true } },
   canton: { select: { name: true } },
   is_featured: true,
@@ -89,6 +91,7 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
   return {
     id: entity.id,
     name: entity.name,
+    slug: entity.slug,
     description: entity.description,
     event_date: entity.date,
     location: entity.location,
@@ -109,6 +112,7 @@ export function toEntity(record: PrismaEvent): Event {
   return Event.fromPersistence({
     id: record.id,
     name: record.name,
+    slug: record.slug,
     description: record.description,
     date: record.event_date,
     location: record.location,
@@ -185,24 +189,16 @@ export function toDetailProjection(
 }
 
 /** Converts a Prisma record to a public list projection. */
-export function toPublicListProjection(
-  record: PublicEventListSelect,
-  cdn: CdnUrlBuilder,
-): PublicEventListProjection {
+export function toPublicListProjection(record: PublicEventListSelect): PublicEventListProjection {
   return {
-    id: record.id,
+    slug: record.slug,
     name: record.name,
     date: record.event_date,
-    location: record.location,
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
     isFeatured: record.is_featured,
     photoCount: record._count.photos,
-    assets: record.assets.map((a) => ({
-      assetType: a.asset_type,
-      url: cdn.assetUrl(a.public_slug),
-      publicSlug: a.public_slug,
-    })),
+    coverSlug: record.assets[0]?.public_slug ?? null,
   }
 }
 
@@ -212,11 +208,10 @@ export function toPublicDetailProjection(
   cdn: CdnUrlBuilder,
 ): PublicEventDetailProjection {
   return {
-    id: record.id,
+    slug: record.slug,
     name: record.name,
     description: record.description,
     date: record.event_date,
-    location: record.location,
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
     isFeatured: record.is_featured,

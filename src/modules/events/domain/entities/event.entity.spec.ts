@@ -193,6 +193,7 @@ describe('Event Entity', () => {
       const event = Event.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Past Event',
+        slug: 'past-event',
         description: null,
         date: pastDate,
         location: null,
@@ -218,6 +219,7 @@ describe('Event Entity', () => {
       const event = Event.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Archived Event',
+        slug: 'archived-event',
         description: null,
         date: new Date('2024-01-01'),
         location: null,

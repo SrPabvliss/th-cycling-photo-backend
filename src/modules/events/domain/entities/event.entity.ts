@@ -1,10 +1,12 @@
 import { AppException, AuditFields } from '@shared/domain'
+import slugify from 'slugify'
 import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo'
 
 export class Event {
   constructor(
     public readonly id: string,
     public name: string,
+    public slug: string,
     public description: string | null,
     public date: Date,
     public location: string | null,
@@ -34,6 +36,7 @@ export class Event {
     return new Event(
       crypto.randomUUID(),
       data.name,
+      Event.generateSlug(data.name),
       data.description,
       data.date,
       data.location,
@@ -60,6 +63,7 @@ export class Event {
     if (data.name !== undefined) {
       Event.validateName(data.name)
       this.name = data.name
+      this.slug = Event.generateSlug(data.name)
     }
 
     if (data.description !== undefined) this.description = data.description
@@ -96,6 +100,10 @@ export class Event {
     this.audit.markUpdated()
   }
 
+  static generateSlug(name: string): string {
+    return slugify(name, { lower: true, strict: true, locale: 'es' })
+  }
+
   private static validateName(name: string): void {
     if (name.length < 3 || name.length > 200) {
       throw AppException.businessRule('event.name_invalid_length')
@@ -115,6 +123,7 @@ export class Event {
   static fromPersistence(data: {
     id: string
     name: string
+    slug: string
     description: string | null
     date: Date
     location: string | null
@@ -131,6 +140,7 @@ export class Event {
     return new Event(
       data.id,
       data.name,
+      data.slug,
       data.description,
       data.date,
       data.location,

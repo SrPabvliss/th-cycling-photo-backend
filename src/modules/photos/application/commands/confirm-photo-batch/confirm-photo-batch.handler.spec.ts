@@ -19,6 +19,7 @@ describe('ConfirmPhotoBatchHandler', () => {
   futureDate.setFullYear(futureDate.getFullYear() + 1)
 
   const existingEvent = Event.fromPersistence({
+    slug: 'test-event',
     id: eventId,
     name: 'Test Event',
     description: null,
@@ -52,6 +53,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       getPublicEventDetail: jest.fn(),
       getPublicPhotos: jest.fn(),
       existsActiveEvent: jest.fn(),
+      existsActiveEventBySlug: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoWriteRepo = {

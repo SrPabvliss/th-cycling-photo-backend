@@ -2,14 +2,16 @@ import type { Event } from '@events/domain/entities'
 import type { IEventWriteRepository } from '@events/domain/ports'
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
+import { nanoid } from 'nanoid'
 import * as EventMapper from '../mappers/event.mapper'
 
 @Injectable()
 export class EventWriteRepository implements IEventWriteRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Persists an event entity (create or update). */
+  /** Persists an event entity (create or update). Appends a suffix if slug collides. */
   async save(event: Event): Promise<Event> {
+    await this.ensureUniqueSlug(event)
     const data = EventMapper.toPersistence(event)
 
     const saved = await this.prisma.event.upsert({
@@ -36,5 +38,17 @@ export class EventWriteRepository implements IEventWriteRepository {
         data: { is_featured: isFeatured },
       })
     })
+  }
+
+  /** Ensures event.slug is unique, appending a short random suffix if it collides. */
+  private async ensureUniqueSlug(event: Event): Promise<void> {
+    const existing = await this.prisma.event.findFirst({
+      where: { slug: event.slug, id: { not: event.id } },
+      select: { id: true },
+    })
+
+    if (existing) {
+      event.slug = `${event.slug}-${nanoid(6)}`
+    }
   }
 }

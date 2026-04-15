@@ -92,16 +92,15 @@ export class EventReadRepository implements IEventReadRepository {
       this.prisma.event.count({ where }),
     ])
 
-    const items = events.map((e) => EventMapper.toPublicListProjection(e, this.cdn))
+    const items = events.map((e) => EventMapper.toPublicListProjection(e))
 
     return new PaginatedResult(items, total, pagination)
   }
 
-  async getPublicEventDetail(eventId: string): Promise<PublicEventDetailProjection | null> {
-    // Mirror the list filter — no cover means the event is not public.
+  async getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null> {
     const event = await this.prisma.event.findFirst({
       where: {
-        id: eventId,
+        slug,
         deleted_at: null,
         status: 'active',
         assets: { some: { asset_type: 'cover_image' } },
@@ -154,6 +153,18 @@ export class EventReadRepository implements IEventReadRepository {
     return this.prisma.event.findFirst({
       where: {
         id: eventId,
+        status: 'active',
+        deleted_at: null,
+        assets: { some: { asset_type: 'cover_image' } },
+      },
+      select: { id: true, name: true },
+    })
+  }
+
+  async existsActiveEventBySlug(slug: string): Promise<{ id: string; name: string } | null> {
+    return this.prisma.event.findFirst({
+      where: {
+        slug,
         status: 'active',
         deleted_at: null,
         assets: { some: { asset_type: 'cover_image' } },

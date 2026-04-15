@@ -65,6 +65,7 @@ describe('Photos Module (e2e)', () => {
     const event = await prisma.event.create({
       data: {
         name: 'E2E Photos Test Event',
+        slug: 'e2e-photos-test-event',
         event_date: futureDate,
         event_type_id: eventType.id,
       },
@@ -337,7 +338,12 @@ describe('Photos Module (e2e)', () => {
 
       const eventType = await prisma.eventType.findFirst({ where: { name: 'road_race' } })
       const emptyEvent = await prisma.event.create({
-        data: { name: 'Empty Event', event_date: futureDate, event_type_id: eventType!.id },
+        data: {
+          name: 'Empty Event',
+          slug: 'empty-event',
+          event_date: futureDate,
+          event_type_id: eventType!.id,
+        },
       })
 
       const response = await request(app.getHttpServer())

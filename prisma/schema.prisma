@@ -293,6 +293,7 @@ model RefreshToken {
 model Event {
   id               String      @id @default(uuid()) @db.Uuid
   name             String      @db.VarChar(200)
+  slug             String      @unique @db.VarChar(250)
   description      String?     @db.Text
   event_date       DateTime    @db.Date
   event_type_id    Int
