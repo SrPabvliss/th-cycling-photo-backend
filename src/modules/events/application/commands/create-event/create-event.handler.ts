@@ -28,7 +28,6 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       name: command.name,
       description: command.description,
       date: command.date,
-      location: command.location,
       provinceId: command.provinceId,
       cantonId: command.cantonId,
       eventTypeId: command.eventTypeId,

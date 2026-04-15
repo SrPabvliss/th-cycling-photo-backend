@@ -9,7 +9,6 @@ export class Event {
     public slug: string,
     public description: string | null,
     public date: Date,
-    public location: string | null,
     public provinceId: number | null,
     public cantonId: number | null,
     public eventTypeId: number,
@@ -17,15 +16,10 @@ export class Event {
     public readonly audit: AuditFields,
   ) {}
 
-  /**
-   * Factory method for creating a new event.
-   * Applies all business validations before instantiation.
-   */
   static create(data: {
     name: string
     description: string | null
     date: Date
-    location: string | null
     provinceId: number | null
     cantonId: number | null
     eventTypeId: number
@@ -39,7 +33,6 @@ export class Event {
       Event.generateSlug(data.name),
       data.description,
       data.date,
-      data.location,
       data.provinceId,
       data.cantonId,
       data.eventTypeId,
@@ -48,14 +41,10 @@ export class Event {
     )
   }
 
-  /**
-   * Updates mutable event fields with business validations.
-   */
   update(data: {
     name?: string
     description?: string | null
     date?: Date
-    location?: string | null
     provinceId?: number | null
     cantonId?: number | null
     eventTypeId?: number
@@ -73,7 +62,6 @@ export class Event {
       this.date = data.date
     }
 
-    if (data.location !== undefined) this.location = data.location
     if (data.provinceId !== undefined) this.provinceId = data.provinceId
     if (data.cantonId !== undefined) this.cantonId = data.cantonId
     if (data.eventTypeId !== undefined) this.eventTypeId = data.eventTypeId
@@ -81,7 +69,6 @@ export class Event {
     this.audit.markUpdated()
   }
 
-  /** Archives this event: sets status to archived and marks as soft-deleted. */
   archive(): void {
     if (this.status === EventStatus.ARCHIVED) {
       throw AppException.businessRule('event.already_archived')
@@ -90,7 +77,6 @@ export class Event {
     this.audit.markDeleted()
   }
 
-  /** Restores a previously archived event: sets status to active and clears deletedAt. */
   restore(): void {
     if (this.status !== EventStatus.ARCHIVED) {
       throw AppException.businessRule('event.not_archived')
@@ -116,17 +102,12 @@ export class Event {
     if (date < today) throw AppException.businessRule('event.date_in_past')
   }
 
-  /**
-   * Reconstitutes an entity from persistence data.
-   * No validations are applied – the data is trusted.
-   */
   static fromPersistence(data: {
     id: string
     name: string
     slug: string
     description: string | null
     date: Date
-    location: string | null
     provinceId: number | null
     cantonId: number | null
     eventTypeId: number
@@ -143,7 +124,6 @@ export class Event {
       data.slug,
       data.description,
       data.date,
-      data.location,
       data.provinceId,
       data.cantonId,
       data.eventTypeId,

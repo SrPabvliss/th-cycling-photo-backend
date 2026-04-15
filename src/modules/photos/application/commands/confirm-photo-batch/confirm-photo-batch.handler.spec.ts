@@ -24,7 +24,7 @@ describe('ConfirmPhotoBatchHandler', () => {
     name: 'Test Event',
     description: null,
     date: futureDate,
-    location: 'Ambato',
+
     provinceId: null,
     cantonId: null,
     eventTypeId: 1,

@@ -7,8 +7,6 @@ export class EventDetailProjection {
   description: string | null
   /** Date when the event takes place */
   date: Date
-  /** Legacy free-text location (preserved for data migration) */
-  location: string | null
   /** Province name (resolved from relation) */
   provinceName: string | null
   /** Canton name (resolved from relation) */

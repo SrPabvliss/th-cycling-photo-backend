@@ -37,14 +37,6 @@ export class CreateEventDto {
   description?: string
 
   @ApiPropertyOptional({
-    description: 'Physical location or address of the event',
-    example: 'Ambato, Ecuador',
-  })
-  @IsString()
-  @IsOptional()
-  location?: string
-
-  @ApiPropertyOptional({
     description: 'Province ID where the event takes place',
     example: 18,
   })

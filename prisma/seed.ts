@@ -351,7 +351,6 @@ async function seedDemoData() {
       slug: slugify(eventName, { lower: true, strict: true, locale: 'es' }),
       event_date: new Date('2026-03-15'),
       event_type_id: downhill!.id,
-      location: 'Ambato, Ecuador',
       province_id: tungurahua?.id ?? null,
       canton_id: ambato?.id ?? null,
       status: 'active',

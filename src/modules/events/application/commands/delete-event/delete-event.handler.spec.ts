@@ -40,7 +40,7 @@ describe('DeleteEventHandler', () => {
       name: 'Vuelta Ciclística',
       description: null,
       date: futureDate,
-      location: 'Ambato',
+
       provinceId: null,
       cantonId: null,
       eventTypeId: 1,

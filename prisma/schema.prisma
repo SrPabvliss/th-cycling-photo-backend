@@ -297,7 +297,6 @@ model Event {
   description      String?     @db.Text
   event_date       DateTime    @db.Date
   event_type_id    Int
-  location         String?     @db.VarChar(200)
   province_id      Int?
   canton_id        Int?
   is_featured             Boolean     @default(false)
