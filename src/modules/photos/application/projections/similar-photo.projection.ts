@@ -1,8 +1,8 @@
 export class SimilarPhotoProjection {
   id: string
   filename: string
-  storageKey: string
   publicSlug: string
+  thumbnailUrl: string
   similarity: number
   hasClassifications: boolean
 }

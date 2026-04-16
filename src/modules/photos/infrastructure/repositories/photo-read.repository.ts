@@ -10,12 +10,16 @@ import type { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
 
 import { PaginatedResult, type Pagination } from '@shared/application'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 import * as PhotoMapper from '../mappers/photo.mapper'
 
 @Injectable()
 export class PhotoReadRepository implements IPhotoReadRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cdn: CdnUrlBuilder,
+  ) {}
 
   /** Finds a photo by ID (no soft-delete filter — photos use hard delete). */
   async findById(id: string): Promise<Photo | null> {
@@ -55,7 +59,11 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       this.prisma.photo.count({ where }),
     ])
 
-    return new PaginatedResult(photos.map(PhotoMapper.toListProjection), total, pagination)
+    return new PaginatedResult(
+      photos.map((p) => PhotoMapper.toListProjection(p, this.cdn)),
+      total,
+      pagination,
+    )
   }
 
   /** Retrieves a single photo's detail with all classification relations. */
@@ -65,7 +73,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       select: PhotoMapper.photoDetailSelectConfig,
     })
 
-    return record ? PhotoMapper.toDetailProjection(record) : null
+    return record ? PhotoMapper.toDetailProjection(record, this.cdn) : null
   }
 
   /** Searches photos across events with multi-criteria filtering. */
@@ -86,7 +94,11 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       this.prisma.photo.count({ where }),
     ])
 
-    return new PaginatedResult(photos.map(PhotoMapper.toListProjection), total, pagination)
+    return new PaginatedResult(
+      photos.map((p) => PhotoMapper.toListProjection(p, this.cdn)),
+      total,
+      pagination,
+    )
   }
 
   /** Returns the total file size (in bytes) for a single event's photos. */
@@ -234,8 +246,8 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return rows.map((row) => ({
       id: row.id,
       filename: row.filename,
-      storageKey: row.storage_key,
       publicSlug: row.public_slug,
+      thumbnailUrl: this.cdn.internalUrl(row.public_slug, 'thumb'),
       similarity: Number(row.similarity),
       hasClassifications: row.has_classifications,
     }))

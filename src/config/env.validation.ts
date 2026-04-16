@@ -79,6 +79,10 @@ export class EnvironmentVariables {
   @IsString()
   CLOUDFLARE_API_TOKEN?: string
 
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_HMAC_SECRET?: string
+
   // Voyage AI
   @IsOptional()
   @IsString()

@@ -22,6 +22,8 @@ describe('GetPhotoDetailHandler', () => {
     uploadedAt: new Date('2025-06-15T12:00:00Z'),
     processedAt: new Date('2025-06-15T12:05:00Z'),
     publicSlug: 'test-slug',
+    imageUrl: 'https://cdn.test/internal/workspace/test-slug.jpg?token=mock',
+    thumbnailUrl: 'https://cdn.test/internal/thumb/test-slug.jpg?token=mock',
     retouchedStorageKey: null,
     retouchedFileSize: null,
     retouchedAt: null,

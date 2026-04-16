@@ -4,14 +4,8 @@ export class CartViewPhotoProjection {
   @ApiProperty({ description: 'Photo ID' })
   id: string
 
-  @ApiProperty({ description: 'Watermarked photo URL' })
-  url: string
-
-  @ApiProperty({ description: 'Photo width in pixels', nullable: true })
-  width: number | null
-
-  @ApiProperty({ description: 'Photo height in pixels', nullable: true })
-  height: number | null
+  @ApiProperty({ description: 'Public slug for building CDN gallery URLs' })
+  publicSlug: string
 }
 
 export class CartViewEventGroupProjection {
@@ -23,18 +17,6 @@ export class CartViewEventGroupProjection {
 
   @ApiProperty({ description: 'Event date' })
   eventDate: Date
-
-  @ApiProperty({ description: 'Event type ID' })
-  eventTypeId: number
-
-  @ApiProperty({ description: 'Event cover public /assets/ URL', nullable: true })
-  coverUrl: string | null
-
-  @ApiProperty({
-    description: 'Cover asset public slug (for cdn-cgi/image transforms)',
-    nullable: true,
-  })
-  coverSlug: string | null
 
   @ApiProperty({ description: 'Photos in this event group', type: [CartViewPhotoProjection] })
   photos: CartViewPhotoProjection[]

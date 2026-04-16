@@ -59,6 +59,7 @@ export class PhotosController {
   }
 
   /** Returns a download manifest with presigned URLs for all event photos. */
+  @Roles('admin')
   @Get('events/:eventId/photos/download-manifest')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download manifest for all event photos' })
@@ -249,6 +250,7 @@ export class PhotosController {
   }
 
   /** Returns a download URL for the original or retouched photo. */
+  @Roles('admin')
   @Get('photos/:id/download')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download URL for a photo' })

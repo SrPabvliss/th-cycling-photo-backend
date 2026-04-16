@@ -5,10 +5,10 @@ export class PhotoListProjection {
   eventId: string
   /** Original filename */
   filename: string
-  /** Storage key for CDN URL resolution */
-  storageKey: string
   /** Opaque public slug for gallery URL */
   publicSlug: string
+  /** Pre-built signed thumbnail URL (internal, 400px) */
+  thumbnailUrl: string
   /** Current processing status */
   status: string
   /** Image width in pixels */

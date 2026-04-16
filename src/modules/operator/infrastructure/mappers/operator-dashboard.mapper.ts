@@ -102,7 +102,7 @@ export function toDashboardProjection(
 }
 
 export function buildCoverUrl(publicSlug: string | null, cdn: CdnUrlBuilder): string | null {
-  return publicSlug ? cdn.assetUrl(publicSlug) : null
+  return publicSlug ? cdn.assetUrl(publicSlug, 'cover-sm') : null
 }
 
 export function resolveCompletedAt(actions: LastActionDate | undefined, fallback: Date): Date {

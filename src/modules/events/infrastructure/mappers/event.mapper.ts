@@ -135,7 +135,7 @@ function getCoverImageSlug(assets: { public_slug: string }[]): string | null {
 /** Converts a Prisma selected record to a list projection. */
 export function toListProjection(record: EventListSelect, cdn: CdnUrlBuilder): EventListProjection {
   const coverSlug = getCoverImageSlug(record.assets)
-  const coverUrl = coverSlug ? cdn.assetUrl(coverSlug) : null
+  const coverUrl = coverSlug ? cdn.assetUrl(coverSlug, 'cover-sm') : null
   return {
     id: record.id,
     name: record.name,
@@ -160,7 +160,7 @@ export function toDetailProjection(
   cdn: CdnUrlBuilder,
 ): EventDetailProjection {
   const coverSlug = getCoverImageSlug(record.assets)
-  const coverUrl = coverSlug ? cdn.assetUrl(coverSlug) : null
+  const coverUrl = coverSlug ? cdn.assetUrl(coverSlug, 'cover-lg') : null
   return {
     id: record.id,
     name: record.name,

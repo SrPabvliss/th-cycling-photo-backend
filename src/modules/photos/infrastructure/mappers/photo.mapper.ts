@@ -6,6 +6,7 @@ import type { PhotoDetailProjection, PhotoListProjection } from '@photos/applica
 import { Photo } from '@photos/domain/entities'
 import type { PhotoStatusType } from '@photos/domain/value-objects/photo-status.vo'
 import type { UnclassifiedReasonType } from '@photos/domain/value-objects/unclassified-reason.vo'
+import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 
 // --- Select shapes for Prisma queries ---
 
@@ -104,13 +105,13 @@ export function toEntity(record: PrismaPhoto): Photo {
 // --- Projection mappers ---
 
 /** Converts a Prisma selected record to a list projection. */
-export function toListProjection(record: PhotoListSelect): PhotoListProjection {
+export function toListProjection(record: PhotoListSelect, cdn: CdnUrlBuilder): PhotoListProjection {
   return {
     id: record.id,
     eventId: record.event_id,
     filename: record.filename,
-    storageKey: record.storage_key,
     publicSlug: record.public_slug,
+    thumbnailUrl: cdn.internalUrl(record.public_slug, 'thumb'),
     status: record.status,
     width: record.width,
     height: record.height,
@@ -120,20 +121,23 @@ export function toListProjection(record: PhotoListSelect): PhotoListProjection {
 }
 
 /** Converts a Prisma selected record to a detail projection with nested relations. */
-export function toDetailProjection(record: PhotoDetailSelect): PhotoDetailProjection {
+export function toDetailProjection(
+  record: PhotoDetailSelect,
+  cdn: CdnUrlBuilder,
+): PhotoDetailProjection {
   return {
     id: record.id,
     eventId: record.event_id,
     filename: record.filename,
-    storageKey: record.storage_key,
     publicSlug: record.public_slug,
+    imageUrl: cdn.internalUrl(record.public_slug, 'workspace'),
+    thumbnailUrl: cdn.internalUrl(record.public_slug, 'thumb'),
     fileSize: Number(record.file_size),
     mimeType: record.mime_type,
     width: record.width,
     height: record.height,
     status: record.status,
     unclassifiedReason: record.unclassified_reason,
-    retouchedStorageKey: record.retouched_storage_key,
     retouchedFileSize: record.retouched_file_size ? Number(record.retouched_file_size) : null,
     retouchedAt: record.retouched_at,
     capturedAt: record.captured_at,

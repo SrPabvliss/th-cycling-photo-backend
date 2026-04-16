@@ -7,7 +7,7 @@ export class PublicEventAssetProjection {
   @ApiProperty({ description: 'Public CDN URL (already points to /assets/)' })
   url: string
 
-  @ApiProperty({ description: 'Public slug — use to build cdn-cgi/image transform URLs' })
+  @ApiProperty({ description: 'Public slug for Worker-handled transform presets' })
   publicSlug: string
 }
 

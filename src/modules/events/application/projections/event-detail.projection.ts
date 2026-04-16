@@ -17,7 +17,7 @@ export class EventDetailProjection {
   cantonId: number | null
   /** Cover image public CDN URL (null if no cover uploaded). */
   coverImageUrl: string | null
-  /** Public slug of the cover asset — used to build cdn-cgi/image transform URLs. */
+  /** Public slug of the cover asset — used to build Worker preset URLs. */
   coverImageSlug: string | null
   /** Source of the cover image (always 'manual' now; the photo fallback was removed). */
   coverImageSource: 'manual' | null

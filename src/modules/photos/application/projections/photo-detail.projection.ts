@@ -7,10 +7,12 @@ export class PhotoDetailProjection {
   eventId: string
   /** Original filename */
   filename: string
-  /** Storage key for CDN URL resolution */
-  storageKey: string
   /** Opaque public slug for gallery URL */
   publicSlug: string
+  /** Pre-built signed workspace URL (internal, 1400px) */
+  imageUrl: string
+  /** Pre-built signed thumbnail URL (internal, 400px) */
+  thumbnailUrl: string
   /** File size in bytes */
   fileSize: number
   /** MIME type */
@@ -23,8 +25,6 @@ export class PhotoDetailProjection {
   status: string
   /** Reason for classification failure, if any */
   unclassifiedReason: string | null
-  /** Storage key of the retouched version */
-  retouchedStorageKey: string | null
   /** Retouched file size in bytes */
   retouchedFileSize: number | null
   /** When the retouched version was uploaded */

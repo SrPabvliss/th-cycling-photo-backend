@@ -149,8 +149,9 @@ export class OrderReadRepository implements IOrderReadRepository {
       photos: record.items.map((oi) => ({
         id: oi.photo.id,
         filename: oi.photo.filename,
-        storageKey: oi.photo.storage_key,
         publicSlug: oi.photo.public_slug,
+        thumbnailUrl: this.cdn.internalUrl(oi.photo.public_slug, 'thumb'),
+        fullUrl: this.cdn.internalUrl(oi.photo.public_slug),
       })),
       deliveryLink: record.delivery_link
         ? {
@@ -224,7 +225,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         photos: o.items.map((i) => ({
           id: i.photo.id,
           filename: i.photo.filename,
-          thumbnailUrl: this.cdn.internalUrl(i.photo.public_slug),
+          thumbnailUrl: this.cdn.internalUrl(i.photo.public_slug, 'thumb'),
           isRetouched: !!i.photo.retouched_storage_key,
         })),
       }))

@@ -127,7 +127,7 @@ export class EventReadRepository implements IEventReadRepository {
     const [photos, total] = await Promise.all([
       this.prisma.photo.findMany({
         where,
-        select: { id: true, public_slug: true, width: true, height: true },
+        select: { id: true, public_slug: true },
         orderBy: { uploaded_at: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
@@ -138,9 +138,7 @@ export class EventReadRepository implements IEventReadRepository {
     return new PaginatedResult(
       photos.map((p) => ({
         id: p.id,
-        url: this.cdn.galleryUrl(p.public_slug),
-        width: p.width,
-        height: p.height,
+        publicSlug: p.public_slug,
       })),
       total,
       pagination,

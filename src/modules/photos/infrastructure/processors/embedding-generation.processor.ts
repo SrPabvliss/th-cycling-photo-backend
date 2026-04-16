@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq'
 import { Inject, Logger } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain/ports'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { EMBEDDING_ADAPTER, type IEmbeddingAdapter } from '@shared/embeddings'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import type { Job } from 'bullmq'
@@ -14,16 +14,13 @@ export interface EmbeddingGenerationJobData {
 export class EmbeddingGenerationProcessor extends WorkerHost {
   private readonly logger = new Logger(EmbeddingGenerationProcessor.name)
 
-  private readonly cdnUrl: string
-
   constructor(
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(EMBEDDING_ADAPTER) private readonly embeddingAdapter: IEmbeddingAdapter,
     private readonly prisma: PrismaService,
-    configService: ConfigService,
+    private readonly cdn: CdnUrlBuilder,
   ) {
     super()
-    this.cdnUrl = configService.getOrThrow<string>('storage.cdnUrl')
   }
 
   async process(job: Job<EmbeddingGenerationJobData>): Promise<void> {
@@ -37,8 +34,8 @@ export class EmbeddingGenerationProcessor extends WorkerHost {
         return
       }
 
-      // Cloudflare Image Transform: resize to fit VoyageAI's 16MP limit
-      const imageUrl = `${this.cdnUrl}/cdn-cgi/image/width=2048,fit=scale-down,format=jpeg/${photo.storageKey}`
+      // Use signed internal URL — no cdn-cgi/image exposure, no storageKey in URL
+      const imageUrl = this.cdn.internalUrl(photo.publicSlug)
       const result = await this.embeddingAdapter.generateImageEmbedding(imageUrl)
 
       const vectorSql = `[${result.embedding.join(',')}]`

@@ -28,8 +28,8 @@ export class ConfirmAvatarUploadHandler implements ICommandHandler<ConfirmAvatar
       await this.storage.delete(user.avatarStorageKey)
     }
 
-    const url = await this.storage.getPresignedDownloadUrl({ key: command.storageKey })
-    user.setAvatar(url, command.storageKey)
+    // Store only the storage key — avatarUrl is generated on-the-fly in the read repository
+    user.setAvatar(null, command.storageKey)
     await this.writeRepo.save(user)
 
     return { id: user.id }
