@@ -25,12 +25,18 @@
 | `@nestjs/platform-express` | HTTP adapter |
 | `@nestjs/config` | Environment config |
 | `@nestjs/cqrs` | CQRS pattern |
-| `@prisma/client` | Database ORM |
-| `@nestjs/bullmq` | Job queues |
-| `bullmq` | BullMQ core |
-| `ioredis` | Redis client |
+| `@nestjs/swagger` | OpenAPI/Swagger documentation |
+| `@prisma/client` | Database ORM (Prisma 7) |
+| `@prisma/adapter-pg` | Prisma driver adapter for PostgreSQL |
+| `pg` | PostgreSQL client (used by adapter) |
+| `nestjs-i18n` | Internationalization (i18n) |
 | `class-validator` | DTO validation |
 | `class-transformer` | DTO transformation |
+| `dotenv` | Environment variable loading |
+| `reflect-metadata` | Decorator metadata |
+| `rxjs` | Reactive extensions |
+
+> **Note:** `@nestjs/bullmq`, `bullmq`, and `ioredis` are installed but **NOT used** currently. They are kept for the future Processing module implementation.
 
 ---
 
@@ -40,11 +46,23 @@
 |---------|---------|
 | `@biomejs/biome` | Linting & formatting |
 | `@nestjs/cli` | CLI tools |
+| `@nestjs/schematics` | NestJS code generation |
 | `@nestjs/testing` | Test utilities |
+| `@types/express` | Express type definitions |
+| `@types/jest` | Jest type definitions |
+| `@types/node` | Node.js type definitions |
+| `@types/pg` | PostgreSQL type definitions |
+| `@types/supertest` | Supertest type definitions |
 | `jest` | Test runner |
 | `ts-jest` | TypeScript support for Jest |
 | `prisma` | Prisma CLI |
 | `husky` | Git hooks |
+| `supertest` | HTTP assertion library |
+| `source-map-support` | Source map support for debugging |
+| `ts-loader` | TypeScript loader |
+| `ts-node` | TypeScript execution |
+| `tsconfig-paths` | Path alias resolution at runtime |
+| `tsx` | TypeScript execution (used by Prisma seed) |
 | `typescript` | TypeScript compiler |
 
 ---
@@ -64,7 +82,9 @@ pnpm add package-name@1.2.3
 
 ---
 
-## AI Service SDKs (To Be Added)
+## AI Service SDKs
+
+> ⚠️ **NO IMPLEMENTADO** — Estos paquetes se instalarán cuando se desarrollen los módulos correspondientes.
 
 ```bash
 # Roboflow
@@ -79,7 +99,9 @@ pnpm add clarifai
 
 ---
 
-## Storage SDKs (To Be Added)
+## Storage SDKs
+
+> ⚠️ **NO IMPLEMENTADO** — Se instalará cuando se desarrolle el módulo de Storage.
 
 ```bash
 # Backblaze B2
@@ -96,18 +118,32 @@ pnpm add @aws-sdk/client-s3
 ```json
 {
   "scripts": {
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
     "build": "nest build",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:seed": "prisma db seed",
+    "prisma:studio": "prisma studio",
+    "prisma:reset": "prisma migrate reset",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint --write .",
+    "lint:check": "biome lint .",
     "check": "biome check --write .",
     "check:ci": "biome ci .",
-    "lint": "biome lint --write .",
-    "format": "biome format --write .",
+    "start": "nest start",
+    "start:dev": "NODE_ENV=development nest start --watch",
+    "start:debug": "NODE_ENV=development nest start --debug --watch",
+    "start:test": "NODE_ENV=test nest start",
+    "start:prod": "node -r tsconfig-paths/register dist/main",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "prepare": "husky"
   }
 }
 ```

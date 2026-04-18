@@ -59,7 +59,7 @@ pids
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-/generated/prisma
+/src/generated/prisma
 
 # ContextKeeper - Local session ledger
 .claude/ledger/sessions/
@@ -67,3 +67,20 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 !.claude/ledger/sessions/_TEMPLATE.md
 !.claude/ledger/research/_TEMPLATE.md
 !.claude/ledger/README.md
+
+# Infrastructure config (private, per-developer)
+.infra-config.local.md
+
+# Cloudflare Workers
+workers/**/.dev.vars
+workers/**/node_modulesworkers/watermark-worker/.wrangler/
+workers/qr-worker/node_modules/
+workers/qr-worker/.wrangler/
+workers/watermark-worker/node_modules/
+workers/watermark-worker/.wrangler/
+
+# load testing scripts
+stress-test/*.js
+
+# graphify knowledge graph output
+graphify-out/

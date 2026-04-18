@@ -15,39 +15,27 @@
 Use `class-validator` decorators for HTTP input validation:
 
 ```typescript
-import {
-  IsString,
-  IsNotEmpty,
-  IsDate,
-  IsEnum,
-  IsOptional,
-  IsNumber,
-  Min,
-  Max,
-  MinLength,
-  MaxLength,
-  IsArray,
-  ArrayMaxSize,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { Type } from 'class-transformer'
+import { IsDate, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator'
 
 export class CreateEventDto {
+  @ApiProperty({ description: 'Name of the cycling event', example: 'Vuelta al Cotopaxi 2026' })
   @IsString()
   @IsNotEmpty()
-  @MinLength(5, { message: 'Name must be at least 5 characters' })
-  @MaxLength(100)
-  name: string;
+  @MinLength(3)
+  @MaxLength(200)
+  name: string
 
+  @ApiProperty({ description: 'Date when the event takes place', example: '2026-06-15T08:00:00.000Z' })
   @IsDate()
   @Type(() => Date)
-  date: Date;
+  date: Date
 
+  @ApiPropertyOptional({ description: 'Physical location or address', example: 'Ambato, Ecuador' })
   @IsString()
   @IsOptional()
-  location?: string;
-
-  @IsEnum(['ROAD', 'MTB', 'BMX', 'TRACK'])
-  category: string;
+  location?: string
 }
 ```
 
@@ -70,24 +58,22 @@ export class CreateEventDto {
 
 ```typescript
 export class GetEventsListDto {
-  @IsOptional()
-  @IsEnum(['DRAFT', 'PROCESSING', 'COMPLETED'])
-  status?: string;
-
-  @IsOptional()
-  @IsNumber()
+  @ApiPropertyOptional({ description: 'Page number (defaults to 1)', example: 1 })
+  @IsInt()
   @Min(1)
-  @Type(() => Number)
-  page?: number = 1;
-
   @IsOptional()
-  @IsNumber()
+  page?: number
+
+  @ApiPropertyOptional({ description: 'Items per page (defaults to 20, max 100)', example: 20 })
+  @IsInt()
   @Min(1)
   @Max(100)
-  @Type(() => Number)
-  limit?: number = 20;
+  @IsOptional()
+  limit?: number
 }
 ```
+
+> **Note:** Pagination defaults are applied in the controller (`dto.page ?? 1, dto.limit ?? 20`), not in the DTO. `@Type(() => Number)` is not needed because the global `ValidationPipe` has `enableImplicitConversion: true`.
 
 ---
 
@@ -99,20 +85,22 @@ Check resource existence before operations:
 @CommandHandler(UpdateEventCommand)
 export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
   constructor(
-    private readonly eventWriteRepository: EventWriteRepository,
+    @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
+    @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
   ) {}
 
-  async execute(command: UpdateEventCommand): Promise<void> {
-    // Validate existence
-    const event = await this.eventWriteRepository.findById(command.eventId);
-    
-    if (!event) {
-      throw AppException.notFound('event', command.eventId);
-    }
+  async execute(command: UpdateEventCommand): Promise<EntityIdProjection> {
+    const event = await this.readRepo.findById(command.id)
+    if (!event) throw AppException.notFound('Event', command.id)
 
-    // Proceed with update
-    event.updateName(command.name);
-    await this.eventWriteRepository.save(event);
+    event.update({
+      name: command.name,
+      date: command.date,
+      location: command.location,
+    })
+
+    await this.writeRepo.save(event)
+    return { id: event.id }
   }
 }
 ```
@@ -125,36 +113,54 @@ Business rules live in entities:
 
 ```typescript
 export class Event {
-  static create(data: CreateEventData): Event {
-    // Business validations
-    if (data.date < new Date()) {
-      throw AppException.businessRule('event.date_in_past');
-    }
+  static create(data: { name: string; date: Date; location: string | null }): Event {
+    Event.validateName(data.name)
+    Event.validateDate(data.date)
 
-    if (!['ROAD', 'MTB', 'BMX', 'TRACK'].includes(data.category)) {
-      throw AppException.businessRule('event.invalid_category');
-    }
-
-    if (data.name.trim().length < 3) {
-      throw AppException.businessRule('event.name_too_short');
-    }
-
-    return new Event(/* ... */);
+    return new Event(
+      crypto.randomUUID(),
+      data.name,
+      data.date,
+      data.location,
+      EventStatus.DRAFT,
+      0,
+      0,
+      AuditFields.initialize(),
+    )
   }
 
-  startProcessing(): void {
-    if (this.status !== 'UPLOADING') {
-      throw AppException.businessRule('event.invalid_status_for_processing');
+  update(data: { name?: string; date?: Date; location?: string | null }): void {
+    if (data.name !== undefined) {
+      Event.validateName(data.name)
+      this.name = data.name
     }
-
-    if (this.totalPhotos === 0) {
-      throw AppException.businessRule('event.no_photos_to_process');
+    if (data.date !== undefined) {
+      Event.validateDate(data.date)
+      this.date = data.date
     }
+    if (data.location !== undefined) this.location = data.location
 
-    this.status = 'PROCESSING';
+    this.audit.markUpdated()
+  }
+
+  private static validateName(name: string): void {
+    if (name.length < 3 || name.length > 200) {
+      throw AppException.businessRule('event.name_invalid_length')
+    }
+  }
+
+  private static validateDate(date: Date): void {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (date < today) throw AppException.businessRule('event.date_in_past')
   }
 }
 ```
+
+Key patterns:
+- Validations extracted to `private static` methods, reused by both `create()` and `update()`
+- Date comparison zeroes hours to compare dates only (not timestamps)
+- `AuditFields` composition for timestamp management
 
 ---
 
@@ -165,7 +171,7 @@ export class Event {
 // BAD: Business validation in handler
 async execute(command: CreateEventCommand) {
   if (command.date < new Date()) {
-    throw new Error('Invalid date');
+    throw AppException.businessRule('event.date_in_past')
   }
 }
 ```
@@ -204,12 +210,12 @@ Validation errors follow ADR-002 format:
     "message": "Validation error",
     "shouldThrow": false,
     "fields": {
-      "name": ["Name must be at least 5 characters"],
-      "date": ["Date is required"]
+      "name": ["name must be longer than or equal to 3 characters"],
+      "date": ["date must be a Date instance"]
     }
   },
   "meta": {
-    "requestId": "req_abc123",
+    "requestId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "timestamp": "2026-01-24T15:30:00Z",
     "path": "/api/v1/events"
   }

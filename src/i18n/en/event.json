@@ -1,0 +1,11 @@
+{
+  "name_invalid_length": "Event name must be between 3 and 200 characters",
+  "date_in_past": "Event date cannot be in the past",
+  "already_archived": "Event is already archived",
+  "not_archived": "Event is not archived",
+  "province_not_found": "The specified province does not exist",
+  "canton_not_in_province": "The specified canton does not belong to the selected province",
+  "canton_requires_province": "A province must be specified when selecting a canton",
+  "invalid_cover_storage_key": "The storage key does not match the expected cover image path for this event",
+  "operator_already_assigned": "This operator is already assigned to the event"
+}

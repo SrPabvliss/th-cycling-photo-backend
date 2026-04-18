@@ -8,28 +8,57 @@ Modular structure organizing code by domain (feature), not by technical layer.
 
 ```
 src/
+├── app.module.ts
+├── app.controller.ts
+├── app.service.ts
+├── main.ts
+├── config/
+│   ├── configuration.ts
+│   └── env.validation.ts
+├── generated/prisma/                 # Prisma-generated client (NEVER modify)
+├── i18n/                             # Translation JSON files (en/, es/)
+│
 ├── modules/                          # Domain modules
 │   ├── events/
 │   │   ├── domain/                   # Business logic
 │   │   │   ├── entities/
-│   │   │   │   └── event.entity.ts
+│   │   │   │   ├── index.ts          # Barrel file
+│   │   │   │   ├── event.entity.ts
+│   │   │   │   └── event.entity.spec.ts
 │   │   │   ├── value-objects/
 │   │   │   │   └── event-status.vo.ts
-│   │   │   └── ports/                # Repository interfaces (optional)
-│   │   │       └── event-repository.port.ts
+│   │   │   └── ports/                # Repository interfaces (required for DI)
+│   │   │       ├── index.ts
+│   │   │       ├── event-read-repository.port.ts
+│   │   │       └── event-write-repository.port.ts
 │   │   │
 │   │   ├── application/              # Use cases
 │   │   │   ├── commands/
-│   │   │   │   └── create-event/
-│   │   │   │       ├── create-event.dto.ts
-│   │   │   │       ├── create-event.command.ts
-│   │   │   │       └── create-event.handler.ts
+│   │   │   │   ├── index.ts          # Barrel file
+│   │   │   │   ├── create-event/
+│   │   │   │   │   ├── create-event.dto.ts
+│   │   │   │   │   ├── create-event.command.ts
+│   │   │   │   │   ├── create-event.handler.ts
+│   │   │   │   │   └── create-event.handler.spec.ts
+│   │   │   │   ├── update-event/
+│   │   │   │   │   ├── update-event.dto.ts
+│   │   │   │   │   ├── update-event.command.ts
+│   │   │   │   │   └── update-event.handler.ts
+│   │   │   │   └── delete-event/
+│   │   │   │       ├── delete-event.command.ts
+│   │   │   │       ├── delete-event.handler.ts
+│   │   │   │       └── delete-event.handler.spec.ts
 │   │   │   ├── queries/
-│   │   │   │   └── get-events-list/
-│   │   │   │       ├── get-events-list.dto.ts
-│   │   │   │       ├── get-events-list.query.ts
-│   │   │   │       └── get-events-list.handler.ts
+│   │   │   │   ├── index.ts          # Barrel file
+│   │   │   │   ├── get-events-list/
+│   │   │   │   │   ├── get-events-list.dto.ts
+│   │   │   │   │   ├── get-events-list.query.ts
+│   │   │   │   │   └── get-events-list.handler.ts
+│   │   │   │   └── get-event-detail/
+│   │   │   │       ├── get-event-detail.query.ts
+│   │   │   │       └── get-event-detail.handler.ts
 │   │   │   └── projections/
+│   │   │       ├── index.ts          # Barrel file
 │   │   │       ├── event-list.projection.ts
 │   │   │       └── event-detail.projection.ts
 │   │   │
@@ -37,51 +66,65 @@ src/
 │   │   │   ├── repositories/
 │   │   │   │   ├── event-write.repository.ts
 │   │   │   │   └── event-read.repository.ts
-│   │   │   ├── mappers/
-│   │   │   │   └── event.mapper.ts
-│   │   │   ├── adapters/             # External services˜
-│   │   │   │   └── roboflow.adapter.ts
-│   │   │   └── processors/           # BullMQ workers
-│   │   │       └── event-processing.processor.ts
+│   │   │   └── mappers/
+│   │   │       └── event.mapper.ts
+│   │   │   # ⚠️ Future: adapters/ (external services), processors/ (BullMQ workers)
 │   │   │
 │   │   ├── presentation/             # HTTP layer
-│   │   │   ├── controllers/
-│   │   │   │   └── events.controller.ts
-│   │   │   └── dtos/                 # Response DTOs (if different from projections)
+│   │   │   └── controllers/
+│   │   │       └── events.controller.ts
 │   │   │
 │   │   └── events.module.ts
 │   │
-│   ├── photos/
-│   ├── processing/
-│   └── storage/
+│   # ⚠️ Future modules: photos/, processing/, storage/
 │
 ├── shared/                           # Cross-cutting concerns
 │   ├── domain/
+│   │   ├── index.ts                  # Barrel file
+│   │   ├── audit-fields.ts
 │   │   └── exceptions/
 │   │       └── app.exception.ts
-│   ├── infrastructure/
-│   │   ├── prisma/
-│   │   │   └── prisma.service.ts
+│   ├── application/
+│   │   ├── index.ts                  # Barrel file
+│   │   ├── pagination.ts
+│   │   └── projections/
+│   │       └── entity-id.projection.ts
+│   ├── http/
+│   │   ├── index.ts                  # Barrel file
+│   │   ├── decorators/
+│   │   │   └── success-message.decorator.ts
 │   │   ├── filters/
 │   │   │   └── global-exception.filter.ts
 │   │   ├── interceptors/
 │   │   │   └── response.interceptor.ts
-│   │   └── middleware/
-│   │       └── request-id.middleware.ts
-│   └── websockets/
-│       └── progress.gateway.ts
+│   │   ├── interfaces/
+│   │   │   ├── api-response.interface.ts
+│   │   │   └── express.d.ts
+│   │   ├── middleware/
+│   │   │   └── request-id.middleware.ts
+│   │   └── swagger/
+│   │       ├── api-response.schema.ts
+│   │       ├── api-envelope-response.decorator.ts
+│   │       └── swagger-i18n.transformer.ts
+│   └── infrastructure/
+│       ├── index.ts                  # Barrel file
+│       └── prisma/
+│           ├── prisma.service.ts
+│           └── prisma.module.ts
+│   # ⚠️ Future: websockets/ (progress.gateway.ts)
 │
-└── app.module.ts
 ```
+
+> **Barrel files (index.ts)** exist at each layer boundary (9+ files). They enable clean alias imports like `from '@events/domain/ports'` instead of deep relative paths.
 
 ---
 
 ## Layer Rules
 
 ### domain/
-- NO dependencies on other layers
 - Pure TypeScript (no NestJS decorators except for DI)
 - Contains: entities, value objects, domain exceptions, port interfaces
+- **Trade-off:** Ports import from `application/` (projections, Pagination) to keep repository interfaces properly typed. This is a known architectural compromise — domain depends on application for return types only.
 
 ### application/
 - Depends only on domain/
@@ -95,7 +138,7 @@ src/
 
 ### presentation/
 - HTTP concerns only
-- Contains: controllers, request/response DTOs
+- Contains: controllers (DTOs live with commands/queries in `application/`, not here)
 - Thin layer, delegates to CommandBus/QueryBus
 
 ---
@@ -106,7 +149,7 @@ src/
 |-------|------|---------|---------|
 | domain | Entity | `{name}.entity.ts` | `event.entity.ts` |
 | domain | Value Object | `{name}.vo.ts` | `event-status.vo.ts` |
-| domain | Port | `{name}-repository.port.ts` | `event-repository.port.ts` |
+| domain | Port | `{name}-{read\|write}-repository.port.ts` | `event-read-repository.port.ts` |
 | application | Command | `{verb}-{noun}.command.ts` | `create-event.command.ts` |
 | application | Query | `get-{noun}.query.ts` | `get-events-list.query.ts` |
 | application | Handler | `{command/query}.handler.ts` | `create-event.handler.ts` |
@@ -176,10 +219,11 @@ src/modules/events/
 Only for genuinely cross-cutting code:
 
 **DO put in shared/:**
-- Base exceptions (AppException)
-- Global filters, interceptors, middleware
-- PrismaService
-- WebSocket gateways
+- Base exceptions (AppException), AuditFields
+- Global filters, interceptors, middleware (in `shared/http/`)
+- Swagger decorators and i18n transformer (in `shared/http/swagger/`)
+- PrismaService (in `shared/infrastructure/`)
+- Pagination, EntityIdProjection (in `shared/application/`)
 
 **DON'T put in shared/:**
 - Feature-specific code

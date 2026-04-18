@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -10,10 +11,8 @@ datasource db {
 // ─── ENUMs ──────────────────────────────────────────────────────────────────
 
 enum EventStatus {
-  draft
-  uploading
-  processing
-  completed
+  active
+  archived
 
   @@map("event_status")
 }
@@ -29,7 +28,7 @@ enum PhotoStatus {
 }
 
 enum UnclassifiedReason {
-  no_cyclist
+  no_participant
   ocr_failed
   low_confidence
   processing_error
@@ -63,12 +62,152 @@ enum ProcessingStage {
   @@map("processing_stage")
 }
 
-enum EquipmentItem {
-  helmet
-  jersey
-  bike
+enum ClassificationSource {
+  manual
+  ai
 
-  @@map("equipment_item")
+  @@map("classification_source")
+}
+
+enum RoleType {
+  admin
+  operator
+  customer
+
+  @@map("role_type")
+}
+
+enum PreviewLinkStatus {
+  active
+  expired
+  converted
+
+  @@map("preview_link_status")
+}
+
+enum OrderStatus {
+  pending
+  paid
+  delivered
+  cancelled
+
+  @@map("order_status")
+}
+
+enum DeliveryLinkStatus {
+  active
+  expired
+  downloaded
+
+  @@map("delivery_link_status")
+}
+
+enum EventAssetType {
+  cover_image
+  event_logo
+  hero_image
+  poster
+
+  @@map("event_asset_type")
+}
+
+enum OrderItemDeliveredAs {
+  original
+  retouched
+
+  @@map("order_item_delivered_as")
+}
+
+enum CartStatus {
+  active
+  converted
+  abandoned
+  expired
+
+  @@map("cart_status")
+}
+
+// ─── Reference Tables ───────────────────────────────────────────────────────
+
+model Province {
+  id         Int    @id @default(autoincrement())
+  name       String @db.VarChar(100)
+  code       String @unique @db.VarChar(10)
+  country_id Int
+
+  country           Country            @relation(fields: [country_id], references: [id], onDelete: Restrict)
+  cantons           Canton[]
+  events            Event[]
+  customer_profiles CustomerProfile[]
+
+  @@index([country_id])
+  @@map("provinces")
+}
+
+model Canton {
+  id          Int    @id @default(autoincrement())
+  name        String @db.VarChar(100)
+  province_id Int
+
+  province          Province           @relation(fields: [province_id], references: [id])
+  events            Event[]
+  customer_profiles CustomerProfile[]
+
+  @@unique([name, province_id])
+  @@index([province_id])
+  @@map("cantons")
+}
+
+model Country {
+  id       Int    @id @default(autoincrement())
+  name     String @db.VarChar(100)
+  iso_code String @unique @db.VarChar(2)
+
+  provinces         Province[]
+  customer_profiles CustomerProfile[]
+
+  @@map("countries")
+}
+
+// ─── Dynamic Catalogs ───────────────────────────────────────────────────────
+
+model EventType {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique @db.VarChar(50)
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  events                 Event[]
+  participant_categories ParticipantCategory[]
+  gear_types             GearType[]
+
+  @@map("event_types")
+}
+
+model ParticipantCategory {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(100)
+  event_type_id Int
+  created_at    DateTime @default(now()) @db.Timestamptz
+
+  event_type EventType @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
+
+  @@unique([name, event_type_id])
+  @@index([event_type_id])
+  @@map("participant_categories")
+}
+
+model GearType {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(50)
+  event_type_id Int
+  created_at    DateTime @default(now()) @db.Timestamptz
+
+  event_type  EventType   @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
+  gear_colors GearColor[]
+
+  @@unique([name, event_type_id])
+  @@index([event_type_id])
+  @@map("gear_types")
 }
 
 // ─── Models ─────────────────────────────────────────────────────────────────
@@ -77,29 +216,138 @@ model User {
   id            String    @id @default(uuid()) @db.Uuid
   email         String    @unique @db.VarChar(255)
   password_hash String    @db.VarChar(255)
+  first_name    String?   @db.VarChar(100)
+  last_name     String?   @db.VarChar(100)
+  avatar_url         String?   @db.VarChar(500)
+  avatar_storage_key String?   @db.VarChar(500)
+  is_active          Boolean   @default(true)
   created_at    DateTime  @default(now()) @db.Timestamptz
   last_login_at DateTime? @db.Timestamptz
 
+  user_roles       UserRole[]
+  refresh_tokens   RefreshToken[]
+  phones           UserPhone[]
+  customer_profile CustomerProfile?
+
+  events_created              Event[]                @relation("EventCreatedBy")
+  events_updated              Event[]                @relation("EventUpdatedBy")
+  photos_created              Photo[]                @relation("PhotoCreatedBy")
+  photos_updated              Photo[]                @relation("PhotoUpdatedBy")
+  photos_retouched            Photo[]                @relation("PhotoRetouchedBy")
+  participants_created        DetectedParticipant[]  @relation("ParticipantCreatedBy")
+  participants_classified     DetectedParticipant[]  @relation("ParticipantClassifiedBy")
+  identifiers_corrected       ParticipantIdentifier[] @relation("IdentifierCorrectedBy")
+  preview_links_created       PreviewLink[]          @relation("PreviewLinkCreatedBy")
+  orders_confirmed            Order[]                @relation("OrderConfirmedBy")
+  orders_placed               Order[]                @relation("OrderUser")
+  carts                       Cart[]
+  notifications               Notification[]
+  assigned_events             EventOperator[]        @relation("EventOperatorUser")
+  event_assignments_made      EventOperator[]        @relation("EventOperatorAssignedBy")
+
   @@map("users")
+}
+
+model Role {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       RoleType @unique
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  user_roles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @db.Uuid
+  role_id     String   @db.Uuid
+  assigned_at DateTime @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, role_id])
+  @@index([user_id])
+  @@index([role_id])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  token_hash String    @unique
+  user_id    String    @db.Uuid
+  ip_address String?   @db.VarChar(45)
+  user_agent String?   @db.VarChar(500)
+  expires_at DateTime  @db.Timestamptz
+  revoked_at DateTime? @db.Timestamptz
+  created_at DateTime  @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([expires_at])
+  @@map("refresh_tokens")
 }
 
 model Event {
   id               String      @id @default(uuid()) @db.Uuid
   name             String      @db.VarChar(200)
+  slug             String      @unique @db.VarChar(250)
+  description      String?     @db.Text
   event_date       DateTime    @db.Date
-  location         String?     @db.VarChar(200)
-  status           EventStatus @default(draft)
-  total_photos     Int         @default(0)
-  processed_photos Int         @default(0)
-  exported_photos  Int         @default(0)
-  created_at       DateTime    @default(now()) @db.Timestamptz
+  event_type_id    Int
+  province_id      Int?
+  canton_id        Int?
+  is_featured             Boolean     @default(false)
+  status                  EventStatus @default(active)
+  created_at              DateTime    @default(now()) @db.Timestamptz
   updated_at       DateTime    @default(now()) @updatedAt @db.Timestamptz
+  deleted_at       DateTime?   @db.Timestamptz
 
-  photos Photo[]
+  created_by_id String? @db.Uuid
+  updated_by_id String? @db.Uuid
+
+  event_type EventType  @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
+  province   Province?  @relation(fields: [province_id], references: [id])
+  canton     Canton?    @relation(fields: [canton_id], references: [id])
+  created_by User?      @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  updated_by User?      @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  photos           Photo[]
+  preview_links    PreviewLink[]
+  orders           Order[]
+  assets           EventAsset[]
+  photo_categories EventPhotoCategory[]
+  cart_items        CartItem[]
+  operators        EventOperator[]
 
   @@index([status])
+  @@index([event_type_id])
   @@index([event_date(sort: Desc)])
+  @@index([deleted_at])
+  @@index([province_id])
+  @@index([canton_id])
+  @@index([created_by_id])
+  @@index([updated_by_id])
   @@map("events")
+}
+
+model EventOperator {
+  id             String   @id @default(uuid()) @db.Uuid
+  event_id       String   @db.Uuid
+  user_id        String   @db.Uuid
+  assigned_at    DateTime @default(now()) @db.Timestamptz
+  assigned_by_id String   @db.Uuid
+
+  event       Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user        User  @relation("EventOperatorUser", fields: [user_id], references: [id], onDelete: Cascade)
+  assigned_by User  @relation("EventOperatorAssignedBy", fields: [assigned_by_id], references: [id], onDelete: Restrict)
+
+  @@unique([event_id, user_id])
+  @@index([event_id])
+  @@index([user_id])
+  @@index([assigned_by_id])
+  @@map("event_operators")
 }
 
 model Photo {
@@ -107,7 +355,8 @@ model Photo {
   event_id String @db.Uuid
 
   filename    String @db.VarChar(255)
-  storage_key String @db.VarChar(500)
+  storage_key String @unique @db.VarChar(500)
+  public_slug String @unique @db.VarChar(30)
   file_size   BigInt
   mime_type   String @default("image/jpeg") @db.VarChar(50)
   width       Int?
@@ -116,75 +365,129 @@ model Photo {
   status              PhotoStatus         @default(pending)
   unclassified_reason UnclassifiedReason?
 
-  captured_at  DateTime? @db.Timestamptz
-  uploaded_at  DateTime  @default(now()) @db.Timestamptz
-  processed_at DateTime? @db.Timestamptz
+  retouched_storage_key  String?  @unique @db.VarChar(500)
+  retouched_public_slug  String?  @unique @db.VarChar(30)
+  retouched_file_size    BigInt?
+  retouched_at           DateTime? @db.Timestamptz
 
-  event             Event             @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  detected_cyclists DetectedCyclist[]
-  processing_jobs   ProcessingJob[]
+  captured_at   DateTime? @db.Timestamptz
+  uploaded_at   DateTime  @default(now()) @db.Timestamptz
+  processed_at  DateTime? @db.Timestamptz
+  classified_at DateTime? @db.Timestamptz
 
-  @@unique([event_id, filename], map: "unique_event_filename")
+  embedding Unsupported("vector(1024)")?
+
+  created_by_id     String? @db.Uuid
+  updated_by_id     String? @db.Uuid
+  retouched_by_id   String? @db.Uuid
+  photo_category_id Int?
+
+  event               Event               @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  created_by          User?               @relation("PhotoCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  updated_by          User?               @relation("PhotoUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  retouched_by        User?               @relation("PhotoRetouchedBy", fields: [retouched_by_id], references: [id], onDelete: SetNull)
+  photo_category      PhotoCategory?      @relation(fields: [photo_category_id], references: [id], onDelete: SetNull)
+  detected_participants DetectedParticipant[]
+  processing_jobs       ProcessingJob[]
+  preview_link_photos   PreviewLinkPhoto[]
+  order_items           OrderItem[]
+  cart_items            CartItem[]
+
+  @@index([event_id, filename])
   @@index([event_id])
   @@index([status])
   @@index([event_id, unclassified_reason], map: "idx_photos_unclassified")
+  @@index([created_by_id])
+  @@index([updated_by_id])
+  @@index([retouched_by_id])
+  @@index([photo_category_id])
+  // HNSW index for cosine similarity is created via raw SQL in the migration
   @@map("photos")
 }
 
-model DetectedCyclist {
+model DetectedParticipant {
   id       String @id @default(uuid()) @db.Uuid
   photo_id String @db.Uuid
 
-  bounding_box     Json    @db.JsonB
-  confidence_score Decimal @db.Decimal(5, 4)
+  source ClassificationSource @default(manual)
+
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  created_by_id    String? @db.Uuid
+  classified_by_id String? @db.Uuid
+
+  photo            Photo                  @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  created_by       User?                  @relation("ParticipantCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  classified_by    User?                  @relation("ParticipantClassifiedBy", fields: [classified_by_id], references: [id], onDelete: SetNull)
+  identifier       ParticipantIdentifier?
+  gear_colors      GearColor[]
+  detection_metadata DetectionMetadata?
+
+  @@index([photo_id])
+  @@index([created_by_id])
+  @@index([classified_by_id])
+  @@map("detected_participants")
+}
+
+model DetectionMetadata {
+  id                      String @id @default(uuid()) @db.Uuid
+  detected_participant_id String @unique @db.Uuid
+
+  bounding_box         Json    @db.JsonB
+  detection_confidence Decimal @db.Decimal(5, 4)
 
   created_at DateTime @default(now()) @db.Timestamptz
 
-  photo            Photo            @relation(fields: [photo_id], references: [id], onDelete: Cascade)
-  plate_number     PlateNumber?
-  equipment_colors EquipmentColor[]
+  detected_participant DetectedParticipant @relation(fields: [detected_participant_id], references: [id], onDelete: Cascade)
 
-  @@index([photo_id])
-  @@index([confidence_score(sort: Desc)])
-  @@map("detected_cyclists")
+  @@index([detected_participant_id])
+  @@map("detection_metadata")
 }
 
-model PlateNumber {
-  id                  String @id @default(uuid()) @db.Uuid
-  detected_cyclist_id String @unique @db.Uuid
+model ParticipantIdentifier {
+  id                      String @id @default(uuid()) @db.Uuid
+  detected_participant_id String @unique @db.Uuid
 
-  number           Int
+  value            String   @db.VarChar(20)
   confidence_score Decimal? @db.Decimal(5, 4)
 
   manually_corrected Boolean   @default(false)
   corrected_at       DateTime? @db.Timestamptz
+  corrected_by_id    String?   @db.Uuid
 
   created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
 
-  detected_cyclist DetectedCyclist @relation(fields: [detected_cyclist_id], references: [id], onDelete: Cascade)
+  detected_participant DetectedParticipant @relation(fields: [detected_participant_id], references: [id], onDelete: Cascade)
+  corrected_by         User?               @relation("IdentifierCorrectedBy", fields: [corrected_by_id], references: [id], onDelete: SetNull)
 
-  @@index([number])
-  @@index([detected_cyclist_id])
-  @@map("plate_numbers")
+  @@index([value])
+  @@index([detected_participant_id])
+  @@index([corrected_by_id])
+  @@map("participant_identifiers")
 }
 
-model EquipmentColor {
-  id                  String @id @default(uuid()) @db.Uuid
-  detected_cyclist_id String @db.Uuid
+model GearColor {
+  id                      String @id @default(uuid()) @db.Uuid
+  detected_participant_id String @db.Uuid
+  gear_type_id            Int
 
-  item_type          EquipmentItem @map("item_type")
   color_name         String        @db.VarChar(50)
   color_hex          String        @db.VarChar(7)
-  density_percentage Decimal       @db.Decimal(5, 2)
+  raw_hex            String?       @db.VarChar(7)
+  density_percentage Decimal?      @db.Decimal(5, 2)
 
   created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
 
-  detected_cyclist DetectedCyclist @relation(fields: [detected_cyclist_id], references: [id], onDelete: Cascade)
+  detected_participant DetectedParticipant @relation(fields: [detected_participant_id], references: [id], onDelete: Cascade)
+  gear_type            GearType            @relation(fields: [gear_type_id], references: [id], onDelete: Restrict)
 
-  @@index([detected_cyclist_id])
-  @@index([item_type])
+  @@index([detected_participant_id])
+  @@index([gear_type_id])
   @@index([color_name])
-  @@map("equipment_colors")
+  @@map("gear_colors")
 }
 
 model ProcessingJob {
@@ -198,6 +501,7 @@ model ProcessingJob {
   error_message String? @db.Text
   retry_count   Int     @default(0)
   max_retries   Int     @default(3)
+  metadata      Json?   @db.JsonB
 
   started_at   DateTime? @db.Timestamptz
   completed_at DateTime? @db.Timestamptz
@@ -209,4 +513,262 @@ model ProcessingJob {
   @@index([status])
   @@index([job_type])
   @@map("processing_jobs")
+}
+
+// ─── Commercial Flow ────────────────────────────────────────────────────────
+
+model PreviewLink {
+  id            String            @id @default(uuid()) @db.Uuid
+  token         String            @unique @db.VarChar(64)
+  event_id      String            @db.Uuid
+  status        PreviewLinkStatus @default(active)
+  expires_at    DateTime          @db.Timestamptz
+  viewed_at     DateTime?         @db.Timestamptz
+  created_at    DateTime          @default(now()) @db.Timestamptz
+  created_by_id String            @db.Uuid
+
+  event      Event              @relation(fields: [event_id], references: [id], onDelete: Restrict)
+  created_by User               @relation("PreviewLinkCreatedBy", fields: [created_by_id], references: [id], onDelete: Restrict)
+  photos     PreviewLinkPhoto[]
+  orders     Order[]
+
+  @@index([event_id])
+  @@index([status])
+  @@index([created_by_id])
+  @@index([expires_at])
+  @@map("preview_links")
+}
+
+model PreviewLinkPhoto {
+  id              String @id @default(uuid()) @db.Uuid
+  preview_link_id String @db.Uuid
+  photo_id        String @db.Uuid
+
+  preview_link PreviewLink @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
+  photo        Photo       @relation(fields: [photo_id], references: [id], onDelete: Restrict)
+
+  @@unique([preview_link_id, photo_id])
+  @@index([preview_link_id])
+  @@index([photo_id])
+  @@map("preview_link_photos")
+}
+
+model Order {
+  id              String      @id @default(uuid()) @db.Uuid
+  preview_link_id String?     @db.Uuid
+  event_id        String      @db.Uuid
+  user_id         String      @db.Uuid
+  status          OrderStatus @default(pending)
+  bib_number      String?     @db.VarChar(20)
+  subtotal        Decimal?    @db.Decimal(10, 2)
+  notes           String?     @db.Text
+  snap_first_name     String?  @db.VarChar(100)
+  snap_last_name      String?  @db.VarChar(100)
+  snap_email          String?  @db.VarChar(255)
+  snap_phone          String?  @db.VarChar(20)
+  snap_country_id     Int?
+  snap_province_id    Int?
+  snap_canton_id      Int?
+  snap_category_name  String?  @db.VarChar(100)
+  created_at      DateTime    @default(now()) @db.Timestamptz
+  paid_at         DateTime?   @db.Timestamptz
+  delivered_at    DateTime?   @db.Timestamptz
+  cancelled_at    DateTime?   @db.Timestamptz
+  confirmed_by_id String?     @db.Uuid
+
+  preview_link  PreviewLink?  @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
+  event         Event         @relation(fields: [event_id], references: [id], onDelete: Restrict)
+  user          User          @relation("OrderUser", fields: [user_id], references: [id], onDelete: Restrict)
+  confirmed_by  User?         @relation("OrderConfirmedBy", fields: [confirmed_by_id], references: [id], onDelete: Restrict)
+  items         OrderItem[]
+  delivery_link DeliveryLink?
+
+  @@index([preview_link_id])
+  @@index([event_id])
+  @@index([user_id])
+  @@index([status])
+  @@index([confirmed_by_id])
+  @@index([created_at(sort: Desc)])
+  @@index([user_id, created_at(sort: Desc)], map: "idx_order_user_date")
+  @@index([event_id, created_at(sort: Desc)], map: "idx_order_event_date")
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String                @id @default(uuid()) @db.Uuid
+  order_id     String                @db.Uuid
+  photo_id     String                @db.Uuid
+  unit_price   Decimal?              @db.Decimal(10, 2)
+  delivered_as OrderItemDeliveredAs?
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Restrict)
+  photo Photo @relation(fields: [photo_id], references: [id], onDelete: Restrict)
+
+  @@unique([order_id, photo_id])
+  @@index([order_id])
+  @@index([photo_id])
+  @@map("order_items")
+}
+
+model DeliveryLink {
+  id                  String             @id @default(uuid()) @db.Uuid
+  order_id            String             @unique @db.Uuid
+  token               String             @unique @db.VarChar(64)
+  status              DeliveryLinkStatus @default(active)
+  expires_at          DateTime           @db.Timestamptz
+  first_downloaded_at DateTime?          @db.Timestamptz
+  last_downloaded_at  DateTime?          @db.Timestamptz
+  download_count      Int                @default(0)
+  created_at          DateTime           @default(now()) @db.Timestamptz
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Restrict)
+
+  @@index([status])
+  @@index([expires_at])
+  @@map("delivery_links")
+}
+
+// ─── Event Assets & Categories ──────────────────────────────────────────────
+
+model EventAsset {
+  id          String         @id @default(uuid()) @db.Uuid
+  event_id    String         @db.Uuid
+  asset_type  EventAssetType
+  storage_key String         @unique @db.VarChar(500)
+  public_slug String         @unique @db.VarChar(30)
+  file_size   BigInt?
+  mime_type   String?        @db.VarChar(50)
+  uploaded_at DateTime       @default(now()) @db.Timestamptz
+
+  event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@unique([event_id, asset_type])
+  @@index([event_id])
+  @@map("event_assets")
+}
+
+model PhotoCategory {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  event_photo_categories EventPhotoCategory[]
+  photos                 Photo[]
+
+  @@map("photo_categories")
+}
+
+model EventPhotoCategory {
+  id                String @id @default(uuid()) @db.Uuid
+  event_id          String @db.Uuid
+  photo_category_id Int
+
+  event          Event         @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  photo_category PhotoCategory @relation(fields: [photo_category_id], references: [id], onDelete: Cascade)
+
+  @@unique([event_id, photo_category_id])
+  @@index([event_id])
+  @@index([photo_category_id])
+  @@map("event_photo_categories")
+}
+
+// ─── User Extended ──────────────────────────────────────────────────────────
+
+model UserPhone {
+  id           String   @id @default(uuid()) @db.Uuid
+  user_id      String   @db.Uuid
+  phone_number String   @db.VarChar(20)
+  label        String?  @db.VarChar(50)
+  is_whatsapp  Boolean  @default(false)
+  is_primary   Boolean  @default(false)
+  created_at   DateTime @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  // Unique partial index (user_id) WHERE is_primary = true created via raw SQL
+  @@map("user_phones")
+}
+
+model CustomerProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @unique @db.Uuid
+  country_id  Int
+  province_id Int?
+  canton_id   Int?
+  created_at  DateTime @default(now()) @db.Timestamptz
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  user     User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  country  Country   @relation(fields: [country_id], references: [id], onDelete: Restrict)
+  province Province? @relation(fields: [province_id], references: [id], onDelete: SetNull)
+  canton   Canton?   @relation(fields: [canton_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id])
+  @@index([country_id])
+  @@index([province_id])
+  @@index([canton_id])
+  @@map("customer_profiles")
+}
+
+// ─── Cart ───────────────────────────────────────────────────────────────────
+
+model Cart {
+  id           String     @id @default(uuid()) @db.Uuid
+  user_id      String?    @db.Uuid
+  session_id   String?    @db.VarChar(64)
+  status       CartStatus @default(active)
+  created_at   DateTime   @default(now()) @db.Timestamptz
+  updated_at   DateTime   @default(now()) @updatedAt @db.Timestamptz
+  expires_at   DateTime   @db.Timestamptz
+  converted_at DateTime?  @db.Timestamptz
+
+  user  User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@index([user_id])
+  @@index([session_id])
+  @@index([status])
+  // Unique partial indexes created via raw SQL:
+  // (user_id) WHERE status = 'active'
+  // (session_id) WHERE status = 'active'
+  @@map("carts")
+}
+
+model CartItem {
+  id         String    @id @default(uuid()) @db.Uuid
+  cart_id    String    @db.Uuid
+  photo_id   String    @db.Uuid
+  event_id   String    @db.Uuid
+  added_at   DateTime  @default(now()) @db.Timestamptz
+  removed_at DateTime? @db.Timestamptz
+
+  cart  Cart  @relation(fields: [cart_id], references: [id], onDelete: Cascade)
+  photo Photo @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@unique([cart_id, photo_id])
+  @@index([cart_id])
+  @@index([photo_id])
+  @@index([event_id])
+  @@map("cart_items")
+}
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+
+model Notification {
+  id         String    @id @default(uuid()) @db.Uuid
+  user_id    String    @db.Uuid
+  type       String    @db.VarChar(50)
+  title      String    @db.VarChar(200)
+  message    String    @db.VarChar(500)
+  data       Json      @default("{}")
+  is_read    Boolean   @default(false)
+  read_at    DateTime? @db.Timestamptz
+  created_at DateTime  @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, is_read, created_at(sort: Desc)])
+  @@map("notifications")
 }

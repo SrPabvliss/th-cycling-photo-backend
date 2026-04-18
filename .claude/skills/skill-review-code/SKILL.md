@@ -42,34 +42,15 @@ Check:
 
 ### Step 2: Run Checklists
 
-Go through ALL relevant checklists:
+Load and verify against all relevant checklist files:
 
-#### Structure Checklist
-- [ ] Files in correct folders (Feature-Sliced)
-- [ ] Naming conventions followed
-- [ ] Layer boundaries respected (domain → application → infrastructure → presentation)
-- [ ] No circular dependencies
+- `checklists/implementation.md` — structure, patterns, code quality
+- `checklists/structure.md` — Feature-Sliced layer boundaries
+- `checklists/command-review.md` / `query-review.md` / `repository-review.md` — per-component checks
+- `testing/test-guidelines.md` — complexity criteria, test coverage
+- `conventions/anti-patterns.md` — common violations to catch
 
-#### Pattern Checklist
-- [ ] Entity has factory method with validations
-- [ ] Handler is thin (<30 lines)
-- [ ] Repository uses separate Mapper class
-- [ ] Controller has `@SuccessMessage()` decorator
-- [ ] Projections used for read operations
-- [ ] AppException used (not generic Error)
-
-#### Code Quality Checklist
-- [ ] No linting errors (`pnpm check`)
-- [ ] No commented-out code
-- [ ] No console.log statements
-- [ ] No hardcoded values that should be config
-- [ ] JSDoc on public methods
-
-#### Test Checklist
-- [ ] Complex logic (CC ≥ 5) has unit tests
-- [ ] Repositories have integration tests
-- [ ] Tests follow AAA pattern
-- [ ] Tests are independent
+> ⚠️ Integration tests are aspirational — only unit tests exist currently. Do not block for missing integration tests.
 
 ### Step 3: Generate Report
 
@@ -88,7 +69,7 @@ Go through ALL relevant checklists:
 #### Patterns
 - [x] Entity has factory method
 - [x] Handler is thin
-- [ ] ❌ Repository has inline mapping (should use Mapper)
+- [ ] ❌ Repository has inline mapping (should use mapper functions)
 
 #### Code Quality
 - [x] No linting errors
@@ -102,7 +83,7 @@ Go through ALL relevant checklists:
 
 | Severity | File | Issue |
 |----------|------|-------|
-| Critical | `repo.ts:45` | Inline mapping instead of Mapper |
+| Critical | `repo.ts:45` | Inline mapping instead of mapper functions |
 | High | `handler.ts:12` | Missing validation |
 | Medium | `entity.ts` | JSDoc incomplete |
 
@@ -164,7 +145,7 @@ return {
   // ... inline mapping
 };
 ```
-**Expected:** Use dedicated Mapper class
+**Expected:** Use dedicated mapper functions (not class)
 **Reference:** `contexts/patterns/repositories.md`
 
 ##### Fix 2: Missing Test
@@ -242,27 +223,9 @@ needs_manual_review: true
 
 ## Checklist Quick Reference
 
-### For Commands
-- [ ] DTO has class-validator decorators
-- [ ] Command is immutable (readonly properties)
-- [ ] Handler < 30 lines
-- [ ] Uses entity factory method
-- [ ] Returns `{ id }` or Projection
-
-### For Queries
-- [ ] Query DTO for filtering/pagination
-- [ ] Handler returns Projection (not entity)
-- [ ] Uses Read Repository
-- [ ] No write operations
-
-### For Repositories
-- [ ] Separate Write and Read repositories
-- [ ] Uses dedicated Mapper class
-- [ ] No inline object mapping
-- [ ] Handles not found with AppException
-
-### For Controllers
-- [ ] `@SuccessMessage()` decorator
-- [ ] Swagger decorators
-- [ ] Only converts DTO → Command/Query
-- [ ] No business logic
+> Per-component checklists are maintained in the context files. Load the relevant one:
+>
+> - **Commands:** `checklists/command-review.md`
+> - **Queries:** `checklists/query-review.md`
+> - **Repositories:** `checklists/repository-review.md`
+> - **General:** `checklists/implementation.md`

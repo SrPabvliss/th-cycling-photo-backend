@@ -39,6 +39,85 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   DB_SSL_MODE?: string
+
+  // Backblaze B2
+  @IsString()
+  @IsNotEmpty()
+  B2_APPLICATION_KEY_ID: string
+
+  @IsString()
+  @IsNotEmpty()
+  B2_APPLICATION_KEY: string
+
+  @IsString()
+  @IsNotEmpty()
+  B2_BUCKET_ID: string
+
+  @IsString()
+  @IsNotEmpty()
+  B2_BUCKET_NAME: string
+
+  @IsString()
+  @IsNotEmpty()
+  B2_REGION: string
+
+  // Cloudflare CDN
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_CDN_URL?: string
+
+  // Cloudflare KV (for slug→path mapping)
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_ACCOUNT_ID?: string
+
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_KV_NAMESPACE_ID?: string
+
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_API_TOKEN?: string
+
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_HMAC_SECRET?: string
+
+  // Voyage AI
+  @IsOptional()
+  @IsString()
+  VOYAGE_API_KEY?: string
+
+  // Auth
+  @IsString()
+  @IsNotEmpty()
+  JWT_SECRET: string
+
+  @IsOptional()
+  @IsString()
+  CORS_ORIGIN?: string
+
+  // Watermark / Preview
+  @IsOptional()
+  @IsString()
+  WATERMARK_BASE_URL?: string
+
+  @IsOptional()
+  @IsString()
+  PREVIEW_BASE_URL?: string
+
+  @IsOptional()
+  @IsString()
+  DELIVERY_BASE_URL?: string
+
+  // Redis
+  @IsOptional()
+  @IsString()
+  REDIS_HOST?: string
+
+  @IsOptional()
+  @IsNumber()
+  REDIS_PORT?: number
 }
 
 export function validate(config: Record<string, unknown>) {

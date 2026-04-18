@@ -1,0 +1,15 @@
+{
+  "name": "watermark-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "aws4fetch": "^1.0.20"
+  }
+}

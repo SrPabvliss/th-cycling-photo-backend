@@ -1,0 +1,6 @@
+{
+  "not_active": "El enlace de vista previa no está activo",
+  "link_expired": "Este enlace de vista previa ha expirado",
+  "expires_in_days_invalid": "La expiración debe ser entre 1 y 90 días",
+  "photos_not_in_event": "Una o más fotos no pertenecen a este evento"
+}

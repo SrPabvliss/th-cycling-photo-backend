@@ -19,16 +19,17 @@
 ```typescript
 // CC = 1 → NO TEST
 async execute(query: GetEventQuery) {
-  return this.repository.findById(query.id);
+  return this.repository.findById(query.id)
 }
 
-// CC = 6 → NEEDS TEST
-static create(props: CreateEventProps): Event {
-  if (!props.name || props.name.length < 3) throw new AppException('...');
-  if (props.date < new Date()) throw new AppException('...');
-  if (!VALID_CATEGORIES.includes(props.category)) throw new AppException('...');
-  if (props.maxPhotos && props.maxPhotos > 10000) throw new AppException('...');
-  return new Event(props);
+// CC = 5 → NEEDS TEST
+static create(data: { name: string; date: Date; location: string | null }): Event {
+  Event.validateName(data.name)   // 2 branches (length < 3 || length > 200)
+  Event.validateDate(data.date)   // 1 branch (date < today)
+  return new Event(
+    crypto.randomUUID(), data.name, data.date, data.location,
+    EventStatus.DRAFT, 0, 0, AuditFields.initialize(),
+  )
 }
 ```
 
@@ -39,7 +40,7 @@ static create(props: CreateEventProps): Event {
 | Type | Purpose | Location | Priority |
 |------|---------|----------|----------|
 | Unit | Complex logic (CC ≥ 5) | `*.spec.ts` next to source | Selective |
-| Integration | Real DB flows | `*.integration.spec.ts` | **HIGH** |
+| Integration | Real DB flows | `*.integration.spec.ts` *(planned)* | **HIGH** |
 
 **E2E tests are OUT OF SCOPE** for backend MVP. Will be added with frontend.
 
@@ -75,6 +76,27 @@ Integration Tests > Selective Unit Tests
 
 ---
 
+## Existing Tests (Sprint 0)
+
+Unit tests currently exist for:
+
+| File | What it tests |
+|------|---------------|
+| `event.entity.spec.ts` | Entity create/update/softDelete/fromPersistence |
+| `create-event.handler.spec.ts` | Command handler with mocked interface |
+| `delete-event.handler.spec.ts` | Delete handler with 404 guard |
+| `audit-fields.spec.ts` | AuditFields composition class |
+| `app.exception.spec.ts` | AppException factory methods |
+| `global-exception.filter.spec.ts` | ADR-002 error envelope formatting |
+| `swagger-i18n.transformer.spec.ts` | Swagger bilingual translation |
+
+**Key testing patterns in real code:**
+- Mock interfaces, not concrete classes: `jest.Mocked<IEventWriteRepository>`
+- Use `Event.fromPersistence()` to create entities with specific states in tests (not `as any` casts)
+- Use dynamic future dates: `futureDate.setFullYear(futureDate.getFullYear() + 1)` (not hardcoded dates)
+
+---
+
 ## Quality Metrics (NOT Coverage %)
 
 Instead of chasing coverage:
@@ -91,16 +113,19 @@ Instead of chasing coverage:
 ## Test Structure (AAA Pattern)
 
 ```typescript
-it('should create event with valid data', async () => {
+it('should create and save event, returning id', async () => {
   // Arrange
-  const command = new CreateEventCommand('Test', new Date('2026-05-01'), 'ROAD');
+  const futureDate = new Date()
+  futureDate.setFullYear(futureDate.getFullYear() + 1)
+  const command = new CreateEventCommand('Test Event', futureDate, 'Ambato')
 
   // Act
-  const result = await handler.execute(command);
+  const result = await handler.execute(command)
 
   // Assert
-  expect(result).toHaveProperty('id');
-});
+  expect(result).toHaveProperty('id')
+  expect(typeof result.id).toBe('string')
+})
 ```
 
 ---
@@ -110,8 +135,10 @@ it('should create event with valid data', async () => {
 ### Test Files
 ```
 event.entity.spec.ts                        # Unit (only if CC ≥ 5)
-event-write.repository.integration.spec.ts  # Integration
+event-write.repository.integration.spec.ts  # Integration (planned convention)
 ```
+
+> **Note:** The `*.integration.spec.ts` convention will be used when integration tests are implemented. Currently only `*.spec.ts` unit tests exist.
 
 ### Test Descriptions
 ```typescript
@@ -129,8 +156,9 @@ describe('Event Entity', () => {
 
 ```bash
 pnpm test                 # Unit tests
-pnpm test:integration     # Integration tests
-pnpm test:all             # All tests
+pnpm test:watch           # Unit tests in watch mode
+pnpm test:cov             # Unit tests with coverage
+pnpm test:e2e             # E2E tests (default NestJS scaffold only)
 ```
 
 ---

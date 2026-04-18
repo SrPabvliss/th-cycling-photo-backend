@@ -25,57 +25,12 @@ Read before documenting:
 
 ## JSDoc Guidelines
 
-### When to Add JSDoc
+> Follow `conventions/documentation.md` for JSDoc rules, templates, and examples.
 
-| Add JSDoc | Skip JSDoc |
-|-----------|------------|
-| Public methods | Private methods |
-| Factory methods | Getters/setters |
-| Methods that throw | Simple CRUD |
-| Complex logic | Self-explanatory code |
-
-### JSDoc Template
-
-```typescript
-/**
- * Brief description of what it does.
- * 
- * @param paramName - Description of parameter
- * @returns Description of return value
- * @throws AppException.businessRule if [condition]
- */
-```
-
-### Example
-
-```typescript
-/**
- * Factory method for creating a new event.
- * Contains all business validations.
- * 
- * @param data - Event creation data
- * @returns New Event instance
- * @throws AppException.businessRule if date is in the past
- * @throws AppException.businessRule if category is invalid
- */
-static create(data: CreateEventData): Event {
-  // ...
-}
-```
-
-## Inline Comments
-
-Use sparingly, for "why" not "what":
-
-```typescript
-// Good: Explains why
-// Roboflow returns confidence as 0-1, frontend expects 0-100
-const confidence = result.confidence * 100;
-
-// Bad: Explains what (obvious from code)
-// Multiply by 100
-const confidence = result.confidence * 100;
-```
+Key points:
+- Add JSDoc to public methods, factory methods, methods that throw
+- Skip private methods, getters/setters, simple CRUD
+- Inline comments: explain "why" not "what"
 
 ## Module README
 

@@ -1,0 +1,6 @@
+{
+  "country_not_found": "El país especificado no existe",
+  "province_not_in_country": "La provincia especificada no pertenece al país seleccionado",
+  "canton_requires_province": "Se debe especificar una provincia al seleccionar un cantón",
+  "canton_not_in_province": "El cantón especificado no pertenece a la provincia seleccionada"
+}

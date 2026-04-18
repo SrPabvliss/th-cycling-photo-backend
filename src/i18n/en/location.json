@@ -1,0 +1,6 @@
+{
+  "country_not_found": "The specified country does not exist",
+  "province_not_in_country": "The specified province does not belong to the selected country",
+  "canton_requires_province": "A province must be specified when selecting a canton",
+  "canton_not_in_province": "The specified canton does not belong to the selected province"
+}

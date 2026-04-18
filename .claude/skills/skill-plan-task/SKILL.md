@@ -91,6 +91,8 @@ Always load:
 - `conventions/naming.md`
 - `conventions/error-handling.md`
 
+> **Note:** Implementation will load these same contexts via `skill-implement-feature`.
+
 ### Step 4: Generate Plan
 
 Create a structured plan with:

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Entities encapsulate business logic and validations. They are created via factory methods, never directly instantiated.
+Entities encapsulate business logic and validations. They are created via factory methods, never directly instantiated. Audit timestamps are managed via `AuditFields` composition.
 
 ## File Location
 
@@ -13,7 +13,9 @@ modules/{domain}/domain/entities/{entity}.entity.ts
 ## Entity Template
 
 ```typescript
-import { AppException } from '@/shared/domain/exceptions/app.exception';
+// modules/events/domain/entities/event.entity.ts
+import { AppException, AuditFields } from '@shared/domain'
+import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo'
 
 export class Event {
   constructor(
@@ -21,141 +23,222 @@ export class Event {
     public name: string,
     public date: Date,
     public location: string | null,
-    public category: string,
-    public status: string,
+    public status: EventStatusType,
     public totalPhotos: number,
     public processedPhotos: number,
-    public readonly createdAt: Date,
-    public updatedAt: Date,
+    public readonly audit: AuditFields,
   ) {}
 
   /**
-   * Factory method for creating new event.
-   * Contains all business validations.
+   * Factory method for creating a new event.
+   * Applies all business validations before instantiation.
+   *
+   * @param data - Event creation data (name, date, location)
+   * @returns New Event instance with draft status
+   * @throws AppException.businessRule if name length is not between 3 and 200
+   * @throws AppException.businessRule if date is in the past
    */
-  static create(data: {
-    name: string;
-    date: Date;
-    location: string | null;
-    category: string;
-  }): Event {
-    // Business validations
-    if (data.date < new Date()) {
-      throw AppException.businessRule('event.date_in_past');
-    }
-
-    if (!['ROAD', 'MTB', 'BMX', 'TRACK'].includes(data.category)) {
-      throw AppException.businessRule('event.invalid_category');
-    }
+  static create(data: { name: string; date: Date; location: string | null }): Event {
+    Event.validateName(data.name)
+    Event.validateDate(data.date)
 
     return new Event(
       crypto.randomUUID(),
       data.name,
       data.date,
       data.location,
-      data.category,
-      'DRAFT',
+      EventStatus.DRAFT,
       0,
       0,
-      new Date(),
-      new Date(),
-    );
+      AuditFields.initialize(),
+    )
   }
 
   /**
-   * Factory method for reconstituting from database.
-   * No validations - data is already valid.
+   * Updates mutable event fields with business validations.
+   *
+   * @param data - Partial update data
+   * @throws AppException.businessRule if name length is not between 3 and 200
+   * @throws AppException.businessRule if date is in the past
+   */
+  update(data: { name?: string; date?: Date; location?: string | null }): void {
+    if (data.name !== undefined) {
+      Event.validateName(data.name)
+      this.name = data.name
+    }
+
+    if (data.date !== undefined) {
+      Event.validateDate(data.date)
+      this.date = data.date
+    }
+
+    if (data.location !== undefined) this.location = data.location
+
+    this.audit.markUpdated()
+  }
+
+  /** Marks this event as soft-deleted. */
+  softDelete(): void {
+    this.audit.markDeleted()
+  }
+
+  private static validateName(name: string): void {
+    if (name.length < 3 || name.length > 200) {
+      throw AppException.businessRule('event.name_invalid_length')
+    }
+  }
+
+  private static validateDate(date: Date): void {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (date < today) throw AppException.businessRule('event.date_in_past')
+  }
+
+  /**
+   * Reconstitutes an entity from persistence data.
+   * No validations are applied – the data is trusted.
    */
   static fromPersistence(data: {
-    id: string;
-    name: string;
-    date: Date;
-    location: string | null;
-    category: string;
-    status: string;
-    totalPhotos: number;
-    processedPhotos: number;
-    createdAt: Date;
-    updatedAt: Date;
+    id: string
+    name: string
+    date: Date
+    location: string | null
+    status: EventStatusType
+    totalPhotos: number
+    processedPhotos: number
+    createdAt: Date
+    updatedAt: Date
+    deletedAt: Date | null
   }): Event {
     return new Event(
       data.id,
       data.name,
       data.date,
       data.location,
-      data.category,
       data.status,
       data.totalPhotos,
       data.processedPhotos,
-      data.createdAt,
-      data.updatedAt,
-    );
+      AuditFields.fromPersistence({
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        deletedAt: data.deletedAt,
+      }),
+    )
   }
 }
 ```
 
 ---
 
-## Behavior Methods
+## AuditFields (Composition)
 
-Entities contain behavior, not just data.
+Audit timestamps are managed via a shared `AuditFields` class composed into entities:
 
 ```typescript
-export class Event {
-  // ... constructor and factory methods
+// shared/domain/audit-fields.ts
+export class AuditFields {
+  constructor(
+    public readonly createdAt: Date,
+    public updatedAt: Date,
+    public deletedAt: Date | null,
+  ) {}
 
-  /**
-   * Check if event can receive photos.
-   */
-  canUploadPhotos(): boolean {
-    return ['DRAFT', 'UPLOADING'].includes(this.status);
+  /** Creates audit fields for a brand-new entity. */
+  static initialize(): AuditFields {
+    const now = new Date()
+    return new AuditFields(now, now, null)
   }
 
-  /**
-   * Start processing. Throws if invalid state.
-   */
-  startProcessing(): void {
-    if (this.status !== 'UPLOADING') {
-      throw AppException.businessRule('event.invalid_status_for_processing');
-    }
-    
-    if (this.totalPhotos === 0) {
-      throw AppException.businessRule('event.no_photos_to_process');
-    }
-
-    this.status = 'PROCESSING';
-    this.updatedAt = new Date();
+  /** Reconstitutes audit fields from persisted data (no validations). */
+  static fromPersistence(data: {
+    createdAt: Date
+    updatedAt: Date
+    deletedAt: Date | null
+  }): AuditFields {
+    return new AuditFields(data.createdAt, data.updatedAt, data.deletedAt)
   }
 
-  /**
-   * Increment photo counter.
-   */
-  addPhoto(): void {
-    if (!this.canUploadPhotos()) {
-      throw AppException.businessRule('event.cannot_upload_photos');
-    }
-    
-    this.totalPhotos++;
-    this.updatedAt = new Date();
+  /** Whether this entity has been soft-deleted. */
+  get isDeleted(): boolean {
+    return this.deletedAt !== null
   }
 
-  /**
-   * Mark one photo as processed.
-   */
-  markPhotoProcessed(): void {
-    if (this.status !== 'PROCESSING') {
-      throw AppException.businessRule('event.not_processing');
-    }
+  /** Marks the entity as updated (refreshes updatedAt). */
+  markUpdated(): void {
+    this.updatedAt = new Date()
+  }
 
-    this.processedPhotos++;
-    this.updatedAt = new Date();
-
-    if (this.processedPhotos >= this.totalPhotos) {
-      this.status = 'COMPLETED';
-    }
+  /** Marks the entity as soft-deleted. */
+  markDeleted(): void {
+    this.deletedAt = new Date()
+    this.updatedAt = new Date()
   }
 }
 ```
+
+**Usage in entities:**
+- `create()` → `AuditFields.initialize()` (sets createdAt/updatedAt to now, deletedAt to null)
+- `update()` → `this.audit.markUpdated()` (refreshes updatedAt)
+- `softDelete()` → `this.audit.markDeleted()` (sets deletedAt + updatedAt)
+- `fromPersistence()` → `AuditFields.fromPersistence(...)` (reconstitutes from DB)
+
+---
+
+## Private Static Validations
+
+Validations are extracted to `private static` methods, reused by both `create()` and `update()`:
+
+```typescript
+private static validateName(name: string): void {
+  if (name.length < 3 || name.length > 200) {
+    throw AppException.businessRule('event.name_invalid_length')
+  }
+}
+
+private static validateDate(date: Date): void {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  if (date < today) throw AppException.businessRule('event.date_in_past')
+}
+```
+
+**Why `private static`:**
+- Reusable: same validation in `create()` and `update()`
+- Testable through public API (tested via `create()` and `update()`)
+- No instance access needed (validation is on the input, not the entity state)
+- Date comparison zeroes hours to compare dates only (not timestamps)
+
+---
+
+## Soft Delete
+
+Entities support soft delete via `AuditFields`:
+
+```typescript
+/** Marks this event as soft-deleted. */
+softDelete(): void {
+  this.audit.markDeleted()
+}
+```
+
+The delete handler calls `entity.softDelete()` to mark it, then the write repository persists the `deleted_at` timestamp. Read repositories filter `deleted_at: null` to exclude soft-deleted records.
+
+---
+
+## Update Method
+
+**Update rules:**
+- Accept partial data with all fields optional
+- Validate each field independently (only if provided)
+- Reuse same validation methods as `create()` via `private static` methods
+- Always call `this.audit.markUpdated()` at the end
+- Guard clauses can be one-liners: `if (data.date < today) throw AppException.businessRule(...)`
+
+---
+
+## Behavior Methods
+
+> **Note:** Additional behavior methods (e.g., status transitions for photo processing) will be added as the corresponding modules are implemented. Currently, the entity supports `create()`, `update()`, `softDelete()`, and `fromPersistence()`.
 
 ---
 
@@ -163,11 +246,14 @@ export class Event {
 
 ### DO:
 - ✅ All business validations in factory method `create()`
-- ✅ Behavior methods that modify state
+- ✅ `update()` method for partial updates with field-level validation
+- ✅ `softDelete()` via `AuditFields.markDeleted()`
+- ✅ Extract validations to `private static` methods for reuse
 - ✅ Guard clauses that throw `AppException.businessRule()`
-- ✅ `readonly` for immutable fields (id, createdAt)
-- ✅ `fromPersistence()` for database reconstitution
-- ✅ Update `updatedAt` in mutation methods
+- ✅ `readonly` for immutable fields (id, audit)
+- ✅ `fromPersistence()` for database reconstitution (no validations)
+- ✅ `AuditFields` composition for timestamp management
+- ✅ Value Objects as `as const` objects with derived types
 
 ### DON'T:
 - ❌ Infrastructure dependencies (Prisma, HTTP, etc.)
@@ -175,53 +261,60 @@ export class Event {
 - ❌ Public setters without validation
 - ❌ Direct instantiation with `new Entity()`
 - ❌ Business logic in handlers or repositories
+- ❌ Value Objects as classes (use `as const` pattern)
+- ❌ Prisma enums in domain layer
+- ❌ Direct `createdAt`/`updatedAt` fields (use `AuditFields` composition)
 
 ---
 
 ## Value Objects
 
-For complex value types, create Value Objects:
+Value Objects use `as const` objects with a derived type. NOT classes, NOT Prisma enums.
 
 ```typescript
 // domain/value-objects/event-status.vo.ts
-export class EventStatus {
-  private static readonly VALID_STATUSES = [
-    'DRAFT',
-    'UPLOADING',
-    'PROCESSING',
-    'COMPLETED',
-    'FAILED',
-  ] as const;
+/**
+ * Allowed statuses for an Event through its lifecycle.
+ *
+ * - `draft`      – Event created, no photos uploaded yet
+ * - `uploading`  – Photos are being uploaded
+ * - `processing` – AI processing in progress
+ * - `completed`  – All photos have been processed
+ */
+export const EventStatus = {
+  DRAFT: 'draft',
+  UPLOADING: 'uploading',
+  PROCESSING: 'processing',
+  COMPLETED: 'completed',
+} as const
 
-  private constructor(public readonly value: string) {}
+export type EventStatusType = (typeof EventStatus)[keyof typeof EventStatus]
+```
 
-  static create(status: string): EventStatus {
-    if (!this.VALID_STATUSES.includes(status as any)) {
-      throw AppException.businessRule('event.invalid_status');
-    }
-    return new EventStatus(status);
-  }
+**Usage in Entity:**
+```typescript
+import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo'
 
-  static draft(): EventStatus {
-    return new EventStatus('DRAFT');
-  }
+export class Event {
+  constructor(
+    // ...
+    public status: EventStatusType,  // typed as 'draft' | 'uploading' | ...
+  ) {}
 
-  canTransitionTo(next: EventStatus): boolean {
-    const transitions: Record<string, string[]> = {
-      DRAFT: ['UPLOADING'],
-      UPLOADING: ['PROCESSING', 'DRAFT'],
-      PROCESSING: ['COMPLETED', 'FAILED'],
-      COMPLETED: [],
-      FAILED: ['DRAFT'],
-    };
-    return transitions[this.value]?.includes(next.value) ?? false;
-  }
-
-  equals(other: EventStatus): boolean {
-    return this.value === other.value;
+  static create(/* ... */): Event {
+    return new Event(
+      // ...
+      EventStatus.DRAFT,  // use constant, not string literal
+    )
   }
 }
 ```
+
+**Why `as const` instead of class or Prisma enum:**
+- Domain independence: not coupled to Prisma schema
+- Lightweight: no runtime class overhead
+- Type-safe: `EventStatusType` is a union of literal types
+- Avoids Biome `noStaticOnlyClass` rule
 
 ---
 
@@ -229,50 +322,74 @@ export class EventStatus {
 
 ```typescript
 describe('Event Entity', () => {
+  const validData = {
+    name: 'Vuelta al Cotopaxi 2026',
+    date: new Date('2026-06-15'),
+    location: 'Ambato, Ecuador',
+  }
+
   describe('create', () => {
     it('should create event with valid data', () => {
-      const event = Event.create({
-        name: 'Test Event',
-        date: new Date('2026-05-01'),
-        location: 'Ambato',
-        category: 'ROAD',
-      });
+      const event = Event.create(validData)
 
-      expect(event).toBeInstanceOf(Event);
-      expect(event.name).toBe('Test Event');
-      expect(event.status).toBe('DRAFT');
-      expect(event.totalPhotos).toBe(0);
-      expect(event.id).toBeDefined();
-    });
+      expect(event).toBeInstanceOf(Event)
+      expect(event.name).toBe(validData.name)
+      expect(event.status).toBe('draft')
+      expect(event.totalPhotos).toBe(0)
+      expect(event.id).toBeDefined()
+      expect(event.audit.createdAt).toBeInstanceOf(Date)
+    })
 
     it('should throw for past date', () => {
       expect(() =>
-        Event.create({
-          name: 'Past Event',
-          date: new Date('2020-01-01'),
-          location: null,
-          category: 'ROAD',
-        }),
-      ).toThrow();
-    });
-  });
+        Event.create({ ...validData, date: new Date('2020-01-01') }),
+      ).toThrow()
+    })
 
-  describe('startProcessing', () => {
-    it('should change status from UPLOADING to PROCESSING', () => {
-      const event = createEventInStatus('UPLOADING', { totalPhotos: 10 });
-      
-      event.startProcessing();
-      
-      expect(event.status).toBe('PROCESSING');
-    });
+    it('should throw for name too short', () => {
+      expect(() =>
+        Event.create({ ...validData, name: 'ab' }),
+      ).toThrow()
+    })
+  })
 
-    it('should throw when no photos', () => {
-      const event = createEventInStatus('UPLOADING', { totalPhotos: 0 });
-      
-      expect(() => event.startProcessing()).toThrow();
-    });
-  });
-});
+  describe('update', () => {
+    it('should update name with validation', () => {
+      const event = Event.create(validData)
+      event.update({ name: 'New Name' })
+      expect(event.name).toBe('New Name')
+    })
+  })
+
+  describe('softDelete', () => {
+    it('should mark entity as deleted', () => {
+      const event = Event.create(validData)
+      event.softDelete()
+      expect(event.audit.isDeleted).toBe(true)
+      expect(event.audit.deletedAt).toBeInstanceOf(Date)
+    })
+  })
+
+  describe('fromPersistence', () => {
+    it('should reconstitute entity without validations', () => {
+      const event = Event.fromPersistence({
+        id: 'some-uuid',
+        name: 'Test',
+        date: new Date('2020-01-01'),  // past date OK in fromPersistence
+        location: null,
+        status: 'draft',
+        totalPhotos: 5,
+        processedPhotos: 3,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      })
+
+      expect(event.id).toBe('some-uuid')
+      expect(event.totalPhotos).toBe(5)
+    })
+  })
+})
 ```
 
 ---

@@ -1,0 +1,17 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+
+# Placeholder workflow - will be configured when production environment is ready.
+# Intended trigger: push to main branch.
+
+jobs:
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Placeholder
+        run: echo "Production deployment not yet configured"

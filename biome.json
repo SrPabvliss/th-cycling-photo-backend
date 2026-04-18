@@ -26,14 +26,22 @@
         "useSingleVarDeclarator": "error",
         "useConst": "error",
         "useTemplate": "warn",
-        "useArrayLiterals": "warn"
+        "useArrayLiterals": "warn",
+        "useBlockStatements": "off",
+        "useImportType": "off"
       },
       "correctness": {
         "noUnusedVariables": "warn"
+      },
+      "complexity": {
+        "noStaticOnlyClass": "off"
       }
     }
   },
   "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
     "formatter": {
       "quoteStyle": "single",
       "trailingCommas": "all",

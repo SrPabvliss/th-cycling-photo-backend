@@ -6,10 +6,11 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client'
 import type { Request, Response } from 'express'
 import { I18nContext } from 'nestjs-i18n'
-import { AppException } from '../../domain/exceptions/app.exception.js'
-import type { ApiErrorResponse } from '../interfaces/api-response.interface.js'
+import { AppException, ErrorCode } from '../../domain/exceptions/app.exception'
+import type { ApiErrorResponse } from '../dto/api-response.dto'
 
 /**
  * Global exception filter that catches all exceptions and formats
@@ -71,6 +72,32 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     }
 
+    if (exception instanceof PrismaClientKnownRequestError) {
+      const appException = this.mapPrismaError(exception)
+      const translatedMessage = i18n
+        ? String(i18n.t(appException.messageKey, { args: appException.context }))
+        : appException.messageKey
+
+      return {
+        status: appException.httpStatus,
+        body: {
+          error: {
+            code: appException.code,
+            message: translatedMessage,
+            shouldThrow: false,
+            ...(isDevelopment && {
+              details: {
+                prismaCode: exception.code,
+                ...appException.context,
+              },
+              stack: exception.stack,
+            }),
+          },
+          meta,
+        },
+      }
+    }
+
     if (exception instanceof HttpException) {
       const status = exception.getStatus()
       const exceptionResponse = exception.getResponse()
@@ -117,6 +144,40 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         },
         meta,
       },
+    }
+  }
+
+  /**
+   * Maps PrismaClientKnownRequestError codes to AppException instances.
+   */
+  private mapPrismaError(error: PrismaClientKnownRequestError): AppException {
+    switch (error.code) {
+      case 'P2002': {
+        const target = (error.meta?.['target'] as string[]) ?? []
+        return AppException.conflict('errors.CONFLICT', {
+          fields: target.join(', '),
+        })
+      }
+      case 'P2025':
+        return new AppException(
+          'errors.NOT_FOUND',
+          HttpStatus.NOT_FOUND,
+          ErrorCode.NOT_FOUND,
+          false,
+          { cause: error.meta?.['cause'] },
+        )
+      case 'P2003': {
+        const field = (error.meta?.['field_name'] as string) ?? 'unknown'
+        return new AppException(
+          'errors.FOREIGN_KEY_FAILED',
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          ErrorCode.BUSINESS_RULE,
+          false,
+          { field },
+        )
+      }
+      default:
+        return AppException.internal('errors.INTERNAL', { prismaCode: error.code })
     }
   }
 

@@ -3,34 +3,46 @@
 ## File Structure
 
 ```
-├── jest.config.js          # Unit tests config
+├── package.json            # Jest config inline under "jest" key
 ├── test/
 │   └── jest-e2e.json       # E2E tests config
 └── src/
     └── **/*.spec.ts        # Unit test files
 ```
 
+> **Note:** There is no separate `jest.config.js` file. Jest configuration lives inline in `package.json`.
+
 ---
 
 ## Unit Tests Configuration
 
-```javascript
-// jest.config.js
-module.exports = {
-  moduleFileExtensions: ['js', 'json', 'ts'],
-  rootDir: 'src',
-  testRegex: '.*\\.spec\\.ts$',
-  transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+Jest config is defined in `package.json` under the `"jest"` key:
+
+```json
+// package.json → "jest"
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "src",
+  "testRegex": ".*\\.spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
   },
-  collectCoverageFrom: ['**/*.(t|j)s'],
-  coverageDirectory: '../coverage',
-  testEnvironment: 'node',
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
+  "moduleNameMapper": {
+    "^@shared/(.*)$": "<rootDir>/shared/$1",
+    "^@generated/(.*)$": "<rootDir>/generated/$1",
+    "^@events/(.*)$": "<rootDir>/modules/events/$1",
+    "^(\\.{1,2}/.*)\\.js$": "$1"
   },
-};
+  "collectCoverageFrom": ["**/*.(t|j)s"],
+  "coverageDirectory": "../coverage",
+  "testEnvironment": "node"
+}
 ```
+
+**Key points:**
+- `moduleNameMapper` maps path aliases (`@shared/*`, `@generated/*`, `@events/*`) to match `tsconfig.json` paths
+- The `.js` extension mapper (`^(\\.{1,2}/.*)\\.js$` → `$1`) strips `.js` from relative imports for CJS/ESM compatibility safety
+- New module aliases must be added to both `tsconfig.json` and `package.json` jest config
 
 ---
 
@@ -47,10 +59,15 @@ module.exports = {
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "moduleNameMapper": {
-    "^@/(.*)$": "<rootDir>/../src/$1"
+    "^@shared/(.*)$": "<rootDir>/../src/shared/$1",
+    "^@generated/(.*)$": "<rootDir>/../src/generated/$1",
+    "^@events/(.*)$": "<rootDir>/../src/modules/events/$1",
+    "^(\\.{1,2}/.*)\\.js$": "$1"
   }
 }
 ```
+
+> **Note:** E2E aliases use `<rootDir>/../src/` prefix since E2E rootDir is `test/`.
 
 ---
 
@@ -102,41 +119,26 @@ test/
 
 ---
 
-## Coverage Thresholds (Optional)
-
-```javascript
-// jest.config.js
-module.exports = {
-  // ... other config
-  coverageThreshold: {
-    global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70,
-    },
-  },
-};
-```
-
----
-
 ## Path Alias Setup
 
-For `@/` imports to work in tests, ensure `tsconfig.json` has:
+Path aliases in `tsconfig.json` must match the Jest `moduleNameMapper`:
 
 ```json
+// tsconfig.json → "compilerOptions"
 {
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+  "baseUrl": "./",
+  "paths": {
+    "@shared/*": ["src/shared/*"],
+    "@generated/*": ["src/generated/*"],
+    "@events/*": ["src/modules/events/*"]
   }
 }
 ```
 
-And Jest config has matching `moduleNameMapper`.
+When adding a new module alias (e.g., `@photos/*`), update **three** places:
+1. `tsconfig.json` → `paths`
+2. `package.json` → `jest.moduleNameMapper`
+3. `test/jest-e2e.json` → `moduleNameMapper`
 
 ---
 

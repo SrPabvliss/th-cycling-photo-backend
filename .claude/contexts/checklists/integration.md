@@ -9,6 +9,8 @@ Use when integrating new module or external service.
 - [ ] PrismaModule available (via Global)
 - [ ] Required modules imported (if cross-module)
 - [ ] Exports defined for shared providers
+- [ ] Repositories as `{ provide: SYMBOL_TOKEN, useClass: RepoClass }` (token-based DI)
+- [ ] Handlers grouped in const arrays: `const CommandHandlers = [...], QueryHandlers = [...]`
 
 ## External Service Integration
 
@@ -36,12 +38,13 @@ Use when integrating new module or external service.
 - [ ] WebSocket events for progress (if needed)
 - [ ] Redis connection configured
 
-## Testing Integration
+## Testing
 
-- [ ] Test database configured
-- [ ] Integration tests for repository
-- [ ] E2E tests for new endpoints
+- [ ] Unit tests for entities and handlers (based on cyclomatic complexity)
+- [ ] Integration tests for repositories (when cross-module queries exist)
 - [ ] Tests cleanup data properly
+
+<!-- Note: E2E tests are out of scope for this backend (see CLAUDE.md) -->
 
 ## Final Verification
 

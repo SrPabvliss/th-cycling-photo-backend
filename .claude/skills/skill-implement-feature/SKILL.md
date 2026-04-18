@@ -69,7 +69,7 @@ Write code following established patterns and conventions.
 
 5. **Mapper** (`infrastructure/mappers/`)
    - `toPersistence()` and `toEntity()`
-   - Static methods, no dependencies
+   - Exported functions, no class, no dependencies
 
 6. **Repository** (`infrastructure/repositories/`)
    - Uses Mapper for conversions
@@ -127,14 +127,10 @@ git commit -m "feat({domain}): add {Entity} repository"
 
 ## Validation Checklist
 
-Before completing, verify:
+Before completing, validate against `checklists/implementation.md`.
 
+Quick self-check:
 - [ ] Research cache consulted for external APIs
-- [ ] Entity has factory method with validations
-- [ ] Handler is thin (<30 lines)
-- [ ] Mapper is separate class (not inline)
-- [ ] Repository uses Mapper
-- [ ] Controller has `@SuccessMessage()`
+- [ ] Mapper is separate file with exported functions (not inline)
 - [ ] No linting errors (`pnpm check`)
-- [ ] Naming conventions followed
 - [ ] Commits made at checkpoints

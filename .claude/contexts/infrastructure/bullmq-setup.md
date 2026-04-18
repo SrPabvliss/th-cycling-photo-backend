@@ -1,5 +1,7 @@
 # BullMQ Setup
 
+> ⚠️ **ESTADO: NO IMPLEMENTADO** — Este documento describe la configuración planificada para el módulo de Processing. Los paquetes (`@nestjs/bullmq`, `bullmq`, `ioredis`) están instalados pero no se usan actualmente. Se implementará cuando se desarrolle el módulo de procesamiento de fotos.
+
 ## Overview
 
 BullMQ handles async job processing for photo classification pipeline.

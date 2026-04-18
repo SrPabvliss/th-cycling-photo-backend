@@ -1,0 +1,8 @@
+{
+  "photo_not_found": "Photo not found",
+  "photo_already_in_cart": "Photo is already in the cart",
+  "no_active_cart": "No active cart found",
+  "cart_empty": "Cart is empty",
+  "event_not_in_cart": "Event not found in cart",
+  "checkout_failed": "Checkout failed"
+}

@@ -1,0 +1,13 @@
+# B2 auth (ttv-worker-read key — read only)
+B2_KEY_ID=your_worker_read_key_id
+B2_APP_KEY=your_worker_read_key_secret
+B2_BUCKET=your_bucket_name
+B2_REGION=us-east-005
+
+# Watermark config
+WATERMARK_OPACITY=0.6
+DEFAULT_QUALITY=60
+
+# Domains
+QR_WORKER_HOST=qr.titantv.com.ec
+PUBLIC_DOMAIN=cdn.titantv.com.ec

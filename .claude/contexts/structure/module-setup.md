@@ -7,38 +7,21 @@ How to configure and register NestJS modules following Feature-Sliced architectu
 ## Module Template
 
 ```typescript
-import { Module } from '@nestjs/common';
-import { CqrsModule } from '@nestjs/cqrs';
+// events.module.ts
+import { CreateEventHandler } from '@events/application/commands/create-event/create-event.handler'
+import { GetEventDetailHandler } from '@events/application/queries/get-event-detail/get-event-detail.handler'
+import { GetEventsListHandler } from '@events/application/queries/get-events-list/get-events-list.handler'
+import { EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY } from '@events/domain/ports'
+import { EventReadRepository } from '@events/infrastructure/repositories/event-read.repository'
+import { EventWriteRepository } from '@events/infrastructure/repositories/event-write.repository'
+import { EventsController } from '@events/presentation/controllers/events.controller'
+import { Module } from '@nestjs/common'
+import { CqrsModule } from '@nestjs/cqrs'
+import { DeleteEventHandler } from './application/commands/delete-event/delete-event.handler'
+import { UpdateEventHandler } from './application/commands/update-event/update-event.handler'
 
-// Controllers
-import { EventsController } from './presentation/controllers/events.controller';
-
-// Command Handlers
-import { CreateEventHandler } from './application/commands/create-event/create-event.handler';
-import { UpdateEventHandler } from './application/commands/update-event/update-event.handler';
-
-// Query Handlers
-import { GetEventsListHandler } from './application/queries/get-events-list/get-events-list.handler';
-import { GetEventDetailHandler } from './application/queries/get-event-detail/get-event-detail.handler';
-
-// Repositories
-import { EventWriteRepository } from './infrastructure/repositories/event-write.repository';
-import { EventReadRepository } from './infrastructure/repositories/event-read.repository';
-
-const CommandHandlers = [
-  CreateEventHandler,
-  UpdateEventHandler,
-];
-
-const QueryHandlers = [
-  GetEventsListHandler,
-  GetEventDetailHandler,
-];
-
-const Repositories = [
-  EventWriteRepository,
-  EventReadRepository,
-];
+const CommandHandlers = [CreateEventHandler, UpdateEventHandler, DeleteEventHandler]
+const QueryHandlers = [GetEventsListHandler, GetEventDetailHandler]
 
 @Module({
   imports: [CqrsModule],
@@ -46,98 +29,114 @@ const Repositories = [
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
-    ...Repositories,
+    { provide: EVENT_READ_REPOSITORY, useClass: EventReadRepository },
+    { provide: EVENT_WRITE_REPOSITORY, useClass: EventWriteRepository },
   ],
-  exports: [...Repositories],  // Export if other modules need them
+  exports: [EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY],
 })
 export class EventsModule {}
 ```
+
+**Key conventions:**
+- Handlers imported individually (no barrel for handlers), grouped as `const` arrays
+- Repository tokens imported via barrel: `from '@events/domain/ports'`
+- Repositories registered with `provide/useClass` using Symbol tokens
+- Exports use Symbol tokens (not concrete classes)
 
 ---
 
 ## Registration in app.module.ts
 
 ```typescript
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { PrismaModule } from './shared/infrastructure/prisma/prisma.module';
-
-// Feature modules
-import { EventsModule } from './modules/events/events.module';
-import { PhotosModule } from './modules/photos/photos.module';
-import { ProcessingModule } from './modules/processing/processing.module';
-import { StorageModule } from './modules/storage/storage.module';
+import * as path from 'node:path'
+import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common'
+import { ConfigModule } from '@nestjs/config'
+import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n'
+import { AppController } from './app.controller'
+import { AppService } from './app.service'
+import configuration from './config/configuration'
+import { validate } from './config/env.validation'
+import { EventsModule } from './modules/events/events.module'
+import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
+import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
 
 @Module({
   imports: [
-    // Global configuration
     ConfigModule.forRoot({
+      envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
+      validate,
+      load: [configuration],
       isGlobal: true,
-      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
-    
-    // Shared infrastructure
+    I18nModule.forRoot({
+      fallbackLanguage: 'en',
+      loaderOptions: {
+        path: path.join(__dirname, '/i18n/'),
+        watch: true,
+      },
+      resolvers: [{ use: QueryResolver, options: ['lang'] }, AcceptLanguageResolver],
+    }),
     PrismaModule,
-    
-    // Feature modules
     EventsModule,
-    PhotosModule,
-    ProcessingModule,
-    StorageModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestIdMiddleware).forRoutes('{*splat}')
+  }
+}
 ```
+
+**Key details:**
+- `ConfigModule.forRoot()` uses array `envFilePath` with `.env` fallback, plus `validate` and `load`
+- `I18nModule` provides bilingual support (en/es) for Swagger and API responses
+- `RequestIdMiddleware` applied globally via `NestModule.configure()`
+- Only implemented feature modules are imported (currently `EventsModule`)
 
 ---
 
-## Module with External Dependencies
+## Module with External Dependencies ⚠️
 
-When module depends on external services (adapters):
+> **Not yet implemented.** Pattern for when modules depend on external services (adapters).
 
 ```typescript
-import { Module } from '@nestjs/common';
-import { CqrsModule } from '@nestjs/cqrs';
-import { HttpModule } from '@nestjs/axios';
-
-// Adapters
-import { RoboflowAdapter } from './infrastructure/adapters/roboflow.adapter';
-import { GoogleVisionAdapter } from './infrastructure/adapters/google-vision.adapter';
-
-// ... handlers, repositories
+import { Module } from '@nestjs/common'
+import { CqrsModule } from '@nestjs/cqrs'
+import { HttpModule } from '@nestjs/axios'
 
 const Adapters = [
   RoboflowAdapter,
   GoogleVisionAdapter,
-];
+]
 
 @Module({
   imports: [
     CqrsModule,
-    HttpModule,  // For HTTP calls to external services
+    HttpModule,
   ],
-  controllers: [ProcessingController],
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
-    ...Repositories,
+    { provide: SOME_READ_REPOSITORY, useClass: SomeReadRepository },
     ...Adapters,
   ],
-  exports: [...Adapters],  // If other modules need adapters
+  exports: [...Adapters],
 })
 export class ProcessingModule {}
 ```
 
 ---
 
-## Module with BullMQ Processors
+## Module with BullMQ Processors ⚠️
+
+> **Not yet implemented.** Pattern for queue-based processing modules.
 
 ```typescript
-import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
-import { CqrsModule } from '@nestjs/cqrs';
-
-import { PhotoProcessingProcessor } from './infrastructure/processors/photo-processing.processor';
+import { Module } from '@nestjs/common'
+import { BullModule } from '@nestjs/bullmq'
+import { CqrsModule } from '@nestjs/cqrs'
 
 @Module({
   imports: [
@@ -148,7 +147,7 @@ import { PhotoProcessingProcessor } from './infrastructure/processors/photo-proc
   ],
   providers: [
     ...CommandHandlers,
-    ...Repositories,
+    { provide: SOME_READ_REPOSITORY, useClass: SomeReadRepository },
     PhotoProcessingProcessor,
   ],
 })
@@ -165,7 +164,7 @@ When module A needs something from module B:
 // events.module.ts
 @Module({
   // ...
-  exports: [EventWriteRepository],  // Export what others need
+  exports: [EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY],  // Export Symbol tokens
 })
 export class EventsModule {}
 
@@ -175,7 +174,7 @@ export class EventsModule {}
     CqrsModule,
     EventsModule,  // Import the module
   ],
-  // Now PhotosModule can inject EventWriteRepository
+  // Now PhotosModule can inject EVENT_WRITE_REPOSITORY
 })
 export class PhotosModule {}
 ```
@@ -190,8 +189,8 @@ For truly shared infrastructure:
 
 ```typescript
 // shared/infrastructure/prisma/prisma.module.ts
-import { Global, Module } from '@nestjs/common';
-import { PrismaService } from './prisma.service';
+import { Global, Module } from '@nestjs/common'
+import { PrismaService } from './prisma.service'
 
 @Global()  // Makes it available everywhere without importing
 @Module({
@@ -203,14 +202,16 @@ export class PrismaModule {}
 
 ---
 
-## Dynamic Module (with config)
+## Dynamic Module (with config) ⚠️
+
+> **Not yet implemented.** Pattern for modules that need runtime configuration.
 
 ```typescript
-import { DynamicModule, Module } from '@nestjs/common';
+import { type DynamicModule, Module } from '@nestjs/common'
 
 interface StorageModuleOptions {
-  bucketName: string;
-  region: string;
+  bucketName: string
+  region: string
 }
 
 @Module({})
@@ -226,7 +227,7 @@ export class StorageModule {
         StorageService,
       ],
       exports: [StorageService],
-    };
+    }
   }
 }
 
@@ -245,9 +246,10 @@ StorageModule.forRoot({
 - [ ] Create `{module}.module.ts`
 - [ ] Import `CqrsModule`
 - [ ] Group handlers in arrays (CommandHandlers, QueryHandlers)
-- [ ] Group repositories in array
+- [ ] Register repositories with Symbol token `provide/useClass`
 - [ ] Register controller(s)
-- [ ] Export repositories/adapters if needed by other modules
+- [ ] Export repository tokens if needed by other modules
+- [ ] Use barrel alias imports (`@events/...`, `@shared/...`) for module internals
 - [ ] Register module in `app.module.ts`
 - [ ] Verify circular dependencies don't exist
 
@@ -281,10 +283,10 @@ export class SomeModule {}
 })
 ```
 
-✅ **Export only what's needed:**
+✅ **Export only what's needed (Symbol tokens):**
 ```typescript
 @Module({
-  exports: [EventWriteRepository],  // GOOD: Specific exports
+  exports: [EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY],  // GOOD: Token exports
 })
 ```
 

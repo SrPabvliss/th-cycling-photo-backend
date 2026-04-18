@@ -1,209 +1,121 @@
 # WebSockets Setup
 
+> Updated: Sprint 6 planning (March 2026).
+> Two WebSocket use cases exist in this project: notifications (Sprint 6) and processing progress (Sprint 9).
+
 ## Overview
 
-WebSockets provide real-time progress updates during photo processing.
+WebSockets use Socket.io 4.x via `@nestjs/platform-socket.io`. Two separate gateways serve different purposes:
 
-## File Structure
+1. **NotificationsGateway** (Sprint 6) — commercial flow events pushed to admin users
+2. **ProgressGateway** (Sprint 9) — real-time photo processing progress
+
+## 1. Notifications Gateway (Sprint 6 — Commercial Flow)
+
+### Architecture
 
 ```
-src/shared/websockets/
-├── progress.gateway.ts
-└── websockets.module.ts
+src/shared/notifications/
+├── notifications.gateway.ts    # WebSocket gateway
+├── notifications.service.ts    # Injectable service for emitting events
+└── notifications.module.ts     # Global module
 ```
 
----
+### Namespace: `/notifications`
 
-## Gateway Template
+Authentication required — JWT validated in `handleConnection` lifecycle hook. Only admin users receive notifications. Unauthenticated connections are rejected immediately.
+
+### Events
+
+| Event | Trigger | Payload |
+|-------|---------|---------|
+| `preview:viewed` | Client opens preview link (first time) | `{ previewLinkId, eventName, photoCount, viewedAt }` |
+| `order:created` | Client submits order from preview | `{ orderId, eventName, customerName, photoCount, createdAt }` |
+| `order:paid` | Admin confirms payment | `{ orderId, eventName, customerName, confirmedBy, paidAt }` |
+
+### Usage from Other Modules
+
+Other modules inject `NotificationsService` and call `emit(event, payload)`:
 
 ```typescript
-// shared/websockets/progress.gateway.ts
-import {
-  WebSocketGateway,
-  WebSocketServer,
-  SubscribeMessage,
-  MessageBody,
-  ConnectedSocket,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
-
-@WebSocketGateway({
-  cors: {
-    origin: '*', // Configure properly for production
-  },
-  namespace: '/progress',
-})
-export class ProgressGateway {
-  private readonly logger = new Logger(ProgressGateway.name);
-
-  @WebSocketServer()
-  server: Server;
-
-  // Client subscribes to event progress
-  @SubscribeMessage('subscribe:event')
-  handleSubscribeEvent(
-    @MessageBody() data: { eventId: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const room = `event:${data.eventId}`;
-    client.join(room);
-    this.logger.log(`Client ${client.id} subscribed to ${room}`);
-    return { success: true, room };
-  }
-
-  // Client unsubscribes from event
-  @SubscribeMessage('unsubscribe:event')
-  handleUnsubscribeEvent(
-    @MessageBody() data: { eventId: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const room = `event:${data.eventId}`;
-    client.leave(room);
-    return { success: true };
-  }
-
-  // ─────────────────────────────────────────────
-  // Methods called by processors/services
-  // ─────────────────────────────────────────────
-
-  emitPhotoProgress(eventId: string, data: PhotoProgressPayload) {
-    this.server.to(`event:${eventId}`).emit('photo:progress', data);
-  }
-
-  emitPhotoCompleted(eventId: string, data: PhotoCompletedPayload) {
-    this.server.to(`event:${eventId}`).emit('photo:completed', data);
-  }
-
-  emitPhotoFailed(eventId: string, data: PhotoFailedPayload) {
-    this.server.to(`event:${eventId}`).emit('photo:failed', data);
-  }
-
-  emitEventProgress(eventId: string, data: EventProgressPayload) {
-    this.server.to(`event:${eventId}`).emit('event:progress', data);
-  }
-
-  emitEventCompleted(eventId: string, data: EventCompletedPayload) {
-    this.server.to(`event:${eventId}`).emit('event:completed', data);
-  }
-}
-
-// ─────────────────────────────────────────────
-// Payload types
-// ─────────────────────────────────────────────
-
-interface PhotoProgressPayload {
-  photoId: string;
-  progress: number;
-  stage: 'detection' | 'ocr' | 'color';
-  requestId: string;
-}
-
-interface PhotoCompletedPayload {
-  photoId: string;
-  plateNumber: number | null;
-  confidence: number;
-  requestId: string;
-}
-
-interface PhotoFailedPayload {
-  photoId: string;
-  error: string;
-  requestId: string;
-}
-
-interface EventProgressPayload {
-  eventId: string;
-  processedPhotos: number;
-  totalPhotos: number;
-  requestId: string;
-}
-
-interface EventCompletedPayload {
-  eventId: string;
-  summary: {
-    total: number;
-    succeeded: number;
-    failed: number;
-  };
-  requestId: string;
-}
+// In PreviewLinks handler:
+this.notificationsService.emit('preview:viewed', {
+  previewLinkId: preview.id,
+  eventName: event.name,
+  photoCount: preview.photos.length,
+  viewedAt: new Date(),
+});
 ```
 
----
-
-## Module Setup
+### Authentication Pattern
 
 ```typescript
-// shared/websockets/websockets.module.ts
-import { Module, Global } from '@nestjs/common';
-import { ProgressGateway } from './progress.gateway';
-
-@Global()
-@Module({
-  providers: [ProgressGateway],
-  exports: [ProgressGateway],
-})
-export class WebSocketsModule {}
-```
-
----
-
-## Usage from Processor
-
-```typescript
-// processing.processor.ts
-import { ProgressGateway } from '@/shared/websockets/progress.gateway';
-
-@Processor('photo-processing')
-export class PhotoProcessingProcessor extends WorkerHost {
-  constructor(private readonly progressGateway: ProgressGateway) {
-    super();
-  }
-
-  async process(job: Job<PhotoProcessingJobData>): Promise<void> {
-    const { photoId, eventId, requestId } = job.data;
-
-    // Emit progress during processing
-    this.progressGateway.emitPhotoProgress(eventId, {
-      photoId,
-      progress: 33,
-      stage: 'detection',
-      requestId,
-    });
-
-    // ... processing logic
-
-    // Emit completion
-    this.progressGateway.emitPhotoCompleted(eventId, {
-      photoId,
-      plateNumber: 127,
-      confidence: 0.94,
-      requestId,
-    });
+@WebSocketGateway({ namespace: '/notifications', cors: { origin: CORS_ORIGIN, credentials: true } })
+export class NotificationsGateway implements OnGatewayConnection {
+  async handleConnection(client: Socket) {
+    try {
+      const token = client.handshake.auth?.token;
+      const payload = this.jwtService.verify(token);
+      // Verify user is admin
+      // If not admin, disconnect
+    } catch {
+      client.disconnect(true);
+    }
   }
 }
 ```
 
----
+## 2. Progress Gateway (Sprint 9 — IA Processing) — PLANNED
 
-## Correlation ID Propagation
+> ⚠️ NOT YET IMPLEMENTED. This section documents the planned architecture.
 
-Always include `requestId` in WebSocket payloads for tracing:
+### Namespace: `/progress`
+
+Room-based — clients subscribe to specific event processing rooms.
+
+### Events (planned)
+
+| Event | Description |
+|-------|-------------|
+| `photo:progress` | Per-photo processing stage update (detection → OCR → color) |
+| `photo:completed` | Photo fully processed with results |
+| `photo:failed` | Photo processing failed |
+| `event:progress` | Aggregate progress (47/500 photos processed) |
+| `event:completed` | All photos in event processed |
+
+### Room Pattern
 
 ```
-HTTP Request (requestId: req_abc123)
-    ↓
-Controller → Queue Job
-    ↓
-BullMQ Worker (job.data.requestId: req_abc123)
-    ↓
-WebSocket Event (payload.requestId: req_abc123)
+Client subscribes to → room: `event:{eventId}`
+Server emits to → that room only
 ```
 
----
+## Dependencies
+
+```bash
+# Already in package.json for NestJS
+@nestjs/platform-socket.io
+@nestjs/websockets
+
+# Client (frontend)
+socket.io-client
+```
+
+## CORS Configuration
+
+WebSocket CORS must match the HTTP CORS origin. Both read from `CORS_ORIGIN` env variable. Credentials (cookies) must be enabled for JWT cookie forwarding if applicable.
+
+## Key Differences Between Gateways
+
+| Aspect | Notifications (Sprint 6) | Progress (Sprint 9) |
+|--------|-------------------------|---------------------|
+| Namespace | `/notifications` | `/progress` |
+| Auth | JWT required (admin only) | JWT required (any role) |
+| Rooms | No rooms (broadcast to all admins) | Room per event |
+| Direction | Server → admin clients only | Server → subscribed clients |
+| State | Stateless (no server-side state) | Tracks processing jobs |
 
 ## See Also
 
-- `infrastructure/bullmq-setup.md` - Job processing
-- `conventions/http-responses.md` - Request ID correlation
+- `project_docs/ADR-005-commercial-flow-model.md` — WebSocket events for commercial flow
+- `infrastructure/bullmq-setup.md` — Job processing (Sprint 9 will connect BullMQ → Progress Gateway)

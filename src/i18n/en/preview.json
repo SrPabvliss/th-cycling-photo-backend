@@ -1,0 +1,6 @@
+{
+  "not_active": "Preview link is not active",
+  "link_expired": "This preview link has expired",
+  "expires_in_days_invalid": "Expiration must be between 1 and 90 days",
+  "photos_not_in_event": "One or more photos do not belong to this event"
+}

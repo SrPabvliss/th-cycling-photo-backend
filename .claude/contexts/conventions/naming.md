@@ -39,7 +39,7 @@
 | DTO | `{Verb}{Noun}Dto` | `CreateEventDto` |
 | Projection | `{Noun}Projection` | `EventListProjection` |
 | Repository | `{Entity}{Write/Read}Repository` | `EventWriteRepository` |
-| Mapper | `{Entity}Mapper` | `EventMapper` |
+| Mapper (module) | `{Entity}Mapper` (imported as `* as`) | `EventMapper` |
 | Adapter | `{Service}Adapter` | `RoboflowAdapter` |
 | Controller | `{Plural}Controller` | `EventsController` |
 | Module | `{Name}Module` | `EventsModule` |
@@ -54,6 +54,8 @@
 |------|---------|---------|
 | Factory | `create()` | `Event.create(data)` |
 | Reconstitution | `fromPersistence()` | `Event.fromPersistence(data)` |
+| Partial update | `update()` | `event.update({ name, date })` |
+| Soft delete | `softDelete()` | `event.softDelete()` |
 | Guard | `can{Action}()` | `canUploadPhotos()` |
 | Mutation | `{verb}()` | `startProcessing()` |
 | Query | `is{State}()`, `has{Thing}()` | `isCompleted()`, `hasPhotos()` |
@@ -64,7 +66,8 @@
 |------|---------|---------|
 | Create/Update | `save()` | `save(entity)` |
 | Find one | `findById()` | `findById(id)` |
-| Find many | `get{Noun}List()` | `getEventsList(filters)` |
+| Find many | `get{Noun}List()` | `getEventsList(pagination)` |
+| Find detail | `get{Noun}Detail()` | `getEventDetail(id)` |
 | Delete | `delete()` | `delete(id)` |
 
 ### Mapper Methods
@@ -95,7 +98,7 @@ const projection = EventMapper.toListProjection(record);
 // Primitives - descriptive names
 const eventId = command.eventId;
 const totalPhotos = event.totalPhotos;
-const isProcessing = event.status === 'PROCESSING';
+const isProcessing = event.status === 'processing';
 ```
 
 ---
@@ -107,8 +110,9 @@ const isProcessing = event.status === 'PROCESSING';
 | Table | snake_case, plural | `events`, `detected_cyclists` |
 | Column | snake_case | `plate_number`, `created_at` |
 | Foreign key | `{table}_id` | `event_id`, `photo_id` |
-| Index | `idx_{table}_{columns}` | `idx_photos_event_id` |
-| Unique | `uq_{table}_{columns}` | `uq_users_email` |
+| Index | `@@index([column])` (unnamed by default) | `@@index([status])` |
+| Named index | `map: "idx_{table}_{description}"` | `map: "idx_photos_unclassified"` |
+| Unique | `map: "unique_{table}_{columns}"` | `map: "unique_event_filename"` |
 
 Prisma model uses PascalCase, mapped to snake_case:
 
@@ -133,16 +137,59 @@ src/
 │   ├── events/
 │   │   ├── domain/
 │   │   │   ├── entities/
-│   │   │   └── value-objects/
+│   │   │   ├── value-objects/
+│   │   │   └── ports/
 │   │   ├── application/
 │   │   │   ├── commands/
 │   │   │   │   └── create-event/
-│   │   │   └── queries/
-│   │   │       └── get-events-list/
-│   │   └── infrastructure/
-│   │       ├── repositories/
-│   │       └── mappers/
+│   │   │   ├── queries/
+│   │   │   │   └── get-events-list/
+│   │   │   └── projections/
+│   │   ├── infrastructure/
+│   │   │   ├── repositories/
+│   │   │   └── mappers/
+│   │   └── presentation/
+│   │       └── controllers/
 ```
+
+---
+
+## Symbol Token Naming
+
+DI tokens for Ports & Adapters use `UPPER_SNAKE_CASE` Symbols:
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Symbol token | `{ENTITY}_{WRITE/READ}_REPOSITORY` | `EVENT_WRITE_REPOSITORY` |
+| Interface | `I{Entity}{Write/Read}Repository` | `IEventWriteRepository` |
+| Port file | `{entity}-{write/read}-repository.port.ts` | `event-write-repository.port.ts` |
+
+```typescript
+// domain/ports/event-write-repository.port.ts
+export interface IEventWriteRepository {
+  save(event: Event): Promise<Event>
+  delete(id: string): Promise<void>
+}
+
+export const EVENT_WRITE_REPOSITORY = Symbol('EVENT_WRITE_REPOSITORY')
+```
+
+The Symbol and interface are **co-located in the same port file**.
+
+---
+
+## Import Rules: `import` vs `import type`
+
+| Import Target | Use `import` | Use `import type` | Why |
+|---------------|-------------|-------------------|-----|
+| DTOs (`@Body()`, `@Query()`) | ✅ | ❌ | `emitDecoratorMetadata` needs class ref |
+| Projection classes (Swagger `type`) | ✅ | ❌ | Swagger needs class ref for `$ref` |
+| CommandBus, QueryBus | ✅ | ❌ | NestJS DI resolution |
+| Handler decorator interfaces (`ICommandHandler`) | ❌ | ✅ | Only used as type constraint |
+| Port interfaces (`IEventWriteRepository`) | ❌ | ✅ | Only used as type annotation |
+| Prisma namespace (`Prisma`) | ❌ | ✅ | Only used for type access |
+
+Biome `useImportType` is **OFF** in this project to prevent accidental type-only imports on classes needed at runtime.
 
 ---
 
@@ -150,3 +197,4 @@ src/
 
 - `structure/feature-sliced.md` - Folder structure
 - `conventions/git.md` - Commit message conventions
+- `patterns/repositories.md` - Port interface and Symbol token patterns

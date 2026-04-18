@@ -3,6 +3,7 @@
 ## Overview
 
 CQRS Light: Separate write (Commands) and read (Queries) paths without event sourcing.
+Handlers use **Ports & Adapters** with `@Inject()` and Symbol tokens.
 
 ## Command Flow
 
@@ -14,36 +15,44 @@ HTTP Request → DTO (validation) → Controller → Command → Handler → Ent
 
 ```
 application/commands/{feature}/
-├── {feature}.dto.ts          # HTTP validations
+├── {feature}.dto.ts          # HTTP validations + Swagger annotations
 ├── {feature}.command.ts      # Immutable transfer object
-└── {feature}.handler.ts      # Thin orchestration
+├── {feature}.handler.ts      # Thin orchestration
+└── {feature}.handler.spec.ts # Unit tests
 ```
 
 ### DTO Template
 
 ```typescript
-import { IsString, IsNotEmpty, IsDate, IsEnum, MinLength, MaxLength, IsOptional } from 'class-validator';
-import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { Type } from 'class-transformer'
+import { IsDate, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator'
 
 export class CreateEventDto {
+  @ApiProperty({ description: 'Name of the cycling event', example: 'Vuelta al Cotopaxi 2026' })
   @IsString()
   @IsNotEmpty()
-  @MinLength(5)
-  @MaxLength(100)
-  name: string;
+  @MinLength(3)
+  @MaxLength(200)
+  name: string
 
+  @ApiProperty({ description: 'Date when the event takes place', example: '2026-06-15T08:00:00.000Z' })
   @IsDate()
   @Type(() => Date)
-  date: Date;
+  date: Date
 
+  @ApiPropertyOptional({ description: 'Physical location or address of the event', example: 'Ambato, Ecuador' })
   @IsString()
   @IsOptional()
-  location?: string;
-
-  @IsEnum(['ROAD', 'MTB', 'BMX', 'TRACK'])
-  category: string;
+  location?: string
 }
 ```
+
+**DTO Rules:**
+- Always include `@ApiProperty` / `@ApiPropertyOptional` with `description` and `example` for Swagger
+- Use `import` (not `import type`) for DTOs used in `@Body()` / `@Query()` decorators
+  (required for `emitDecoratorMetadata` to emit type references)
+- Delete commands have no DTO — the `id` comes from the URL path parameter
 
 ### Command Template
 
@@ -53,218 +62,338 @@ export class CreateEventCommand {
     public readonly name: string,
     public readonly date: Date,
     public readonly location: string | null,
-    public readonly category: string,
   ) {}
 }
 ```
-
-**Rules:**
-- Immutable (readonly)
-- No logic or validations
-- Constructor with all params
-- Primitive types or VOs
 
 ### Command Handler Template
 
 ```typescript
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { CreateEventCommand } from './create-event.command';
-import { EventWriteRepository } from '@/modules/events/infrastructure/repositories/event-write.repository';
-import { Event } from '@/modules/events/domain/entities/event.entity';
+import { Event } from '@events/domain/entities'
+import { EVENT_WRITE_REPOSITORY, type IEventWriteRepository } from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import type { EntityIdProjection } from '@shared/application'
+import { CreateEventCommand } from './create-event.command'
 
 @CommandHandler(CreateEventCommand)
 export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
   constructor(
-    private readonly eventWriteRepository: EventWriteRepository,
+    @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
   ) {}
 
-  async execute(command: CreateEventCommand): Promise<{ id: string }> {
-    // 1. Create entity with factory method (business validations inside)
+  async execute(command: CreateEventCommand): Promise<EntityIdProjection> {
     const event = Event.create({
       name: command.name,
       date: command.date,
       location: command.location,
-      category: command.category,
-    });
-
-    // 2. Persist
-    const savedEvent = await this.eventWriteRepository.save(event);
-
-    // 3. Return only what's needed
-    return { id: savedEvent.id };
+    })
+    const saved = await this.writeRepo.save(event)
+    return { id: saved.id }
   }
 }
 ```
 
-**Handler Rules:**
-- Thin: <30 lines ideally
-- Orchestration only
-- Delegate complex logic to Domain Services
-- NO validations (already in Entity)
-- Transactions if multi-step
+### Update Handler (needs both repos)
 
-**Return Values:**
-- Simple results (1-2 properties): Return inline object `{ id: string }`
-- Complex results (3+ properties): Use a Projection class
+```typescript
+import {
+  EVENT_READ_REPOSITORY,
+  EVENT_WRITE_REPOSITORY,
+  type IEventReadRepository,
+  type IEventWriteRepository,
+} from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import type { EntityIdProjection } from '@shared/application'
+import { AppException } from '@shared/domain'
+import { UpdateEventCommand } from './update-event.command'
+
+@CommandHandler(UpdateEventCommand)
+export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
+  constructor(
+    @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
+    @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
+  ) {}
+
+  async execute(command: UpdateEventCommand): Promise<EntityIdProjection> {
+    const event = await this.readRepo.findById(command.id)
+    if (!event) throw AppException.notFound('Event', command.id)
+
+    event.update({
+      name: command.name,
+      date: command.date,
+      location: command.location,
+    })
+
+    await this.writeRepo.save(event)
+
+    return { id: event.id }
+  }
+}
+```
+
+### Delete Handler
+
+Delete handler verifies the event exists via `readRepo.findById()`, then calls `writeRepo.delete(id)` which performs a **soft delete** in infrastructure (sets `deleted_at` timestamp). No DTO — the `id` comes from the URL path.
+
+```typescript
+import {
+  EVENT_READ_REPOSITORY,
+  EVENT_WRITE_REPOSITORY,
+  type IEventReadRepository,
+  type IEventWriteRepository,
+} from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import type { EntityIdProjection } from '@shared/application'
+import { AppException } from '@shared/domain'
+import { DeleteEventCommand } from './delete-event.command'
+
+@CommandHandler(DeleteEventCommand)
+export class DeleteEventHandler implements ICommandHandler<DeleteEventCommand> {
+  constructor(
+    @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
+    @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
+  ) {}
+
+  async execute(command: DeleteEventCommand): Promise<EntityIdProjection> {
+    const event = await this.readRepo.findById(command.id)
+    if (!event) throw AppException.notFound('Event', command.id)
+
+    await this.writeRepo.delete(command.id)
+
+    return { id: command.id }
+  }
+}
+```
+
+**Delete Command** is minimal — only the `id`:
+
+```typescript
+export class DeleteEventCommand {
+  constructor(public readonly id: string) {}
+}
+```
+
+**Handler Rules:**
+- Use `@Inject(TOKEN)` with Symbol tokens (Ports & Adapters)
+- Types are **interfaces** (IEventWriteRepository), not concrete classes
+- Create: only WriteRepository needed
+- Update/Delete: inject both ReadRepository (for `findById`) and WriteRepository
+- Delete handler calls `writeRepo.delete(id)` — soft delete is in infrastructure
+- Return `EntityIdProjection` from `@shared/application`
+- Guard clauses can be one-liners: `if (!event) throw AppException.notFound(...)`
+- Thin: <30 lines ideally
 
 ---
 
 ## Query Flow
 
 ```
-HTTP Request → Query Params DTO → Controller → Query → Handler → Read Repository → Projection → Response
+HTTP Request → Query Params DTO → Controller → Query → Handler → Read Repository → Projection
 ```
 
 ### File Structure
 
 ```
 application/queries/{feature}/
-├── {feature}.dto.ts          # Query params
-├── {feature}.query.ts        # Immutable object
+├── {feature}.dto.ts          # Query params + Swagger
+├── {feature}.query.ts        # Immutable object (uses Pagination composition)
 └── {feature}.handler.ts      # Thin
 
 application/projections/
-└── {feature}.projection.ts   # Output DTO
+├── {feature}-list.projection.ts
+└── {feature}-detail.projection.ts
 ```
 
-### Query Template
+### Pagination (Composition Pattern)
 
 ```typescript
-export class GetEventsListQuery {
+// shared/application/pagination.ts
+export class Pagination {
   constructor(
-    public readonly status?: string,
-    public readonly dateFrom?: Date,
-    public readonly dateTo?: Date,
-    public readonly search?: string,
-    public readonly page: number = 1,
-    public readonly limit: number = 20,
+    public readonly page: number,
+    public readonly limit: number,
   ) {}
+
+  get skip(): number { return (this.page - 1) * this.limit }
+  get take(): number { return this.limit }
 }
 ```
 
-### Query Handler Template
+### Query Template (with Pagination)
 
 ```typescript
-import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
-import { GetEventsListQuery } from './get-events-list.query';
-import { EventReadRepository } from '@/modules/events/infrastructure/repositories/event-read.repository';
-import { EventListProjection } from '@/modules/events/application/projections/event-list.projection';
+import type { Pagination } from '@shared/application'
+
+export class GetEventsListQuery {
+  constructor(public readonly pagination: Pagination) {}
+}
+```
+
+### Query Handler Template (List)
+
+```typescript
+import { EventListProjection } from '@events/application/projections'
+import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
+import { GetEventsListQuery } from './get-events-list.query'
 
 @QueryHandler(GetEventsListQuery)
 export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
-  constructor(
-    private readonly eventReadRepository: EventReadRepository,
-  ) {}
+  constructor(@Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository) {}
 
   async execute(query: GetEventsListQuery): Promise<EventListProjection[]> {
-    return this.eventReadRepository.getEventsList({
-      status: query.status,
-      dateFrom: query.dateFrom,
-      dateTo: query.dateTo,
-      search: query.search,
-      page: query.page,
-      limit: query.limit,
-    });
+    return this.readRepo.getEventsList(query.pagination)
   }
 }
 ```
 
-**Rules:**
-- Even simpler than Command Handler
-- Repository returns Projection directly
-- NO complex transformations here
+### Query Handler Template (Detail with notFound)
+
+Detail queries throw `AppException.notFound()` if the projection is `null`:
+
+```typescript
+import { EventDetailProjection } from '@events/application/projections'
+import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
+import { AppException } from '@shared/domain'
+import { GetEventDetailQuery } from './get-event-detail.query'
+
+@QueryHandler(GetEventDetailQuery)
+export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery> {
+  constructor(@Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository) {}
+
+  async execute(query: GetEventDetailQuery): Promise<EventDetailProjection> {
+    const event = await this.readRepo.getEventDetail(query.id)
+    if (!event) throw AppException.notFound('Event', query.id)
+
+    return event
+  }
+}
+```
 
 ### Projection Template
 
 ```typescript
+/** Flat projection for event list items. */
 export class EventListProjection {
-  id: string;
-  name: string;
-  date: Date;
-  location: string | null;
-  status: string;
-  totalPhotos: number;
-  processedPhotos: number;
+  /** Unique event identifier */
+  id: string
+  /** Event display name */
+  name: string
+  /** Event date */
+  date: Date
+  // ... JSDoc comments enable Swagger CLI plugin introspection
 }
 ```
 
-### When to Use Projections
+**Projection independence:** Each projection is a standalone class. `EventDetailProjection` duplicates fields from `EventListProjection` — it does NOT extend or inherit from it. This keeps projections independent and avoids coupling between list and detail views.
 
-| Return Complexity | Approach |
-|-------------------|----------|
-| 1-2 properties | Inline object: `{ id: string }` |
-| 3+ properties | Projection class |
-| List of items | Always Projection class |
+---
 
-**Critical:**
-- Only fields frontend needs
-- NO nested relations
-- Flat structure preferred
+## Shared Types
+
+### EntityIdProjection
+
+```typescript
+// shared/application/projections/entity-id.projection.ts
+export class EntityIdProjection {
+  /** Entity UUID */
+  id: string
+}
+```
+
+Used by all command handlers that return `{ id }`. JSDoc comments are read by the Swagger CLI plugin (`introspectComments: true`) — no `@ApiProperty` needed.
+
+---
+
+## Module Registration (Handlers)
+
+Handlers are imported individually (no barrel files) and grouped as `const` locals:
+
+```typescript
+// events.module.ts
+const CommandHandlers = [CreateEventHandler, DeleteEventHandler, UpdateEventHandler]
+const QueryHandlers = [GetEventDetailHandler, GetEventsListHandler]
+
+@Module({
+  imports: [CqrsModule],
+  controllers: [EventsController],
+  providers: [
+    ...CommandHandlers,
+    ...QueryHandlers,
+    { provide: EVENT_READ_REPOSITORY, useClass: EventReadRepository },
+    { provide: EVENT_WRITE_REPOSITORY, useClass: EventWriteRepository },
+  ],
+  exports: [EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY],
+})
+export class EventsModule {}
+```
+
+**Key conventions:**
+- Each handler imported individually — no barrel for handlers
+- Grouped as `const CommandHandlers` / `const QueryHandlers` for readability
+- Spread into `providers` array
+- Repository tokens and interfaces imported via barrel: `from '@events/domain/ports'`
+- Repository tokens registered via `provide/useClass`
 
 ---
 
 ## Anti-Patterns
 
+❌ **Direct class injection (no interface):**
+```typescript
+constructor(private readonly writeRepo: EventWriteRepository) {}
+```
+
 ❌ **Business logic in handler:**
 ```typescript
 async execute(command: CreateEventCommand) {
-  // BAD: Validations in handler
-  if (command.date < new Date()) {
-    throw new Error('Invalid date');
-  }
+  if (command.date < new Date()) throw new Error('Invalid date')
   // Should be in Entity.create()
 }
 ```
 
-❌ **Query returning full Entity:**
+❌ **Inline pagination in query:**
 ```typescript
-// BAD: Overfetching
-return this.prisma.event.findMany({
-  include: {
-    photos: {
-      include: {
-        detected_cyclists: true
-      }
-    }
-  }
-});
-```
-
-❌ **Repository with business logic:**
-```typescript
-// BAD: Logic in repository
-async save(event: Event) {
-  if (event.status === 'COMPLETED') {
-    // Should be in Entity or Domain Service
-  }
+export class GetEventsListQuery {
+  constructor(
+    public readonly page: number,    // BAD: use Pagination composition
+    public readonly limit: number,
+  ) {}
 }
 ```
 
-✅ **Correct thin handler:**
+❌ **Missing Swagger on DTOs:**
 ```typescript
-async execute(command: CreateEventCommand) {
-  const event = Event.create(command); // Validations inside
-  return this.repository.save(event);
+export class CreateEventDto {
+  @IsString()
+  name: string  // BAD: needs @ApiProperty
 }
 ```
 
----
+✅ **Correct patterns:**
+```typescript
+// Token injection with interface
+@Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository
 
-## Naming Conventions
+// Pagination composition
+new GetEventsListQuery(new Pagination(dto.page ?? 1, dto.limit ?? 20))
 
-| Type | Format | Examples |
-|------|--------|----------|
-| Command | `{Verb}{Noun}Command` | `CreateEventCommand`, `UpdateEventStatusCommand` |
-| Query | `Get{Noun}Query` | `GetEventQuery`, `GetEventsListQuery` |
-| Handler | `{CommandOrQuery}Handler` | `CreateEventHandler`, `GetEventsListHandler` |
-| Projection | `{Noun}Projection` | `EventListProjection`, `PhotoDetailProjection` |
+// EntityIdProjection for command returns
+return { id: saved.id }
+```
 
 ---
 
 ## See Also
 
+- `patterns/repositories.md` - Ports & Adapters, mapper functions
 - `patterns/entities.md` - Factory methods and business validations
-- `patterns/repositories.md` - Write/Read repository separation and mappers
-- `patterns/controllers.md` - DTO to Command/Query conversion
+- `patterns/controllers.md` - DTO to Command/Query conversion + Swagger
+- `infrastructure/swagger-setup.md` - Swagger configuration
 - `conventions/error-handling.md` - AppException usage
-- `conventions/validations.md` - Validation by layer

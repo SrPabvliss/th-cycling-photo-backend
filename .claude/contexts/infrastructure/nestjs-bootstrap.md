@@ -8,30 +8,32 @@ Configuration of `main.ts` and global providers.
 
 ```typescript
 // src/main.ts
-import { NestFactory, Reflector } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AppModule } from './app.module';
-import { GlobalExceptionFilter } from './shared/infrastructure/filters/global-exception.filter';
-import { ResponseInterceptor } from './shared/infrastructure/interceptors/response.interceptor';
+import { Logger, ValidationPipe } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { NestFactory, Reflector } from '@nestjs/core'
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+import { AppModule } from './app.module'
+import { GlobalExceptionFilter } from './shared/http/filters/global-exception.filter'
+import { ResponseInterceptor } from './shared/http/interceptors/response.interceptor'
+import {
+  loadSwaggerTranslations,
+  translateDocument,
+} from './shared/http/swagger/swagger-i18n.transformer'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const config = app.get(ConfigService);
-  const reflector = app.get(Reflector);
-  const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create(AppModule)
+  const configService = app.get(ConfigService)
+  const reflector = app.get(Reflector)
+  const logger = new Logger('Bootstrap')
 
-  // Global prefix
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1')
 
-  // CORS
   app.enableCors({
-    origin: config.get('CORS_ORIGIN', '*'),
+    origin: configService.get('CORS_ORIGIN', '*'),
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: true,
-  });
+  })
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -41,20 +43,59 @@ async function bootstrap() {
         enableImplicitConversion: true,
       },
     }),
-  );
+  )
 
-  // Global filters and interceptors
-  app.useGlobalFilters(new GlobalExceptionFilter());
-  app.useGlobalInterceptors(new ResponseInterceptor(reflector));
+  app.useGlobalFilters(new GlobalExceptionFilter())
+  app.useGlobalInterceptors(new ResponseInterceptor(reflector))
 
-  const port = config.get('PORT', 3000);
-  await app.listen(port);
-  
-  logger.log(`Application running on port ${port}`);
+  const nodeEnv = configService.get<string>('nodeEnv')
+
+  if (nodeEnv !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Cycling Photo Classification API')
+      .setDescription(
+        'Automated cycling photography classification system using AI cloud services.',
+      )
+      .setVersion('0.1.0')
+      .build()
+
+    const documentEn = SwaggerModule.createDocument(app, swaggerConfig)
+
+    const esTranslations = loadSwaggerTranslations('es')
+    const documentEs = translateDocument(documentEn, esTranslations)
+
+    SwaggerModule.setup('api/docs/en', app, documentEn, {
+      jsonDocumentUrl: '/api/docs/en-json',
+      yamlDocumentUrl: '/api/docs/en-yaml',
+    })
+
+    SwaggerModule.setup('api/docs/es', app, documentEs, {
+      jsonDocumentUrl: '/api/docs/es-json',
+      yamlDocumentUrl: '/api/docs/es-yaml',
+    })
+
+    app
+      .getHttpAdapter()
+      .getInstance()
+      .get('/api/docs', (_req: unknown, res: { redirect: (url: string) => void }) =>
+        res.redirect('/api/docs/en'),
+      )
+
+    logger.log('Swagger UI: /api/docs/en (English) | /api/docs/es (Spanish)')
+  }
+
+  const port = configService.get<number>('port', 3000)
+
+  await app.listen(port)
+  logger.log(`Application running on port ${port} [${nodeEnv}]`)
 }
-
-bootstrap();
+bootstrap()
 ```
+
+**Key notes:**
+- `nodeEnv` and `port` come from `configuration.ts` loader (keys are `'nodeEnv'`, `'port'`), not raw env vars
+- Swagger is only enabled outside production
+- `SwaggerModule.setup()` includes `jsonDocumentUrl`/`yamlDocumentUrl` for JSON/YAML export endpoints
 
 ---
 
@@ -74,19 +115,18 @@ bootstrap();
 Custom decorator to define success messages per endpoint:
 
 ```typescript
-// shared/infrastructure/decorators/success-message.decorator.ts
-import { SetMetadata } from '@nestjs/common';
+// shared/http/decorators/success-message.decorator.ts
+import { SetMetadata } from '@nestjs/common'
 
-export const SUCCESS_MESSAGE_KEY = 'successMessage';
+export const SUCCESS_MESSAGE_KEY = 'successMessage'
 
-export const SuccessMessage = (messageKey: string) =>
-  SetMetadata(SUCCESS_MESSAGE_KEY, messageKey);
+export const SuccessMessage = (messageKey: string) => SetMetadata(SUCCESS_MESSAGE_KEY, messageKey)
 ```
 
 **Usage in controllers:**
 ```typescript
 @Post()
-@SuccessMessage('event.created')
+@SuccessMessage('success.CREATED')
 async create(@Body() dto: CreateEventDto) {
   // ...
 }
@@ -96,69 +136,47 @@ async create(@Body() dto: CreateEventDto) {
 
 ## Response Interceptor
 
-Uses `Reflector` to read `@SuccessMessage()` metadata:
+Uses `Reflector` to read `@SuccessMessage()` metadata and `I18nContext` to translate:
 
 ```typescript
-// shared/infrastructure/interceptors/response.interceptor.ts
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { Request } from 'express';
-import { SUCCESS_MESSAGE_KEY } from '../decorators/success-message.decorator';
-
-interface ApiResponse<T> {
-  data: T;
-  meta: {
-    requestId: string;
-    timestamp: string;
-    message: string | null;
-  };
-}
-
+// shared/http/interceptors/response.interceptor.ts
 @Injectable()
-export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>> {
+export class ResponseInterceptor<T> implements NestInterceptor<T, ApiSuccessResponse<T>> {
   constructor(private readonly reflector: Reflector) {}
 
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Observable<ApiResponse<T>> {
-    const request = context.switchToHttp().getRequest<Request>();
-    
-    // Get @SuccessMessage() value from handler metadata
-    const successMessageKey = this.reflector.get<string>(
-      SUCCESS_MESSAGE_KEY,
-      context.getHandler(),
-    );
+  intercept(context: ExecutionContext, next: CallHandler): Observable<ApiSuccessResponse<T>> {
+    const request = context.switchToHttp().getRequest<Request>()
+    const i18n = I18nContext.current()
+
+    const successMessageKey = this.reflector.get<string>(SUCCESS_MESSAGE_KEY, context.getHandler())
+
+    const translatedMessage =
+      successMessageKey && i18n ? String(i18n.t(successMessageKey)) : (successMessageKey ?? null)
 
     return next.handle().pipe(
       map((data) => ({
         data,
         meta: {
-          requestId: request['requestId'],
+          requestId: request.requestId,
           timestamp: new Date().toISOString(),
-          message: successMessageKey ?? null,  // TODO: i18n translation
+          message: translatedMessage,
         },
       })),
-    );
+    )
   }
 }
 ```
+
+> **Note:** Imports `ApiSuccessResponse<T>` from `shared/http/interfaces/api-response.interface.ts`. Uses `request.requestId` (typed via `express.d.ts`). Translates success messages via `nestjs-i18n`.
 
 **Response format:**
 ```json
 {
   "data": { "id": "uuid-here" },
   "meta": {
-    "requestId": "req_abc123",
+    "requestId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "timestamp": "2026-01-24T15:30:00Z",
-    "message": "event.created"
+    "message": "Event created successfully"
   }
 }
 ```
@@ -168,113 +186,74 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>
 ## Global Exception Filter
 
 ```typescript
-// shared/infrastructure/filters/global-exception.filter.ts
-import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  HttpStatus,
-  Logger,
-} from '@nestjs/common';
-import { Request, Response } from 'express';
-import { AppException } from '@/shared/domain/exceptions/app.exception';
-
+// shared/http/filters/global-exception.filter.ts
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(GlobalExceptionFilter.name);
+  private readonly logger = new Logger(GlobalExceptionFilter.name)
 
   catch(exception: unknown, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const request = ctx.getRequest<Request>();
-    const response = ctx.getResponse<Response>();
-    
-    const isDevelopment = process.env.NODE_ENV === 'development';
+    const ctx = host.switchToHttp()
+    const request = ctx.getRequest<Request>()
+    const response = ctx.getResponse<Response>()
+    const i18n = I18nContext.current(host)
 
-    const { status, body } = this.buildResponse(
-      exception,
-      request,
-      isDevelopment,
-    );
+    const isDevelopment = process.env.NODE_ENV === 'development'
+    const { status, body } = this.buildResponse(exception, request, isDevelopment, i18n)
 
     this.logger.error(
       `${request.method} ${request.url} - ${status}`,
       exception instanceof Error ? exception.stack : undefined,
-    );
+    )
 
-    response.status(status).json(body);
+    response.status(status).json(body)
   }
-
-  private buildResponse(
-    exception: unknown,
-    request: Request,
-    isDevelopment: boolean,
-  ) {
-    if (exception instanceof AppException) {
-      return {
-        status: exception.httpStatus,
-        body: {
-          error: {
-            code: exception.code,
-            message: exception.messageKey, // TODO: i18n translation
-            shouldThrow: exception.shouldThrow,
-            ...(isDevelopment && {
-              details: exception.context,
-              stack: exception.stack,
-            }),
-          },
-          meta: {
-            requestId: request['requestId'],
-            timestamp: new Date().toISOString(),
-            path: request.url,
-          },
-        },
-      };
-    }
-
-    // Unknown errors
-    return {
-      status: HttpStatus.INTERNAL_SERVER_ERROR,
-      body: {
-        error: {
-          code: 'INTERNAL',
-          message: 'An unexpected error occurred',
-          shouldThrow: false,
-          ...(isDevelopment && {
-            details: exception instanceof Error ? exception.message : exception,
-            stack: exception instanceof Error ? exception.stack : undefined,
-          }),
-        },
-        meta: {
-          requestId: request['requestId'],
-          timestamp: new Date().toISOString(),
-          path: request.url,
-        },
-      },
-    };
-  }
+  // ...
 }
 ```
+
+> **Note:** The full filter handles three branches: `AppException` (business/domain errors with i18n translation), `HttpException` (class-validator `BadRequestException` — extracts per-field validation errors via `extractValidationFields()`), and unknown errors (500). All messages are translated through `nestjs-i18n`. Uses typed `request.requestId` and returns `ApiErrorResponse` interface. See `conventions/error-handling.md` for full details.
 
 ---
 
 ## Request ID Middleware
 
 ```typescript
-// shared/infrastructure/middleware/request-id.middleware.ts
-import { Injectable, NestMiddleware } from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
-import { randomUUID } from 'crypto';
+// shared/http/middleware/request-id.middleware.ts
+import { randomUUID } from 'node:crypto'
+import { Injectable, type NestMiddleware } from '@nestjs/common'
+import type { NextFunction, Request, Response } from 'express'
 
 @Injectable()
 export class RequestIdMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
-    const requestId = (req.headers['x-request-id'] as string) || randomUUID();
-    req['requestId'] = requestId;
-    res.setHeader('X-Request-Id', requestId);
-    next();
+    const requestId = (req.headers['x-request-id'] as string) || randomUUID()
+    req.requestId = requestId
+    res.setHeader('X-Request-Id', requestId)
+    next()
   }
 }
 ```
+
+> **Note:** `req.requestId` is typed via `src/shared/http/interfaces/express.d.ts` which augments the Express `Request` interface.
+
+---
+
+## API Response Interfaces
+
+```typescript
+// shared/http/interfaces/api-response.interface.ts
+export interface ApiSuccessResponse<T = unknown> {
+  data: T
+  meta: ApiMeta
+}
+
+export interface ApiErrorResponse {
+  error: ApiErrorDetail
+  meta: ApiMeta
+}
+```
+
+These interfaces are used by `ResponseInterceptor` and `GlobalExceptionFilter` respectively for type-safe response formatting.
 
 ---
 
@@ -282,55 +261,73 @@ export class RequestIdMiddleware implements NestMiddleware {
 
 ```typescript
 // src/app.module.ts
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { RequestIdMiddleware } from './shared/infrastructure/middleware/request-id.middleware';
-
-// Shared
-import { PrismaModule } from './shared/infrastructure/prisma/prisma.module';
-import { WebSocketsModule } from './shared/websockets/websockets.module';
-
-// Features
-import { EventsModule } from './modules/events/events.module';
-import { PhotosModule } from './modules/photos/photos.module';
-import { ProcessingModule } from './modules/processing/processing.module';
-import { StorageModule } from './modules/storage/storage.module';
+import * as path from 'node:path'
+import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common'
+import { ConfigModule } from '@nestjs/config'
+import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n'
+import { AppController } from './app.controller'
+import { AppService } from './app.service'
+import configuration from './config/configuration'
+import { validate } from './config/env.validation'
+import { EventsModule } from './modules/events/events.module'
+import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
+import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({
+      envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
+      validate,
+      load: [configuration],
       isGlobal: true,
-      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+    }),
+    I18nModule.forRoot({
+      fallbackLanguage: 'en',
+      loaderOptions: {
+        path: path.join(__dirname, '/i18n/'),
+        watch: true,
+      },
+      resolvers: [{ use: QueryResolver, options: ['lang'] }, AcceptLanguageResolver],
     }),
     PrismaModule,
-    WebSocketsModule,
     EventsModule,
-    PhotosModule,
-    ProcessingModule,
-    StorageModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestIdMiddleware).forRoutes('*');
+    consumer.apply(RequestIdMiddleware).forRoutes('{*splat}')
   }
 }
 ```
+
+> **Note:** Additional feature modules (`PhotosModule`, `ProcessingModule`, `StorageModule`) will be added as they are implemented. `'{*splat}'` is the NestJS 11 wildcard route syntax.
 
 ---
 
 ## File Structure
 
 ```
-src/shared/infrastructure/
+src/shared/http/
 ├── decorators/
 │   └── success-message.decorator.ts
 ├── filters/
-│   └── global-exception.filter.ts
+│   ├── global-exception.filter.ts
+│   └── global-exception.filter.spec.ts
 ├── interceptors/
 │   └── response.interceptor.ts
-└── middleware/
-    └── request-id.middleware.ts
+├── interfaces/
+│   ├── api-response.interface.ts
+│   └── express.d.ts
+├── middleware/
+│   └── request-id.middleware.ts
+├── swagger/
+│   ├── api-envelope-response.decorator.ts
+│   ├── api-response.schema.ts
+│   ├── swagger-i18n.transformer.ts
+│   └── swagger-i18n.transformer.spec.ts
+└── index.ts                          # Barrel file
 ```
 
 ---
@@ -338,6 +335,6 @@ src/shared/infrastructure/
 ## See Also
 
 - `patterns/controllers.md` - @SuccessMessage usage
-- `conventions/http-responses.md` - Response envelope format
 - `conventions/error-handling.md` - AppException details
 - `infrastructure/env-config.md` - Environment setup
+- `infrastructure/swagger-setup.md` - Swagger configuration

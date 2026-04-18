@@ -1,0 +1,11 @@
+{
+  "not_pending": "La orden no está en estado pendiente",
+  "not_paid": "La orden no está en estado pagado",
+  "preview_not_available": "El enlace de vista previa no está disponible para ordenar",
+  "preview_expired": "El enlace de vista previa ha expirado",
+  "photos_not_in_preview": "Una o más fotos no son parte de esta vista previa",
+  "already_submitted": "Ya se ha enviado una orden para este enlace de vista previa",
+  "not_delivered": "La orden no tiene estado entregado",
+  "customer_profile_required": "Se requiere un perfil de cliente para realizar un pedido",
+  "photos_not_in_event": "Una o más fotos no pertenecen a este evento"
+}

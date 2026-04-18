@@ -1,0 +1,17 @@
+name: Deploy Preview
+
+on:
+  workflow_dispatch:
+
+# Placeholder workflow - will be configured when preview environment is ready.
+# Intended trigger: push to develop branch.
+
+jobs:
+  deploy-preview:
+    name: Deploy to Preview
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Placeholder
+        run: echo "Preview deployment not yet configured"

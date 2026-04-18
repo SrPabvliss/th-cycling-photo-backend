@@ -38,45 +38,18 @@ Read before writing tests:
 - `contexts/testing/integration-tests.md` - Repository tests with real DB
 - `contexts/infrastructure/jest-config.md` - Jest configuration
 
-## Test Types (MVP Scope)
+## Test Types & Complexity Criteria
 
-| Type | Purpose | File Pattern | When |
-|------|---------|--------------|------|
-| Unit | Complex logic | `*.spec.ts` | CC ≥ 5 |
-| Integration | Real DB flows | `*.integration.spec.ts` | Always for repos |
+> See `testing/test-guidelines.md` for CC thresholds, test type definitions, and what deserves unit tests.
 
-**E2E is OUT OF SCOPE** - Will be implemented with frontend later.
-
-## Complexity Criteria (Cyclomatic Complexity)
-
-| CC | Decision |
-|----|----------|
-| 1-2 | NO unit test needed |
-| 3-4 | Evaluate - only if important edge cases |
-| 5+ | Unit test REQUIRED |
-
-## What Deserves Unit Tests
-
-### Entities (if CC ≥ 5)
-- Factory method with multiple validations ✓
-- State machine transitions ✓
-- Complex business rules ✓
-
-### Handlers (if has logic)
-- Business rule orchestration ✓
-- Multiple repository calls ✓
-- Conditional flows ✓
-
-### What to Skip
-- `findById()` that just calls repository ✗
-- Simple property access ✗
-- Delegations without logic ✗
+**E2E is OUT OF SCOPE** — will be implemented with frontend later.
 
 ## Commands
 
 ```bash
 pnpm test                    # Unit tests
-pnpm test:integration        # Integration tests
+pnpm test:watch              # Watch mode
+pnpm test:cov                # With coverage
 pnpm test -- file.spec.ts    # Specific file
 ```
 

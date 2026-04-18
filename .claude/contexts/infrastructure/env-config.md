@@ -1,5 +1,7 @@
 # Environment Configuration
 
+> Updated: Sprint 5 (March 2026). See also: `project_docs/env-config.md` for the complete variable reference table.
+
 ## File Structure
 
 ```
@@ -12,36 +14,88 @@
 
 ---
 
-## .env.example
+## .env.example (current — Sprint 5)
 
 ```env
-# Application
+# App
 NODE_ENV=development
 PORT=3000
 
 # Database
-DATABASE_URL="postgresql://user:password@localhost:5432/cycling_photos_dev"
+DB_HOST=localhost
+DB_PORT=5498
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=cycling_photo_dev
+# DB_SSL_MODE=require  # Uncomment for cloud databases
 
-# Redis (BullMQ)
+# Backblaze B2
+B2_APPLICATION_KEY_ID=your_application_key_id
+B2_APPLICATION_KEY=your_application_key
+B2_BUCKET_ID=your_bucket_id
+B2_BUCKET_NAME=your_bucket_name
+B2_REGION=your_region
+
+# Cloudflare CDN
+CLOUDFLARE_CDN_URL=your_cdn_url
+
+# Voyage AI
+VOYAGE_API_KEY=your_voyage_api_key
+
+# Redis
 REDIS_HOST=localhost
-REDIS_PORT=6379
+REDIS_PORT=6394
 
-# Storage (Backblaze B2)
-B2_APPLICATION_KEY_ID=
-B2_APPLICATION_KEY=
-B2_BUCKET_NAME=
-B2_BUCKET_ID=
+# Auth
+JWT_SECRET=your_jwt_secret_change_me
+JWT_ACCESS_EXPIRATION_SECONDS=900
+JWT_REFRESH_EXPIRY_DAYS=30
+CORS_ORIGIN=http://localhost:5173
 
-# CDN (Cloudflare)
-CLOUDFLARE_ACCOUNT_ID=
-CLOUDFLARE_CDN_URL=
+# Seed
+ADMIN_SEED_EMAIL=admin@example.com
+ADMIN_SEED_PASSWORD=test123
+```
 
-# AI Services
-ROBOFLOW_API_KEY=
-ROBOFLOW_MODEL_ID=
-GOOGLE_VISION_CREDENTIALS=
-CLARIFAI_API_KEY=
-CLARIFAI_MODEL_ID=
+> **Note:** Database uses individual vars (`DB_HOST`, `DB_PORT`, etc.) instead of a single `DATABASE_URL`. The connection string is built at runtime by `src/config/configuration.ts`.
+
+---
+
+## Configuration Factory
+
+```typescript
+// src/config/configuration.ts
+export default () => {
+  const { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, DB_SSL_MODE } = process.env
+
+  let databaseUrl = `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
+  if (DB_SSL_MODE) {
+    databaseUrl += `?sslmode=${DB_SSL_MODE}`
+  }
+
+  return {
+    port: Number.parseInt(process.env.PORT || '3000', 10),
+    nodeEnv: process.env.NODE_ENV,
+    database: {
+      host: DB_HOST,
+      port: Number.parseInt(DB_PORT || '5432', 10),
+      user: DB_USER,
+      password: DB_PASSWORD,
+      name: DB_NAME,
+      sslMode: DB_SSL_MODE,
+      url: databaseUrl,
+    },
+  }
+}
+```
+
+This factory is loaded via `ConfigModule.forRoot({ load: [configuration] })`. Access values with dot notation:
+
+```typescript
+configService.get<number>('port')           // 3000
+configService.get<string>('nodeEnv')        // 'development'
+configService.get<string>('database.url')   // full connection string
+configService.get<string>('database.host')  // 'localhost'
 ```
 
 ---
@@ -50,19 +104,27 @@ CLARIFAI_MODEL_ID=
 
 ```typescript
 // app.module.ts
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import configuration from './config/configuration'
+import { validate } from './config/env.validation'
 
 @Module({
   imports: [
     ConfigModule.forRoot({
+      envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
+      validate,
+      load: [configuration],
       isGlobal: true,
-      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
   ],
 })
 export class AppModule {}
 ```
+
+**Key points:**
+- `envFilePath` is an **array** — first match wins, `.env` serves as fallback
+- `validate` runs environment validation on startup (see below)
+- `load: [configuration]` registers the factory for typed config access
+- `isGlobal: true` makes `ConfigService` available everywhere without importing `ConfigModule`
 
 ---
 
@@ -87,85 +149,112 @@ export class StorageService {
 | Method | Behavior |
 |--------|----------|
 | `get<T>(key)` | Returns value or undefined |
+| `get<T>(key, default)` | Returns value or default |
 | `getOrThrow<T>(key)` | Returns value or throws error |
 
 ---
 
-## Environment Validation (Optional)
+## Environment Validation
+
+Environment variables are validated on startup using `class-validator`. **When adding new env vars, add them here too:**
 
 ```typescript
-// config/env.validation.ts
-import { plainToInstance } from 'class-transformer';
-import { IsEnum, IsNumber, IsString, validateSync } from 'class-validator';
-
-enum Environment {
-  Development = 'development',
-  Test = 'test',
-  Preview = 'preview',
-  Production = 'production',
-}
-
-class EnvironmentVariables {
-  @IsEnum(Environment)
-  NODE_ENV: Environment;
+// src/config/env.validation.ts
+export class EnvironmentVariables {
+  // App
+  @IsEnum(['development', 'test', 'preview', 'production'])
+  NODE_ENV: string
 
   @IsNumber()
-  PORT: number;
+  @Min(1)
+  PORT: number
 
-  @IsString()
-  DATABASE_URL: string;
-
-  @IsString()
-  REDIS_HOST: string;
-
+  // Database
+  @IsString() @IsNotEmpty()
+  DB_HOST: string
   @IsNumber()
-  REDIS_PORT: number;
-}
+  DB_PORT: number
+  @IsString() @IsNotEmpty()
+  DB_USER: string
+  @IsString() @IsNotEmpty()
+  DB_PASSWORD: string
+  @IsString() @IsNotEmpty()
+  DB_NAME: string
+  @IsOptional() @IsString()
+  DB_SSL_MODE?: string
 
-export function validate(config: Record<string, unknown>) {
-  const validatedConfig = plainToInstance(EnvironmentVariables, config, {
-    enableImplicitConversion: true,
-  });
-  
-  const errors = validateSync(validatedConfig, {
-    skipMissingProperties: false,
-  });
+  // Backblaze B2
+  @IsString() @IsNotEmpty()
+  B2_APPLICATION_KEY_ID: string
+  @IsString() @IsNotEmpty()
+  B2_APPLICATION_KEY: string
+  @IsString() @IsNotEmpty()
+  B2_BUCKET_ID: string
+  @IsString() @IsNotEmpty()
+  B2_BUCKET_NAME: string
+  @IsString() @IsNotEmpty()
+  B2_REGION: string
 
-  if (errors.length > 0) {
-    throw new Error(errors.toString());
-  }
-  
-  return validatedConfig;
+  // Cloudflare
+  @IsString() @IsNotEmpty()
+  CLOUDFLARE_CDN_URL: string
+
+  // Voyage AI
+  @IsString() @IsNotEmpty()
+  VOYAGE_API_KEY: string
+
+  // Redis
+  @IsString() @IsNotEmpty()
+  REDIS_HOST: string
+  @IsNumber()
+  REDIS_PORT: number
+
+  // Auth
+  @IsString() @IsNotEmpty()
+  JWT_SECRET: string
+  @IsNumber()
+  JWT_ACCESS_EXPIRATION_SECONDS: number
+  @IsNumber()
+  JWT_REFRESH_EXPIRY_DAYS: number
+  @IsString() @IsNotEmpty()
+  CORS_ORIGIN: string
+
+  // Seed
+  @IsString() @IsNotEmpty()
+  ADMIN_SEED_EMAIL: string
+  @IsString() @IsNotEmpty()
+  ADMIN_SEED_PASSWORD: string
 }
 ```
 
-```typescript
-// app.module.ts
-ConfigModule.forRoot({
-  isGlobal: true,
-  validate,
-}),
-```
+If any required variable is missing or invalid, the app will **fail to start** with a descriptive error.
 
 ---
 
-## Environment-Specific Behavior
+## Docker Compose (Local Development)
 
-```typescript
-@Injectable()
-export class SomeService {
-  constructor(private readonly config: ConfigService) {}
+```yaml
+# docker-compose.yml
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5498:5432"    # Mapped to non-standard port
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cycling_photo_dev
 
-  private isDevelopment(): boolean {
-    return this.config.get('NODE_ENV') === 'development';
-  }
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6394:6379"    # Mapped to non-standard port
+    command: redis-server --appendonly yes
+```
 
-  async doSomething() {
-    if (this.isDevelopment()) {
-      // Development-only behavior
-    }
-  }
-}
+```bash
+pnpm docker:up     # Start PostgreSQL + Redis
+pnpm docker:down   # Stop services
 ```
 
 ---
@@ -182,5 +271,6 @@ export class SomeService {
 
 ## See Also
 
+- `project_docs/env-config.md` - Complete variable reference table
 - `infrastructure/nestjs-bootstrap.md` - Main app configuration
-- `structure/module-setup.md` - ConfigModule registration
+- `infrastructure/prisma-setup.md` - Database connection via adapter
