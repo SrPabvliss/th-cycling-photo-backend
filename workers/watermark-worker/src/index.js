@@ -10,6 +10,7 @@ const ASSET_PRESETS = {
 const INTERNAL_PRESETS = {
   thumb: { width: 400, quality: 80, fit: 'scale-down', format: 'auto' },
   workspace: { width: 1400, quality: 90, fit: 'scale-down', format: 'auto' },
+  embedding: { width: 1600, quality: 75, fit: 'scale-down', format: 'jpeg' },
 }
 
 // ─── HMAC helpers ──────────────────────────────────────────────────────────

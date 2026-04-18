@@ -30,12 +30,13 @@ describe('VoyageAIEmbeddingAdapter', () => {
       usage: { totalTokens: 42 },
     })
 
-    const result = await adapter.generateImageEmbedding('https://cdn.example.com/photo.jpg')
+    const base64 = 'data:image/jpeg;base64,/9j/4AAQ...'
+    const result = await adapter.generateImageEmbedding(base64)
 
     expect(result.embedding).toEqual(mockEmbedding)
     expect(result.totalTokens).toBe(42)
     expect(mockMultimodalEmbed).toHaveBeenCalledWith({
-      inputs: [{ content: [{ type: 'image_url', imageUrl: 'https://cdn.example.com/photo.jpg' }] }],
+      inputs: [{ content: [{ type: 'image_base64', imageBase64: base64 }] }],
       model: 'voyage-multimodal-3.5',
     })
   })
@@ -47,7 +48,7 @@ describe('VoyageAIEmbeddingAdapter', () => {
     })
 
     const error = await adapter
-      .generateImageEmbedding('https://cdn.example.com/photo.jpg')
+      .generateImageEmbedding('data:image/jpeg;base64,test')
       .catch((e) => e)
 
     expect(error).toBeInstanceOf(AppException)
@@ -58,7 +59,7 @@ describe('VoyageAIEmbeddingAdapter', () => {
     mockMultimodalEmbed.mockRejectedValueOnce(new Error('API rate limit exceeded'))
 
     const error = await adapter
-      .generateImageEmbedding('https://cdn.example.com/photo.jpg')
+      .generateImageEmbedding('data:image/jpeg;base64,test')
       .catch((e) => e)
 
     expect(error).toBeInstanceOf(AppException)

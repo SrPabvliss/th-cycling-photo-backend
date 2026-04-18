@@ -4,7 +4,7 @@ export interface EmbeddingResult {
 }
 
 export interface IEmbeddingAdapter {
-  generateImageEmbedding(imageUrl: string): Promise<EmbeddingResult>
+  generateImageEmbedding(imageBase64: string): Promise<EmbeddingResult>
 }
 
 export const EMBEDDING_ADAPTER = Symbol('EMBEDDING_ADAPTER')

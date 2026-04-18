@@ -34,9 +34,19 @@ export class EmbeddingGenerationProcessor extends WorkerHost {
         return
       }
 
-      // Use signed internal URL — no cdn-cgi/image exposure, no storageKey in URL
-      const imageUrl = this.cdn.internalUrl(photo.publicSlug)
-      const result = await this.embeddingAdapter.generateImageEmbedding(imageUrl)
+      // Download resized image (~200-400KB) from Worker via signed internal URL
+      const imageUrl = this.cdn.internalUrl(photo.publicSlug, 'embedding')
+      const response = await fetch(imageUrl)
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image from CDN: ${response.status} ${response.statusText}`)
+      }
+
+      // Convert to base64 data URL for Voyage AI
+      const buffer = Buffer.from(await response.arrayBuffer())
+      const base64 = `data:image/jpeg;base64,${buffer.toString('base64')}`
+
+      const result = await this.embeddingAdapter.generateImageEmbedding(base64)
 
       const vectorSql = `[${result.embedding.join(',')}]`
       await this.prisma.$executeRawUnsafe(

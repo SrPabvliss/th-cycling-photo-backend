@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
-export type InternalPreset = 'thumb' | 'workspace'
+export type InternalPreset = 'thumb' | 'workspace' | 'embedding'
 export type AssetPreset = 'cover-sm' | 'cover-lg'
 
 @Injectable()
