@@ -79,3 +79,5 @@ workers/qr-worker/.wrangler/
 workers/watermark-worker/node_modules/
 workers/watermark-worker/.wrangler/
 
+# load testing scripts
+stress-test/*.js

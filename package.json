@@ -30,7 +30,7 @@
     "start:dev": "NODE_ENV=development nest start --watch",
     "start:debug": "NODE_ENV=development nest start --debug --watch",
     "start:test": "NODE_ENV=test nest start",
-    "start:prod": "node -r tsconfig-paths/register dist/main",
+    "start:prod": "node -r tsconfig-paths/register dist/src/main",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
