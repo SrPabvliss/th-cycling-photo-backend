@@ -24,6 +24,7 @@ describe('GetPhotoDetailHandler', () => {
     eventSlug: 'test-event',
     imageUrl: 'https://cdn.test/internal/workspace/test-slug.jpg?token=mock',
     thumbnailUrl: 'https://cdn.test/internal/thumb/test-slug.jpg?token=mock',
+    retouchedImageUrl: null,
     retouchedFileSize: null,
     retouchedAt: null,
     classifiedAt: null,

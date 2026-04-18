@@ -27,6 +27,8 @@ export class PhotoDetailProjection {
   status: string
   /** Reason for classification failure, if any */
   unclassifiedReason: string | null
+  /** Pre-built signed URL for retouched version (null if not retouched) */
+  retouchedImageUrl: string | null
   /** Retouched file size in bytes */
   retouchedFileSize: number | null
   /** When the retouched version was uploaded */

@@ -12,8 +12,10 @@ import {
   PHOTO_READ_REPOSITORY,
   PHOTO_WRITE_REPOSITORY,
 } from '@photos/domain/ports'
+import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
+import { nanoid } from 'nanoid'
 import { ConfirmRetouchedUploadCommand } from './confirm-retouched-upload.command'
 
 @CommandHandler(ConfirmRetouchedUploadCommand)
@@ -26,6 +28,7 @@ export class ConfirmRetouchedUploadHandler
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(PHOTO_WRITE_REPOSITORY) private readonly photoWriteRepo: IPhotoWriteRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
+    @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
     @Inject(ORDER_READ_REPOSITORY) private readonly orderReadRepo: IOrderReadRepository,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -39,6 +42,7 @@ export class ConfirmRetouchedUploadHandler
       throw AppException.businessRule('photo.invalid_object_key_prefix')
     }
 
+    // Clean up old retouched file and its KV slug
     if (photo.retouchedStorageKey) {
       try {
         await this.storage.delete(photo.retouchedStorageKey)
@@ -46,9 +50,29 @@ export class ConfirmRetouchedUploadHandler
         this.logger.warn(`Failed to delete old retouched file: ${photo.retouchedStorageKey}`, error)
       }
     }
+    if (photo.retouchedPublicSlug) {
+      this.kv.delete(photo.retouchedPublicSlug).catch((error) => {
+        this.logger.warn(
+          `Failed to delete old retouched KV slug: ${photo.retouchedPublicSlug}`,
+          error,
+        )
+      })
+    }
 
-    photo.setRetouched(command.objectKey, BigInt(command.fileSize), command.retouchedById)
+    // Generate slug and register in KV
+    const retouchedSlug = nanoid()
+    photo.setRetouched(
+      command.objectKey,
+      retouchedSlug,
+      BigInt(command.fileSize),
+      command.retouchedById,
+    )
     await this.photoWriteRepo.save(photo)
+
+    // Register slug → storage key in KV (fire-and-forget)
+    this.kv.write(retouchedSlug, command.objectKey).catch((err: unknown) => {
+      this.logger.error(`Failed to register retouched KV slug: ${retouchedSlug}`, err)
+    })
 
     const completedOrders = await this.orderReadRepo.findOrdersFullyRetouchedByPhoto(
       command.photoId,

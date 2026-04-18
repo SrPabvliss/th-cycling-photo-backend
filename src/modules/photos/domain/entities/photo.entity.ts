@@ -32,6 +32,7 @@ export class Photo {
     public readonly uploadedAt: Date,
     public processedAt: Date | null,
     public retouchedStorageKey: string | null,
+    public retouchedPublicSlug: string | null,
     public retouchedFileSize: bigint | null,
     public retouchedAt: Date | null,
     public retouchedById: string | null,
@@ -72,6 +73,7 @@ export class Photo {
       null,
       null,
       null,
+      null,
       data.photoCategoryId ?? null,
     )
   }
@@ -87,8 +89,14 @@ export class Photo {
     this.processedAt = new Date()
   }
 
-  setRetouched(storageKey: string, fileSize: bigint, retouchedById: string): void {
+  setRetouched(
+    storageKey: string,
+    publicSlug: string,
+    fileSize: bigint,
+    retouchedById: string,
+  ): void {
     this.retouchedStorageKey = storageKey
+    this.retouchedPublicSlug = publicSlug
     this.retouchedFileSize = fileSize
     this.retouchedAt = new Date()
     this.retouchedById = retouchedById
@@ -96,6 +104,7 @@ export class Photo {
 
   clearRetouched(): void {
     this.retouchedStorageKey = null
+    this.retouchedPublicSlug = null
     this.retouchedFileSize = null
     this.retouchedAt = null
     this.retouchedById = null
@@ -135,6 +144,7 @@ export class Photo {
     uploadedAt: Date
     processedAt: Date | null
     retouchedStorageKey: string | null
+    retouchedPublicSlug: string | null
     retouchedFileSize: bigint | null
     retouchedAt: Date | null
     retouchedById?: string | null
@@ -156,6 +166,7 @@ export class Photo {
       data.uploadedAt,
       data.processedAt,
       data.retouchedStorageKey,
+      data.retouchedPublicSlug,
       data.retouchedFileSize,
       data.retouchedAt,
       data.retouchedById ?? null,

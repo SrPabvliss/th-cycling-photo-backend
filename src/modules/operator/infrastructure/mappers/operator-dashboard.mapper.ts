@@ -8,7 +8,6 @@ import type {
 } from '../../application/projections'
 import type {
   AssignedEventRow,
-  ClassificationProgress,
   LastActionDate,
   RecentActivityRow,
   RetouchProgress,
@@ -16,37 +15,25 @@ import type {
 
 export function toActiveEventProjection(
   event: AssignedEventRow,
-  classification: ClassificationProgress,
   retouch: RetouchProgress,
   coverUrl: string | null,
 ): ActiveEventProjection {
-  const percentage =
-    classification.total > 0
-      ? Math.round((classification.classified / classification.total) * 100)
-      : 0
-
   return {
     eventId: event.eventId,
     name: event.name,
     date: formatDate(event.eventDate),
     location: event.location,
     coverUrl,
-    classification: {
-      total: classification.total,
-      classified: classification.classified,
-      percentage,
-    },
     retouch: {
       pendingOrders: retouch.pendingOrders,
       pendingPhotos: retouch.pendingPhotos,
     },
-    hasProgress: classification.classified > 0,
   }
 }
 
 export function toCompletedEventProjection(
   event: AssignedEventRow,
-  classifiedCount: number,
+  totalRetouched: number,
   completedAt: Date,
   coverUrl: string | null,
 ): CompletedEventProjection {
@@ -56,21 +43,16 @@ export function toCompletedEventProjection(
     location: event.location,
     date: formatDate(event.eventDate),
     coverUrl,
-    totalClassified: classifiedCount,
+    totalRetouched,
     completedAt: completedAt.toISOString(),
   }
 }
 
 export function toRecentActivityProjection(row: RecentActivityRow): RecentActivityProjection {
-  const descriptions: Record<RecentActivityRow['type'], string> = {
-    classification: `Classified photo in ${row.eventName}`,
-    retouch: `Retouched photo in ${row.eventName}`,
-  }
-
   return {
-    type: row.type,
+    type: 'retouch',
     eventName: row.eventName,
-    description: descriptions[row.type],
+    description: `Foto retocada en ${row.eventName}`,
     timestamp: row.timestamp.toISOString(),
   }
 }
@@ -80,10 +62,6 @@ export function toSummaryProjection(
 ): DashboardSummaryProjection {
   return {
     assignedEventsCount: activeEvents.length,
-    pendingPhotosCount: activeEvents.reduce(
-      (sum, event) => sum + (event.classification.total - event.classification.classified),
-      0,
-    ),
     pendingRetouchCount: activeEvents.reduce((sum, event) => sum + event.retouch.pendingPhotos, 0),
   }
 }
@@ -102,14 +80,13 @@ export function toDashboardProjection(
 }
 
 export function buildCoverUrl(publicSlug: string | null, cdn: CdnUrlBuilder): string | null {
-  return publicSlug ? cdn.assetUrl(publicSlug, 'cover-sm') : null
+  return publicSlug ? cdn.assetUrl(publicSlug, 'cover-lg') : null
 }
 
 export function resolveCompletedAt(actions: LastActionDate | undefined, fallback: Date): Date {
-  const dates = [actions?.lastClassifiedAt, actions?.lastRetouchedAt]
+  const dates = [actions?.lastRetouchedAt]
     .filter((d): d is Date => d != null)
     .map((d) => d.getTime())
-
   return dates.length > 0 ? new Date(Math.max(...dates)) : fallback
 }
 

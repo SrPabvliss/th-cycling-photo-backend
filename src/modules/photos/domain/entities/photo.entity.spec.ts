@@ -124,6 +124,7 @@ describe('Photo Entity', () => {
         processedAt: new Date('2026-01-15'),
         publicSlug: 'test-slug',
         retouchedStorageKey: null,
+        retouchedPublicSlug: null,
         retouchedFileSize: null,
         retouchedAt: null,
       })
@@ -153,6 +154,7 @@ describe('Photo Entity', () => {
         processedAt: new Date('2026-01-15'),
         publicSlug: 'test-slug',
         retouchedStorageKey: null,
+        retouchedPublicSlug: null,
         retouchedFileSize: null,
         retouchedAt: null,
       })

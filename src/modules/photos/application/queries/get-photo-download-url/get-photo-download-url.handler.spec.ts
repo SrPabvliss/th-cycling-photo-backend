@@ -31,6 +31,7 @@ describe('GetPhotoDownloadUrlHandler', () => {
       processedAt: new Date(),
       publicSlug: 'test-slug',
       retouchedStorageKey: withRetouched ? retouchedKey : null,
+      retouchedPublicSlug: withRetouched ? 'retouched-slug' : null,
       retouchedFileSize: withRetouched ? 3000n : null,
       retouchedAt: withRetouched ? new Date() : null,
     })

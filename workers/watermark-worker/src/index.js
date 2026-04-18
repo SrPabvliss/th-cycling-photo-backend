@@ -209,9 +209,37 @@ async function fetchWatermarked(slug, env) {
 
 const ROUTE_REGEX = /^\/(gallery|internal|assets)\/(?:([a-z0-9-]+)\/)?([a-zA-Z0-9_-]+)\.jpg$/
 
+/**
+ * Validates the Referer header to prevent hotlinking from unauthorized domains.
+ * Allows: direct browser access (no referer), same-domain, and allowed origins.
+ * ALLOWED_ORIGINS env var: comma-separated list (e.g., "http://localhost:5173,https://app.titantv.com.ec")
+ */
+function isAllowedReferer(request, env) {
+  const referer = request.headers.get('referer')
+  if (!referer) return true // Direct access (browser bar, curl) is OK
+
+  const allowedOrigins = (env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+  allowedOrigins.push(`https://${env.PUBLIC_DOMAIN}`) // Always allow CDN domain itself
+
+  try {
+    const refererOrigin = new URL(referer).origin
+    return allowedOrigins.some((allowed) => refererOrigin === allowed)
+  } catch {
+    return false
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
+
+    // Referer check — block hotlinking from unauthorized domains
+    if (!isAllowedReferer(request, env)) {
+      return new Response('Forbidden', { status: 403 })
+    }
 
     // Serve watermark PNG from KV
     if (url.pathname === '/gallery/_assets/watermark.png') {

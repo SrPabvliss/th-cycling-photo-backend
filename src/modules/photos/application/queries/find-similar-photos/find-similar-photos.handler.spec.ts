@@ -26,6 +26,7 @@ describe('FindSimilarPhotosHandler', () => {
     processedAt: null,
     publicSlug: 'test-slug',
     retouchedStorageKey: null,
+    retouchedPublicSlug: null,
     retouchedFileSize: null,
     retouchedAt: null,
   })

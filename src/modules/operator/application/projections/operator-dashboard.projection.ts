@@ -1,11 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
 
-export class ClassificationProgressProjection {
-  @ApiProperty() total: number
-  @ApiProperty() classified: number
-  @ApiProperty() percentage: number
-}
-
 export class RetouchProgressProjection {
   @ApiProperty() pendingOrders: number
   @ApiProperty() pendingPhotos: number
@@ -13,7 +7,6 @@ export class RetouchProgressProjection {
 
 export class DashboardSummaryProjection {
   @ApiProperty() assignedEventsCount: number
-  @ApiProperty() pendingPhotosCount: number
   @ApiProperty() pendingRetouchCount: number
 }
 
@@ -23,10 +16,7 @@ export class ActiveEventProjection {
   @ApiProperty() date: string
   @ApiProperty() location: string
   @ApiProperty({ nullable: true }) coverUrl: string | null
-  @ApiProperty({ type: ClassificationProgressProjection })
-  classification: ClassificationProgressProjection
   @ApiProperty({ type: RetouchProgressProjection }) retouch: RetouchProgressProjection
-  @ApiProperty() hasProgress: boolean
 }
 
 export class CompletedEventProjection {
@@ -35,12 +25,12 @@ export class CompletedEventProjection {
   @ApiProperty() location: string
   @ApiProperty() date: string
   @ApiProperty({ nullable: true }) coverUrl: string | null
-  @ApiProperty() totalClassified: number
+  @ApiProperty() totalRetouched: number
   @ApiProperty() completedAt: string
 }
 
 export class RecentActivityProjection {
-  @ApiProperty({ enum: ['classification', 'retouch'] }) type: 'classification' | 'retouch'
+  @ApiProperty({ enum: ['retouch'] }) type: 'retouch'
   @ApiProperty() eventName: string
   @ApiProperty() description: string
   @ApiProperty() timestamp: string

@@ -6,12 +6,6 @@ export interface AssignedEventRow {
   coverPublicSlug: string | null
 }
 
-export interface ClassificationProgress {
-  eventId: string
-  total: number
-  classified: number
-}
-
 export interface RetouchProgress {
   eventId: string
   pendingOrders: number
@@ -20,19 +14,18 @@ export interface RetouchProgress {
 
 export interface LastActionDate {
   eventId: string
-  lastClassifiedAt: Date | null
   lastRetouchedAt: Date | null
+  totalRetouched: number
 }
 
 export interface RecentActivityRow {
-  type: 'classification' | 'retouch'
+  type: 'retouch'
   eventName: string
   timestamp: Date
 }
 
 export interface IOperatorDashboardRepository {
   getAssignedEvents(operatorId: string): Promise<AssignedEventRow[]>
-  getClassificationProgress(eventIds: string[]): Promise<ClassificationProgress[]>
   getRetouchProgress(eventIds: string[]): Promise<RetouchProgress[]>
   getLastActionDates(eventIds: string[]): Promise<LastActionDate[]>
   getRecentActivity(operatorId: string, limit: number): Promise<RecentActivityRow[]>

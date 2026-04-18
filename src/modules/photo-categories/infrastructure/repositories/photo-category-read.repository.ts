@@ -32,7 +32,15 @@ export class PhotoCategoryReadRepository implements IPhotoCategoryReadRepository
       where: { event_id: eventId },
       select: {
         photo_category: {
-          select: PhotoCategoryMapper.photoCategorySelectConfig,
+          select: {
+            id: true,
+            name: true,
+            _count: {
+              select: {
+                photos: { where: { event_id: eventId } },
+              },
+            },
+          },
         },
       },
       orderBy: { photo_category: { name: 'asc' } },

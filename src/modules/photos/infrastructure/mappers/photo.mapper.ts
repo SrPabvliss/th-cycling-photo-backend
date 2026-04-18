@@ -37,6 +37,7 @@ export const photoDetailSelectConfig = {
   height: true,
   status: true,
   unclassified_reason: true,
+  retouched_public_slug: true,
   retouched_file_size: true,
   retouched_at: true,
   captured_at: true,
@@ -79,6 +80,7 @@ export function toPersistence(entity: Photo): Prisma.PhotoUncheckedCreateInput {
     status: entity.status,
     unclassified_reason: entity.unclassifiedReason,
     retouched_storage_key: entity.retouchedStorageKey,
+    retouched_public_slug: entity.retouchedPublicSlug,
     retouched_file_size: entity.retouchedFileSize,
     retouched_at: entity.retouchedAt,
     retouched_by_id: entity.retouchedById,
@@ -108,6 +110,7 @@ export function toEntity(record: PrismaPhoto): Photo {
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
     retouchedStorageKey: record.retouched_storage_key,
+    retouchedPublicSlug: record.retouched_public_slug,
     retouchedFileSize: record.retouched_file_size,
     retouchedAt: record.retouched_at,
     retouchedById: record.retouched_by_id,
@@ -149,6 +152,9 @@ export function toDetailProjection(
     height: record.height,
     status: record.status,
     unclassifiedReason: record.unclassified_reason,
+    retouchedImageUrl: record.retouched_public_slug
+      ? cdn.internalUrl(record.retouched_public_slug, 'workspace')
+      : null,
     retouchedFileSize: record.retouched_file_size ? Number(record.retouched_file_size) : null,
     retouchedAt: record.retouched_at,
     capturedAt: record.captured_at,

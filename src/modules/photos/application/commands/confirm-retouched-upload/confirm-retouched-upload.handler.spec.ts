@@ -1,6 +1,7 @@
 import type { IOrderReadRepository } from '@orders/domain/ports'
 import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository, IPhotoWriteRepository } from '@photos/domain/ports'
+import type { IKvStorageAdapter } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
 import { ConfirmRetouchedUploadCommand } from './confirm-retouched-upload.command'
@@ -12,6 +13,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
   let photoWriteRepo: jest.Mocked<IPhotoWriteRepository>
   let storageAdapter: jest.Mocked<IStorageAdapter>
   let orderReadRepo: jest.Mocked<Pick<IOrderReadRepository, 'findOrdersFullyRetouchedByPhoto'>>
+  let kvStorage: jest.Mocked<IKvStorageAdapter>
   let eventEmitter: { emit: jest.Mock }
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
@@ -33,6 +35,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
       processedAt: new Date(),
       publicSlug: 'test-slug',
       retouchedStorageKey: retouchedKey,
+      retouchedPublicSlug: 'retouched-slug',
       retouchedFileSize: retouchedKey ? 3000n : null,
       retouchedAt: retouchedKey ? new Date() : null,
     })
@@ -78,12 +81,18 @@ describe('ConfirmRetouchedUploadHandler', () => {
       findOrdersFullyRetouchedByPhoto: jest.fn().mockResolvedValue([]),
     } as jest.Mocked<Pick<IOrderReadRepository, 'findOrdersFullyRetouchedByPhoto'>>
 
+    kvStorage = {
+      write: jest.fn().mockResolvedValue(undefined),
+      writeBulk: jest.fn(),
+      delete: jest.fn().mockResolvedValue(undefined),
+    } as jest.Mocked<IKvStorageAdapter>
     eventEmitter = { emit: jest.fn() }
 
     handler = new ConfirmRetouchedUploadHandler(
       photoReadRepo,
       photoWriteRepo,
       storageAdapter,
+      kvStorage,
       orderReadRepo as unknown as jest.Mocked<IOrderReadRepository>,
       eventEmitter as any,
     )
