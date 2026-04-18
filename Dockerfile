@@ -61,9 +61,12 @@ COPY --from=build --chown=nestjs:nodejs /app/dist/src/i18n ./dist/src/i18n
 # Copy package.json (needed for prisma seed)
 COPY --from=build --chown=nestjs:nodejs /app/package.json ./
 
+# Copy entrypoint script
+COPY --from=build --chown=nestjs:nodejs /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+
 ENV NODE_ENV=production
 ENV PORT=3001
 
 EXPOSE 3001
 
-CMD ["node", "dist/src/main.js"]
+CMD ["sh", "scripts/docker-entrypoint.sh"]
