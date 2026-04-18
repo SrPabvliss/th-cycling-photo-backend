@@ -112,7 +112,6 @@ export class OrderReadRepository implements IOrderReadRepository {
               select: {
                 id: true,
                 filename: true,
-                storage_key: true,
                 public_slug: true,
                 retouched_storage_key: true,
               },

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 import type { RetouchQueueProjection } from '../../application/projections'
 import type { IOperatorRetouchRepository } from '../../domain/ports'
@@ -6,7 +7,10 @@ import * as RetouchMapper from '../mappers/retouch-queue.mapper'
 
 @Injectable()
 export class OperatorRetouchRepository implements IOperatorRetouchRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cdn: CdnUrlBuilder,
+  ) {}
 
   async getRetouchQueue(eventId: string): Promise<RetouchQueueProjection> {
     const orders = await this.prisma.order.findMany({
@@ -26,7 +30,6 @@ export class OperatorRetouchRepository implements IOperatorRetouchRepository {
             photo: {
               select: {
                 id: true,
-                storage_key: true,
                 public_slug: true,
                 retouched_storage_key: true,
               },
@@ -36,7 +39,7 @@ export class OperatorRetouchRepository implements IOperatorRetouchRepository {
       },
     })
 
-    return RetouchMapper.toRetouchQueueProjection(orders)
+    return RetouchMapper.toRetouchQueueProjection(orders, this.cdn)
   }
 
   async isOperatorAssigned(eventId: string, operatorId: string): Promise<boolean> {

@@ -1,3 +1,4 @@
+import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import type {
   RetouchQueueItemProjection,
   RetouchQueueOrderProjection,
@@ -14,23 +15,20 @@ interface OrderRecord {
 
 interface PhotoRecord {
   id: string
-  storage_key: string
   public_slug: string
   retouched_storage_key: string | null
 }
 
-function toItemProjection(photo: PhotoRecord): RetouchQueueItemProjection {
+function toItemProjection(photo: PhotoRecord, cdn: CdnUrlBuilder): RetouchQueueItemProjection {
   return {
     photoId: photo.id,
-    storageKey: photo.storage_key,
-    publicSlug: photo.public_slug,
+    thumbnailUrl: cdn.internalUrl(photo.public_slug, 'thumb'),
     isRetouched: photo.retouched_storage_key !== null,
-    retouchedStorageKey: photo.retouched_storage_key,
   }
 }
 
-function toOrderProjection(order: OrderRecord): RetouchQueueOrderProjection {
-  const items = order.items.map((item) => toItemProjection(item.photo))
+function toOrderProjection(order: OrderRecord, cdn: CdnUrlBuilder): RetouchQueueOrderProjection {
+  const items = order.items.map((item) => toItemProjection(item.photo, cdn))
   return {
     orderId: order.id,
     buyerName: [order.snap_first_name, order.snap_last_name].filter(Boolean).join(' '),
@@ -41,8 +39,11 @@ function toOrderProjection(order: OrderRecord): RetouchQueueOrderProjection {
   }
 }
 
-export function toRetouchQueueProjection(orders: OrderRecord[]): RetouchQueueProjection {
+export function toRetouchQueueProjection(
+  orders: OrderRecord[],
+  cdn: CdnUrlBuilder,
+): RetouchQueueProjection {
   return {
-    orders: orders.map(toOrderProjection),
+    orders: orders.map((o) => toOrderProjection(o, cdn)),
   }
 }

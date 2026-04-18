@@ -1,6 +1,7 @@
 import type {
   PhotoDetailProjection,
   PhotoListProjection,
+  PhotoViewProjection,
   SimilarPhotoProjection,
 } from '@photos/application/projections'
 import type { SearchPhotosFilters } from '@photos/application/queries'
@@ -32,6 +33,7 @@ export interface IPhotoReadRepository {
   countByIds(ids: string[]): Promise<number>
   countByIdsAndEvent(photoIds: string[], eventId: string): Promise<number>
   findSimilar(photoId: string, eventId: string, limit: number): Promise<SimilarPhotoProjection[]>
+  getPhotoViewBySlug(slug: string): Promise<PhotoViewProjection | null>
   countAll(): Promise<number>
   sumAllFileSize(): Promise<number>
 }

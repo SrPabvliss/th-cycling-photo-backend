@@ -67,18 +67,18 @@ export class EventsController {
     return this.queryBus.execute(new GetEventsStatsQuery())
   }
 
-  @Get(':id')
+  @Get(':slug')
   @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
-  @ApiOperation({ summary: 'Get event details by ID' })
-  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  @ApiOperation({ summary: 'Get event details by slug' })
+  @ApiParam({ name: 'slug', description: 'Event URL slug', example: 'vuelta-al-cotopaxi-2026' })
   @ApiEnvelopeResponse({
     status: 200,
     description: 'Event detail retrieved',
     type: EventDetailProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async findOne(@Param('id') id: string) {
-    const query = new GetEventDetailQuery(id)
+  async findOne(@Param('slug') slug: string) {
+    const query = new GetEventDetailQuery(slug)
     return this.queryBus.execute(query)
   }
 

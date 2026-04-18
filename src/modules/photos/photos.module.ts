@@ -12,6 +12,7 @@ import { GetDownloadManifestHandler } from '@photos/application/queries/get-down
 import { GetPendingRetouchHandler } from '@photos/application/queries/get-pending-retouch/get-pending-retouch.handler'
 import { GetPhotoDetailHandler } from '@photos/application/queries/get-photo-detail/get-photo-detail.handler'
 import { GetPhotoDownloadUrlHandler } from '@photos/application/queries/get-photo-download-url/get-photo-download-url.handler'
+import { GetPhotoViewHandler } from '@photos/application/queries/get-photo-view/get-photo-view.handler'
 import { GetPhotosListHandler } from '@photos/application/queries/get-photos-list/get-photos-list.handler'
 import { GetResumePointHandler } from '@photos/application/queries/get-resume-point/get-resume-point.handler'
 import { SearchPhotosHandler } from '@photos/application/queries/search-photos/search-photos.handler'
@@ -34,6 +35,7 @@ const QueryHandlers = [
   GetPhotosListHandler,
   GetPhotoDetailHandler,
   GetPhotoDownloadUrlHandler,
+  GetPhotoViewHandler,
   GetResumePointHandler,
   GetDownloadManifestHandler,
   SearchPhotosHandler,

@@ -1,6 +1,8 @@
 export class EventDetailProjection {
   /** Event UUID */
   id: string
+  /** URL-friendly slug */
+  slug: string
   /** Name of the cycling event */
   name: string
   /** Optional description of the event */
@@ -19,8 +21,6 @@ export class EventDetailProjection {
   coverImageUrl: string | null
   /** Public slug of the cover asset — used to build Worker preset URLs. */
   coverImageSlug: string | null
-  /** Source of the cover image (always 'manual' now; the photo fallback was removed). */
-  coverImageSource: 'manual' | null
   /** Whether this event is currently featured */
   isFeatured: boolean
   /** Current event status */

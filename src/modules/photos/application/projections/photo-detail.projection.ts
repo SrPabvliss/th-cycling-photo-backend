@@ -5,6 +5,8 @@ export class PhotoDetailProjection {
   id: string
   /** Parent event UUID */
   eventId: string
+  /** Parent event slug for navigation */
+  eventSlug: string
   /** Original filename */
   filename: string
   /** Opaque public slug for gallery URL */

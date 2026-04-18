@@ -2,7 +2,11 @@ import { toDetectedParticipantProjection } from '@classifications/infrastructure
 import type { ClassificationDetailSelect } from '@classifications/infrastructure/mappers/cyclist.mapper'
 import { classificationDetailSelectConfig } from '@classifications/infrastructure/mappers/cyclist.mapper'
 import { Prisma, type Photo as PrismaPhoto } from '@generated/prisma/client'
-import type { PhotoDetailProjection, PhotoListProjection } from '@photos/application/projections'
+import type {
+  PhotoDetailProjection,
+  PhotoListProjection,
+  PhotoViewProjection,
+} from '@photos/application/projections'
 import { Photo } from '@photos/domain/entities'
 import type { PhotoStatusType } from '@photos/domain/value-objects/photo-status.vo'
 import type { UnclassifiedReasonType } from '@photos/domain/value-objects/unclassified-reason.vo'
@@ -12,13 +16,9 @@ import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 
 export const photoListSelectConfig = {
   id: true,
-  event_id: true,
   filename: true,
-  storage_key: true,
   public_slug: true,
   status: true,
-  width: true,
-  height: true,
   uploaded_at: true,
   classified_at: true,
 } satisfies Prisma.PhotoSelect
@@ -28,8 +28,8 @@ export type PhotoListSelect = Prisma.PhotoGetPayload<{ select: typeof photoListS
 export const photoDetailSelectConfig = {
   id: true,
   event_id: true,
+  event: { select: { slug: true } },
   filename: true,
-  storage_key: true,
   public_slug: true,
   file_size: true,
   mime_type: true,
@@ -37,7 +37,6 @@ export const photoDetailSelectConfig = {
   height: true,
   status: true,
   unclassified_reason: true,
-  retouched_storage_key: true,
   retouched_file_size: true,
   retouched_at: true,
   captured_at: true,
@@ -48,6 +47,20 @@ export const photoDetailSelectConfig = {
 } satisfies Prisma.PhotoSelect
 
 export type PhotoDetailSelect = Prisma.PhotoGetPayload<{ select: typeof photoDetailSelectConfig }>
+
+export const photoViewSelectConfig = {
+  public_slug: true,
+  event: { select: { slug: true } },
+  filename: true,
+  file_size: true,
+  mime_type: true,
+  status: true,
+  unclassified_reason: true,
+  uploaded_at: true,
+  processed_at: true,
+} satisfies Prisma.PhotoSelect
+
+export type PhotoViewSelect = Prisma.PhotoGetPayload<{ select: typeof photoViewSelectConfig }>
 
 // --- Entity mappers ---
 
@@ -108,13 +121,10 @@ export function toEntity(record: PrismaPhoto): Photo {
 export function toListProjection(record: PhotoListSelect, cdn: CdnUrlBuilder): PhotoListProjection {
   return {
     id: record.id,
-    eventId: record.event_id,
-    filename: record.filename,
     publicSlug: record.public_slug,
+    filename: record.filename,
     thumbnailUrl: cdn.internalUrl(record.public_slug, 'thumb'),
     status: record.status,
-    width: record.width,
-    height: record.height,
     uploadedAt: record.uploaded_at,
     classifiedAt: record.classified_at,
   }
@@ -128,6 +138,7 @@ export function toDetailProjection(
   return {
     id: record.id,
     eventId: record.event_id,
+    eventSlug: record.event.slug,
     filename: record.filename,
     publicSlug: record.public_slug,
     imageUrl: cdn.internalUrl(record.public_slug, 'workspace'),
@@ -145,5 +156,20 @@ export function toDetailProjection(
     processedAt: record.processed_at,
     classifiedAt: record.classified_at,
     detectedParticipants: record.detected_participants.map(toDetectedParticipantProjection),
+  }
+}
+
+/** Converts a Prisma record to a lightweight photo view projection. */
+export function toViewProjection(record: PhotoViewSelect, cdn: CdnUrlBuilder): PhotoViewProjection {
+  return {
+    eventSlug: record.event.slug,
+    filename: record.filename,
+    imageUrl: cdn.internalUrl(record.public_slug, 'workspace'),
+    fileSize: Number(record.file_size),
+    mimeType: record.mime_type,
+    status: record.status,
+    unclassifiedReason: record.unclassified_reason,
+    uploadedAt: record.uploaded_at,
+    processedAt: record.processed_at,
   }
 }

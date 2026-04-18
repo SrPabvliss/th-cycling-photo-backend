@@ -66,6 +66,17 @@ export class EventReadRepository implements IEventReadRepository {
     return EventMapper.toDetailProjection(record, this.cdn)
   }
 
+  async getEventDetailBySlug(slug: string): Promise<EventDetailProjection | null> {
+    const record = await this.prisma.event.findFirst({
+      where: { slug },
+      select: EventMapper.eventDetailSelectConfig,
+    })
+
+    if (!record) return null
+
+    return EventMapper.toDetailProjection(record, this.cdn)
+  }
+
   async countAll(): Promise<number> {
     return this.prisma.event.count()
   }

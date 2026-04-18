@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common'
 import type {
   PhotoDetailProjection,
   PhotoListProjection,
+  PhotoViewProjection,
   SimilarPhotoProjection,
 } from '@photos/application/projections'
 import type { SearchPhotosFilters } from '@photos/application/queries'
@@ -74,6 +75,16 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     })
 
     return record ? PhotoMapper.toDetailProjection(record, this.cdn) : null
+  }
+
+  /** Retrieves a lightweight photo view by public slug. */
+  async getPhotoViewBySlug(slug: string): Promise<PhotoViewProjection | null> {
+    const record = await this.prisma.photo.findFirst({
+      where: { public_slug: slug },
+      select: PhotoMapper.photoViewSelectConfig,
+    })
+
+    return record ? PhotoMapper.toViewProjection(record, this.cdn) : null
   }
 
   /** Searches photos across events with multi-criteria filtering. */
@@ -223,13 +234,12 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       Array<{
         id: string
         filename: string
-        storage_key: string
         public_slug: string
         similarity: number
         has_classifications: boolean
       }>
     >(
-      `SELECT p.id, p.filename, p.storage_key, p.public_slug,
+      `SELECT p.id, p.filename, p.public_slug,
         1 - (p.embedding <=> (SELECT embedding FROM photos WHERE id = $1::uuid)) as similarity,
         EXISTS(SELECT 1 FROM detected_participants dp WHERE dp.photo_id = p.id) as has_classifications
       FROM photos p

@@ -48,6 +48,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       findById: jest.fn(),
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
+      getEventDetailBySlug: jest.fn(),
       countAll: jest.fn(),
       getPublicEventsList: jest.fn(),
       getPublicEventDetail: jest.fn(),

@@ -17,8 +17,8 @@ export const coverImageAssetSelectConfig = {
 
 export const eventListSelectConfig = {
   id: true,
+  slug: true,
   name: true,
-  description: true,
   event_date: true,
   province: { select: { name: true } },
   canton: { select: { name: true } },
@@ -36,6 +36,7 @@ export type EventListSelect = Prisma.EventGetPayload<{ select: typeof eventListS
 
 export const eventDetailSelectConfig = {
   ...eventListSelectConfig,
+  description: true,
   province_id: true,
   canton_id: true,
   created_at: true,
@@ -138,18 +139,16 @@ export function toListProjection(record: EventListSelect, cdn: CdnUrlBuilder): E
   const coverUrl = coverSlug ? cdn.assetUrl(coverSlug, 'cover-sm') : null
   return {
     id: record.id,
+    slug: record.slug,
     name: record.name,
-    description: record.description,
     date: record.event_date,
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
     coverImageUrl: coverUrl,
     coverImageSlug: coverSlug,
-    coverImageSource: coverUrl ? 'manual' : null,
     isFeatured: record.is_featured,
     status: record.status,
     photoCount: record._count.photos,
-    classifiedCount: 0,
     totalFileSize: 0,
   }
 }
@@ -163,6 +162,7 @@ export function toDetailProjection(
   const coverUrl = coverSlug ? cdn.assetUrl(coverSlug, 'cover-lg') : null
   return {
     id: record.id,
+    slug: record.slug,
     name: record.name,
     description: record.description,
     date: record.event_date,
@@ -172,7 +172,6 @@ export function toDetailProjection(
     cantonId: record.canton_id,
     coverImageUrl: coverUrl,
     coverImageSlug: coverSlug,
-    coverImageSource: coverUrl ? 'manual' : null,
     isFeatured: record.is_featured,
     status: record.status,
     photoCount: record._count.photos,

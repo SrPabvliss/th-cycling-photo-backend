@@ -1,10 +1,10 @@
 export class EventListProjection {
   /** Event UUID */
   id: string
+  /** URL-friendly slug */
+  slug: string
   /** Name of the cycling event */
   name: string
-  /** Optional description of the event */
-  description: string | null
   /** Date when the event takes place */
   date: Date
   /** Province name (resolved from relation) */
@@ -15,16 +15,12 @@ export class EventListProjection {
   coverImageUrl: string | null
   /** Public slug of the cover asset — used to build Worker preset URLs. */
   coverImageSlug: string | null
-  /** Source of the cover image (always 'manual' now; the photo fallback was removed). */
-  coverImageSource: 'manual' | null
   /** Whether this event is currently featured */
   isFeatured: boolean
   /** Current event status */
   status: string
   /** Number of photos associated with this event (computed) */
   photoCount: number
-  /** Number of classified photos (computed) */
-  classifiedCount: number
   /** Total file size of all photos in bytes (computed) */
   totalFileSize: number
 }
