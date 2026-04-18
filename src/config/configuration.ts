@@ -10,7 +10,7 @@ export default () => {
 
   const { VOYAGE_API_KEY } = process.env
 
-  const { REDIS_HOST, REDIS_PORT } = process.env
+  const { REDIS_HOST, REDIS_PORT, REDIS_PASSWORD } = process.env
 
   const { JWT_SECRET, JWT_ACCESS_EXPIRATION_SECONDS, JWT_REFRESH_EXPIRY_DAYS, CORS_ORIGIN } =
     process.env
@@ -63,6 +63,7 @@ export default () => {
     redis: {
       host: REDIS_HOST || 'localhost',
       port: Number.parseInt(REDIS_PORT || '6394', 10),
+      password: REDIS_PASSWORD || undefined,
     },
     jwt: {
       secret: JWT_SECRET,

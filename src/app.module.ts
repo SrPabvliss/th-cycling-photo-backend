@@ -53,6 +53,7 @@ import { StorageModule } from './shared/storage/storage.module'
         connection: {
           host: config.get<string>('redis.host', 'localhost'),
           port: config.get<number>('redis.port', 6394),
+          password: config.get<string>('redis.password'),
         },
       }),
       inject: [ConfigService],
