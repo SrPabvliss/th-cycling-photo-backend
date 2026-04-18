@@ -1,28 +1,27 @@
-name = "watermark-worker"
+name = "watermark-worker-prod"
 main = "src/index.js"
 compatibility_date = "2025-09-01"
 
-# Routes:
+# Routes: same as dev but using prod KV namespace
 #  /gallery/*  — public, watermarked + degraded
 #  /internal/* — admin, originals (no watermark)
 #  /assets/*   — public event assets (covers, logos) — originals, no watermark
 [[routes]]
-pattern = "cdn-dev.titantv.com.ec/gallery/*"
+pattern = "cdn.titantv.com.ec/gallery/*"
 zone_name = "titantv.com.ec"
 
 [[routes]]
-pattern = "cdn-dev.titantv.com.ec/internal/*"
+pattern = "cdn.titantv.com.ec/internal/*"
 zone_name = "titantv.com.ec"
 
 [[routes]]
-pattern = "cdn-dev.titantv.com.ec/assets/*"
+pattern = "cdn.titantv.com.ec/assets/*"
 zone_name = "titantv.com.ec"
 
-# Workers KV — slug → B2 object path mapping
+# Workers KV — slug → B2 object path mapping (PROD namespace)
 [[kv_namespaces]]
 binding = "IMAGE_MAP"
-id = "2d500704ffd7413ca3401e6c08b1f8f3"
+id = "39b5e4e4652645678ad93027d4b97c7e"
 
-# All sensitive vars go in .dev.vars (local) or wrangler secret (production)
 # Required secrets: B2_KEY_ID, B2_APP_KEY, B2_BUCKET, B2_REGION,
 #   WATERMARK_OPACITY, DEFAULT_QUALITY, QR_WORKER_HOST, PUBLIC_DOMAIN
