@@ -38,25 +38,25 @@ export class PublicEventsController {
   }
 
   @Public()
-  @Get(':eventId')
+  @Get(':slug')
   @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
-  @ApiOperation({ summary: 'Get public event detail with photo categories' })
-  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
+  @ApiOperation({ summary: 'Get public event detail by slug' })
+  @ApiParam({ name: 'slug', description: 'Event URL slug', example: 'vuelta-al-cotopaxi-2026' })
   @ApiEnvelopeResponse({
     status: 200,
     description: 'Public event detail',
     type: PublicEventDetailProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async findOne(@Param('eventId') eventId: string) {
-    return this.queryBus.execute(new GetPublicEventDetailQuery(eventId))
+  async findOne(@Param('slug') slug: string) {
+    return this.queryBus.execute(new GetPublicEventDetailQuery(slug))
   }
 
   @Public()
-  @Get(':eventId/photos')
+  @Get(':slug/photos')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List completed photos for a public event (watermarked)' })
-  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
+  @ApiParam({ name: 'slug', description: 'Event URL slug', example: 'vuelta-al-cotopaxi-2026' })
   @ApiQuery({ name: 'photoCategoryId', required: false, type: Number })
   @ApiEnvelopeResponse({
     status: 200,
@@ -65,10 +65,10 @@ export class PublicEventsController {
     isArray: true,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async findPhotos(@Param('eventId') eventId: string, @Query() dto: GetPublicEventPhotosDto) {
+  async findPhotos(@Param('slug') slug: string, @Query() dto: GetPublicEventPhotosDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     return this.queryBus.execute(
-      new GetPublicEventPhotosQuery(eventId, pagination, dto.photoCategoryId ?? null),
+      new GetPublicEventPhotosQuery(slug, pagination, dto.photoCategoryId ?? null),
     )
   }
 }

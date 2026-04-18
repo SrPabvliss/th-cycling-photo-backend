@@ -41,18 +41,22 @@ export class GetDeliveryByTokenHandler implements IQueryHandler<GetDeliveryByTok
     const data = await this.readRepo.getDeliveryData(query.token)
     if (!data) throw AppException.notFound('entities.delivery_link', query.token)
 
-    // Transform: generate presigned download URLs from storageKey
+    // Transform: generate presigned download URLs from storageKey.
+    // Use generic filenames to avoid exposing original camera filenames.
     const photos = await Promise.all(
-      data.photos.map(async (photo) => ({
-        id: photo.id,
-        filename: photo.filename,
-        fileSize: photo.fileSize,
-        downloadUrl: await this.storage.getPresignedDownloadUrl({
-          key: photo.storageKey,
-          filename: photo.filename,
-          expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
-        }),
-      })),
+      data.photos.map(async (photo, index) => {
+        const safeFilename = `photo-${index + 1}.jpg`
+        return {
+          id: photo.id,
+          filename: safeFilename,
+          fileSize: photo.fileSize,
+          downloadUrl: await this.storage.getPresignedDownloadUrl({
+            key: photo.storageKey,
+            filename: safeFilename,
+            expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
+          }),
+        }
+      }),
     )
 
     return {

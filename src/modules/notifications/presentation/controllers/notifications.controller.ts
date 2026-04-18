@@ -41,7 +41,7 @@ export class NotificationsController {
 
   @Roles('admin', 'operator')
   @Get('unread-count')
-  @SuccessMessage('success.FETCHED')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.notification' })
   @ApiOperation({ summary: 'Get unread notification count' })
   @ApiEnvelopeResponse({
     status: 200,
@@ -54,7 +54,7 @@ export class NotificationsController {
 
   @Roles('admin', 'operator')
   @Patch('read-all')
-  @SuccessMessage('success.UPDATED')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.notification' })
   @ApiOperation({ summary: 'Mark all notifications as read' })
   async markAllAsRead(@CurrentUser() user: ICurrentUser) {
     return this.commandBus.execute(new MarkAllReadCommand(user.userId))
@@ -62,7 +62,7 @@ export class NotificationsController {
 
   @Roles('admin', 'operator')
   @Patch(':id/read')
-  @SuccessMessage('success.UPDATED')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.notification' })
   @ApiOperation({ summary: 'Mark a notification as read' })
   @ApiParam({ name: 'id', description: 'Notification UUID', format: 'uuid' })
   @ApiEnvelopeResponse({

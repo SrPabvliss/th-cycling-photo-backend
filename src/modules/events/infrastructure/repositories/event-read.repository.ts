@@ -66,6 +66,17 @@ export class EventReadRepository implements IEventReadRepository {
     return EventMapper.toDetailProjection(record, this.cdn)
   }
 
+  async getEventDetailBySlug(slug: string): Promise<EventDetailProjection | null> {
+    const record = await this.prisma.event.findFirst({
+      where: { slug },
+      select: EventMapper.eventDetailSelectConfig,
+    })
+
+    if (!record) return null
+
+    return EventMapper.toDetailProjection(record, this.cdn)
+  }
+
   async countAll(): Promise<number> {
     return this.prisma.event.count()
   }
@@ -92,16 +103,15 @@ export class EventReadRepository implements IEventReadRepository {
       this.prisma.event.count({ where }),
     ])
 
-    const items = events.map((e) => EventMapper.toPublicListProjection(e, this.cdn))
+    const items = events.map((e) => EventMapper.toPublicListProjection(e))
 
     return new PaginatedResult(items, total, pagination)
   }
 
-  async getPublicEventDetail(eventId: string): Promise<PublicEventDetailProjection | null> {
-    // Mirror the list filter — no cover means the event is not public.
+  async getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null> {
     const event = await this.prisma.event.findFirst({
       where: {
-        id: eventId,
+        slug,
         deleted_at: null,
         status: 'active',
         assets: { some: { asset_type: 'cover_image' } },
@@ -128,7 +138,7 @@ export class EventReadRepository implements IEventReadRepository {
     const [photos, total] = await Promise.all([
       this.prisma.photo.findMany({
         where,
-        select: { id: true, public_slug: true, width: true, height: true },
+        select: { id: true, public_slug: true },
         orderBy: { uploaded_at: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
@@ -139,9 +149,7 @@ export class EventReadRepository implements IEventReadRepository {
     return new PaginatedResult(
       photos.map((p) => ({
         id: p.id,
-        url: this.cdn.galleryUrl(p.public_slug),
-        width: p.width,
-        height: p.height,
+        publicSlug: p.public_slug,
       })),
       total,
       pagination,
@@ -154,6 +162,18 @@ export class EventReadRepository implements IEventReadRepository {
     return this.prisma.event.findFirst({
       where: {
         id: eventId,
+        status: 'active',
+        deleted_at: null,
+        assets: { some: { asset_type: 'cover_image' } },
+      },
+      select: { id: true, name: true },
+    })
+  }
+
+  async existsActiveEventBySlug(slug: string): Promise<{ id: string; name: string } | null> {
+    return this.prisma.event.findFirst({
+      where: {
+        slug,
         status: 'active',
         deleted_at: null,
         assets: { some: { asset_type: 'cover_image' } },

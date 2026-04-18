@@ -1,6 +1,6 @@
 export { AuthTokensProjection } from './auth-tokens.projection'
 export { AuthUserProjection } from './auth-user.projection'
-export { MePhoneProjection, MeProfileProjection, MeProjection } from './me.projection'
+export { MeProjection } from './me.projection'
 export { RegisteredUserProjection } from './registered-user.projection'
 export { StoredRefreshTokenProjection } from './stored-refresh-token.projection'
 export { UserSnapDataProjection } from './user-snap-data.projection'

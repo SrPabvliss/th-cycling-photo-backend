@@ -26,6 +26,7 @@ describe('FindSimilarPhotosHandler', () => {
     processedAt: null,
     publicSlug: 'test-slug',
     retouchedStorageKey: null,
+    retouchedPublicSlug: null,
     retouchedFileSize: null,
     retouchedAt: null,
   })
@@ -67,16 +68,18 @@ describe('FindSimilarPhotosHandler', () => {
       {
         id: 'aaa-111',
         filename: 'IMG_002.jpg',
-        storageKey: `events/${eventId}/def-IMG_002.jpg`,
+
         publicSlug: 'test-slug-similar-1',
+        thumbnailUrl: 'https://cdn.test/internal/thumb/test-slug-similar-1.jpg?token=mock',
         similarity: 0.95,
         hasClassifications: true,
       },
       {
         id: 'bbb-222',
         filename: 'IMG_003.jpg',
-        storageKey: `events/${eventId}/ghi-IMG_003.jpg`,
+
         publicSlug: 'test-slug-similar-2',
+        thumbnailUrl: 'https://cdn.test/internal/thumb/test-slug-similar-2.jpg?token=mock',
         similarity: 0.87,
         hasClassifications: false,
       },
@@ -89,8 +92,8 @@ describe('FindSimilarPhotosHandler', () => {
     expect(result[0]).toEqual({
       id: 'aaa-111',
       filename: 'IMG_002.jpg',
-      storageKey: `events/${eventId}/def-IMG_002.jpg`,
       publicSlug: 'test-slug-similar-1',
+      thumbnailUrl: 'https://cdn.test/internal/thumb/test-slug-similar-1.jpg?token=mock',
       similarity: 0.95,
       hasClassifications: true,
     })

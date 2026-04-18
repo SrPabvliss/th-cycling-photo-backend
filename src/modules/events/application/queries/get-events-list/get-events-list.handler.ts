@@ -13,7 +13,6 @@ export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
   ) {}
 
-  /** Retrieves a paginated list of events, enriching with photo counts and file sizes. */
   async execute(query: GetEventsListQuery): Promise<PaginatedResult<EventListProjection>> {
     const result = await this.readRepo.getEventsList(
       query.pagination,
@@ -23,15 +22,10 @@ export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
     if (result.items.length === 0) return result
 
     const allEventIds = result.items.map((e) => e.id)
-
-    const [fileSizes, classifiedCounts] = await Promise.all([
-      this.photoReadRepo.getTotalFileSizesByEventIds(allEventIds),
-      this.photoReadRepo.getClassifiedCountsByEventIds(allEventIds),
-    ])
+    const fileSizes = await this.photoReadRepo.getTotalFileSizesByEventIds(allEventIds)
 
     for (const event of result.items) {
       event.totalFileSize = fileSizes.get(event.id) ?? 0
-      event.classifiedCount = classifiedCounts.get(event.id) ?? 0
     }
 
     return result

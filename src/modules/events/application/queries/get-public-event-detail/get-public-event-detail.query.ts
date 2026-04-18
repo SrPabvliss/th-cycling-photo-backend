@@ -1,3 +1,3 @@
 export class GetPublicEventDetailQuery {
-  constructor(public readonly eventId: string) {}
+  constructor(public readonly slug: string) {}
 }

@@ -37,7 +37,7 @@ describe('CreateEventHandler', () => {
   })
 
   it('should create and save event, returning id', async () => {
-    const command = new CreateEventCommand('Test Event', futureDate, null, 'Ambato', null, null, 1)
+    const command = new CreateEventCommand('Test Event', futureDate, null, null, null, 1)
 
     writeRepo.save.mockImplementation(async (event: Event) => event)
 
@@ -56,7 +56,7 @@ describe('CreateEventHandler', () => {
   })
 
   it('should create event with valid province and canton', async () => {
-    const command = new CreateEventCommand('Test Event', futureDate, null, null, 18, 1, 1)
+    const command = new CreateEventCommand('Test Event', futureDate, null, 18, 1, 1)
 
     writeRepo.save.mockImplementation(async (event: Event) => event)
 
@@ -67,7 +67,7 @@ describe('CreateEventHandler', () => {
   })
 
   it('should propagate location validation errors', async () => {
-    const command = new CreateEventCommand('Test Event', futureDate, null, null, 999, null, 1)
+    const command = new CreateEventCommand('Test Event', futureDate, null, 999, null, 1)
 
     locationValidator.validate.mockRejectedValue(
       AppException.businessRule('event.province_not_found'),
@@ -81,7 +81,6 @@ describe('CreateEventHandler', () => {
     const command = new CreateEventCommand(
       'Test Event',
       new Date('2020-01-01'),
-      null,
       null,
       null,
       null,

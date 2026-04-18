@@ -31,6 +31,7 @@ describe('GetPhotoDownloadUrlHandler', () => {
       processedAt: new Date(),
       publicSlug: 'test-slug',
       retouchedStorageKey: withRetouched ? retouchedKey : null,
+      retouchedPublicSlug: withRetouched ? 'retouched-slug' : null,
       retouchedFileSize: withRetouched ? 3000n : null,
       retouchedAt: withRetouched ? new Date() : null,
     })
@@ -41,6 +42,7 @@ describe('GetPhotoDownloadUrlHandler', () => {
       existsByEventAndFilename: jest.fn(),
       getPhotosList: jest.fn(),
       getPhotoDetail: jest.fn(),
+      getPhotoViewBySlug: jest.fn(),
       searchPhotos: jest.fn(),
       getTotalFileSizeByEvent: jest.fn(),
       getTotalFileSizesByEventIds: jest.fn(),

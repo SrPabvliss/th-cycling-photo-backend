@@ -7,22 +7,19 @@ export class PublicEventAssetProjection {
   @ApiProperty({ description: 'Public CDN URL (already points to /assets/)' })
   url: string
 
-  @ApiProperty({ description: 'Public slug — use to build cdn-cgi/image transform URLs' })
+  @ApiProperty({ description: 'Public slug for Worker-handled transform presets' })
   publicSlug: string
 }
 
 export class PublicEventListProjection {
-  @ApiProperty({ description: 'Event UUID' })
-  id: string
+  @ApiProperty({ description: 'URL-friendly slug for public navigation' })
+  slug: string
 
   @ApiProperty({ description: 'Event name' })
   name: string
 
   @ApiProperty({ description: 'Event date' })
   date: Date
-
-  @ApiPropertyOptional({ description: 'Location' })
-  location: string | null
 
   @ApiPropertyOptional({ description: 'Province name' })
   provinceName: string | null
@@ -36,6 +33,6 @@ export class PublicEventListProjection {
   @ApiProperty({ description: 'Number of photos' })
   photoCount: number
 
-  @ApiProperty({ description: 'Event assets with CDN URLs', type: [PublicEventAssetProjection] })
-  assets: PublicEventAssetProjection[]
+  @ApiPropertyOptional({ description: 'Cover image slug for CDN transform URLs' })
+  coverSlug: string | null
 }

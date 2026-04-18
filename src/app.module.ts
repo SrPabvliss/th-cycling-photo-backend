@@ -4,6 +4,7 @@ import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
 import { EventEmitterModule } from '@nestjs/event-emitter'
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
@@ -56,6 +57,11 @@ import { StorageModule } from './shared/storage/storage.module'
       }),
       inject: [ConfigService],
     }),
+    ThrottlerModule.forRoot([
+      { name: 'short', ttl: 1000, limit: 20 },
+      { name: 'medium', ttl: 10000, limit: 100 },
+      { name: 'long', ttl: 60000, limit: 300 },
+    ]),
     EventEmitterModule.forRoot(),
     PrismaModule,
     StorageModule,
@@ -81,6 +87,7 @@ import { StorageModule } from './shared/storage/storage.module'
     AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule implements NestModule {

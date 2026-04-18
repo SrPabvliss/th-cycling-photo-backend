@@ -20,6 +20,7 @@ import {
   PendingRetouchOrderProjection,
   PhotoDetailProjection,
   PhotoListProjection,
+  PhotoViewProjection,
   PresignedUrlProjection,
   SimilarPhotoProjection,
 } from '@photos/application/projections'
@@ -34,6 +35,7 @@ import {
   SearchPhotosQuery,
 } from '@photos/application/queries'
 import { GetDownloadManifestQuery } from '@photos/application/queries/get-download-manifest/get-download-manifest.query'
+import { GetPhotoViewQuery } from '@photos/application/queries/get-photo-view/get-photo-view.query'
 import { GetResumePointQuery } from '@photos/application/queries/get-resume-point/get-resume-point.query'
 import { AuditContext, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
@@ -59,6 +61,7 @@ export class PhotosController {
   }
 
   /** Returns a download manifest with presigned URLs for all event photos. */
+  @Roles('admin')
   @Get('events/:eventId/photos/download-manifest')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download manifest for all event photos' })
@@ -134,7 +137,22 @@ export class PhotosController {
     return this.queryBus.execute(query)
   }
 
-  /** Retrieves a single photo's detail. */
+  /** Retrieves a lightweight photo view by public slug. */
+  @Get('photos/view/:slug')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Get lightweight photo view by slug' })
+  @ApiParam({ name: 'slug', description: 'Photo public slug' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Photo view retrieved',
+    type: PhotoViewProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
+  async findBySlug(@Param('slug') slug: string) {
+    return this.queryBus.execute(new GetPhotoViewQuery(slug))
+  }
+
+  /** Retrieves a single photo's full detail (used by workspace). */
   @Get('photos/:id')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get photo details by ID' })
@@ -249,6 +267,7 @@ export class PhotosController {
   }
 
   /** Returns a download URL for the original or retouched photo. */
+  @Roles('admin')
   @Get('photos/:id/download')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download URL for a photo' })

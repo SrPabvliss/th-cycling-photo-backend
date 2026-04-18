@@ -6,15 +6,11 @@ import type {
 } from '@cart/application/projections'
 import type { ICartReadRepository } from '@cart/domain/ports'
 import { Injectable } from '@nestjs/common'
-import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 
 @Injectable()
 export class CartReadRepository implements ICartReadRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly cdn: CdnUrlBuilder,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findActiveByUserId(userId: string): Promise<ActiveCartProjection | null> {
     const cart = await this.prisma.cart.findFirst({
@@ -38,20 +34,8 @@ export class CartReadRepository implements ICartReadRepository {
     const items = await this.prisma.cartItem.findMany({
       where: { cart_id: cartId, removed_at: null },
       select: {
-        photo: { select: { id: true, public_slug: true, width: true, height: true } },
-        event: {
-          select: {
-            id: true,
-            name: true,
-            event_date: true,
-            event_type_id: true,
-            assets: {
-              where: { asset_type: 'cover_image' },
-              select: { public_slug: true },
-              take: 1,
-            },
-          },
-        },
+        photo: { select: { id: true, public_slug: true } },
+        event: { select: { id: true, name: true, event_date: true } },
       },
       orderBy: { added_at: 'asc' },
     })
@@ -62,34 +46,23 @@ export class CartReadRepository implements ICartReadRepository {
         eventId: string
         eventName: string
         eventDate: Date
-        eventTypeId: number
-        coverUrl: string | null
-        coverSlug: string | null
-        photos: { id: string; url: string; width: number | null; height: number | null }[]
+        photos: { id: string; publicSlug: string }[]
       }
     >()
 
     for (const item of items) {
       const eventId = item.event.id
       if (!eventMap.has(eventId)) {
-        const coverAsset = item.event.assets[0]
-        const coverSlug = coverAsset?.public_slug ?? null
-        const coverUrl = coverSlug ? this.cdn.assetUrl(coverSlug) : null
         eventMap.set(eventId, {
           eventId,
           eventName: item.event.name,
           eventDate: item.event.event_date,
-          eventTypeId: item.event.event_type_id,
-          coverUrl,
-          coverSlug,
           photos: [],
         })
       }
       eventMap.get(eventId)?.photos.push({
         id: item.photo.id,
-        url: this.cdn.galleryUrl(item.photo.public_slug),
-        width: item.photo.width,
-        height: item.photo.height,
+        publicSlug: item.photo.public_slug,
       })
     }
 

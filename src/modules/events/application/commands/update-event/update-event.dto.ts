@@ -33,15 +33,6 @@ export class UpdateEventDto {
   description?: string | null
 
   @ApiPropertyOptional({
-    description: 'Physical location or address of the event (null to clear)',
-    example: 'Ambato, Ecuador',
-    nullable: true,
-  })
-  @IsString()
-  @IsOptional()
-  location?: string | null
-
-  @ApiPropertyOptional({
     description: 'Province ID where the event takes place (null to clear)',
     example: 18,
     nullable: true,

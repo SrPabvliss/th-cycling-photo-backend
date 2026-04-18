@@ -15,7 +15,12 @@ export default () => {
   const { JWT_SECRET, JWT_ACCESS_EXPIRATION_SECONDS, JWT_REFRESH_EXPIRY_DAYS, CORS_ORIGIN } =
     process.env
 
-  const { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_KV_NAMESPACE_ID, CLOUDFLARE_API_TOKEN } = process.env
+  const {
+    CLOUDFLARE_ACCOUNT_ID,
+    CLOUDFLARE_KV_NAMESPACE_ID,
+    CLOUDFLARE_API_TOKEN,
+    CLOUDFLARE_HMAC_SECRET,
+  } = process.env
 
   const { WATERMARK_BASE_URL, PREVIEW_BASE_URL, DELIVERY_BASE_URL } = process.env
 
@@ -50,6 +55,7 @@ export default () => {
       accountId: CLOUDFLARE_ACCOUNT_ID,
       kvNamespaceId: CLOUDFLARE_KV_NAMESPACE_ID,
       apiToken: CLOUDFLARE_API_TOKEN,
+      hmacSecret: CLOUDFLARE_HMAC_SECRET,
     },
     voyageAi: {
       apiKey: VOYAGE_API_KEY,

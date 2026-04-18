@@ -67,7 +67,7 @@ export class User {
     this.passwordHash = passwordHash
   }
 
-  setAvatar(url: string, storageKey: string): void {
+  setAvatar(url: string | null, storageKey: string): void {
     this.avatarUrl = url
     this.avatarStorageKey = storageKey
   }

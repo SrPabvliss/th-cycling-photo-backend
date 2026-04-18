@@ -13,10 +13,9 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
   ) {}
 
-  /** Retrieves a single event's detail, enriching with photo counts and file size. */
   async execute(query: GetEventDetailQuery): Promise<EventDetailProjection> {
-    const event = await this.readRepo.getEventDetail(query.id)
-    if (!event) throw AppException.notFound('Event', query.id)
+    const event = await this.readRepo.getEventDetailBySlug(query.slug)
+    if (!event) throw AppException.notFound('Event', query.slug)
 
     const [totalFileSize, classifiedCount] = await Promise.all([
       this.photoReadRepo.getTotalFileSizeByEvent(event.id),

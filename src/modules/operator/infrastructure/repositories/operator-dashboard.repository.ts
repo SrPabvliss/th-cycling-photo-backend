@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
 import type {
   AssignedEventRow,
-  ClassificationProgress,
   IOperatorDashboardRepository,
   LastActionDate,
   RecentActivityRow,
@@ -46,38 +45,9 @@ export class OperatorDashboardRepository implements IOperatorDashboardRepository
     }))
   }
 
-  async getClassificationProgress(eventIds: string[]): Promise<ClassificationProgress[]> {
-    if (eventIds.length === 0) return []
-
-    const results = await this.prisma.photo.groupBy({
-      by: ['event_id'],
-      where: { event_id: { in: eventIds } },
-      _count: { id: true },
-    })
-
-    const classifiedResults = await this.prisma.photo.groupBy({
-      by: ['event_id'],
-      where: {
-        event_id: { in: eventIds },
-        classified_at: { not: null },
-      },
-      _count: { id: true },
-    })
-
-    const totalMap = new Map(results.map((r) => [r.event_id, r._count.id]))
-    const classifiedMap = new Map(classifiedResults.map((r) => [r.event_id, r._count.id]))
-
-    return eventIds.map((eventId) => ({
-      eventId,
-      total: totalMap.get(eventId) ?? 0,
-      classified: classifiedMap.get(eventId) ?? 0,
-    }))
-  }
-
   async getRetouchProgress(eventIds: string[]): Promise<RetouchProgress[]> {
     if (eventIds.length === 0) return []
 
-    // Count paid orders with at least one unretouched photo, per event
     const ordersWithPending = await this.prisma.order.findMany({
       where: {
         event_id: { in: eventIds },
@@ -112,72 +82,45 @@ export class OperatorDashboardRepository implements IOperatorDashboardRepository
   async getLastActionDates(eventIds: string[]): Promise<LastActionDate[]> {
     if (eventIds.length === 0) return []
 
-    const [classifiedDates, retouchedDates] = await Promise.all([
-      this.prisma.photo.groupBy({
-        by: ['event_id'],
-        where: { event_id: { in: eventIds }, classified_at: { not: null } },
-        _max: { classified_at: true },
-      }),
-      this.prisma.photo.groupBy({
-        by: ['event_id'],
-        where: { event_id: { in: eventIds }, retouched_at: { not: null } },
-        _max: { retouched_at: true },
-      }),
-    ])
+    const retouchedData = await this.prisma.photo.groupBy({
+      by: ['event_id'],
+      where: { event_id: { in: eventIds }, retouched_at: { not: null } },
+      _max: { retouched_at: true },
+      _count: { id: true },
+    })
 
-    const classifiedMap = new Map(classifiedDates.map((r) => [r.event_id, r._max.classified_at]))
-    const retouchedMap = new Map(retouchedDates.map((r) => [r.event_id, r._max.retouched_at]))
+    const retouchedMap = new Map(
+      retouchedData.map((r) => [
+        r.event_id,
+        { lastRetouchedAt: r._max.retouched_at, totalRetouched: r._count.id },
+      ]),
+    )
 
     return eventIds.map((eventId) => ({
       eventId,
-      lastClassifiedAt: classifiedMap.get(eventId) ?? null,
-      lastRetouchedAt: retouchedMap.get(eventId) ?? null,
+      lastRetouchedAt: retouchedMap.get(eventId)?.lastRetouchedAt ?? null,
+      totalRetouched: retouchedMap.get(eventId)?.totalRetouched ?? 0,
     }))
   }
 
   async getRecentActivity(operatorId: string, limit: number): Promise<RecentActivityRow[]> {
-    const [classifications, retouches] = await Promise.all([
-      this.prisma.photo.findMany({
-        where: {
-          classified_at: { not: null },
-          detected_participants: { some: { classified_by_id: operatorId } },
-        },
-        select: {
-          classified_at: true,
-          event: { select: { name: true } },
-        },
-        orderBy: { classified_at: 'desc' },
-        take: limit,
-      }),
-      this.prisma.photo.findMany({
-        where: {
-          retouched_by_id: operatorId,
-          retouched_at: { not: null },
-        },
-        select: {
-          retouched_at: true,
-          event: { select: { name: true } },
-        },
-        orderBy: { retouched_at: 'desc' },
-        take: limit,
-      }),
-    ])
+    const retouches = await this.prisma.photo.findMany({
+      where: {
+        retouched_by_id: operatorId,
+        retouched_at: { not: null },
+      },
+      select: {
+        retouched_at: true,
+        event: { select: { name: true } },
+      },
+      orderBy: { retouched_at: 'desc' },
+      take: limit,
+    })
 
-    const activities: RecentActivityRow[] = [
-      ...classifications.map((p) => ({
-        type: 'classification' as const,
-        eventName: p.event.name,
-        timestamp: p.classified_at!,
-      })),
-      ...retouches.map((p) => ({
-        type: 'retouch' as const,
-        eventName: p.event.name,
-        timestamp: p.retouched_at!,
-      })),
-    ]
-
-    activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-
-    return activities.slice(0, limit)
+    return retouches.map((p) => ({
+      type: 'retouch' as const,
+      eventName: p.event.name,
+      timestamp: p.retouched_at!,
+    }))
   }
 }

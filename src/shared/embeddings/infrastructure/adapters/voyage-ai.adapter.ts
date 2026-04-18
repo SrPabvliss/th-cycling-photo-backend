@@ -13,10 +13,11 @@ export class VoyageAIEmbeddingAdapter implements IEmbeddingAdapter {
     this.client = new VoyageAIClient({ apiKey })
   }
 
-  async generateImageEmbedding(imageUrl: string): Promise<EmbeddingResult> {
+  /** Generates an image embedding from a base64-encoded data URL (data:image/jpeg;base64,...). */
+  async generateImageEmbedding(imageBase64: string): Promise<EmbeddingResult> {
     try {
       const response = await this.client.multimodalEmbed({
-        inputs: [{ content: [{ type: 'image_url', imageUrl }] }],
+        inputs: [{ content: [{ type: 'image_base64', imageBase64 }] }],
         model: 'voyage-multimodal-3.5',
       })
 

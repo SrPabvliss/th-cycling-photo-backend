@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common'
 import type {
   PhotoDetailProjection,
   PhotoListProjection,
+  PhotoViewProjection,
   SimilarPhotoProjection,
 } from '@photos/application/projections'
 import type { SearchPhotosFilters } from '@photos/application/queries'
@@ -10,12 +11,16 @@ import type { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
 
 import { PaginatedResult, type Pagination } from '@shared/application'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 import * as PhotoMapper from '../mappers/photo.mapper'
 
 @Injectable()
 export class PhotoReadRepository implements IPhotoReadRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cdn: CdnUrlBuilder,
+  ) {}
 
   /** Finds a photo by ID (no soft-delete filter — photos use hard delete). */
   async findById(id: string): Promise<Photo | null> {
@@ -55,7 +60,11 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       this.prisma.photo.count({ where }),
     ])
 
-    return new PaginatedResult(photos.map(PhotoMapper.toListProjection), total, pagination)
+    return new PaginatedResult(
+      photos.map((p) => PhotoMapper.toListProjection(p, this.cdn)),
+      total,
+      pagination,
+    )
   }
 
   /** Retrieves a single photo's detail with all classification relations. */
@@ -65,7 +74,17 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       select: PhotoMapper.photoDetailSelectConfig,
     })
 
-    return record ? PhotoMapper.toDetailProjection(record) : null
+    return record ? PhotoMapper.toDetailProjection(record, this.cdn) : null
+  }
+
+  /** Retrieves a lightweight photo view by public slug. */
+  async getPhotoViewBySlug(slug: string): Promise<PhotoViewProjection | null> {
+    const record = await this.prisma.photo.findFirst({
+      where: { public_slug: slug },
+      select: PhotoMapper.photoViewSelectConfig,
+    })
+
+    return record ? PhotoMapper.toViewProjection(record, this.cdn) : null
   }
 
   /** Searches photos across events with multi-criteria filtering. */
@@ -86,7 +105,11 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       this.prisma.photo.count({ where }),
     ])
 
-    return new PaginatedResult(photos.map(PhotoMapper.toListProjection), total, pagination)
+    return new PaginatedResult(
+      photos.map((p) => PhotoMapper.toListProjection(p, this.cdn)),
+      total,
+      pagination,
+    )
   }
 
   /** Returns the total file size (in bytes) for a single event's photos. */
@@ -211,13 +234,12 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       Array<{
         id: string
         filename: string
-        storage_key: string
         public_slug: string
         similarity: number
         has_classifications: boolean
       }>
     >(
-      `SELECT p.id, p.filename, p.storage_key, p.public_slug,
+      `SELECT p.id, p.filename, p.public_slug,
         1 - (p.embedding <=> (SELECT embedding FROM photos WHERE id = $1::uuid)) as similarity,
         EXISTS(SELECT 1 FROM detected_participants dp WHERE dp.photo_id = p.id) as has_classifications
       FROM photos p
@@ -234,8 +256,8 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return rows.map((row) => ({
       id: row.id,
       filename: row.filename,
-      storageKey: row.storage_key,
       publicSlug: row.public_slug,
+      thumbnailUrl: this.cdn.internalUrl(row.public_slug, 'thumb'),
       similarity: Number(row.similarity),
       hasClassifications: row.has_classifications,
     }))

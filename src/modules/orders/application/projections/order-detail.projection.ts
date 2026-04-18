@@ -1,8 +1,9 @@
 export class OrderPhotoProjection {
   id: string
   filename: string
-  storageKey: string
   publicSlug: string
+  thumbnailUrl: string
+  fullUrl: string
 }
 
 export class OrderDeliveryLinkProjection {

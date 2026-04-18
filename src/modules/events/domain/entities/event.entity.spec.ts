@@ -9,7 +9,6 @@ describe('Event Entity', () => {
     name: 'Vuelta Ciclística de Ambato',
     description: null as string | null,
     date: futureDate,
-    location: 'Ambato, Ecuador',
     provinceId: 18 as number | null,
     cantonId: 1 as number | null,
     eventTypeId: 1,
@@ -22,20 +21,14 @@ describe('Event Entity', () => {
       expect(event).toBeInstanceOf(Event)
       expect(event.id).toBeDefined()
       expect(event.name).toBe(validData.name)
+      expect(event.slug).toBe('vuelta-ciclistica-de-ambato')
       expect(event.date).toBe(futureDate)
-      expect(event.location).toBe('Ambato, Ecuador')
       expect(event.provinceId).toBe(18)
       expect(event.cantonId).toBe(1)
       expect(event.status).toBe('active')
       expect(event.audit.deletedAt).toBeNull()
       expect(event.audit.isDeleted).toBe(false)
       expect(event.audit.createdAt).toBeInstanceOf(Date)
-    })
-
-    it('should create event with null location', () => {
-      const event = Event.create({ ...validData, location: null })
-
-      expect(event.location).toBeNull()
     })
 
     it('should create event with null provinceId and cantonId', () => {
@@ -87,11 +80,12 @@ describe('Event Entity', () => {
   })
 
   describe('update', () => {
-    it('should update name when valid', () => {
+    it('should update name and regenerate slug', () => {
       const event = Event.create(validData)
       event.update({ name: 'New Name' })
 
       expect(event.name).toBe('New Name')
+      expect(event.slug).toBe('new-name')
     })
 
     it('should update date when valid', () => {
@@ -102,13 +96,6 @@ describe('Event Entity', () => {
       event.update({ date: newDate })
 
       expect(event.date).toBe(newDate)
-    })
-
-    it('should update location to null', () => {
-      const event = Event.create(validData)
-      event.update({ location: null })
-
-      expect(event.location).toBeNull()
     })
 
     it('should throw for invalid name on update', () => {
@@ -128,13 +115,11 @@ describe('Event Entity', () => {
     it('should not modify fields not provided', () => {
       const event = Event.create(validData)
       const originalDate = event.date
-      const originalLocation = event.location
 
       event.update({ name: 'Only Name Changed' })
 
       expect(event.name).toBe('Only Name Changed')
       expect(event.date).toBe(originalDate)
-      expect(event.location).toBe(originalLocation)
     })
 
     it('should update updatedAt timestamp via audit', () => {
@@ -193,9 +178,9 @@ describe('Event Entity', () => {
       const event = Event.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Past Event',
+        slug: 'past-event',
         description: null,
         date: pastDate,
-        location: null,
         provinceId: null,
         cantonId: null,
         eventTypeId: 1,
@@ -218,9 +203,9 @@ describe('Event Entity', () => {
       const event = Event.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Archived Event',
+        slug: 'archived-event',
         description: null,
         date: new Date('2024-01-01'),
-        location: null,
         provinceId: 18,
         cantonId: 1,
         eventTypeId: 1,

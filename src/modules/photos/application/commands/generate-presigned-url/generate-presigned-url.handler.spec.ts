@@ -16,11 +16,12 @@ describe('GeneratePresignedUrlHandler', () => {
   futureDate.setFullYear(futureDate.getFullYear() + 1)
 
   const existingEvent = Event.fromPersistence({
+    slug: 'test-event',
     id: '550e8400-e29b-41d4-a716-446655440000',
     name: 'Test Event',
     description: null,
     date: futureDate,
-    location: 'Ambato',
+
     provinceId: null,
     cantonId: null,
     eventTypeId: 1,
@@ -35,11 +36,13 @@ describe('GeneratePresignedUrlHandler', () => {
       findById: jest.fn(),
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
+      getEventDetailBySlug: jest.fn(),
       countAll: jest.fn(),
       getPublicEventsList: jest.fn(),
       getPublicEventDetail: jest.fn(),
       getPublicPhotos: jest.fn(),
       existsActiveEvent: jest.fn(),
+      existsActiveEventBySlug: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoReadRepo = {
@@ -47,6 +50,7 @@ describe('GeneratePresignedUrlHandler', () => {
       existsByEventAndFilename: jest.fn(),
       getPhotosList: jest.fn(),
       getPhotoDetail: jest.fn(),
+      getPhotoViewBySlug: jest.fn(),
       searchPhotos: jest.fn(),
       getTotalFileSizeByEvent: jest.fn(),
       getTotalFileSizesByEventIds: jest.fn(),

@@ -38,45 +38,28 @@ export class AuthUserRepository implements IAuthUserRepository {
     })
   }
 
-  /** Retrieves the authenticated user's profile data. */
+  /** Retrieves the authenticated user's essential data. */
   async getMe(userId: string): Promise<MeProjection | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        user_roles: { include: { role: true } },
-        customer_profile: true,
-        phones: true,
+      select: {
+        id: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        user_roles: { select: { role: { select: { name: true } } } },
       },
     })
 
     if (!user) return null
 
-    const role = user.user_roles[0]?.role.name ?? 'customer'
-
-    const result: MeProjection = {
+    return {
       id: user.id,
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
-      role,
-      phones: user.phones.map((p) => ({
-        id: p.id,
-        phoneNumber: p.phone_number,
-        label: p.label,
-        isWhatsapp: p.is_whatsapp,
-        isPrimary: p.is_primary,
-      })),
+      role: user.user_roles[0]?.role.name ?? 'customer',
     }
-
-    if (user.customer_profile) {
-      result.profile = {
-        countryId: user.customer_profile.country_id,
-        provinceId: user.customer_profile.province_id,
-        cantonId: user.customer_profile.canton_id,
-      }
-    }
-
-    return result
   }
 
   /** Registers a new user with role, profile, and phone in a single transaction. */

@@ -344,12 +344,13 @@ async function seedDemoData() {
 
   const downhill = await prisma.eventType.findUnique({ where: { name: 'Downhill' } })
 
+  const slugify = (await import('slugify')).default
   const event = await prisma.event.create({
     data: {
       name: eventName,
+      slug: slugify(eventName, { lower: true, strict: true, locale: 'es' }),
       event_date: new Date('2026-03-15'),
       event_type_id: downhill!.id,
-      location: 'Ambato, Ecuador',
       province_id: tungurahua?.id ?? null,
       canton_id: ambato?.id ?? null,
       status: 'active',

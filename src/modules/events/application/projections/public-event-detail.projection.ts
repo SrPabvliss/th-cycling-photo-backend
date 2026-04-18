@@ -10,8 +10,8 @@ export class PublicPhotoCategoryProjection {
 }
 
 export class PublicEventDetailProjection {
-  @ApiProperty({ description: 'Event UUID' })
-  id: string
+  @ApiProperty({ description: 'URL-friendly slug for public navigation' })
+  slug: string
 
   @ApiProperty({ description: 'Event name' })
   name: string
@@ -21,9 +21,6 @@ export class PublicEventDetailProjection {
 
   @ApiProperty({ description: 'Event date' })
   date: Date
-
-  @ApiPropertyOptional({ description: 'Location' })
-  location: string | null
 
   @ApiPropertyOptional({ description: 'Province name' })
   provinceName: string | null
