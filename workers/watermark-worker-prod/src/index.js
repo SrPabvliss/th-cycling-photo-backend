@@ -1,0 +1,1 @@
+../../watermark-worker/src/index.js
