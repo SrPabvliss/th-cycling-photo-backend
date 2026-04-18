@@ -81,3 +81,6 @@ workers/watermark-worker/.wrangler/
 
 # load testing scripts
 stress-test/*.js
+
+# graphify knowledge graph output
+graphify-out/
