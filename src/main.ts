@@ -20,8 +20,19 @@ async function bootstrap() {
   app.use(cookieParser())
   app.setGlobalPrefix('api/v1')
 
+  const corsOrigin = configService.get('cors.origin', '*')
+  const allowedOrigins = corsOrigin.split(',').map((o: string) => o.trim())
   app.enableCors({
-    origin: configService.get('cors.origin', '*'),
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin || allowedOrigins.includes('*')) return callback(null, true)
+      const allowed = allowedOrigins.some((pattern: string) =>
+        pattern.includes('*') ? origin.endsWith(pattern.replace('*', '')) : origin === pattern,
+      )
+      callback(allowed ? null : new Error('CORS'), allowed)
+    },
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: true,
   })
