@@ -1,5 +1,3 @@
-import type { DetectedParticipantProjection } from '@classifications/application/projections'
-
 export class PhotoDetailProjection {
   /** Photo UUID */
   id: string
@@ -25,8 +23,6 @@ export class PhotoDetailProjection {
   height: number | null
   /** Current processing status */
   status: string
-  /** Reason for classification failure, if any */
-  unclassifiedReason: string | null
   /** Pre-built signed URL for retouched version (null if not retouched) */
   retouchedImageUrl: string | null
   /** Retouched file size in bytes */
@@ -39,8 +35,6 @@ export class PhotoDetailProjection {
   uploadedAt: Date
   /** When processing completed */
   processedAt: Date | null
-  /** When an operator marked this photo as classified */
-  classifiedAt: Date | null
-  /** Detected participants with identifiers and gear colors */
-  detectedParticipants: DetectedParticipantProjection[]
+  /** When the photo was marked as reviewed by an operator */
+  reviewedAt: Date | null
 }

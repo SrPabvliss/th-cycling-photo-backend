@@ -118,6 +118,15 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsNumber()
   REDIS_PORT?: number
+
+  // AI Pipeline
+  @IsOptional()
+  @IsString()
+  AI_PIPELINE_BASE_URL?: string
+
+  @IsOptional()
+  @IsNumber()
+  AI_PIPELINE_TIMEOUT_MS?: number
 }
 
 export function validate(config: Record<string, unknown>) {

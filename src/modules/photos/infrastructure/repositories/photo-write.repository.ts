@@ -36,21 +36,6 @@ export class PhotoWriteRepository implements IPhotoWriteRepository {
     await this.prisma.photo.delete({ where: { id } })
   }
 
-  /** Marks a photo as classified and optionally sets classified_by on its cyclists. */
-  async markAsClassified(photoId: string, classifiedById?: string | null): Promise<void> {
-    await this.prisma.photo.update({
-      where: { id: photoId },
-      data: { classified_at: new Date() },
-    })
-
-    if (classifiedById) {
-      await this.prisma.detectedParticipant.updateMany({
-        where: { photo_id: photoId },
-        data: { classified_by_id: classifiedById },
-      })
-    }
-  }
-
   /** Bulk-updates photo_category_id on multiple photos. Returns count of updated records. */
   async bulkUpdateCategory(photoIds: string[], photoCategoryId: number | null): Promise<number> {
     const result = await this.prisma.photo.updateMany({

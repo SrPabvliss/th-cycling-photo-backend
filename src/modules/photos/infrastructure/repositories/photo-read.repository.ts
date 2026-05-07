@@ -1,4 +1,4 @@
-import type { Prisma } from '@generated/prisma/client'
+import { PhotoStatus, Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import type {
   PhotoDetailProjection,
@@ -45,8 +45,8 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     photoCategoryId?: number,
   ): Promise<PaginatedResult<PhotoListProjection>> {
     const where: Prisma.PhotoWhereInput = { event_id: eventId }
-    if (classified === true) where.classified_at = { not: null }
-    if (classified === false) where.classified_at = null
+    if (classified === true) where.status = PhotoStatus.reviewed
+    if (classified === false) where.status = { not: PhotoStatus.reviewed }
     if (photoCategoryId) where.photo_category_id = photoCategoryId
 
     const [photos, total] = await Promise.all([
@@ -67,7 +67,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     )
   }
 
-  /** Retrieves a single photo's detail with all classification relations. */
+  /** Retrieves a single photo's detail. */
   async getPhotoDetail(id: string): Promise<PhotoDetailProjection | null> {
     const record = await this.prisma.photo.findUnique({
       where: { id },
@@ -145,20 +145,20 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return Number(result._sum.file_size ?? 0)
   }
 
-  /** Returns the count of classified photos for a single event. */
+  /** Returns the count of reviewed (formerly: classified) photos for a single event. */
   async getClassifiedCountByEvent(eventId: string): Promise<number> {
     return this.prisma.photo.count({
-      where: { event_id: eventId, classified_at: { not: null } },
+      where: { event_id: eventId, status: PhotoStatus.reviewed },
     })
   }
 
-  /** Batch: returns a map of eventId → classified photo count. */
+  /** Batch: returns a map of eventId → reviewed photo count. */
   async getClassifiedCountsByEventIds(eventIds: string[]): Promise<Map<string, number>> {
     if (eventIds.length === 0) return new Map()
 
     const results = await this.prisma.photo.groupBy({
       by: ['event_id'],
-      where: { event_id: { in: eventIds }, classified_at: { not: null } },
+      where: { event_id: { in: eventIds }, status: PhotoStatus.reviewed },
       _count: { id: true },
     })
 
@@ -181,13 +181,13 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     }))
   }
 
-  /** Returns the first unclassified photo and its page number for resume functionality. */
+  /** Returns the first non-reviewed photo and its page number for resume functionality. */
   async getResumePoint(
     eventId: string,
     limit: number,
   ): Promise<{ photoId: string | null; page: number }> {
     const firstUnclassified = await this.prisma.photo.findFirst({
-      where: { event_id: eventId, classified_at: null },
+      where: { event_id: eventId, status: { not: PhotoStatus.reviewed } },
       orderBy: { filename: 'asc' },
       select: { id: true, filename: true },
     })
@@ -206,13 +206,13 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return this.prisma.photo.count({ where: { id: { in: ids } } })
   }
 
-  /** Counts how many of the given IDs belong to a specific event and are completed. */
+  /** Counts how many of the given IDs belong to a specific event and are processed or reviewed. */
   async countByIdsAndEvent(photoIds: string[], eventId: string): Promise<number> {
     return this.prisma.photo.count({
       where: {
         id: { in: photoIds },
         event_id: eventId,
-        status: 'completed',
+        status: { in: [PhotoStatus.processed, PhotoStatus.reviewed] },
       },
     })
   }
@@ -241,7 +241,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     >(
       `SELECT p.id, p.filename, p.public_slug,
         1 - (p.embedding <=> (SELECT embedding FROM photos WHERE id = $1::uuid)) as similarity,
-        EXISTS(SELECT 1 FROM detected_participants dp WHERE dp.photo_id = p.id) as has_classifications
+        EXISTS(SELECT 1 FROM photo_bibs pb WHERE pb.photo_id = p.id) as has_classifications
       FROM photos p
       WHERE p.event_id = $2::uuid
         AND p.id != $1::uuid
@@ -270,46 +270,54 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     if (filters.eventId) where.event_id = filters.eventId
     if (filters.status) where.status = filters.status as Prisma.EnumPhotoStatusFilter
 
-    const participantConditions: Prisma.DetectedParticipantWhereInput[] = []
+    const conditions: Prisma.PhotoWhereInput[] = []
 
     if (filters.plateNumber !== undefined) {
-      participantConditions.push({ identifier: { value: String(filters.plateNumber) } })
-    }
-
-    if (filters.helmetColor) {
-      const colors = filters.helmetColor.split(',').map((c) => c.trim())
-      participantConditions.push({
-        gear_colors: {
-          some: { gear_type: { name: 'helmet' }, color_name: { in: colors, mode: 'insensitive' } },
+      conditions.push({
+        bibs: {
+          some: { digits: String(filters.plateNumber) },
         },
       })
     }
 
-    if (filters.clothingColor) {
-      const colors = filters.clothingColor.split(',').map((c) => c.trim())
-      participantConditions.push({
-        gear_colors: {
+    const helmetColors = filters.helmetColor
+      ? filters.helmetColor.split(',').map((c) => c.trim())
+      : []
+    if (helmetColors.length > 0) {
+      conditions.push({
+        colors: {
+          some: { region: 'helmet', primary_color: { in: helmetColors, mode: 'insensitive' } },
+        },
+      })
+    }
+
+    const clothingColors = filters.clothingColor
+      ? filters.clothingColor.split(',').map((c) => c.trim())
+      : []
+    if (clothingColors.length > 0) {
+      conditions.push({
+        colors: {
           some: {
-            gear_type: { name: 'clothing' },
-            color_name: { in: colors, mode: 'insensitive' },
+            region: 'cyclist_clothes',
+            primary_color: { in: clothingColors, mode: 'insensitive' },
           },
         },
       })
     }
 
-    if (filters.bikeColor) {
-      const colors = filters.bikeColor.split(',').map((c) => c.trim())
-      participantConditions.push({
-        gear_colors: {
-          some: { gear_type: { name: 'bike' }, color_name: { in: colors, mode: 'insensitive' } },
+    const bicycleColors = filters.bikeColor ? filters.bikeColor.split(',').map((c) => c.trim()) : []
+    if (bicycleColors.length > 0) {
+      conditions.push({
+        colors: {
+          some: { region: 'bicycle', primary_color: { in: bicycleColors, mode: 'insensitive' } },
         },
       })
     }
 
-    if (participantConditions.length > 0) {
-      where.detected_participants = {
-        some: { AND: participantConditions },
-      }
+    if (conditions.length > 0) {
+      where.AND = where.AND
+        ? [...(where.AND as Prisma.PhotoWhereInput[]), ...conditions]
+        : conditions
     }
 
     if (filters.fromDate || filters.toDate) {

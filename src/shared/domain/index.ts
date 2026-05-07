@@ -1,2 +1,2 @@
 export { AuditFields } from './audit-fields'
-export { AppException } from './exceptions/app.exception'
+export { AppException, ErrorCode } from './exceptions/app.exception'

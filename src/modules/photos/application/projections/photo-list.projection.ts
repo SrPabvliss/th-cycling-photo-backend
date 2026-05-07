@@ -11,6 +11,6 @@ export class PhotoListProjection {
   status: string
   /** When the photo was uploaded */
   uploadedAt: Date
-  /** When the photo was classified (null if not yet classified) */
-  classifiedAt: Date | null
+  /** When the photo was marked as reviewed (null if not yet reviewed) */
+  reviewedAt: Date | null
 }

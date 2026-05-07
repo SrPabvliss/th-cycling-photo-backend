@@ -19,6 +19,7 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     @Inject(PHOTO_WRITE_REPOSITORY) private readonly photoWriteRepo: IPhotoWriteRepository,
     @Inject(KV_STORAGE_ADAPTER) private readonly kvStorage: IKvStorageAdapter,
     @InjectQueue('embedding-generation') private readonly embeddingQueue: Queue,
+    @InjectQueue('photo-classification') private readonly classificationQueue: Queue,
   ) {}
 
   /** Validates event, checks objectKey prefixes, and batch-inserts photo metadata. */
@@ -68,6 +69,15 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
       })),
     )
     this.logger.log(`Enqueued ${photos.length} embedding generation jobs`)
+
+    await this.classificationQueue.addBulk(
+      photos.map((photo) => ({
+        name: 'classify-photo',
+        data: { photoId: photo.id },
+        opts: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+      })),
+    )
+    this.logger.log(`Enqueued ${photos.length} photo classification jobs`)
 
     return { confirmed }
   }

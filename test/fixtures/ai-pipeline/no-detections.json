@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "image_id": "00000000-0000-0000-0000-000000000002",
+  "detections": [],
+  "bib_readings": [],
+  "color_analyses": [],
+  "image_width": 1920,
+  "image_height": 1080,
+  "processing_ms": 1200.0,
+  "timings": { "total_ms": 1200.0, "detection_ms": 800.0, "ocr_ms": 0.0, "color_ms": 0.0 },
+  "stage_results": [
+    {
+      "stage": "detection",
+      "status": "ok",
+      "items_processed": 0,
+      "items_succeeded": 0,
+      "items_failed": 0,
+      "notes": ["no_detections_above_threshold"]
+    },
+    {
+      "stage": "ocr",
+      "status": "skipped",
+      "items_processed": 0,
+      "items_succeeded": 0,
+      "items_failed": 0,
+      "notes": ["no_competidor_number_detected"]
+    },
+    {
+      "stage": "color",
+      "status": "skipped",
+      "items_processed": 0,
+      "items_succeeded": 0,
+      "items_failed": 0,
+      "notes": ["no_color_regions_detected"]
+    }
+  ],
+  "model_versions": { "detection": "yolo", "ocr": "parseq", "color": "gemini" }
+}

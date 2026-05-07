@@ -1,0 +1,68 @@
+{
+  "schema_version": "0.9",
+  "image_id": "00000000-0000-0000-0000-000000000001",
+  "detections": [
+    {
+      "class_name": "competidor_number",
+      "class_id": 1,
+      "confidence": 0.95,
+      "bbox": [0.1, 0.3, 0.3, 0.55]
+    },
+    { "class_name": "helmet", "class_id": 3, "confidence": 0.92, "bbox": [0.41, 0.05, 0.58, 0.22] }
+  ],
+  "bib_readings": [
+    {
+      "digits": "20",
+      "confidence": 0.98,
+      "confidence_per_digit": [0.99, 0.97],
+      "status": "matched",
+      "rejection_reason": null,
+      "preprocessing_applied": [],
+      "bbox_source": [0.1, 0.3, 0.3, 0.55],
+      "raw_ocr_text": "20",
+      "processing_ms": 287.0
+    }
+  ],
+  "color_analyses": [
+    {
+      "region": "helmet",
+      "primary_color": "rojo",
+      "secondary_color": "blanco",
+      "confidence": 0.9,
+      "bbox_source": [0.41, 0.05, 0.58, 0.22],
+      "strategy": "gemini-2.5-flash",
+      "processing_ms": 1733
+    }
+  ],
+  "image_width": 1920,
+  "image_height": 1080,
+  "processing_ms": 5722.0,
+  "timings": { "total_ms": 5722.0, "detection_ms": 59.0, "ocr_ms": 287.0, "color_ms": 5350.0 },
+  "stage_results": [
+    {
+      "stage": "detection",
+      "status": "ok",
+      "items_processed": 1,
+      "items_succeeded": 1,
+      "items_failed": 0,
+      "notes": []
+    },
+    {
+      "stage": "ocr",
+      "status": "ok",
+      "items_processed": 1,
+      "items_succeeded": 1,
+      "items_failed": 0,
+      "notes": []
+    },
+    {
+      "stage": "color",
+      "status": "ok",
+      "items_processed": 1,
+      "items_succeeded": 1,
+      "items_failed": 0,
+      "notes": []
+    }
+  ],
+  "model_versions": { "detection": "yolo", "ocr": "parseq", "color": "gemini" }
+}
