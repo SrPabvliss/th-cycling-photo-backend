@@ -12,6 +12,8 @@ export default () => {
 
   const { REDIS_HOST, REDIS_PORT, REDIS_PASSWORD } = process.env
 
+  const { AI_PIPELINE_BASE_URL, AI_PIPELINE_TIMEOUT_MS } = process.env
+
   const { JWT_SECRET, JWT_ACCESS_EXPIRATION_SECONDS, JWT_REFRESH_EXPIRY_DAYS, CORS_ORIGIN } =
     process.env
 
@@ -81,6 +83,10 @@ export default () => {
     },
     cors: {
       origin: CORS_ORIGIN,
+    },
+    aiPipeline: {
+      baseUrl: AI_PIPELINE_BASE_URL || 'http://localhost:8001',
+      timeoutMs: Number.parseInt(AI_PIPELINE_TIMEOUT_MS || '30000', 10),
     },
   }
 }

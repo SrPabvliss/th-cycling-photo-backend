@@ -25,6 +25,7 @@ import { PhotoCategoriesModule } from './modules/photo-categories/photo-categori
 import { PhotosModule } from './modules/photos/photos.module'
 import { PreviewsModule } from './modules/previews/previews.module'
 import { UsersModule } from './modules/users/users.module'
+import { AiPipelineModule } from './shared/ai-pipeline/ai-pipeline.module'
 import { RolesGuard } from './shared/auth'
 import { CloudflareModule } from './shared/cloudflare/cloudflare.module'
 import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
@@ -69,6 +70,7 @@ import { StorageModule } from './shared/storage/storage.module'
     CloudflareModule,
     NotificationsModule,
     EmbeddingsModule,
+    AiPipelineModule,
     CartModule,
     ClassificationsModule,
     DeliveriesModule,
