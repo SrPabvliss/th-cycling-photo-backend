@@ -1,7 +1,6 @@
 import { AppException } from '@shared/domain'
 import { nanoid } from 'nanoid'
 import { PhotoStatus, type PhotoStatusType } from '../value-objects/photo-status.vo'
-import type { UnclassifiedReasonType } from '../value-objects/unclassified-reason.vo'
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
@@ -27,10 +26,10 @@ export class Photo {
     public width: number | null,
     public height: number | null,
     public status: PhotoStatusType,
-    public unclassifiedReason: UnclassifiedReasonType | null,
     public readonly capturedAt: Date | null,
     public readonly uploadedAt: Date,
     public processedAt: Date | null,
+    public reviewedAt: Date | null,
     public retouchedStorageKey: string | null,
     public retouchedPublicSlug: string | null,
     public retouchedFileSize: bigint | null,
@@ -65,9 +64,9 @@ export class Photo {
       data.width ?? null,
       data.height ?? null,
       PhotoStatus.PENDING,
-      null,
       data.capturedAt ?? null,
       new Date(),
+      null,
       null,
       null,
       null,
@@ -78,15 +77,25 @@ export class Photo {
     )
   }
 
-  markAsCompleted(): void {
-    this.status = PhotoStatus.COMPLETED
+  markProcessing(): void {
+    this.status = PhotoStatus.PROCESSING
+  }
+
+  markProcessed(width: number | null, height: number | null): void {
+    this.status = PhotoStatus.PROCESSED
+    this.processedAt = new Date()
+    if (width !== null) this.width = width
+    if (height !== null) this.height = height
+  }
+
+  markFailed(): void {
+    this.status = PhotoStatus.FAILED
     this.processedAt = new Date()
   }
 
-  markAsFailed(reason: UnclassifiedReasonType): void {
-    this.status = PhotoStatus.FAILED
-    this.unclassifiedReason = reason
-    this.processedAt = new Date()
+  markReviewed(): void {
+    this.status = PhotoStatus.REVIEWED
+    this.reviewedAt = new Date()
   }
 
   setRetouched(
@@ -139,10 +148,10 @@ export class Photo {
     width: number | null
     height: number | null
     status: PhotoStatusType
-    unclassifiedReason: UnclassifiedReasonType | null
     capturedAt: Date | null
     uploadedAt: Date
     processedAt: Date | null
+    reviewedAt: Date | null
     retouchedStorageKey: string | null
     retouchedPublicSlug: string | null
     retouchedFileSize: bigint | null
@@ -161,10 +170,10 @@ export class Photo {
       data.width,
       data.height,
       data.status,
-      data.unclassifiedReason,
       data.capturedAt,
       data.uploadedAt,
       data.processedAt,
+      data.reviewedAt,
       data.retouchedStorageKey,
       data.retouchedPublicSlug,
       data.retouchedFileSize,

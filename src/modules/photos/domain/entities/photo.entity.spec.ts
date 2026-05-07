@@ -22,12 +22,12 @@ describe('Photo Entity', () => {
       expect(photo.fileSize).toBe(1024n)
       expect(photo.mimeType).toBe('image/jpeg')
       expect(photo.status).toBe('pending')
-      expect(photo.unclassifiedReason).toBeNull()
       expect(photo.width).toBeNull()
       expect(photo.height).toBeNull()
       expect(photo.capturedAt).toBeNull()
       expect(photo.uploadedAt).toBeInstanceOf(Date)
       expect(photo.processedAt).toBeNull()
+      expect(photo.reviewedAt).toBeNull()
     })
 
     it('should create photo with optional width and height', () => {
@@ -82,27 +82,48 @@ describe('Photo Entity', () => {
     })
   })
 
-  describe('markAsCompleted', () => {
-    it('should set status to completed and processedAt', () => {
+  describe('markProcessing', () => {
+    it('should set status to processing', () => {
       const photo = Photo.create(validData)
-
-      photo.markAsCompleted()
-
-      expect(photo.status).toBe('completed')
-      expect(photo.processedAt).toBeInstanceOf(Date)
-      expect(photo.unclassifiedReason).toBeNull()
+      photo.markProcessing()
+      expect(photo.status).toBe('processing')
     })
   })
 
-  describe('markAsFailed', () => {
-    it('should set status to failed with reason and processedAt', () => {
+  describe('markProcessed', () => {
+    it('should set status, processedAt, width and height', () => {
       const photo = Photo.create(validData)
-
-      photo.markAsFailed('no_participant')
-
-      expect(photo.status).toBe('failed')
-      expect(photo.unclassifiedReason).toBe('no_participant')
+      photo.markProcessed(1920, 1080)
+      expect(photo.status).toBe('processed')
       expect(photo.processedAt).toBeInstanceOf(Date)
+      expect(photo.width).toBe(1920)
+      expect(photo.height).toBe(1080)
+    })
+
+    it('should not overwrite width/height when nulls passed', () => {
+      const photo = Photo.create({ ...validData, width: 800, height: 600 })
+      photo.markProcessed(null, null)
+      expect(photo.status).toBe('processed')
+      expect(photo.width).toBe(800)
+      expect(photo.height).toBe(600)
+    })
+  })
+
+  describe('markFailed', () => {
+    it('should set status to failed and processedAt', () => {
+      const photo = Photo.create(validData)
+      photo.markFailed()
+      expect(photo.status).toBe('failed')
+      expect(photo.processedAt).toBeInstanceOf(Date)
+    })
+  })
+
+  describe('markReviewed', () => {
+    it('should set status to reviewed and reviewedAt', () => {
+      const photo = Photo.create(validData)
+      photo.markReviewed()
+      expect(photo.status).toBe('reviewed')
+      expect(photo.reviewedAt).toBeInstanceOf(Date)
     })
   })
 
@@ -117,11 +138,11 @@ describe('Photo Entity', () => {
         mimeType: 'image/jpeg',
         width: 800,
         height: 600,
-        status: 'completed',
-        unclassifiedReason: null,
+        status: 'processed',
         capturedAt: new Date('2026-01-10'),
         uploadedAt: new Date('2026-01-15'),
         processedAt: new Date('2026-01-15'),
+        reviewedAt: null,
         publicSlug: 'test-slug',
         retouchedStorageKey: null,
         retouchedPublicSlug: null,
@@ -131,13 +152,15 @@ describe('Photo Entity', () => {
 
       expect(photo).toBeInstanceOf(Photo)
       expect(photo.id).toBe('550e8400-e29b-41d4-a716-446655440000')
-      expect(photo.status).toBe('completed')
+      expect(photo.status).toBe('processed')
       expect(photo.width).toBe(800)
       expect(photo.height).toBe(600)
       expect(photo.processedAt).toBeInstanceOf(Date)
+      expect(photo.reviewedAt).toBeNull()
     })
 
-    it('should reconstitute failed photo with unclassified reason', () => {
+    it('should reconstitute reviewed photo with reviewedAt', () => {
+      const reviewedAt = new Date('2026-01-16')
       const photo = Photo.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
         eventId: '660e8400-e29b-41d4-a716-446655440000',
@@ -147,11 +170,11 @@ describe('Photo Entity', () => {
         mimeType: 'image/jpeg',
         width: null,
         height: null,
-        status: 'failed',
-        unclassifiedReason: 'ocr_failed',
+        status: 'reviewed',
         capturedAt: null,
         uploadedAt: new Date('2026-01-15'),
         processedAt: new Date('2026-01-15'),
+        reviewedAt,
         publicSlug: 'test-slug',
         retouchedStorageKey: null,
         retouchedPublicSlug: null,
@@ -159,8 +182,8 @@ describe('Photo Entity', () => {
         retouchedAt: null,
       })
 
-      expect(photo.status).toBe('failed')
-      expect(photo.unclassifiedReason).toBe('ocr_failed')
+      expect(photo.status).toBe('reviewed')
+      expect(photo.reviewedAt).toBe(reviewedAt)
     })
   })
 })

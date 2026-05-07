@@ -28,11 +28,11 @@ describe('ConfirmRetouchedUploadHandler', () => {
       mimeType: 'image/jpeg',
       width: 1920,
       height: 1080,
-      status: 'completed',
-      unclassifiedReason: null,
+      status: 'processed',
       capturedAt: null,
       uploadedAt: new Date(),
       processedAt: new Date(),
+      reviewedAt: null,
       publicSlug: 'test-slug',
       retouchedStorageKey: retouchedKey,
       retouchedPublicSlug: 'retouched-slug',
@@ -65,7 +65,6 @@ describe('ConfirmRetouchedUploadHandler', () => {
       save: jest.fn(),
       saveMany: jest.fn(),
       delete: jest.fn(),
-      markAsClassified: jest.fn(),
       bulkUpdateCategory: jest.fn(),
     } as jest.Mocked<IPhotoWriteRepository>
 

@@ -1,8 +1,7 @@
+import { PhotoStatus } from '@generated/prisma/client'
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import { IsDate, IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator'
-
-const PHOTO_STATUS_VALUES = ['pending', 'detecting', 'analyzing', 'completed', 'failed'] as const
 
 export class SearchPhotosDto {
   @ApiPropertyOptional({ description: 'Filter by event UUID', format: 'uuid' })
@@ -12,12 +11,12 @@ export class SearchPhotosDto {
 
   @ApiPropertyOptional({
     description: 'Filter by photo status',
-    enum: PHOTO_STATUS_VALUES,
-    example: 'completed',
+    enum: PhotoStatus,
+    example: PhotoStatus.processed,
   })
-  @IsEnum(PHOTO_STATUS_VALUES)
+  @IsEnum(PhotoStatus)
   @IsOptional()
-  status?: string
+  status?: PhotoStatus
 
   @ApiPropertyOptional({ description: 'Search by plate number (1-999)', example: 42 })
   @IsInt()

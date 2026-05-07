@@ -11,10 +11,10 @@ export class PhotoViewProjection {
   mimeType: string
   /** Current processing status */
   status: string
-  /** Reason for classification failure, if any */
-  unclassifiedReason: string | null
   /** When the photo was uploaded */
   uploadedAt: Date
   /** When processing completed */
   processedAt: Date | null
+  /** When the photo was marked as reviewed by an operator */
+  reviewedAt: Date | null
 }

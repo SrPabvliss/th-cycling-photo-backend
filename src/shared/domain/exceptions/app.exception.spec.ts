@@ -46,6 +46,14 @@ describe('AppException', () => {
 
       expect(exception.shouldThrow).toBe(true)
     })
+
+    it('should attach context when provided', () => {
+      const exception = AppException.businessRule('color_name.invalid', false, {
+        received: 'verde-fluor',
+      })
+      expect(exception.context).toEqual({ received: 'verde-fluor' })
+      expect(exception.code).toBe(ErrorCode.BUSINESS_RULE)
+    })
   })
 
   describe('externalService', () => {
