@@ -18,9 +18,11 @@ import { GetResumePointHandler } from '@photos/application/queries/get-resume-po
 import { SearchPhotosHandler } from '@photos/application/queries/search-photos/search-photos.handler'
 import { PHOTO_READ_REPOSITORY, PHOTO_WRITE_REPOSITORY } from '@photos/domain/ports'
 import { EmbeddingGenerationProcessor } from '@photos/infrastructure/processors/embedding-generation.processor'
+import { PhotoClassificationProcessor } from '@photos/infrastructure/processors/photo-classification.processor'
 import { PhotoReadRepository } from '@photos/infrastructure/repositories/photo-read.repository'
 import { PhotoWriteRepository } from '@photos/infrastructure/repositories/photo-write.repository'
 import { PhotosController } from '@photos/presentation/controllers/photos.controller'
+import { ClassificationsModule } from '../classifications/classifications.module'
 import { EventsModule } from '../events/events.module'
 
 const CommandHandlers = [
@@ -45,15 +47,17 @@ const QueryHandlers = [
 @Module({
   imports: [
     CqrsModule,
-    BullModule.registerQueue({ name: 'embedding-generation' }),
+    BullModule.registerQueue({ name: 'embedding-generation' }, { name: 'photo-classification' }),
     forwardRef(() => EventsModule),
     forwardRef(() => OrdersModule),
+    forwardRef(() => ClassificationsModule),
   ],
   controllers: [PhotosController],
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
     EmbeddingGenerationProcessor,
+    PhotoClassificationProcessor,
     { provide: PHOTO_READ_REPOSITORY, useClass: PhotoReadRepository },
     { provide: PHOTO_WRITE_REPOSITORY, useClass: PhotoWriteRepository },
   ],
