@@ -1,6 +1,3 @@
-import { toDetectedParticipantProjection } from '@classifications/infrastructure/mappers/classification-projection.mapper'
-import type { ClassificationDetailSelect } from '@classifications/infrastructure/mappers/cyclist.mapper'
-import { classificationDetailSelectConfig } from '@classifications/infrastructure/mappers/cyclist.mapper'
 import { Prisma, type Photo as PrismaPhoto } from '@generated/prisma/client'
 import type {
   PhotoDetailProjection,
@@ -9,7 +6,6 @@ import type {
 } from '@photos/application/projections'
 import { Photo } from '@photos/domain/entities'
 import type { PhotoStatusType } from '@photos/domain/value-objects/photo-status.vo'
-import type { UnclassifiedReasonType } from '@photos/domain/value-objects/unclassified-reason.vo'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 
 // --- Select shapes for Prisma queries ---
@@ -20,7 +16,7 @@ export const photoListSelectConfig = {
   public_slug: true,
   status: true,
   uploaded_at: true,
-  classified_at: true,
+  reviewed_at: true,
 } satisfies Prisma.PhotoSelect
 
 export type PhotoListSelect = Prisma.PhotoGetPayload<{ select: typeof photoListSelectConfig }>
@@ -36,15 +32,13 @@ export const photoDetailSelectConfig = {
   width: true,
   height: true,
   status: true,
-  unclassified_reason: true,
   retouched_public_slug: true,
   retouched_file_size: true,
   retouched_at: true,
   captured_at: true,
   uploaded_at: true,
   processed_at: true,
-  classified_at: true,
-  ...classificationDetailSelectConfig,
+  reviewed_at: true,
 } satisfies Prisma.PhotoSelect
 
 export type PhotoDetailSelect = Prisma.PhotoGetPayload<{ select: typeof photoDetailSelectConfig }>
@@ -56,9 +50,9 @@ export const photoViewSelectConfig = {
   file_size: true,
   mime_type: true,
   status: true,
-  unclassified_reason: true,
   uploaded_at: true,
   processed_at: true,
+  reviewed_at: true,
 } satisfies Prisma.PhotoSelect
 
 export type PhotoViewSelect = Prisma.PhotoGetPayload<{ select: typeof photoViewSelectConfig }>
@@ -78,7 +72,6 @@ export function toPersistence(entity: Photo): Prisma.PhotoUncheckedCreateInput {
     width: entity.width,
     height: entity.height,
     status: entity.status,
-    unclassified_reason: entity.unclassifiedReason,
     retouched_storage_key: entity.retouchedStorageKey,
     retouched_public_slug: entity.retouchedPublicSlug,
     retouched_file_size: entity.retouchedFileSize,
@@ -87,6 +80,7 @@ export function toPersistence(entity: Photo): Prisma.PhotoUncheckedCreateInput {
     captured_at: entity.capturedAt,
     uploaded_at: entity.uploadedAt,
     processed_at: entity.processedAt,
+    reviewed_at: entity.reviewedAt,
     created_by_id: entity.createdById,
     photo_category_id: entity.photoCategoryId,
   }
@@ -105,10 +99,10 @@ export function toEntity(record: PrismaPhoto): Photo {
     width: record.width,
     height: record.height,
     status: record.status as PhotoStatusType,
-    unclassifiedReason: record.unclassified_reason as UnclassifiedReasonType | null,
     capturedAt: record.captured_at,
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
+    reviewedAt: record.reviewed_at,
     retouchedStorageKey: record.retouched_storage_key,
     retouchedPublicSlug: record.retouched_public_slug,
     retouchedFileSize: record.retouched_file_size,
@@ -129,11 +123,11 @@ export function toListProjection(record: PhotoListSelect, cdn: CdnUrlBuilder): P
     thumbnailUrl: cdn.internalUrl(record.public_slug, 'thumb'),
     status: record.status,
     uploadedAt: record.uploaded_at,
-    classifiedAt: record.classified_at,
+    reviewedAt: record.reviewed_at,
   }
 }
 
-/** Converts a Prisma selected record to a detail projection with nested relations. */
+/** Converts a Prisma selected record to a detail projection. */
 export function toDetailProjection(
   record: PhotoDetailSelect,
   cdn: CdnUrlBuilder,
@@ -151,7 +145,6 @@ export function toDetailProjection(
     width: record.width,
     height: record.height,
     status: record.status,
-    unclassifiedReason: record.unclassified_reason,
     retouchedImageUrl: record.retouched_public_slug
       ? cdn.internalUrl(record.retouched_public_slug, 'workspace')
       : null,
@@ -160,8 +153,7 @@ export function toDetailProjection(
     capturedAt: record.captured_at,
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
-    classifiedAt: record.classified_at,
-    detectedParticipants: record.detected_participants.map(toDetectedParticipantProjection),
+    reviewedAt: record.reviewed_at,
   }
 }
 
@@ -174,8 +166,8 @@ export function toViewProjection(record: PhotoViewSelect, cdn: CdnUrlBuilder): P
     fileSize: Number(record.file_size),
     mimeType: record.mime_type,
     status: record.status,
-    unclassifiedReason: record.unclassified_reason,
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
+    reviewedAt: record.reviewed_at,
   }
 }

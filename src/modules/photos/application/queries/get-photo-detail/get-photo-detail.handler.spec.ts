@@ -15,11 +15,11 @@ describe('GetPhotoDetailHandler', () => {
     mimeType: 'image/jpeg',
     width: 1920,
     height: 1080,
-    status: 'classified',
-    unclassifiedReason: null,
+    status: 'reviewed',
     capturedAt: new Date('2025-06-15T10:30:00Z'),
     uploadedAt: new Date('2025-06-15T12:00:00Z'),
     processedAt: new Date('2025-06-15T12:05:00Z'),
+    reviewedAt: null,
     publicSlug: 'test-slug',
     eventSlug: 'test-event',
     imageUrl: 'https://cdn.test/internal/workspace/test-slug.jpg?token=mock',
@@ -27,8 +27,6 @@ describe('GetPhotoDetailHandler', () => {
     retouchedImageUrl: null,
     retouchedFileSize: null,
     retouchedAt: null,
-    classifiedAt: null,
-    detectedParticipants: [],
   }
 
   beforeEach(() => {
