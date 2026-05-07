@@ -10,12 +10,19 @@
   "moduleNameMapper": {
     "^@shared/(.*)$": "<rootDir>/../src/shared/$1",
     "^@generated/(.*)$": "<rootDir>/../src/generated/$1",
+    "^@event-assets/(.*)$": "<rootDir>/../src/modules/event-assets/$1",
     "^@events/(.*)$": "<rootDir>/../src/modules/events/$1",
+    "^@photo-categories/(.*)$": "<rootDir>/../src/modules/photo-categories/$1",
     "^@photos/(.*)$": "<rootDir>/../src/modules/photos/$1",
     "^@classifications/(.*)$": "<rootDir>/../src/modules/classifications/$1",
-    "^@auth/(.*)$": "<rootDir>/../src/modules/auth/$1",
-    "^@orders/(.*)$": "<rootDir>/../src/modules/orders/$1",
+    "^@locations/(.*)$": "<rootDir>/../src/modules/locations/$1",
     "^@users/(.*)$": "<rootDir>/../src/modules/users/$1",
+    "^@previews/(.*)$": "<rootDir>/../src/modules/previews/$1",
+    "^@deliveries/(.*)$": "<rootDir>/../src/modules/deliveries/$1",
+    "^@orders/(.*)$": "<rootDir>/../src/modules/orders/$1",
+    "^@notifications/(.*)$": "<rootDir>/../src/modules/notifications/$1",
+    "^@auth/(.*)$": "<rootDir>/../src/modules/auth/$1",
+    "^@cart/(.*)$": "<rootDir>/../src/modules/cart/$1",
     "^(\\.{1,2}/.*)\\.js$": "$1"
   }
 }

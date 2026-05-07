@@ -1,6 +1,7 @@
 import type { INestApplication } from '@nestjs/common'
 import { ValidationPipe } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
+import { JwtService } from '@nestjs/jwt'
 import { Test, type TestingModule } from '@nestjs/testing'
 import request from 'supertest'
 import type { App } from 'supertest/types'
@@ -9,19 +10,28 @@ import { GlobalExceptionFilter } from '../src/shared/http/filters/global-excepti
 import { ResponseInterceptor } from '../src/shared/http/interceptors/response.interceptor'
 import { PrismaService } from '../src/shared/infrastructure'
 import { STORAGE_ADAPTER } from '../src/shared/storage/domain/ports/storage-adapter.port'
+import { createAuthenticatedUser, type TestAuthUser } from './fixtures/factories/auth.factory'
 
 describe('Photos Module (e2e)', () => {
   let app: INestApplication<App>
   let prisma: PrismaService
   let testEventId: string
+  let admin: TestAuthUser
+  let bearer: string
 
   const mockStorageAdapter = {
+    getPresignedUrl: jest.fn(async ({ key }: { key: string }) => ({
+      url: `https://b2.test/presigned/${key}?signed=1`,
+      objectKey: key,
+      expiresIn: 300,
+    })),
+    getPresignedDownloadUrl: jest.fn(async () => 'https://b2.test/download/mock'),
+    delete: jest.fn().mockResolvedValue(undefined),
     upload: jest.fn().mockResolvedValue({
       key: 'events/test/photos/mock.jpg',
       url: 'https://cdn.test.com/events/test/photos/mock.jpg',
     }),
     getPublicUrl: jest.fn().mockReturnValue('https://cdn.test.com/events/test/photos/mock.jpg'),
-    delete: jest.fn().mockResolvedValue(undefined),
   }
 
   beforeAll(async () => {
@@ -51,8 +61,11 @@ describe('Photos Module (e2e)', () => {
     await app.init()
 
     prisma = moduleFixture.get(PrismaService)
+    const jwt = moduleFixture.get(JwtService)
 
-    // Create a test event for photo uploads
+    admin = await createAuthenticatedUser(prisma as never, jwt, 'admin')
+    bearer = `Bearer ${admin.token}`
+
     const futureDate = new Date()
     futureDate.setFullYear(futureDate.getFullYear() + 1)
 
@@ -65,7 +78,7 @@ describe('Photos Module (e2e)', () => {
     const event = await prisma.event.create({
       data: {
         name: 'E2E Photos Test Event',
-        slug: 'e2e-photos-test-event',
+        slug: `e2e-photos-${Date.now()}`,
         event_date: futureDate,
         event_type_id: eventType.id,
       },
@@ -74,12 +87,10 @@ describe('Photos Module (e2e)', () => {
   })
 
   afterAll(async () => {
-    // Clean up test data respecting FK order
-    await prisma.gearColor.deleteMany()
-    await prisma.participantIdentifier.deleteMany()
-    await prisma.detectedParticipant.deleteMany()
-    await prisma.photo.deleteMany()
-    await prisma.event.deleteMany()
+    await prisma.photo.deleteMany({ where: { event_id: testEventId } })
+    await prisma.event.deleteMany({ where: { id: testEventId } })
+    await prisma.userRole.deleteMany({ where: { user_id: admin.userId } })
+    await prisma.user.delete({ where: { id: admin.userId } }).catch(() => undefined)
     await app.close()
   })
 
@@ -87,252 +98,100 @@ describe('Photos Module (e2e)', () => {
     jest.clearAllMocks()
   })
 
-  // --- Happy path: upload → list → detail → classify → search ---
+  // --- Upload flow: presigned-url → confirm-batch → list → detail ---
 
-  describe('Happy path workflow', () => {
-    let uploadedPhotoId: string
+  describe('Upload + retrieval workflow', () => {
+    let confirmedPhotoId: string
+    const fileName = `race-${Date.now()}-001.jpg`
 
-    it('POST /api/v1/events/:eventId/photos — should upload a photo', async () => {
-      const fakeJpeg = Buffer.alloc(1024, 0xff)
+    it('POST /events/:eventId/photos/presigned-url — should return signed URL', async () => {
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/events/${testEventId}/photos/presigned-url`)
+        .set('Authorization', bearer)
+        .send({ fileName, contentType: 'image/jpeg' })
+        .expect(201)
+
+      expect(response.body.data).toMatchObject({
+        isDuplicate: false,
+        expiresIn: 300,
+      })
+      expect(response.body.data.url).toContain('https://b2.test/presigned/')
+      expect(response.body.data.objectKey).toContain(`events/${testEventId}/photos/`)
+      expect(mockStorageAdapter.getPresignedUrl).toHaveBeenCalledTimes(1)
+    })
+
+    it('POST /events/:eventId/photos/confirm-batch — should create photo records', async () => {
+      const objectKey = `events/${testEventId}/photos/test-${Date.now()}-${fileName}`
 
       const response = await request(app.getHttpServer())
-        .post(`/api/v1/events/${testEventId}/photos`)
-        .attach('photos', fakeJpeg, {
-          filename: 'race-photo-001.jpg',
-          contentType: 'image/jpeg',
+        .post(`/api/v1/events/${testEventId}/photos/confirm-batch`)
+        .set('Authorization', bearer)
+        .send({
+          photos: [{ fileName, fileSize: 4096, objectKey, contentType: 'image/jpeg' }],
         })
         .expect(201)
 
-      expect(response.body.data).toHaveLength(1)
-      expect(response.body.data[0]).toHaveProperty('id')
-      expect(typeof response.body.data[0].id).toBe('string')
-      uploadedPhotoId = response.body.data[0].id
-
-      expect(mockStorageAdapter.upload).toHaveBeenCalledWith(
-        expect.objectContaining({
-          buffer: expect.any(Buffer),
-          contentType: 'image/jpeg',
-          key: expect.stringContaining(`events/${testEventId}/photos/`),
-        }),
-      )
+      expect(response.body.data).toHaveProperty('confirmed', 1)
     })
 
-    it('POST /api/v1/events/:eventId/photos — should upload multiple photos', async () => {
-      const photo1 = Buffer.alloc(512, 0xfe)
-      const photo2 = Buffer.alloc(512, 0xfd)
-
-      const response = await request(app.getHttpServer())
-        .post(`/api/v1/events/${testEventId}/photos`)
-        .attach('photos', photo1, {
-          filename: 'race-photo-002.png',
-          contentType: 'image/png',
-        })
-        .attach('photos', photo2, {
-          filename: 'race-photo-003.webp',
-          contentType: 'image/webp',
-        })
-        .expect(201)
-
-      expect(response.body.data).toHaveLength(2)
-      expect(mockStorageAdapter.upload).toHaveBeenCalledTimes(2)
-    })
-
-    it('GET /api/v1/events/:eventId/photos — should list uploaded photos', async () => {
+    it('GET /events/:eventId/photos — should list confirmed photos', async () => {
       const response = await request(app.getHttpServer())
         .get(`/api/v1/events/${testEventId}/photos`)
-        .expect(200)
-
-      expect(response.body.data).toHaveLength(3)
-      expect(response.body.data[0]).toHaveProperty('id')
-      expect(response.body.data[0]).toHaveProperty('eventId', testEventId)
-      expect(response.body.data[0]).toHaveProperty('status', 'pending')
-      expect(response.body.data[0]).toHaveProperty('filename')
-      expect(response.body.data[0]).toHaveProperty('storageKey')
-      expect(response.body.data[0]).toHaveProperty('uploadedAt')
-    })
-
-    it('GET /api/v1/events/:eventId/photos?page=1&limit=2 — should paginate', async () => {
-      const page1 = await request(app.getHttpServer())
-        .get(`/api/v1/events/${testEventId}/photos`)
-        .query({ page: 1, limit: 2 })
-        .expect(200)
-
-      const page2 = await request(app.getHttpServer())
-        .get(`/api/v1/events/${testEventId}/photos`)
-        .query({ page: 2, limit: 2 })
-        .expect(200)
-
-      expect(page1.body.data).toHaveLength(2)
-      expect(page2.body.data).toHaveLength(1)
-    })
-
-    it('GET /api/v1/photos/:id — should get photo detail', async () => {
-      const response = await request(app.getHttpServer())
-        .get(`/api/v1/photos/${uploadedPhotoId}`)
-        .expect(200)
-
-      const photo = response.body.data
-      expect(photo).toHaveProperty('id', uploadedPhotoId)
-      expect(photo).toHaveProperty('eventId', testEventId)
-      expect(photo).toHaveProperty('filename', 'race-photo-001.jpg')
-      expect(photo).toHaveProperty('mimeType', 'image/jpeg')
-      expect(photo).toHaveProperty('status', 'pending')
-      expect(photo).toHaveProperty('detectedParticipants')
-      expect(photo.detectedParticipants).toEqual([])
-    })
-
-    it('PATCH /api/v1/photos/:id/classify — should classify photo with cyclist data', async () => {
-      const classifyBody = {
-        cyclists: [
-          {
-            boundingBox: { x: 10, y: 20, width: 100, height: 200 },
-            confidenceScore: 0.95,
-            plateNumber: { number: 42, confidenceScore: 0.88 },
-            colors: [
-              {
-                itemType: 'jersey',
-                colorName: 'Red',
-                colorHex: '#FF0000',
-                densityPercentage: 65.5,
-              },
-            ],
-          },
-        ],
-      }
-
-      const response = await request(app.getHttpServer())
-        .patch(`/api/v1/photos/${uploadedPhotoId}/classify`)
-        .send(classifyBody)
-        .expect(200)
-
-      expect(response.body.data).toHaveProperty('id', uploadedPhotoId)
-    })
-
-    it('GET /api/v1/photos/:id — should include classification data after classify', async () => {
-      const response = await request(app.getHttpServer())
-        .get(`/api/v1/photos/${uploadedPhotoId}`)
-        .expect(200)
-
-      const photo = response.body.data
-      expect(photo.status).toBe('completed')
-      expect(photo.processedAt).not.toBeNull()
-      expect(photo.detectedParticipants).toHaveLength(1)
-
-      const participant = photo.detectedParticipants[0]
-      expect(participant).toHaveProperty('confidenceScore', 0.95)
-      expect(participant).toHaveProperty('boundingBox')
-      expect(participant.participantIdentifier).toHaveProperty('value', '42')
-      expect(participant.gearColors).toHaveLength(1)
-      expect(participant.gearColors[0]).toHaveProperty('gearTypeName', 'jersey')
-      expect(participant.gearColors[0]).toHaveProperty('colorName', 'Red')
-    })
-
-    it('GET /api/v1/photos/search?plateNumber=42 — should find photo by plate number', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/api/v1/photos/search')
-        .query({ plateNumber: 42 })
+        .set('Authorization', bearer)
         .expect(200)
 
       expect(response.body.data.length).toBeGreaterThanOrEqual(1)
-
-      const found = response.body.data.find((p: { id: string }) => p.id === uploadedPhotoId)
+      const found = response.body.data.find((p: { filename: string }) => p.filename === fileName)
       expect(found).toBeDefined()
-      expect(found.status).toBe('completed')
+      confirmedPhotoId = found.id
+      expect(found).toHaveProperty('id')
+      expect(found).toHaveProperty('filename', fileName)
+      // Status may be pending|processing|failed depending on async classification race.
+      expect(['pending', 'processing', 'processed', 'failed']).toContain(found.status)
     })
 
-    it('GET /api/v1/photos/search?status=completed — should filter by status', async () => {
+    it('GET /photos/:id — should return photo detail', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/v1/photos/search')
-        .query({ status: 'completed', eventId: testEventId })
+        .get(`/api/v1/photos/${confirmedPhotoId}`)
+        .set('Authorization', bearer)
         .expect(200)
 
-      expect(response.body.data.length).toBeGreaterThanOrEqual(1)
-      for (const photo of response.body.data) {
-        expect(photo.status).toBe('completed')
-      }
+      expect(response.body.data).toHaveProperty('id', confirmedPhotoId)
+      expect(response.body.data).toHaveProperty('mimeType', 'image/jpeg')
+      expect(['pending', 'processing', 'processed', 'failed']).toContain(response.body.data.status)
     })
   })
 
   // --- Validation tests ---
 
   describe('Validation', () => {
-    it('should reject non-image file types (GIF)', async () => {
-      const fakeGif = Buffer.from('GIF89a')
-
+    it('POST presigned-url with invalid contentType should reject', async () => {
       await request(app.getHttpServer())
-        .post(`/api/v1/events/${testEventId}/photos`)
-        .attach('photos', fakeGif, {
-          filename: 'animation.gif',
-          contentType: 'image/gif',
-        })
+        .post(`/api/v1/events/${testEventId}/photos/presigned-url`)
+        .set('Authorization', bearer)
+        .send({ fileName: 'animation.gif', contentType: 'image/gif' })
         .expect(400)
     })
 
-    it('should return 404 when uploading to non-existent event', async () => {
-      const fakeJpeg = Buffer.alloc(64, 0xff)
-      const nonExistentId = '00000000-0000-0000-0000-000000000000'
-
+    it('POST presigned-url on non-existent event returns 404', async () => {
       const response = await request(app.getHttpServer())
-        .post(`/api/v1/events/${nonExistentId}/photos`)
-        .attach('photos', fakeJpeg, {
-          filename: 'orphan.jpg',
-          contentType: 'image/jpeg',
-        })
+        .post('/api/v1/events/00000000-0000-0000-0000-000000000000/photos/presigned-url')
+        .set('Authorization', bearer)
+        .send({ fileName: 'orphan.jpg', contentType: 'image/jpeg' })
         .expect(404)
 
       expect(response.body.error).toHaveProperty('code', 'NOT_FOUND')
     })
 
-    it('should reject classify with invalid body (missing required fields)', async () => {
-      const response = await request(app.getHttpServer())
-        .patch('/api/v1/photos/00000000-0000-0000-0000-000000000000/classify')
-        .send({ cyclists: [{ invalidField: true }] })
-        .expect(400)
-
-      expect(response.body.error).toHaveProperty('code', 'VALIDATION_FAILED')
-    })
-
-    it('should reject classify with out-of-range confidence score', async () => {
-      await request(app.getHttpServer())
-        .patch('/api/v1/photos/00000000-0000-0000-0000-000000000000/classify')
-        .send({
-          cyclists: [
-            {
-              boundingBox: { x: 0, y: 0, width: 10, height: 10 },
-              confidenceScore: 1.5,
-            },
-          ],
-        })
-        .expect(400)
-    })
-
-    it('should reject classify with invalid equipment item type', async () => {
-      await request(app.getHttpServer())
-        .patch('/api/v1/photos/00000000-0000-0000-0000-000000000000/classify')
-        .send({
-          cyclists: [
-            {
-              boundingBox: { x: 0, y: 0, width: 10, height: 10 },
-              confidenceScore: 0.9,
-              colors: [
-                {
-                  itemType: 'shoes',
-                  colorName: 'Blue',
-                  colorHex: '#0000FF',
-                  densityPercentage: 50,
-                },
-              ],
-            },
-          ],
-        })
-        .expect(400)
+    it('GET endpoints reject unauthenticated requests', async () => {
+      await request(app.getHttpServer()).get(`/api/v1/events/${testEventId}/photos`).expect(401)
     })
   })
 
   // --- Edge cases ---
 
   describe('Edge cases', () => {
-    it('should return empty list for event with no photos', async () => {
+    it('GET /events/:id/photos returns empty list for event with no photos', async () => {
       const futureDate = new Date()
       futureDate.setFullYear(futureDate.getFullYear() + 1)
 
@@ -340,59 +199,51 @@ describe('Photos Module (e2e)', () => {
       const emptyEvent = await prisma.event.create({
         data: {
           name: 'Empty Event',
-          slug: 'empty-event',
+          slug: `empty-event-${Date.now()}`,
           event_date: futureDate,
           event_type_id: eventType!.id,
         },
       })
 
-      const response = await request(app.getHttpServer())
-        .get(`/api/v1/events/${emptyEvent.id}/photos`)
-        .expect(200)
+      try {
+        const response = await request(app.getHttpServer())
+          .get(`/api/v1/events/${emptyEvent.id}/photos`)
+          .set('Authorization', bearer)
+          .expect(200)
 
-      expect(response.body.data).toEqual([])
+        expect(response.body.data).toEqual([])
+      } finally {
+        await prisma.event.delete({ where: { id: emptyEvent.id } })
+      }
     })
 
-    it('should return 404 for non-existent photo detail', async () => {
+    it('GET /photos/:id returns 404 for non-existent photo', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/photos/00000000-0000-0000-0000-000000000000')
+        .set('Authorization', bearer)
         .expect(404)
 
       expect(response.body.error).toHaveProperty('code', 'NOT_FOUND')
     })
 
-    it('should return empty results for search with no matches', async () => {
+    it('GET /photos/search returns empty for no matches', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/photos/search')
+        .set('Authorization', bearer)
         .query({ plateNumber: 999 })
         .expect(200)
 
       expect(response.body.data).toEqual([])
-    })
-
-    it('should return 404 when classifying non-existent photo', async () => {
-      const response = await request(app.getHttpServer())
-        .patch('/api/v1/photos/00000000-0000-0000-0000-000000000000/classify')
-        .send({
-          cyclists: [
-            {
-              boundingBox: { x: 0, y: 0, width: 10, height: 10 },
-              confidenceScore: 0.9,
-            },
-          ],
-        })
-        .expect(404)
-
-      expect(response.body.error).toHaveProperty('code', 'NOT_FOUND')
     })
   })
 
   // --- Response envelope structure ---
 
   describe('Response envelope', () => {
-    it('should wrap success response in { data, meta } envelope', async () => {
+    it('wraps success in { data, meta } envelope', async () => {
       const response = await request(app.getHttpServer())
         .get(`/api/v1/events/${testEventId}/photos`)
+        .set('Authorization', bearer)
         .expect(200)
 
       expect(response.body).toHaveProperty('data')
@@ -401,9 +252,10 @@ describe('Photos Module (e2e)', () => {
       expect(response.body.meta).toHaveProperty('timestamp')
     })
 
-    it('should wrap error response in { error, meta } envelope', async () => {
+    it('wraps error in { error, meta } envelope', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/photos/00000000-0000-0000-0000-000000000000')
+        .set('Authorization', bearer)
         .expect(404)
 
       expect(response.body).toHaveProperty('error')

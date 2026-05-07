@@ -84,3 +84,6 @@ stress-test/*.js
 
 # graphify knowledge graph output
 graphify-out/
+
+# Internal documentation (thesis reference, not for repo)
+docs/
