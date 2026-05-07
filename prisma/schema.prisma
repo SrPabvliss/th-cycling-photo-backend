@@ -19,54 +19,53 @@ enum EventStatus {
 
 enum PhotoStatus {
   pending
-  detecting
-  analyzing
-  completed
+  processing
+  processed
   failed
+  reviewed
 
   @@map("photo_status")
 }
 
-enum UnclassifiedReason {
-  no_participant
-  ocr_failed
-  low_confidence
-  processing_error
-
-  @@map("unclassified_reason")
+enum AttributeSource {
+  ai
+  reviewer
 }
 
-enum JobStatus {
-  pending
-  processing
+enum ProcessingStatus {
+  running
   completed
   failed
-
-  @@map("job_status")
 }
 
-enum JobType {
+enum ProcessingStageName {
   detection
   ocr
-  color_analysis
-
-  @@map("job_type")
+  color
 }
 
-enum ProcessingStage {
-  detection
-  ocr
-  color_analysis
-  completed
-
-  @@map("processing_stage")
+enum ProcessingStageStatus {
+  ok
+  partial
+  skipped
+  failed
 }
 
-enum ClassificationSource {
-  manual
-  ai
+enum BibReadingStatus {
+  matched
+  abstained
+  unmatched
+}
 
-  @@map("classification_source")
+enum ColorRegion {
+  helmet
+  cyclist_clothes
+  bicycle
+}
+
+enum CorrectionTargetType {
+  photo_bib
+  photo_color
 }
 
 enum RoleType {
@@ -135,7 +134,7 @@ model Province {
   code       String @unique @db.VarChar(10)
   country_id Int
 
-  country           Country            @relation(fields: [country_id], references: [id], onDelete: Restrict)
+  country           Country           @relation(fields: [country_id], references: [id], onDelete: Restrict)
   cantons           Canton[]
   events            Event[]
   customer_profiles CustomerProfile[]
@@ -149,7 +148,7 @@ model Canton {
   name        String @db.VarChar(100)
   province_id Int
 
-  province          Province           @relation(fields: [province_id], references: [id])
+  province          Province          @relation(fields: [province_id], references: [id])
   events            Event[]
   customer_profiles CustomerProfile[]
 
@@ -178,7 +177,6 @@ model EventType {
 
   events                 Event[]
   participant_categories ParticipantCategory[]
-  gear_types             GearType[]
 
   @@map("event_types")
 }
@@ -196,54 +194,40 @@ model ParticipantCategory {
   @@map("participant_categories")
 }
 
-model GearType {
-  id            Int      @id @default(autoincrement())
-  name          String   @db.VarChar(50)
-  event_type_id Int
-  created_at    DateTime @default(now()) @db.Timestamptz
-
-  event_type  EventType   @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
-  gear_colors GearColor[]
-
-  @@unique([name, event_type_id])
-  @@index([event_type_id])
-  @@map("gear_types")
-}
-
 // ─── Models ─────────────────────────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(uuid()) @db.Uuid
-  email         String    @unique @db.VarChar(255)
-  password_hash String    @db.VarChar(255)
-  first_name    String?   @db.VarChar(100)
-  last_name     String?   @db.VarChar(100)
+  id                 String    @id @default(uuid()) @db.Uuid
+  email              String    @unique @db.VarChar(255)
+  password_hash      String    @db.VarChar(255)
+  first_name         String?   @db.VarChar(100)
+  last_name          String?   @db.VarChar(100)
   avatar_url         String?   @db.VarChar(500)
   avatar_storage_key String?   @db.VarChar(500)
   is_active          Boolean   @default(true)
-  created_at    DateTime  @default(now()) @db.Timestamptz
-  last_login_at DateTime? @db.Timestamptz
+  created_at         DateTime  @default(now()) @db.Timestamptz
+  last_login_at      DateTime? @db.Timestamptz
 
   user_roles       UserRole[]
   refresh_tokens   RefreshToken[]
   phones           UserPhone[]
   customer_profile CustomerProfile?
 
-  events_created              Event[]                @relation("EventCreatedBy")
-  events_updated              Event[]                @relation("EventUpdatedBy")
-  photos_created              Photo[]                @relation("PhotoCreatedBy")
-  photos_updated              Photo[]                @relation("PhotoUpdatedBy")
-  photos_retouched            Photo[]                @relation("PhotoRetouchedBy")
-  participants_created        DetectedParticipant[]  @relation("ParticipantCreatedBy")
-  participants_classified     DetectedParticipant[]  @relation("ParticipantClassifiedBy")
-  identifiers_corrected       ParticipantIdentifier[] @relation("IdentifierCorrectedBy")
-  preview_links_created       PreviewLink[]          @relation("PreviewLinkCreatedBy")
-  orders_confirmed            Order[]                @relation("OrderConfirmedBy")
-  orders_placed               Order[]                @relation("OrderUser")
-  carts                       Cart[]
-  notifications               Notification[]
-  assigned_events             EventOperator[]        @relation("EventOperatorUser")
-  event_assignments_made      EventOperator[]        @relation("EventOperatorAssignedBy")
+  events_created         Event[]         @relation("EventCreatedBy")
+  events_updated         Event[]         @relation("EventUpdatedBy")
+  photos_created         Photo[]         @relation("PhotoCreatedBy")
+  photos_updated         Photo[]         @relation("PhotoUpdatedBy")
+  photos_retouched       Photo[]         @relation("PhotoRetouchedBy")
+  created_bibs           PhotoBib[]      @relation("UserCreatedBibs")
+  created_colors         PhotoColor[]    @relation("UserCreatedColors")
+  corrections            Correction[]    @relation("UserCorrections")
+  preview_links_created  PreviewLink[]   @relation("PreviewLinkCreatedBy")
+  orders_confirmed       Order[]         @relation("OrderConfirmedBy")
+  orders_placed          Order[]         @relation("OrderUser")
+  carts                  Cart[]
+  notifications          Notification[]
+  assigned_events        EventOperator[] @relation("EventOperatorUser")
+  event_assignments_made EventOperator[] @relation("EventOperatorAssignedBy")
 
   @@map("users")
 }
@@ -291,34 +275,34 @@ model RefreshToken {
 }
 
 model Event {
-  id               String      @id @default(uuid()) @db.Uuid
-  name             String      @db.VarChar(200)
-  slug             String      @unique @db.VarChar(250)
-  description      String?     @db.Text
-  event_date       DateTime    @db.Date
-  event_type_id    Int
-  province_id      Int?
-  canton_id        Int?
-  is_featured             Boolean     @default(false)
-  status                  EventStatus @default(active)
-  created_at              DateTime    @default(now()) @db.Timestamptz
-  updated_at       DateTime    @default(now()) @updatedAt @db.Timestamptz
-  deleted_at       DateTime?   @db.Timestamptz
+  id            String      @id @default(uuid()) @db.Uuid
+  name          String      @db.VarChar(200)
+  slug          String      @unique @db.VarChar(250)
+  description   String?     @db.Text
+  event_date    DateTime    @db.Date
+  event_type_id Int
+  province_id   Int?
+  canton_id     Int?
+  is_featured   Boolean     @default(false)
+  status        EventStatus @default(active)
+  created_at    DateTime    @default(now()) @db.Timestamptz
+  updated_at    DateTime    @default(now()) @updatedAt @db.Timestamptz
+  deleted_at    DateTime?   @db.Timestamptz
 
   created_by_id String? @db.Uuid
   updated_by_id String? @db.Uuid
 
-  event_type EventType  @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
-  province   Province?  @relation(fields: [province_id], references: [id])
-  canton     Canton?    @relation(fields: [canton_id], references: [id])
-  created_by User?      @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
-  updated_by User?      @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  event_type       EventType            @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
+  province         Province?            @relation(fields: [province_id], references: [id])
+  canton           Canton?              @relation(fields: [canton_id], references: [id])
+  created_by       User?                @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  updated_by       User?                @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
   photos           Photo[]
   preview_links    PreviewLink[]
   orders           Order[]
   assets           EventAsset[]
   photo_categories EventPhotoCategory[]
-  cart_items        CartItem[]
+  cart_items       CartItem[]
   operators        EventOperator[]
 
   @@index([status])
@@ -362,18 +346,17 @@ model Photo {
   width       Int?
   height      Int?
 
-  status              PhotoStatus         @default(pending)
-  unclassified_reason UnclassifiedReason?
+  status PhotoStatus @default(pending)
 
-  retouched_storage_key  String?  @unique @db.VarChar(500)
-  retouched_public_slug  String?  @unique @db.VarChar(30)
-  retouched_file_size    BigInt?
-  retouched_at           DateTime? @db.Timestamptz
+  retouched_storage_key String?   @unique @db.VarChar(500)
+  retouched_public_slug String?   @unique @db.VarChar(30)
+  retouched_file_size   BigInt?
+  retouched_at          DateTime? @db.Timestamptz
 
-  captured_at   DateTime? @db.Timestamptz
-  uploaded_at   DateTime  @default(now()) @db.Timestamptz
-  processed_at  DateTime? @db.Timestamptz
-  classified_at DateTime? @db.Timestamptz
+  captured_at  DateTime? @db.Timestamptz
+  uploaded_at  DateTime  @default(now()) @db.Timestamptz
+  processed_at DateTime? @db.Timestamptz
+  reviewed_at  DateTime? @db.Timestamptz
 
   embedding Unsupported("vector(1024)")?
 
@@ -382,21 +365,23 @@ model Photo {
   retouched_by_id   String? @db.Uuid
   photo_category_id Int?
 
-  event               Event               @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  created_by          User?               @relation("PhotoCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
-  updated_by          User?               @relation("PhotoUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
-  retouched_by        User?               @relation("PhotoRetouchedBy", fields: [retouched_by_id], references: [id], onDelete: SetNull)
-  photo_category      PhotoCategory?      @relation(fields: [photo_category_id], references: [id], onDelete: SetNull)
-  detected_participants DetectedParticipant[]
-  processing_jobs       ProcessingJob[]
-  preview_link_photos   PreviewLinkPhoto[]
-  order_items           OrderItem[]
-  cart_items            CartItem[]
+  event               Event              @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  created_by          User?              @relation("PhotoCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  updated_by          User?              @relation("PhotoUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  retouched_by        User?              @relation("PhotoRetouchedBy", fields: [retouched_by_id], references: [id], onDelete: SetNull)
+  photo_category      PhotoCategory?     @relation(fields: [photo_category_id], references: [id], onDelete: SetNull)
+  processings         PhotoProcessing[]
+  detections          PhotoDetection[]
+  bibs                PhotoBib[]
+  colors              PhotoColor[]
+  corrections         Correction[]
+  preview_link_photos PreviewLinkPhoto[]
+  order_items         OrderItem[]
+  cart_items          CartItem[]
 
   @@index([event_id, filename])
   @@index([event_id])
   @@index([status])
-  @@index([event_id, unclassified_reason], map: "idx_photos_unclassified")
   @@index([created_by_id])
   @@index([updated_by_id])
   @@index([retouched_by_id])
@@ -405,114 +390,132 @@ model Photo {
   @@map("photos")
 }
 
-model DetectedParticipant {
-  id       String @id @default(uuid()) @db.Uuid
-  photo_id String @db.Uuid
+model PhotoProcessing {
+  id             String           @id @default(uuid()) @db.Uuid
+  photo_id       String           @db.Uuid
+  schema_version String
+  status         ProcessingStatus
+  total_ms       Float
+  model_versions Json
+  started_at     DateTime         @default(now())
+  completed_at   DateTime?
+  error_message  String?
 
-  source ClassificationSource @default(manual)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
-
-  created_by_id    String? @db.Uuid
-  classified_by_id String? @db.Uuid
-
-  photo            Photo                  @relation(fields: [photo_id], references: [id], onDelete: Cascade)
-  created_by       User?                  @relation("ParticipantCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
-  classified_by    User?                  @relation("ParticipantClassifiedBy", fields: [classified_by_id], references: [id], onDelete: SetNull)
-  identifier       ParticipantIdentifier?
-  gear_colors      GearColor[]
-  detection_metadata DetectionMetadata?
+  photo      Photo                  @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  stages     PhotoProcessingStage[]
+  detections PhotoDetection[]
+  bibs       PhotoBib[]
+  colors     PhotoColor[]
 
   @@index([photo_id])
-  @@index([created_by_id])
-  @@index([classified_by_id])
-  @@map("detected_participants")
+  @@index([started_at])
+  @@map("photo_processings")
 }
 
-model DetectionMetadata {
-  id                      String @id @default(uuid()) @db.Uuid
-  detected_participant_id String @unique @db.Uuid
+model PhotoProcessingStage {
+  id                  String                @id @default(uuid()) @db.Uuid
+  photo_processing_id String                @db.Uuid
+  stage               ProcessingStageName
+  status              ProcessingStageStatus
+  ms                  Float
+  items_processed     Int
+  items_succeeded     Int
+  items_failed        Int
+  notes               Json
 
-  bounding_box         Json    @db.JsonB
-  detection_confidence Decimal @db.Decimal(5, 4)
+  processing PhotoProcessing @relation(fields: [photo_processing_id], references: [id], onDelete: Cascade)
 
-  created_at DateTime @default(now()) @db.Timestamptz
-
-  detected_participant DetectedParticipant @relation(fields: [detected_participant_id], references: [id], onDelete: Cascade)
-
-  @@index([detected_participant_id])
-  @@map("detection_metadata")
+  @@unique([photo_processing_id, stage])
+  @@index([stage, status])
+  @@map("photo_processing_stages")
 }
 
-model ParticipantIdentifier {
-  id                      String @id @default(uuid()) @db.Uuid
-  detected_participant_id String @unique @db.Uuid
+model PhotoDetection {
+  id                  String  @id @default(uuid()) @db.Uuid
+  photo_id            String  @db.Uuid
+  photo_processing_id String  @db.Uuid
+  class_name          String
+  class_id            Int
+  confidence          Decimal @db.Decimal(4, 3)
+  bbox                Json
 
-  value            String   @db.VarChar(20)
-  confidence_score Decimal? @db.Decimal(5, 4)
-
-  manually_corrected Boolean   @default(false)
-  corrected_at       DateTime? @db.Timestamptz
-  corrected_by_id    String?   @db.Uuid
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
-
-  detected_participant DetectedParticipant @relation(fields: [detected_participant_id], references: [id], onDelete: Cascade)
-  corrected_by         User?               @relation("IdentifierCorrectedBy", fields: [corrected_by_id], references: [id], onDelete: SetNull)
-
-  @@index([value])
-  @@index([detected_participant_id])
-  @@index([corrected_by_id])
-  @@map("participant_identifiers")
-}
-
-model GearColor {
-  id                      String @id @default(uuid()) @db.Uuid
-  detected_participant_id String @db.Uuid
-  gear_type_id            Int
-
-  color_name         String        @db.VarChar(50)
-  color_hex          String        @db.VarChar(7)
-  raw_hex            String?       @db.VarChar(7)
-  density_percentage Decimal?      @db.Decimal(5, 2)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
-
-  detected_participant DetectedParticipant @relation(fields: [detected_participant_id], references: [id], onDelete: Cascade)
-  gear_type            GearType            @relation(fields: [gear_type_id], references: [id], onDelete: Restrict)
-
-  @@index([detected_participant_id])
-  @@index([gear_type_id])
-  @@index([color_name])
-  @@map("gear_colors")
-}
-
-model ProcessingJob {
-  id       String @id @default(uuid()) @db.Uuid
-  photo_id String @db.Uuid
-
-  job_type         JobType         @map("job_type")
-  status           JobStatus       @default(pending)
-  processing_stage ProcessingStage @map("processing_stage")
-
-  error_message String? @db.Text
-  retry_count   Int     @default(0)
-  max_retries   Int     @default(3)
-  metadata      Json?   @db.JsonB
-
-  started_at   DateTime? @db.Timestamptz
-  completed_at DateTime? @db.Timestamptz
-  created_at   DateTime  @default(now()) @db.Timestamptz
-
-  photo Photo @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  photo      Photo           @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  processing PhotoProcessing @relation(fields: [photo_processing_id], references: [id], onDelete: Cascade)
 
   @@index([photo_id])
-  @@index([status])
-  @@index([job_type])
-  @@map("processing_jobs")
+  @@index([class_name])
+  @@map("photo_detections")
+}
+
+model PhotoBib {
+  id                    String            @id @default(uuid()) @db.Uuid
+  photo_id              String            @db.Uuid
+  photo_processing_id   String?           @db.Uuid
+  source                AttributeSource
+  digits                String
+  confidence            Decimal?          @db.Decimal(4, 3)
+  confidence_per_digit  Json?
+  status                BibReadingStatus?
+  rejection_reason      String?
+  raw_ocr_text          String?
+  bbox_source           Json?
+  preprocessing_applied Json?
+  processing_ms         Float?
+  created_at            DateTime          @default(now())
+  created_by_id         String?           @db.Uuid
+
+  photo      Photo            @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  processing PhotoProcessing? @relation(fields: [photo_processing_id], references: [id], onDelete: SetNull)
+  created_by User?            @relation("UserCreatedBibs", fields: [created_by_id], references: [id])
+
+  @@index([photo_id])
+  @@index([digits])
+  @@map("photo_bibs")
+}
+
+model PhotoColor {
+  id                  String          @id @default(uuid()) @db.Uuid
+  photo_id            String          @db.Uuid
+  photo_processing_id String?         @db.Uuid
+  source              AttributeSource
+  region              ColorRegion
+  primary_color       String
+  secondary_color     String?
+  confidence          Decimal?        @db.Decimal(4, 3)
+  bbox_source         Json?
+  strategy            String?
+  processing_ms       Int?
+  created_at          DateTime        @default(now())
+  created_by_id       String?         @db.Uuid
+
+  photo      Photo            @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  processing PhotoProcessing? @relation(fields: [photo_processing_id], references: [id], onDelete: SetNull)
+  created_by User?            @relation("UserCreatedColors", fields: [created_by_id], references: [id])
+
+  @@index([photo_id])
+  @@index([region, primary_color])
+  @@map("photo_colors")
+}
+
+model Correction {
+  id           String               @id @default(uuid()) @db.Uuid
+  photo_id     String               @db.Uuid
+  target_type  CorrectionTargetType
+  target_id    String               @db.Uuid
+  field        String
+  old_value    String?
+  new_value    String?
+  reviewer_id  String               @db.Uuid
+  corrected_at DateTime             @default(now())
+  reason       String?
+
+  photo    Photo @relation(fields: [photo_id], references: [id], onDelete: Cascade)
+  reviewer User  @relation("UserCorrections", fields: [reviewer_id], references: [id])
+
+  @@index([photo_id])
+  @@index([target_type, target_id])
+  @@index([target_type, target_id, field, corrected_at(sort: Desc)])
+  @@map("corrections")
 }
 
 // ─── Commercial Flow ────────────────────────────────────────────────────────
@@ -554,27 +557,27 @@ model PreviewLinkPhoto {
 }
 
 model Order {
-  id              String      @id @default(uuid()) @db.Uuid
-  preview_link_id String?     @db.Uuid
-  event_id        String      @db.Uuid
-  user_id         String      @db.Uuid
-  status          OrderStatus @default(pending)
-  bib_number      String?     @db.VarChar(20)
-  subtotal        Decimal?    @db.Decimal(10, 2)
-  notes           String?     @db.Text
-  snap_first_name     String?  @db.VarChar(100)
-  snap_last_name      String?  @db.VarChar(100)
-  snap_email          String?  @db.VarChar(255)
-  snap_phone          String?  @db.VarChar(20)
-  snap_country_id     Int?
-  snap_province_id    Int?
-  snap_canton_id      Int?
-  snap_category_name  String?  @db.VarChar(100)
-  created_at      DateTime    @default(now()) @db.Timestamptz
-  paid_at         DateTime?   @db.Timestamptz
-  delivered_at    DateTime?   @db.Timestamptz
-  cancelled_at    DateTime?   @db.Timestamptz
-  confirmed_by_id String?     @db.Uuid
+  id                 String      @id @default(uuid()) @db.Uuid
+  preview_link_id    String?     @db.Uuid
+  event_id           String      @db.Uuid
+  user_id            String      @db.Uuid
+  status             OrderStatus @default(pending)
+  bib_number         String?     @db.VarChar(20)
+  subtotal           Decimal?    @db.Decimal(10, 2)
+  notes              String?     @db.Text
+  snap_first_name    String?     @db.VarChar(100)
+  snap_last_name     String?     @db.VarChar(100)
+  snap_email         String?     @db.VarChar(255)
+  snap_phone         String?     @db.VarChar(20)
+  snap_country_id    Int?
+  snap_province_id   Int?
+  snap_canton_id     Int?
+  snap_category_name String?     @db.VarChar(100)
+  created_at         DateTime    @default(now()) @db.Timestamptz
+  paid_at            DateTime?   @db.Timestamptz
+  delivered_at       DateTime?   @db.Timestamptz
+  cancelled_at       DateTime?   @db.Timestamptz
+  confirmed_by_id    String?     @db.Uuid
 
   preview_link  PreviewLink?  @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
   event         Event         @relation(fields: [event_id], references: [id], onDelete: Restrict)

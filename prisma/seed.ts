@@ -141,26 +141,6 @@ async function seedParticipantCategories() {
   console.log(`Seeded ${count} participant categories (Downhill)`)
 }
 
-async function seedGearTypes() {
-  const downhill = await prisma.eventType.findUnique({ where: { name: 'Downhill' } })
-  if (!downhill) {
-    console.log('Downhill event type not found — skipping gear types')
-    return
-  }
-
-  const gearTypes = ['headwear', 'clothing', 'vehicle']
-
-  for (const name of gearTypes) {
-    await prisma.gearType.upsert({
-      where: { name_event_type_id: { name, event_type_id: downhill.id } },
-      update: {},
-      create: { name, event_type_id: downhill.id },
-    })
-  }
-
-  console.log(`Seeded ${gearTypes.length} gear types (Downhill)`)
-}
-
 async function seedPhotoCategories() {
   const categories = [
     'Reconocimiento de pista',
@@ -355,7 +335,6 @@ async function main() {
   await seedLocations()
   await seedEventTypes()
   await seedParticipantCategories()
-  await seedGearTypes()
   await seedPhotoCategories()
   await seedRoles()
   await seedAdminUser()
