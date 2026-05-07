@@ -59,12 +59,17 @@ export class AppException extends Error {
   }
 
   /** Business rule violation (422) */
-  static businessRule(messageKey: string, shouldThrow = false): AppException {
+  static businessRule(
+    messageKey: string,
+    shouldThrow = false,
+    context?: Record<string, unknown>,
+  ): AppException {
     return new AppException(
       messageKey,
       HttpStatus.UNPROCESSABLE_ENTITY,
       ErrorCode.BUSINESS_RULE,
       shouldThrow,
+      context,
     )
   }
 
