@@ -461,6 +461,7 @@ model PhotoBib {
   bbox_source           Json?
   preprocessing_applied Json?
   processing_ms         Float?
+  crop_path             String?           @db.VarChar(255)
   created_at            DateTime          @default(now())
   created_by_id         String?           @db.Uuid
 
@@ -485,6 +486,7 @@ model PhotoColor {
   bbox_source         Json?
   strategy            String?
   processing_ms       Int?
+  crop_path           String?         @db.VarChar(255)
   created_at          DateTime        @default(now())
   created_by_id       String?         @db.Uuid
 
