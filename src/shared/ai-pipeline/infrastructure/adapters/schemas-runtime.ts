@@ -31,6 +31,7 @@ export const PipelineResponseV1Schema = z.object({
       bbox_source: BboxTuple,
       raw_ocr_text: z.string().nullable(),
       processing_ms: z.number(),
+      crop_path: z.string().nullable().optional(),
     }),
   ),
   color_analyses: z.array(
@@ -42,6 +43,7 @@ export const PipelineResponseV1Schema = z.object({
       bbox_source: BboxTuple,
       strategy: z.string(),
       processing_ms: z.number(),
+      crop_path: z.string().nullable().optional(),
     }),
   ),
   image_width: z.number().int(),

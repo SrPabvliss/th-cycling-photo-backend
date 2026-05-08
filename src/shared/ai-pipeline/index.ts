@@ -5,6 +5,7 @@ export {
   type ClassificationPipelineRequest,
   type ClassificationPipelineResponse,
   type ColorAnalysisDto,
+  type CropUploadUrls,
   type DetectionDto,
   type HealthCheckResponse,
   type IClassificationPipelineAdapter,
