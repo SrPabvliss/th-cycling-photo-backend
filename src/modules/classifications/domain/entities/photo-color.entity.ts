@@ -14,6 +14,7 @@ export class PhotoColor {
     public readonly strategy: string | null,
     public readonly processingMs: number | null,
     public readonly createdById: string | null,
+    public readonly cropPath: string | null,
   ) {}
 
   static createFromAi(data: {
@@ -26,6 +27,7 @@ export class PhotoColor {
     bboxSource: [number, number, number, number]
     strategy: string
     processingMs: number
+    cropPath: string | null
   }): PhotoColor {
     return new PhotoColor(
       crypto.randomUUID(),
@@ -40,6 +42,7 @@ export class PhotoColor {
       data.strategy,
       data.processingMs,
       null,
+      data.cropPath,
     )
   }
 
@@ -56,6 +59,7 @@ export class PhotoColor {
     strategy: string | null
     processingMs: number | null
     createdById: string | null
+    cropPath: string | null
   }): PhotoColor {
     return new PhotoColor(
       data.id,
@@ -70,6 +74,7 @@ export class PhotoColor {
       data.strategy,
       data.processingMs,
       data.createdById,
+      data.cropPath,
     )
   }
 }

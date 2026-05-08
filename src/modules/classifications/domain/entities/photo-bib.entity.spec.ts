@@ -15,6 +15,7 @@ describe('PhotoBib', () => {
       bboxSource: [10, 20, 80, 120],
       preprocessingApplied: ['grayscale', 'contrast'],
       processingMs: 150,
+      cropPath: null,
     })
     expect(bib.id).toEqual(expect.any(String))
     expect(bib.id.length).toBeGreaterThan(0)
@@ -31,5 +32,64 @@ describe('PhotoBib', () => {
     expect(bib.preprocessingApplied).toEqual(['grayscale', 'contrast'])
     expect(bib.processingMs).toBe(150)
     expect(bib.createdById).toBeNull()
+  })
+
+  describe('cropPath', () => {
+    it('createFromAi accepts cropPath and exposes it', () => {
+      const bib = PhotoBib.createFromAi({
+        photoId: 'p1',
+        photoProcessingId: 'pp1',
+        digits: '20',
+        confidence: 0.95,
+        confidencePerDigit: [0.95, 0.95],
+        status: BibReadingStatus.matched,
+        rejectionReason: null,
+        rawOcrText: '20',
+        bboxSource: [0.1, 0.1, 0.2, 0.2],
+        preprocessingApplied: [],
+        processingMs: 100,
+        cropPath: 'events/e1/photos/p1/crops/bibs/0.jpg',
+      })
+      expect(bib.cropPath).toBe('events/e1/photos/p1/crops/bibs/0.jpg')
+    })
+
+    it('createFromAi accepts null cropPath', () => {
+      const bib = PhotoBib.createFromAi({
+        photoId: 'p1',
+        photoProcessingId: 'pp1',
+        digits: '20',
+        confidence: 0.95,
+        confidencePerDigit: [0.95, 0.95],
+        status: BibReadingStatus.matched,
+        rejectionReason: null,
+        rawOcrText: '20',
+        bboxSource: [0.1, 0.1, 0.2, 0.2],
+        preprocessingApplied: [],
+        processingMs: 100,
+        cropPath: null,
+      })
+      expect(bib.cropPath).toBeNull()
+    })
+
+    it('fromPersistence round-trips cropPath', () => {
+      const bib = PhotoBib.fromPersistence({
+        id: 'b1',
+        photoId: 'p1',
+        photoProcessingId: 'pp1',
+        source: AttributeSource.ai,
+        digits: '20',
+        confidence: 0.95,
+        confidencePerDigit: [0.95, 0.95],
+        status: BibReadingStatus.matched,
+        rejectionReason: null,
+        rawOcrText: '20',
+        bboxSource: [0.1, 0.1, 0.2, 0.2],
+        preprocessingApplied: [],
+        processingMs: 100,
+        createdById: null,
+        cropPath: 'events/e1/photos/p1/crops/bibs/0.jpg',
+      })
+      expect(bib.cropPath).toBe('events/e1/photos/p1/crops/bibs/0.jpg')
+    })
   })
 })

@@ -34,6 +34,7 @@ export interface PersistBibInput {
   bboxSource: [number, number, number, number] | null
   preprocessingApplied: string[] | null
   processingMs: number | null
+  cropPath: string | null
 }
 
 export interface PersistColorInput {
@@ -45,6 +46,7 @@ export interface PersistColorInput {
   bboxSource: [number, number, number, number] | null
   strategy: string | null
   processingMs: number | null
+  cropPath: string | null
 }
 
 export interface PersistResultInput {
