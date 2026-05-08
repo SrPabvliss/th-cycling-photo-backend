@@ -58,6 +58,7 @@ export class PipelineResponseMapper {
           bboxSource: b.bboxSource,
           preprocessingApplied: b.preprocessingApplied,
           processingMs: b.processingMs,
+          cropPath: b.cropPath,
         }),
       ),
       colors: response.colorAnalyses.map(
@@ -70,6 +71,7 @@ export class PipelineResponseMapper {
           bboxSource: c.bboxSource,
           strategy: c.strategy,
           processingMs: c.processingMs,
+          cropPath: c.cropPath,
         }),
       ),
     }

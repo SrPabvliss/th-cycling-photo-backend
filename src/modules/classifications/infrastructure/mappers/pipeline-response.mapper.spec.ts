@@ -19,6 +19,7 @@ const sampleResponse: ClassificationPipelineResponse = {
       bboxSource: [0.1, 0.3, 0.3, 0.55],
       rawOcrText: '20',
       processingMs: 287,
+      cropPath: null,
     },
   ],
   colorAnalyses: [
@@ -30,6 +31,7 @@ const sampleResponse: ClassificationPipelineResponse = {
       bboxSource: [0.4, 0.05, 0.58, 0.22],
       strategy: 'gemini-2.5-flash',
       processingMs: 1733,
+      cropPath: null,
     },
   ],
   imageWidth: 1920,
@@ -158,5 +160,60 @@ describe('PipelineResponseMapper', () => {
     expect(input.bibs).toEqual([])
     expect(input.colors).toEqual([])
     expect(input.stages.find((s) => s.stage === 'ocr')?.status).toBe('skipped')
+  })
+
+  it('maps cropPath from bib_readings into PersistBibInput', () => {
+    const responseWithCrop: ClassificationPipelineResponse = {
+      ...sampleResponse,
+      bibReadings: [
+        { ...sampleResponse.bibReadings[0], cropPath: 'events/e/photos/p/crops/bibs/0.jpg' },
+      ],
+    }
+    const input = PipelineResponseMapper.toPersistInput(
+      'photo-1',
+      responseWithCrop,
+      new Date(),
+      new Date(),
+    )
+    expect(input.bibs[0].cropPath).toBe('events/e/photos/p/crops/bibs/0.jpg')
+  })
+
+  it('maps null cropPath from bib_readings as null', () => {
+    const input = PipelineResponseMapper.toPersistInput(
+      'photo-1',
+      sampleResponse,
+      new Date(),
+      new Date(),
+    )
+    expect(input.bibs[0].cropPath).toBeNull()
+  })
+
+  it('maps cropPath from color_analyses into PersistColorInput', () => {
+    const responseWithCrop: ClassificationPipelineResponse = {
+      ...sampleResponse,
+      colorAnalyses: [
+        {
+          ...sampleResponse.colorAnalyses[0],
+          cropPath: 'events/e/photos/p/crops/colors/helmet/0.jpg',
+        },
+      ],
+    }
+    const input = PipelineResponseMapper.toPersistInput(
+      'photo-1',
+      responseWithCrop,
+      new Date(),
+      new Date(),
+    )
+    expect(input.colors[0].cropPath).toBe('events/e/photos/p/crops/colors/helmet/0.jpg')
+  })
+
+  it('maps null cropPath from color_analyses as null', () => {
+    const input = PipelineResponseMapper.toPersistInput(
+      'photo-1',
+      sampleResponse,
+      new Date(),
+      new Date(),
+    )
+    expect(input.colors[0].cropPath).toBeNull()
   })
 })
