@@ -21,6 +21,7 @@ import { LocationsModule } from './modules/locations/locations.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
 import { OperatorModule } from './modules/operator/operator.module'
 import { OrdersModule } from './modules/orders/orders.module'
+import { ParticipantCategoriesModule } from './modules/participant-categories/participant-categories.module'
 import { PhotoCategoriesModule } from './modules/photo-categories/photo-categories.module'
 import { PhotosModule } from './modules/photos/photos.module'
 import { PreviewsModule } from './modules/previews/previews.module'
@@ -79,6 +80,7 @@ import { StorageModule } from './shared/storage/storage.module'
     LocationsModule,
     OperatorModule,
     OrdersModule,
+    ParticipantCategoriesModule,
     PhotoCategoriesModule,
     PhotosModule,
     PreviewsModule,
