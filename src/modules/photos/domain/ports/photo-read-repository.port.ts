@@ -1,3 +1,4 @@
+import type { PhotoStatus } from '@generated/prisma/client'
 import type {
   PhotoDetailProjection,
   PhotoListProjection,
@@ -7,6 +8,17 @@ import type {
 import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { PaginatedResult, Pagination } from '@shared/application'
 import type { Photo } from '../entities'
+
+export interface ReviewQueueRepoItem {
+  id: string
+  publicSlug: string
+  filename: string
+  status: PhotoStatus
+  reviewedAt: Date | null
+  minBibConfidence: number | null
+  bibsCount: number
+  colorsCount: number
+}
 
 export interface IPhotoReadRepository {
   findById(id: string): Promise<Photo | null>
@@ -37,6 +49,12 @@ export interface IPhotoReadRepository {
   getPhotoViewBySlug(slug: string): Promise<PhotoViewProjection | null>
   countAll(): Promise<number>
   sumAllFileSize(): Promise<number>
+  getReviewQueue(params: {
+    eventId: string
+    onlyPending: boolean
+    limit: number
+    offset: number
+  }): Promise<{ items: ReviewQueueRepoItem[]; total: number }>
 }
 
 export const PHOTO_READ_REPOSITORY = Symbol('PHOTO_READ_REPOSITORY')

@@ -1,10 +1,11 @@
-import { Prisma, type Photo as PrismaPhoto } from '@generated/prisma/client'
+import { CorrectionTargetType, Prisma, type Photo as PrismaPhoto } from '@generated/prisma/client'
 import type {
   PhotoDetailProjection,
   PhotoListProjection,
   PhotoViewProjection,
 } from '@photos/application/projections'
 import { Photo } from '@photos/domain/entities'
+import type { ICorrectionRepository } from '@photos/domain/ports'
 import type { PhotoStatusType } from '@photos/domain/value-objects/photo-status.vo'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
@@ -156,6 +157,7 @@ export async function toDetailProjection(
   record: PhotoDetailSelect,
   cdn: CdnUrlBuilder,
   storage: IStorageAdapter,
+  correctionRepo: ICorrectionRepository,
 ): Promise<PhotoDetailProjection> {
   const cropPaths = Array.from(
     new Set(
@@ -175,6 +177,18 @@ export async function toDetailProjection(
   const signedByPath = new Map<string, string>(
     settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : [])),
   )
+
+  const correctionTargets = [
+    ...record.bibs.map((b) => ({
+      targetType: CorrectionTargetType.photo_bib,
+      targetId: b.id,
+    })),
+    ...record.colors.map((c) => ({
+      targetType: CorrectionTargetType.photo_color,
+      targetId: c.id,
+    })),
+  ]
+  const corrections = await correctionRepo.findLatestByTargets(correctionTargets)
 
   return {
     id: record.id,
@@ -198,23 +212,37 @@ export async function toDetailProjection(
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
     reviewedAt: record.reviewed_at,
-    bibs: record.bibs.map((b) => ({
-      id: b.id,
-      digits: b.digits,
-      status: b.status,
-      confidence: b.confidence === null ? null : Number(b.confidence),
-      source: b.source,
-      cropUrl: b.crop_path ? (signedByPath.get(b.crop_path) ?? null) : null,
-    })),
-    colors: record.colors.map((c) => ({
-      id: c.id,
-      region: c.region,
-      primaryColor: c.primary_color,
-      secondaryColor: c.secondary_color,
-      confidence: c.confidence === null ? null : Number(c.confidence),
-      source: c.source,
-      cropUrl: c.crop_path ? (signedByPath.get(c.crop_path) ?? null) : null,
-    })),
+    bibs: record.bibs.map((b) => {
+      const c = corrections.get(`photo_bib:${b.id}:digits`)
+      return {
+        id: b.id,
+        digits: c?.newValue ?? b.digits,
+        digitsOriginal: b.digits,
+        wasCorrected: !!c,
+        correctedAt: c?.correctedAt ?? null,
+        status: b.status,
+        confidence: b.confidence === null ? null : Number(b.confidence),
+        source: b.source,
+        cropUrl: b.crop_path ? (signedByPath.get(b.crop_path) ?? null) : null,
+      }
+    }),
+    colors: record.colors.map((c) => {
+      const cp = corrections.get(`photo_color:${c.id}:primary_color`)
+      const cs = corrections.get(`photo_color:${c.id}:secondary_color`)
+      return {
+        id: c.id,
+        region: c.region,
+        primaryColor: (cp?.newValue ?? c.primary_color) as string,
+        primaryColorOriginal: c.primary_color,
+        primaryWasCorrected: !!cp,
+        secondaryColor: cs?.newValue ?? c.secondary_color,
+        secondaryColorOriginal: c.secondary_color,
+        secondaryWasCorrected: !!cs,
+        confidence: c.confidence === null ? null : Number(c.confidence),
+        source: c.source,
+        cropUrl: c.crop_path ? (signedByPath.get(c.crop_path) ?? null) : null,
+      }
+    }),
   }
 }
 
