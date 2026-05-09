@@ -1,4 +1,7 @@
-import { PHOTO_CLASSIFICATION_WRITE_REPOSITORY } from '@classifications/domain/ports'
+import {
+  CROP_UPLOAD_URLS_SERVICE,
+  PHOTO_CLASSIFICATION_WRITE_REPOSITORY,
+} from '@classifications/domain/ports'
 import { Test } from '@nestjs/testing'
 import { PHOTO_READ_REPOSITORY, PHOTO_WRITE_REPOSITORY } from '@photos/domain/ports'
 import { CLASSIFICATION_PIPELINE_ADAPTER } from '@shared/ai-pipeline'
@@ -67,6 +70,14 @@ describe('ProcessPhotoClassificationHandler', () => {
     persistResult: jest.fn().mockResolvedValue({ processingId: 'p-1' }),
     persistFailure: jest.fn().mockResolvedValue({ processingId: 'p-fail' }),
   }
+  const cropUrlsService = {
+    generate: jest.fn().mockResolvedValue({
+      bibs: [],
+      colorsHelmet: [],
+      colorsClothes: [],
+      colorsBicycle: [],
+    }),
+  }
 
   beforeEach(async () => {
     jest.clearAllMocks()
@@ -74,6 +85,12 @@ describe('ProcessPhotoClassificationHandler', () => {
     storage.getPresignedDownloadUrl.mockResolvedValue('https://b2/url.jpg')
     writeRepo.persistResult.mockResolvedValue({ processingId: 'p-1' })
     writeRepo.persistFailure.mockResolvedValue({ processingId: 'p-fail' })
+    cropUrlsService.generate.mockResolvedValue({
+      bibs: [],
+      colorsHelmet: [],
+      colorsClothes: [],
+      colorsBicycle: [],
+    })
     const moduleRef = await Test.createTestingModule({
       providers: [
         ProcessPhotoClassificationHandler,
@@ -82,6 +99,7 @@ describe('ProcessPhotoClassificationHandler', () => {
         { provide: STORAGE_ADAPTER, useValue: storage },
         { provide: CLASSIFICATION_PIPELINE_ADAPTER, useValue: adapter },
         { provide: PHOTO_CLASSIFICATION_WRITE_REPOSITORY, useValue: writeRepo },
+        { provide: CROP_UPLOAD_URLS_SERVICE, useValue: cropUrlsService },
       ],
     }).compile()
     handler = moduleRef.get(ProcessPhotoClassificationHandler)
@@ -139,6 +157,26 @@ describe('ProcessPhotoClassificationHandler', () => {
     ).rejects.toMatchObject({ messageKey: 'ai_pipeline.unsupported_schema_version' })
     expect(writeRepo.persistFailure).toHaveBeenCalled()
     expect(photo.markFailed).toHaveBeenCalled()
+  })
+
+  it('generates crop upload URLs and forwards them to the AI pipeline adapter', async () => {
+    const photo = okPhoto()
+    photoReadRepo.findById.mockResolvedValue(photo)
+    adapter.classify.mockResolvedValue(baseResponse)
+    const fakeUrls = {
+      bibs: ['u-bib-0'],
+      colorsHelmet: ['u-helmet-0'],
+      colorsClothes: ['u-clothes-0'],
+      colorsBicycle: ['u-bicycle-0'],
+    }
+    cropUrlsService.generate.mockResolvedValue(fakeUrls)
+
+    await handler.execute(new ProcessPhotoClassificationCommand('photo-1'))
+
+    expect(cropUrlsService.generate).toHaveBeenCalledWith('photo-1', 'evt-1')
+    expect(adapter.classify).toHaveBeenCalledWith(
+      expect.objectContaining({ cropUploadUrls: fakeUrls }),
+    )
   })
 
   it('on service_unavailable: rethrows without persistFailure', async () => {

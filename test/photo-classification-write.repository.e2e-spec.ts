@@ -100,12 +100,13 @@ describe('PhotoClassificationWriteRepository (integration)', () => {
         digits: '20',
         confidence: 0.98,
         confidencePerDigit: [0.99, 0.97],
-        status: BibReadingStatus.matched,
+        status: BibReadingStatus.read,
         rejectionReason: null,
         rawOcrText: '20',
         bboxSource: [0.1, 0.3, 0.3, 0.55],
         preprocessingApplied: [],
         processingMs: 287,
+        cropPath: null,
       },
     ],
     colors: [
@@ -118,6 +119,7 @@ describe('PhotoClassificationWriteRepository (integration)', () => {
         bboxSource: [0.4, 0.05, 0.58, 0.22],
         strategy: 'gemini-2.5-flash',
         processingMs: 1733,
+        cropPath: null,
       },
     ],
   })
@@ -163,6 +165,35 @@ describe('PhotoClassificationWriteRepository (integration)', () => {
     await repo.persistResult(buildInput())
     const count = await prisma.photoProcessing.count({ where: { photo_id: photoId } })
     expect(count).toBe(2)
+  })
+
+  it('persists crop_path when provided in PersistBibInput and PersistColorInput', async () => {
+    const input = buildInput()
+    input.bibs[0].cropPath = 'events/e/photos/p/crops/bibs/0.jpg'
+    input.colors[0].cropPath = 'events/e/photos/p/crops/colors/helmet/0.jpg'
+    const { processingId } = await repo.persistResult(input)
+
+    const bibs = await prisma.photoBib.findMany({
+      where: { photo_processing_id: processingId },
+    })
+    expect(bibs[0].crop_path).toBe('events/e/photos/p/crops/bibs/0.jpg')
+
+    const colors = await prisma.photoColor.findMany({
+      where: { photo_processing_id: processingId },
+    })
+    expect(colors[0].crop_path).toBe('events/e/photos/p/crops/colors/helmet/0.jpg')
+  })
+
+  it('persists null crop_path when cropPath is null', async () => {
+    const { processingId } = await repo.persistResult(buildInput())
+    const bibs = await prisma.photoBib.findMany({
+      where: { photo_processing_id: processingId },
+    })
+    expect(bibs[0].crop_path).toBeNull()
+    const colors = await prisma.photoColor.findMany({
+      where: { photo_processing_id: processingId },
+    })
+    expect(colors[0].crop_path).toBeNull()
   })
 
   it('persistFailure writes status=failed with error_message', async () => {

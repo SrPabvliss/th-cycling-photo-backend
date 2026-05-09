@@ -126,4 +126,77 @@ describe('CyclingAiPipelineAdapter', () => {
     expect(body.confidence_threshold).toBe(0.3)
     expect(body).not.toHaveProperty('startlist')
   })
+
+  it('accepts schema_version 1.1', async () => {
+    const v11 = { ...singleCyclist, schema_version: '1.1' }
+    fetchMock.mockResolvedValueOnce(buildResponse(v11))
+    const r = await adapter.classify({
+      imageId: singleCyclist.image_id,
+      imageUrl: 'https://x/y.jpg',
+    })
+    expect(r.schemaVersion).toBe('1.1')
+  })
+
+  it('sends crop_upload_urls in body when provided', async () => {
+    fetchMock.mockResolvedValueOnce(buildResponse({ ...singleCyclist, schema_version: '1.1' }))
+    await adapter.classify({
+      imageId: singleCyclist.image_id,
+      imageUrl: 'https://x/y.jpg',
+      cropUploadUrls: {
+        bibs: ['u-bib-0'],
+        colorsHelmet: ['u-helmet-0'],
+        colorsClothes: ['u-clothes-0'],
+        colorsBicycle: ['u-bicycle-0'],
+      },
+    })
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)
+    expect(body.crop_upload_urls).toEqual({
+      bibs: ['u-bib-0'],
+      colors_helmet: ['u-helmet-0'],
+      colors_clothes: ['u-clothes-0'],
+      colors_bicycle: ['u-bicycle-0'],
+    })
+  })
+
+  it('omits crop_upload_urls from body when not provided', async () => {
+    fetchMock.mockResolvedValueOnce(buildResponse(singleCyclist))
+    await adapter.classify({
+      imageId: singleCyclist.image_id,
+      imageUrl: 'https://x/y.jpg',
+    })
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)
+    expect(body).not.toHaveProperty('crop_upload_urls')
+  })
+
+  it('maps crop_path from bib_readings and color_analyses (v1.1)', async () => {
+    const v11WithCrops = {
+      ...singleCyclist,
+      schema_version: '1.1',
+      bib_readings: singleCyclist.bib_readings.map((b: object) => ({
+        ...b,
+        crop_path: 'events/e/photos/p/crops/bibs/0.jpg',
+      })),
+      color_analyses: singleCyclist.color_analyses.map((c: object) => ({
+        ...c,
+        crop_path: 'events/e/photos/p/crops/colors/helmet/0.jpg',
+      })),
+    }
+    fetchMock.mockResolvedValueOnce(buildResponse(v11WithCrops))
+    const r = await adapter.classify({
+      imageId: singleCyclist.image_id,
+      imageUrl: 'https://x/y.jpg',
+    })
+    expect(r.bibReadings[0].cropPath).toBe('events/e/photos/p/crops/bibs/0.jpg')
+    expect(r.colorAnalyses[0].cropPath).toBe('events/e/photos/p/crops/colors/helmet/0.jpg')
+  })
+
+  it('maps missing crop_path to null (backwards compat with v1.0)', async () => {
+    fetchMock.mockResolvedValueOnce(buildResponse(singleCyclist))
+    const r = await adapter.classify({
+      imageId: singleCyclist.image_id,
+      imageUrl: 'https://x/y.jpg',
+    })
+    expect(r.bibReadings[0].cropPath).toBeNull()
+    expect(r.colorAnalyses[0].cropPath).toBeNull()
+  })
 })

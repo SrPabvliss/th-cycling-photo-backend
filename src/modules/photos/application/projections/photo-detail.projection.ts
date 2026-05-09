@@ -1,3 +1,36 @@
+import type { AttributeSource, BibReadingStatus, ColorRegion } from '@generated/prisma/client'
+
+export class BibAttributeProjection {
+  /** PhotoBib UUID */
+  id: string
+  /** Detected/corrected bib digits (raw AI value for now; effective resolution lands in Spec C) */
+  digits: string
+  /** OCR matching status against startlist; null when no startlist info available */
+  status: BibReadingStatus | null
+  /** Confidence in [0,1] */
+  confidence: number | null
+  /** ai (pipeline) | reviewer (manual; available once Spec C lands) */
+  source: AttributeSource
+  /** Pre-signed download URL (TTL 3600s); null when no crop persisted or signing failed */
+  cropUrl: string | null
+}
+
+export class ColorAttributeProjection {
+  /** PhotoColor UUID */
+  id: string
+  /** Body region the color was sampled from */
+  region: ColorRegion
+  /** Primary color name (Spanish palette) */
+  primaryColor: string
+  /** Optional secondary color name */
+  secondaryColor: string | null
+  /** Confidence in [0,1] */
+  confidence: number | null
+  source: AttributeSource
+  /** Pre-signed download URL (TTL 3600s); null when no crop persisted or signing failed */
+  cropUrl: string | null
+}
+
 export class PhotoDetailProjection {
   /** Photo UUID */
   id: string
@@ -37,4 +70,8 @@ export class PhotoDetailProjection {
   processedAt: Date | null
   /** When the photo was marked as reviewed by an operator */
   reviewedAt: Date | null
+  /** AI- and reviewer-generated bib attributes for this photo */
+  bibs: BibAttributeProjection[]
+  /** AI- and reviewer-generated color attributes for this photo */
+  colors: ColorAttributeProjection[]
 }

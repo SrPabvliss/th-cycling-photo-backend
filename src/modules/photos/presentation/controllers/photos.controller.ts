@@ -27,6 +27,7 @@ import {
 import {
   FindSimilarPhotosQuery,
   GetPendingRetouchQuery,
+  GetPhotoDetailBySlugQuery,
   GetPhotoDetailQuery,
   GetPhotoDownloadUrlQuery,
   GetPhotosListDto,
@@ -150,6 +151,22 @@ export class PhotosController {
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
   async findBySlug(@Param('slug') slug: string) {
     return this.queryBus.execute(new GetPhotoViewQuery(slug))
+  }
+
+  /** Retrieves a single photo's full detail (admin/operator) by public slug. */
+  @Roles('admin', 'operator')
+  @Get('photos/detail/:slug')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Get photo full detail by slug (admin/operator)' })
+  @ApiParam({ name: 'slug', description: 'Photo public slug' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Photo detail retrieved',
+    type: PhotoDetailProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
+  async findDetailBySlug(@Param('slug') slug: string) {
+    return this.queryBus.execute(new GetPhotoDetailBySlugQuery(slug))
   }
 
   /** Retrieves a single photo's full detail (used by workspace). */

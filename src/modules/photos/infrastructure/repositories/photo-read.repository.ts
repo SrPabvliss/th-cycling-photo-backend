@@ -1,5 +1,5 @@
 import { PhotoStatus, Prisma } from '@generated/prisma/client'
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import type {
   PhotoDetailProjection,
   PhotoListProjection,
@@ -13,6 +13,10 @@ import type { IPhotoReadRepository } from '@photos/domain/ports'
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
+import {
+  type IStorageAdapter,
+  STORAGE_ADAPTER,
+} from '@shared/storage/domain/ports/storage-adapter.port'
 import * as PhotoMapper from '../mappers/photo.mapper'
 
 @Injectable()
@@ -20,6 +24,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cdn: CdnUrlBuilder,
+    @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
   ) {}
 
   /** Finds a photo by ID (no soft-delete filter — photos use hard delete). */
@@ -67,14 +72,24 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     )
   }
 
-  /** Retrieves a single photo's detail. */
+  /** Retrieves a single photo's detail by ID. */
   async getPhotoDetail(id: string): Promise<PhotoDetailProjection | null> {
     const record = await this.prisma.photo.findUnique({
       where: { id },
       select: PhotoMapper.photoDetailSelectConfig,
     })
 
-    return record ? PhotoMapper.toDetailProjection(record, this.cdn) : null
+    return record ? await PhotoMapper.toDetailProjection(record, this.cdn, this.storage) : null
+  }
+
+  /** Retrieves a single photo's detail by public slug (admin/operator). */
+  async getPhotoDetailBySlug(slug: string): Promise<PhotoDetailProjection | null> {
+    const record = await this.prisma.photo.findFirst({
+      where: { public_slug: slug },
+      select: PhotoMapper.photoDetailSelectConfig,
+    })
+
+    return record ? await PhotoMapper.toDetailProjection(record, this.cdn, this.storage) : null
   }
 
   /** Retrieves a lightweight photo view by public slug. */

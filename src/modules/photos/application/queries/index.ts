@@ -1,6 +1,7 @@
 export { FindSimilarPhotosQuery } from './find-similar-photos/find-similar-photos.query'
 export { GetPendingRetouchQuery } from './get-pending-retouch/get-pending-retouch.query'
 export { GetPhotoDetailQuery } from './get-photo-detail/get-photo-detail.query'
+export { GetPhotoDetailBySlugQuery } from './get-photo-detail-by-slug/get-photo-detail-by-slug.query'
 export { GetPhotoDownloadUrlQuery } from './get-photo-download-url/get-photo-download-url.query'
 export { GetPhotosListDto } from './get-photos-list/get-photos-list.dto'
 export { GetPhotosListQuery } from './get-photos-list/get-photos-list.query'
