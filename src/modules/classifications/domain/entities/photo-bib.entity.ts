@@ -52,6 +52,31 @@ export class PhotoBib {
     )
   }
 
+  static createManual(data: {
+    photoId: string
+    digits: string
+    status?: BibReadingStatus
+    reviewerId: string
+  }): PhotoBib {
+    return new PhotoBib(
+      crypto.randomUUID(),
+      data.photoId,
+      null,
+      AttributeSource.reviewer,
+      data.digits,
+      null,
+      null,
+      data.status ?? BibReadingStatus.read,
+      null,
+      null,
+      null,
+      null,
+      null,
+      data.reviewerId,
+      null,
+    )
+  }
+
   static fromPersistence(data: {
     id: string
     photoId: string

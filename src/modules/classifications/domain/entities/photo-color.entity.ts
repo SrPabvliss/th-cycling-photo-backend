@@ -46,6 +46,30 @@ export class PhotoColor {
     )
   }
 
+  static createManual(data: {
+    photoId: string
+    region: ColorRegion
+    primaryColor: string
+    secondaryColor: string | null
+    reviewerId: string
+  }): PhotoColor {
+    return new PhotoColor(
+      crypto.randomUUID(),
+      data.photoId,
+      null,
+      AttributeSource.reviewer,
+      data.region,
+      data.primaryColor,
+      data.secondaryColor,
+      null,
+      null,
+      null,
+      null,
+      data.reviewerId,
+      null,
+    )
+  }
+
   static fromPersistence(data: {
     id: string
     photoId: string

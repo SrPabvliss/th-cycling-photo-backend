@@ -1,3 +1,4 @@
+export * from './correction-repository.port'
 export {
   type IPhotoReadRepository,
   PHOTO_READ_REPOSITORY,
