@@ -8,14 +8,19 @@
       "confidence": 0.95,
       "bbox": [0.1, 0.3, 0.3, 0.55]
     },
-    { "class_name": "helmet", "class_id": 3, "confidence": 0.92, "bbox": [0.41, 0.05, 0.58, 0.22] }
+    {
+      "class_name": "helmet",
+      "class_id": 3,
+      "confidence": 0.92,
+      "bbox": [0.41, 0.05, 0.58, 0.22]
+    }
   ],
   "bib_readings": [
     {
       "digits": "20",
       "confidence": 0.98,
       "confidence_per_digit": [0.99, 0.97],
-      "status": "matched",
+      "status": "read",
       "rejection_reason": null,
       "preprocessing_applied": [],
       "bbox_source": [0.1, 0.3, 0.3, 0.55],
@@ -27,7 +32,12 @@
   "image_width": 1920,
   "image_height": 1080,
   "processing_ms": 5722.0,
-  "timings": { "total_ms": 5722.0, "detection_ms": 59.0, "ocr_ms": 287.0, "color_ms": 5350.0 },
+  "timings": {
+    "total_ms": 5722.0,
+    "detection_ms": 59.0,
+    "ocr_ms": 287.0,
+    "color_ms": 5350.0
+  },
   "stage_results": [
     {
       "stage": "detection",
@@ -54,5 +64,9 @@
       "notes": ["color_analysis_failed"]
     }
   ],
-  "model_versions": { "detection": "yolo", "ocr": "parseq", "color": "gemini" }
+  "model_versions": {
+    "detection": "yolo",
+    "ocr": "parseq",
+    "color": "gemini"
+  }
 }

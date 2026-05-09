@@ -9,7 +9,7 @@ describe('PhotoBib', () => {
       digits: '1234',
       confidence: 0.97,
       confidencePerDigit: [0.99, 0.98, 0.97, 0.94],
-      status: BibReadingStatus.matched,
+      status: BibReadingStatus.read,
       rejectionReason: null,
       rawOcrText: '1234',
       bboxSource: [10, 20, 80, 120],
@@ -25,7 +25,7 @@ describe('PhotoBib', () => {
     expect(bib.digits).toBe('1234')
     expect(bib.confidence).toBe(0.97)
     expect(bib.confidencePerDigit).toEqual([0.99, 0.98, 0.97, 0.94])
-    expect(bib.status).toBe(BibReadingStatus.matched)
+    expect(bib.status).toBe(BibReadingStatus.read)
     expect(bib.rejectionReason).toBeNull()
     expect(bib.rawOcrText).toBe('1234')
     expect(bib.bboxSource).toEqual([10, 20, 80, 120])
@@ -42,7 +42,7 @@ describe('PhotoBib', () => {
         digits: '20',
         confidence: 0.95,
         confidencePerDigit: [0.95, 0.95],
-        status: BibReadingStatus.matched,
+        status: BibReadingStatus.read,
         rejectionReason: null,
         rawOcrText: '20',
         bboxSource: [0.1, 0.1, 0.2, 0.2],
@@ -60,7 +60,7 @@ describe('PhotoBib', () => {
         digits: '20',
         confidence: 0.95,
         confidencePerDigit: [0.95, 0.95],
-        status: BibReadingStatus.matched,
+        status: BibReadingStatus.read,
         rejectionReason: null,
         rawOcrText: '20',
         bboxSource: [0.1, 0.1, 0.2, 0.2],
@@ -80,7 +80,7 @@ describe('PhotoBib', () => {
         digits: '20',
         confidence: 0.95,
         confidencePerDigit: [0.95, 0.95],
-        status: BibReadingStatus.matched,
+        status: BibReadingStatus.read,
         rejectionReason: null,
         rawOcrText: '20',
         bboxSource: [0.1, 0.1, 0.2, 0.2],

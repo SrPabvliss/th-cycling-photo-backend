@@ -100,7 +100,7 @@ describe('PhotoClassificationWriteRepository (integration)', () => {
         digits: '20',
         confidence: 0.98,
         confidencePerDigit: [0.99, 0.97],
-        status: BibReadingStatus.matched,
+        status: BibReadingStatus.read,
         rejectionReason: null,
         rawOcrText: '20',
         bboxSource: [0.1, 0.3, 0.3, 0.55],

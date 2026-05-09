@@ -13,7 +13,7 @@ const sampleResponse: ClassificationPipelineResponse = {
       digits: '20',
       confidence: 0.98,
       confidencePerDigit: [0.99, 0.97],
-      status: 'matched',
+      status: 'read',
       rejectionReason: null,
       preprocessingApplied: [],
       bboxSource: [0.1, 0.3, 0.3, 0.55],
