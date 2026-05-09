@@ -14,7 +14,7 @@ import type {
 } from '../../domain/ports'
 import { HealthResponseV1Schema, PipelineResponseV1Schema } from './schemas-runtime'
 
-const SUPPORTED_SCHEMA_VERSIONS = new Set(['1.0', '1.1'])
+const SUPPORTED_SCHEMA_VERSIONS = new Set(['1.0', '1.1', '1.2'])
 
 @Injectable()
 export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter {
@@ -112,7 +112,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { received: raw.schema_version, expected: '1.0 | 1.1' },
+        { received: raw.schema_version, expected: '1.0 | 1.1 | 1.2' },
       )
     }
 

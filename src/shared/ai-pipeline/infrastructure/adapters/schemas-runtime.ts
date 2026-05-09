@@ -26,7 +26,6 @@ export const PipelineResponseV1Schema = z.object({
       confidence_per_digit: z.array(z.number()),
       status: z.nativeEnum(BibReadingStatus),
       rejection_reason: z.string().nullable(),
-      startlist_match: z.string().nullable().optional(),
       preprocessing_applied: z.array(z.string()),
       bbox_source: BboxTuple,
       raw_ocr_text: z.string().nullable(),
