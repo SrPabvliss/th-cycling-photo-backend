@@ -7,6 +7,7 @@ import type {
 import { Photo } from '@photos/domain/entities'
 import type { PhotoStatusType } from '@photos/domain/value-objects/photo-status.vo'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
 
 // --- Select shapes for Prisma queries ---
 
@@ -39,6 +40,29 @@ export const photoDetailSelectConfig = {
   uploaded_at: true,
   processed_at: true,
   reviewed_at: true,
+  bibs: {
+    select: {
+      id: true,
+      source: true,
+      digits: true,
+      status: true,
+      confidence: true,
+      crop_path: true,
+    },
+    orderBy: { created_at: 'asc' as const },
+  },
+  colors: {
+    select: {
+      id: true,
+      source: true,
+      region: true,
+      primary_color: true,
+      secondary_color: true,
+      confidence: true,
+      crop_path: true,
+    },
+    orderBy: { created_at: 'asc' as const },
+  },
 } satisfies Prisma.PhotoSelect
 
 export type PhotoDetailSelect = Prisma.PhotoGetPayload<{ select: typeof photoDetailSelectConfig }>
@@ -127,11 +151,31 @@ export function toListProjection(record: PhotoListSelect, cdn: CdnUrlBuilder): P
   }
 }
 
-/** Converts a Prisma selected record to a detail projection. */
-export function toDetailProjection(
+/** Converts a Prisma selected record to a detail projection. Signs each crop_path via storage. */
+export async function toDetailProjection(
   record: PhotoDetailSelect,
   cdn: CdnUrlBuilder,
-): PhotoDetailProjection {
+  storage: IStorageAdapter,
+): Promise<PhotoDetailProjection> {
+  const cropPaths = Array.from(
+    new Set(
+      [...record.bibs.map((b) => b.crop_path), ...record.colors.map((c) => c.crop_path)].filter(
+        (p): p is string => p !== null,
+      ),
+    ),
+  )
+
+  const settled = await Promise.allSettled(
+    cropPaths.map(async (path) => {
+      const url = await storage.getPresignedDownloadUrl({ key: path, expiresIn: 3600 })
+      return [path, url] as const
+    }),
+  )
+
+  const signedByPath = new Map<string, string>(
+    settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : [])),
+  )
+
   return {
     id: record.id,
     eventId: record.event_id,
@@ -154,6 +198,23 @@ export function toDetailProjection(
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
     reviewedAt: record.reviewed_at,
+    bibs: record.bibs.map((b) => ({
+      id: b.id,
+      digits: b.digits,
+      status: b.status,
+      confidence: b.confidence === null ? null : Number(b.confidence),
+      source: b.source,
+      cropUrl: b.crop_path ? (signedByPath.get(b.crop_path) ?? null) : null,
+    })),
+    colors: record.colors.map((c) => ({
+      id: c.id,
+      region: c.region,
+      primaryColor: c.primary_color,
+      secondaryColor: c.secondary_color,
+      confidence: c.confidence === null ? null : Number(c.confidence),
+      source: c.source,
+      cropUrl: c.crop_path ? (signedByPath.get(c.crop_path) ?? null) : null,
+    })),
   }
 }
 
