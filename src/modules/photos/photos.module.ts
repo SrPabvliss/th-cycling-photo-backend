@@ -11,6 +11,7 @@ import { FindSimilarPhotosHandler } from '@photos/application/queries/find-simil
 import { GetDownloadManifestHandler } from '@photos/application/queries/get-download-manifest/get-download-manifest.handler'
 import { GetPendingRetouchHandler } from '@photos/application/queries/get-pending-retouch/get-pending-retouch.handler'
 import { GetPhotoDetailHandler } from '@photos/application/queries/get-photo-detail/get-photo-detail.handler'
+import { GetPhotoDetailBySlugHandler } from '@photos/application/queries/get-photo-detail-by-slug/get-photo-detail-by-slug.handler'
 import { GetPhotoDownloadUrlHandler } from '@photos/application/queries/get-photo-download-url/get-photo-download-url.handler'
 import { GetPhotoViewHandler } from '@photos/application/queries/get-photo-view/get-photo-view.handler'
 import { GetPhotosListHandler } from '@photos/application/queries/get-photos-list/get-photos-list.handler'
@@ -36,6 +37,7 @@ const QueryHandlers = [
   FindSimilarPhotosHandler,
   GetPhotosListHandler,
   GetPhotoDetailHandler,
+  GetPhotoDetailBySlugHandler,
   GetPhotoDownloadUrlHandler,
   GetPhotoViewHandler,
   GetResumePointHandler,
