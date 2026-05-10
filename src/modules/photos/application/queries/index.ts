@@ -5,5 +5,7 @@ export { GetPhotoDetailBySlugQuery } from './get-photo-detail-by-slug/get-photo-
 export { GetPhotoDownloadUrlQuery } from './get-photo-download-url/get-photo-download-url.query'
 export { GetPhotosListDto } from './get-photos-list/get-photos-list.dto'
 export { GetPhotosListQuery } from './get-photos-list/get-photos-list.query'
+export { GetReviewQueueDto } from './get-review-queue/get-review-queue.dto'
+export { GetReviewQueueQuery } from './get-review-queue/get-review-queue.query'
 export { SearchPhotosDto } from './search-photos/search-photos.dto'
 export { type SearchPhotosFilters, SearchPhotosQuery } from './search-photos/search-photos.query'

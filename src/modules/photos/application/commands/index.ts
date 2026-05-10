@@ -1,3 +1,18 @@
+export { AddPhotoBibCommand } from './add-photo-bib/add-photo-bib.command'
+export { AddPhotoBibDto } from './add-photo-bib/add-photo-bib.dto'
+export { AddPhotoBibHandler } from './add-photo-bib/add-photo-bib.handler'
+export { AddPhotoColorCommand } from './add-photo-color/add-photo-color.command'
+export { AddPhotoColorDto } from './add-photo-color/add-photo-color.dto'
+export { AddPhotoColorHandler } from './add-photo-color/add-photo-color.handler'
+export { ApplyBibCorrectionCommand } from './apply-bib-correction/apply-bib-correction.command'
+export { ApplyBibCorrectionDto } from './apply-bib-correction/apply-bib-correction.dto'
+export { ApplyBibCorrectionHandler } from './apply-bib-correction/apply-bib-correction.handler'
+export {
+  ApplyColorCorrectionCommand,
+  type ColorCorrectionField,
+} from './apply-color-correction/apply-color-correction.command'
+export { ApplyColorCorrectionDto } from './apply-color-correction/apply-color-correction.dto'
+export { ApplyColorCorrectionHandler } from './apply-color-correction/apply-color-correction.handler'
 export { BulkAssignCategoryCommand } from './bulk-assign-category/bulk-assign-category.command'
 export { BulkAssignCategoryDto } from './bulk-assign-category/bulk-assign-category.dto'
 export { ConfirmPhotoBatchCommand } from './confirm-photo-batch/confirm-photo-batch.command'
@@ -8,3 +23,5 @@ export { GeneratePresignedUrlCommand } from './generate-presigned-url/generate-p
 export { GeneratePresignedUrlDto } from './generate-presigned-url/generate-presigned-url.dto'
 export { GenerateRetouchedPresignedUrlCommand } from './generate-retouched-presigned-url/generate-retouched-presigned-url.command'
 export { GenerateRetouchedPresignedUrlDto } from './generate-retouched-presigned-url/generate-retouched-presigned-url.dto'
+export { MarkPhotoReviewedCommand } from './mark-photo-reviewed/mark-photo-reviewed.command'
+export { MarkPhotoReviewedHandler } from './mark-photo-reviewed/mark-photo-reviewed.handler'

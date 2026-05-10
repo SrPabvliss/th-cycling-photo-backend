@@ -67,4 +67,40 @@ describe('PhotoColor', () => {
       expect(color.cropPath).toBe('events/e1/photos/p1/crops/colors/helmet/0.jpg')
     })
   })
+
+  describe('createManual', () => {
+    it('creates a reviewer-sourced color with null processing fields', () => {
+      const color = PhotoColor.createManual({
+        photoId: 'photo-1',
+        region: ColorRegion.helmet,
+        primaryColor: 'rojo',
+        secondaryColor: 'blanco',
+        reviewerId: 'reviewer-1',
+      })
+      expect(color.id).toBeDefined()
+      expect(color.photoId).toBe('photo-1')
+      expect(color.photoProcessingId).toBeNull()
+      expect(color.source).toBe(AttributeSource.reviewer)
+      expect(color.region).toBe(ColorRegion.helmet)
+      expect(color.primaryColor).toBe('rojo')
+      expect(color.secondaryColor).toBe('blanco')
+      expect(color.confidence).toBeNull()
+      expect(color.bboxSource).toBeNull()
+      expect(color.strategy).toBeNull()
+      expect(color.processingMs).toBeNull()
+      expect(color.cropPath).toBeNull()
+      expect(color.createdById).toBe('reviewer-1')
+    })
+
+    it('accepts secondaryColor=null', () => {
+      const color = PhotoColor.createManual({
+        photoId: 'photo-1',
+        region: ColorRegion.bicycle,
+        primaryColor: 'azul',
+        secondaryColor: null,
+        reviewerId: 'reviewer-1',
+      })
+      expect(color.secondaryColor).toBeNull()
+    })
+  })
 })

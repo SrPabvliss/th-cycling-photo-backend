@@ -92,4 +92,34 @@ describe('PhotoBib', () => {
       expect(bib.cropPath).toBe('events/e1/photos/p1/crops/bibs/0.jpg')
     })
   })
+
+  describe('createManual', () => {
+    it('creates a reviewer-sourced bib with null processing fields', () => {
+      const bib = PhotoBib.createManual({
+        photoId: 'photo-1',
+        digits: '42',
+        status: BibReadingStatus.read,
+        reviewerId: 'reviewer-1',
+      })
+      expect(bib.id).toBeDefined()
+      expect(bib.photoId).toBe('photo-1')
+      expect(bib.photoProcessingId).toBeNull()
+      expect(bib.source).toBe(AttributeSource.reviewer)
+      expect(bib.digits).toBe('42')
+      expect(bib.confidence).toBeNull()
+      expect(bib.confidencePerDigit).toBeNull()
+      expect(bib.status).toBe(BibReadingStatus.read)
+      expect(bib.cropPath).toBeNull()
+      expect(bib.createdById).toBe('reviewer-1')
+    })
+
+    it('defaults status to read when not provided', () => {
+      const bib = PhotoBib.createManual({
+        photoId: 'photo-1',
+        digits: '7',
+        reviewerId: 'reviewer-1',
+      })
+      expect(bib.status).toBe(BibReadingStatus.read)
+    })
+  })
 })

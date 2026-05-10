@@ -5,6 +5,12 @@ export class BibAttributeProjection {
   id: string
   /** Detected/corrected bib digits (raw AI value for now; effective resolution lands in Spec C) */
   digits: string
+  /** Original digits as read by AI before any corrections. */
+  digitsOriginal: string
+  /** True if a reviewer correction has been applied to digits. */
+  wasCorrected: boolean
+  /** Timestamp of latest digits correction; null if none. */
+  correctedAt: Date | null
   /** OCR matching status against startlist; null when no startlist info available */
   status: BibReadingStatus | null
   /** Confidence in [0,1] */
@@ -22,8 +28,16 @@ export class ColorAttributeProjection {
   region: ColorRegion
   /** Primary color name (Spanish palette) */
   primaryColor: string
+  /** Original primary color as detected by AI before any corrections. */
+  primaryColorOriginal: string
+  /** True if a reviewer correction has been applied to primary color. */
+  primaryWasCorrected: boolean
   /** Optional secondary color name */
   secondaryColor: string | null
+  /** Original secondary color as detected by AI before any corrections. */
+  secondaryColorOriginal: string | null
+  /** True if a reviewer correction has been applied to secondary color. */
+  secondaryWasCorrected: boolean
   /** Confidence in [0,1] */
   confidence: number | null
   source: AttributeSource

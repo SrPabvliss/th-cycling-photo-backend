@@ -8,7 +8,11 @@ import type {
 } from '@photos/application/projections'
 import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { Photo } from '@photos/domain/entities'
-import type { IPhotoReadRepository } from '@photos/domain/ports'
+import {
+  CORRECTION_REPOSITORY,
+  type ICorrectionRepository,
+  type IPhotoReadRepository,
+} from '@photos/domain/ports'
 
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
@@ -25,6 +29,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     private readonly prisma: PrismaService,
     private readonly cdn: CdnUrlBuilder,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
+    @Inject(CORRECTION_REPOSITORY) private readonly correctionRepo: ICorrectionRepository,
   ) {}
 
   /** Finds a photo by ID (no soft-delete filter — photos use hard delete). */
@@ -79,7 +84,9 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       select: PhotoMapper.photoDetailSelectConfig,
     })
 
-    return record ? await PhotoMapper.toDetailProjection(record, this.cdn, this.storage) : null
+    return record
+      ? await PhotoMapper.toDetailProjection(record, this.cdn, this.storage, this.correctionRepo)
+      : null
   }
 
   /** Retrieves a single photo's detail by public slug (admin/operator). */
@@ -89,7 +96,9 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       select: PhotoMapper.photoDetailSelectConfig,
     })
 
-    return record ? await PhotoMapper.toDetailProjection(record, this.cdn, this.storage) : null
+    return record
+      ? await PhotoMapper.toDetailProjection(record, this.cdn, this.storage, this.correctionRepo)
+      : null
   }
 
   /** Retrieves a lightweight photo view by public slug. */
@@ -276,6 +285,77 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       similarity: Number(row.similarity),
       hasClassifications: row.has_classifications,
     }))
+  }
+
+  /** Retrieves the review queue for an event with bib/color counts and min bib confidence. */
+  async getReviewQueue(params: {
+    eventSlug: string
+    onlyPending: boolean
+    limit: number
+    offset: number
+  }): Promise<{
+    items: Array<{
+      id: string
+      publicSlug: string
+      filename: string
+      status: PhotoStatus
+      reviewedAt: Date | null
+      minBibConfidence: number | null
+      bibsCount: number
+      colorsCount: number
+    }>
+    total: number
+  }> {
+    const { eventSlug, onlyPending, limit, offset } = params
+
+    type Row = {
+      id: string
+      public_slug: string
+      filename: string
+      status: PhotoStatus
+      reviewed_at: Date | null
+      min_bib_confidence: number | string | null
+      bibs_count: bigint
+      colors_count: bigint
+    }
+
+    const items = await this.prisma.$queryRaw<Row[]>`
+      SELECT p.id, p.public_slug, p.filename, p.status, p.reviewed_at,
+             (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) AS min_bib_confidence,
+             (SELECT COUNT(*)::bigint FROM photo_bibs WHERE photo_id = p.id) AS bibs_count,
+             (SELECT COUNT(*)::bigint FROM photo_colors WHERE photo_id = p.id) AS colors_count
+      FROM photos p
+      INNER JOIN events e ON e.id = p.event_id
+      WHERE e.slug = ${eventSlug}
+        AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
+        AND (NOT ${onlyPending}::bool OR p.reviewed_at IS NULL)
+      ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) ASC NULLS FIRST,
+               p.uploaded_at ASC
+      LIMIT ${limit} OFFSET ${offset}
+    `
+
+    const totalRow = await this.prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*)::bigint AS count
+      FROM photos p
+      INNER JOIN events e ON e.id = p.event_id
+      WHERE e.slug = ${eventSlug}
+        AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
+        AND (NOT ${onlyPending}::bool OR p.reviewed_at IS NULL)
+    `
+
+    return {
+      items: items.map((r) => ({
+        id: r.id,
+        publicSlug: r.public_slug,
+        filename: r.filename,
+        status: r.status,
+        reviewedAt: r.reviewed_at,
+        minBibConfidence: r.min_bib_confidence === null ? null : Number(r.min_bib_confidence),
+        bibsCount: Number(r.bibs_count),
+        colorsCount: Number(r.colors_count),
+      })),
+      total: Number(totalRow[0]?.count ?? 0),
+    }
   }
 
   /** Builds a Prisma where clause from search filters. */

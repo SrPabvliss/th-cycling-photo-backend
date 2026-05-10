@@ -1,8 +1,16 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { BulkCategoryResultProjection } from '@photo-categories/application/projections'
 import {
+  AddPhotoBibCommand,
+  AddPhotoBibDto,
+  AddPhotoColorCommand,
+  AddPhotoColorDto,
+  ApplyBibCorrectionCommand,
+  ApplyBibCorrectionDto,
+  ApplyColorCorrectionCommand,
+  ApplyColorCorrectionDto,
   BulkAssignCategoryCommand,
   BulkAssignCategoryDto,
   ConfirmPhotoBatchCommand,
@@ -13,6 +21,7 @@ import {
   GeneratePresignedUrlDto,
   GenerateRetouchedPresignedUrlCommand,
   GenerateRetouchedPresignedUrlDto,
+  MarkPhotoReviewedCommand,
 } from '@photos/application/commands'
 import {
   ConfirmBatchProjection,
@@ -22,6 +31,7 @@ import {
   PhotoListProjection,
   PhotoViewProjection,
   PresignedUrlProjection,
+  ReviewQueueItemProjection,
   SimilarPhotoProjection,
 } from '@photos/application/projections'
 import {
@@ -32,13 +42,15 @@ import {
   GetPhotoDownloadUrlQuery,
   GetPhotosListDto,
   GetPhotosListQuery,
+  GetReviewQueueDto,
+  GetReviewQueueQuery,
   SearchPhotosDto,
   SearchPhotosQuery,
 } from '@photos/application/queries'
 import { GetDownloadManifestQuery } from '@photos/application/queries/get-download-manifest/get-download-manifest.query'
 import { GetPhotoViewQuery } from '@photos/application/queries/get-photo-view/get-photo-view.query'
 import { GetResumePointQuery } from '@photos/application/queries/get-resume-point/get-resume-point.query'
-import { AuditContext, Pagination } from '@shared/application'
+import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
@@ -106,7 +118,7 @@ export class PhotosController {
   }
 
   /** Returns paid orders with photos pending retouching, ordered FIFO. */
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Get('photos/pending-retouch')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Get photos pending retouching grouped by order' })
@@ -167,6 +179,134 @@ export class PhotosController {
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
   async findDetailBySlug(@Param('slug') slug: string) {
     return this.queryBus.execute(new GetPhotoDetailBySlugQuery(slug))
+  }
+
+  /** Apply a digits correction to a specific bib (admin/operator). */
+  @Roles('admin', 'operator')
+  @Post('photos/:photoId/bibs/:bibId/corrections')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Apply bib digits correction' })
+  @ApiParam({ name: 'photoId', description: 'Photo UUID', format: 'uuid' })
+  @ApiParam({ name: 'bibId', description: 'PhotoBib UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Correction applied (or no-op if value unchanged)',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo or bib not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Photo is being processed' })
+  async applyBibCorrection(
+    @Param('photoId') photoId: string,
+    @Param('bibId') bibId: string,
+    @Body() body: ApplyBibCorrectionDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new ApplyBibCorrectionCommand(photoId, bibId, body.newValue, user.userId),
+    )
+  }
+
+  /** Apply a primary or secondary color correction to a specific color attribute (admin/operator). */
+  @Roles('admin', 'operator')
+  @Post('photos/:photoId/colors/:colorId/corrections')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Apply color correction (primary or secondary)' })
+  @ApiParam({ name: 'photoId', format: 'uuid' })
+  @ApiParam({ name: 'colorId', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Correction applied (or no-op if value unchanged)',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Photo is being processed' })
+  async applyColorCorrection(
+    @Param('photoId') photoId: string,
+    @Param('colorId') colorId: string,
+    @Body() body: ApplyColorCorrectionDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new ApplyColorCorrectionCommand(photoId, colorId, body.field, body.newValue, user.userId),
+    )
+  }
+
+  /** Mark a photo as reviewed (idempotente set-only — never reverts) (admin/operator). */
+  @Roles('admin', 'operator')
+  @Post('photos/:photoId/reviewed')
+  @HttpCode(200)
+  @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Mark photo as reviewed (idempotente set-only)' })
+  @ApiParam({ name: 'photoId', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Photo marked reviewed',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Photo is being processed' })
+  async markPhotoReviewed(@Param('photoId') photoId: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new MarkPhotoReviewedCommand(photoId, user.userId))
+  }
+
+  /** Add a manual reviewer-sourced bib to a photo (admin/operator). */
+  @Roles('admin', 'operator')
+  @Post('photos/:photoId/bibs')
+  @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Add manual bib (reviewer-sourced)' })
+  @ApiParam({ name: 'photoId', format: 'uuid' })
+  @ApiEnvelopeResponse({ status: 201, description: 'Manual bib created', type: EntityIdProjection })
+  async addPhotoBib(
+    @Param('photoId') photoId: string,
+    @Body() body: AddPhotoBibDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new AddPhotoBibCommand(photoId, body.digits, body.status, user.userId),
+    )
+  }
+
+  /** Add a manual reviewer-sourced color to a photo (admin/operator). */
+  @Roles('admin', 'operator')
+  @Post('photos/:photoId/colors')
+  @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Add manual color (reviewer-sourced)' })
+  @ApiParam({ name: 'photoId', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Manual color created',
+    type: EntityIdProjection,
+  })
+  async addPhotoColor(
+    @Param('photoId') photoId: string,
+    @Body() body: AddPhotoColorDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new AddPhotoColorCommand(
+        photoId,
+        body.region,
+        body.primaryColor,
+        body.secondaryColor ?? null,
+        user.userId,
+      ),
+    )
+  }
+
+  /** Paginated review queue for an event, ordered by min(bib confidence) ASC NULLS FIRST (admin/operator). */
+  @Roles('admin', 'operator')
+  @Get('events/:eventSlug/review-queue')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'Review queue ordered by min(bib confidence) ASC NULLS FIRST' })
+  @ApiParam({ name: 'eventSlug', description: 'Event public slug' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Paginated review queue',
+    type: ReviewQueueItemProjection,
+    isArray: true,
+  })
+  async getReviewQueue(@Param('eventSlug') eventSlug: string, @Query() dto: GetReviewQueueDto) {
+    const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 50)
+    const onlyPending = dto.onlyPending ?? true
+    return this.queryBus.execute(new GetReviewQueueQuery(eventSlug, pagination, onlyPending))
   }
 
   /** Retrieves a single photo's full detail (used by workspace). */
