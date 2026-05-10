@@ -1,9 +1,10 @@
 import { PhotoStatus } from '@generated/prisma/client'
 import { ApiPropertyOptional } from '@nestjs/swagger'
+import { PaginationQueryDto } from '@shared/application'
 import { Type } from 'class-transformer'
 import { IsDate, IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator'
 
-export class SearchPhotosDto {
+export class SearchPhotosDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filter by event UUID', format: 'uuid' })
   @IsUUID()
   @IsOptional()
@@ -67,17 +68,4 @@ export class SearchPhotosDto {
   @IsString()
   @IsOptional()
   bikeColor?: string
-
-  @ApiPropertyOptional({ description: 'Page number (defaults to 1)', example: 1 })
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  page?: number
-
-  @ApiPropertyOptional({ description: 'Items per page (defaults to 20, max 100)', example: 20 })
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  @IsOptional()
-  limit?: number
 }

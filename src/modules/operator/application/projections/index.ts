@@ -1,10 +1,13 @@
+export { DashboardSummaryProjection } from './dashboard-summary.projection'
+export { OperatorActiveEventProjection } from './operator-active-event.projection'
 export {
-  ActiveEventProjection,
-  CompletedEventProjection,
-  DashboardSummaryProjection,
-  OperatorDashboardProjection,
-  RecentActivityProjection,
-} from './operator-dashboard.projection'
+  OperatorActiveEventRetouchStatsProjection,
+  OperatorActiveEventReviewStatsProjection,
+  OperatorActiveEventStatsProjection,
+} from './operator-active-event-stats.projection'
+export { OperatorCompletedEventProjection } from './operator-completed-event.projection'
+export { OperatorCompletedEventStatsProjection } from './operator-completed-event-stats.projection'
+export { RecentActivityProjection } from './recent-activity.projection'
 export {
   RetouchQueueItemProjection,
   RetouchQueueOrderProjection,

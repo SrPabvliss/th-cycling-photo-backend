@@ -43,6 +43,9 @@ describe('GeneratePresignedUrlHandler', () => {
       getPublicPhotos: jest.fn(),
       existsActiveEvent: jest.fn(),
       existsActiveEventBySlug: jest.fn(),
+      getAssignedEventsByStatus: jest.fn(),
+      countAssignedEventsByStatus: jest.fn(),
+      getAssignedEventIdsByStatus: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoReadRepo = {

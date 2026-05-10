@@ -12,6 +12,7 @@ datasource db {
 
 enum EventStatus {
   active
+  completed
   archived
 
   @@map("event_status")

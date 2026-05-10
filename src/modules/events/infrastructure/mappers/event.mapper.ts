@@ -1,6 +1,7 @@
 import type {
   EventDetailProjection,
   EventListProjection,
+  EventSummaryProjection,
   PublicEventDetailProjection,
   PublicEventListProjection,
 } from '@events/application/projections'
@@ -44,6 +45,23 @@ export const eventDetailSelectConfig = {
 } satisfies Prisma.EventSelect
 
 export type EventDetailSelect = Prisma.EventGetPayload<{ select: typeof eventDetailSelectConfig }>
+
+export const eventSummarySelectConfig = {
+  id: true,
+  slug: true,
+  name: true,
+  event_date: true,
+  province: { select: { name: true } },
+  canton: { select: { name: true } },
+  _count: { select: { photos: true } },
+  assets: {
+    select: coverImageAssetSelectConfig,
+    where: { asset_type: 'cover_image' },
+    take: 1,
+  },
+} satisfies Prisma.EventSelect
+
+export type EventSummarySelect = Prisma.EventGetPayload<{ select: typeof eventSummarySelectConfig }>
 
 export const publicEventListSelectConfig = {
   slug: true,
@@ -131,6 +149,24 @@ export function toEntity(record: PrismaEvent): Event {
 /** Extracts the cover image slug from joined EventAsset rows. */
 function getCoverImageSlug(assets: { public_slug: string }[]): string | null {
   return assets[0]?.public_slug ?? null
+}
+
+/** Converts a Prisma record to a summary projection (cross-module shape). */
+export function toSummaryProjection(
+  record: EventSummarySelect,
+  cdn: CdnUrlBuilder,
+): EventSummaryProjection {
+  const coverSlug = getCoverImageSlug(record.assets)
+  const location = [record.canton?.name, record.province?.name].filter(Boolean).join(', ')
+  return {
+    id: record.id,
+    slug: record.slug,
+    name: record.name,
+    date: record.event_date,
+    location,
+    coverUrl: coverSlug ? cdn.assetUrl(coverSlug, 'cover-lg') : null,
+    totalPhotos: record._count.photos,
+  }
 }
 
 /** Converts a Prisma selected record to a list projection. */

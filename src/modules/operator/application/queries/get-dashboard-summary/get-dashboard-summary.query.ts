@@ -1,3 +1,3 @@
-export class GetOperatorDashboardQuery {
+export class GetDashboardSummaryQuery {
   constructor(public readonly operatorId: string) {}
 }
