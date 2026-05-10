@@ -23,6 +23,7 @@ describe('Review queue (e2e)', () => {
   let bearer: string
   let customerBearer: string
   let eventId: string
+  let eventSlug: string
   let photoA: string
   let photoB: string
   let photoC: string
@@ -70,6 +71,11 @@ describe('Review queue (e2e)', () => {
     customerBearer = `Bearer ${customer.token}`
     createdUserIds.push(admin.userId, customer.userId)
     eventId = await createEventFixture(prisma as unknown as PrismaClient)
+    const ev = await prisma.event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { slug: true },
+    })
+    eventSlug = ev.slug
 
     // Photo A: no bibs, status=processed (uploaded earliest)
     photoA = await createPhotoFixture(prisma as unknown as PrismaClient, eventId)
@@ -129,7 +135,7 @@ describe('Review queue (e2e)', () => {
 
   it('GET default (onlyPending=true) → A, B, C in order; D excluded', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventId}/review-queue`)
+      .get(`/api/v1/events/${eventSlug}/review-queue`)
       .set('Authorization', bearer)
       .expect(200)
 
@@ -150,7 +156,7 @@ describe('Review queue (e2e)', () => {
 
   it('GET onlyPending=false → returns all 4 including reviewed photo', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventId}/review-queue?onlyPending=false`)
+      .get(`/api/v1/events/${eventSlug}/review-queue?onlyPending=false`)
       .set('Authorization', bearer)
       .expect(200)
 
@@ -161,7 +167,7 @@ describe('Review queue (e2e)', () => {
 
   it('pagination: page=1&limit=2 returns 2; page=2 returns 1', async () => {
     const r1 = await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventId}/review-queue?page=1&limit=2`)
+      .get(`/api/v1/events/${eventSlug}/review-queue?page=1&limit=2`)
       .set('Authorization', bearer)
       .expect(200)
     expect(r1.body.data).toHaveLength(2)
@@ -171,7 +177,7 @@ describe('Review queue (e2e)', () => {
     expect(r1.body.meta.pagination.totalPages).toBe(2)
 
     const r2 = await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventId}/review-queue?page=2&limit=2`)
+      .get(`/api/v1/events/${eventSlug}/review-queue?page=2&limit=2`)
       .set('Authorization', bearer)
       .expect(200)
     expect(r2.body.data).toHaveLength(1)
@@ -180,14 +186,14 @@ describe('Review queue (e2e)', () => {
 
   it('limit > 100 is rejected by DTO validation (Max=100) → 400', async () => {
     await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventId}/review-queue?limit=999`)
+      .get(`/api/v1/events/${eventSlug}/review-queue?limit=999`)
       .set('Authorization', bearer)
       .expect(400)
   })
 
   it('thumbnailUrl is populated (string, not null)', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventId}/review-queue`)
+      .get(`/api/v1/events/${eventSlug}/review-queue`)
       .set('Authorization', bearer)
       .expect(200)
     for (const item of res.body.data) {
@@ -197,12 +203,12 @@ describe('Review queue (e2e)', () => {
   })
 
   it('without JWT → 401', async () => {
-    await request(app.getHttpServer()).get(`/api/v1/events/${eventId}/review-queue`).expect(401)
+    await request(app.getHttpServer()).get(`/api/v1/events/${eventSlug}/review-queue`).expect(401)
   })
 
   it('with customer role → 403', async () => {
     await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventId}/review-queue`)
+      .get(`/api/v1/events/${eventSlug}/review-queue`)
       .set('Authorization', customerBearer)
       .expect(403)
   })

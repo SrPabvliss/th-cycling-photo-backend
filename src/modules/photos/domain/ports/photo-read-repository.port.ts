@@ -50,7 +50,7 @@ export interface IPhotoReadRepository {
   countAll(): Promise<number>
   sumAllFileSize(): Promise<number>
   getReviewQueue(params: {
-    eventId: string
+    eventSlug: string
     onlyPending: boolean
     limit: number
     offset: number

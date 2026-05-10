@@ -29,25 +29,18 @@ const buildPhoto = (status: any = 'processed', reviewedAt: Date | null = null) =
 describe('ApplyColorCorrectionHandler', () => {
   let handler: ApplyColorCorrectionHandler
   let photoReadRepo: any
-  let photoWriteRepo: any
   let colorRepo: any
   let correctionRepo: any
 
   beforeEach(() => {
     photoReadRepo = { findById: jest.fn() }
-    photoWriteRepo = { save: jest.fn() }
     colorRepo = { findById: jest.fn(), save: jest.fn() }
     correctionRepo = {
       appendCorrection: jest.fn(),
       findLatestForTarget: jest.fn(),
       findLatestByTargets: jest.fn(),
     }
-    handler = new ApplyColorCorrectionHandler(
-      photoReadRepo,
-      photoWriteRepo,
-      colorRepo,
-      correctionRepo,
-    )
+    handler = new ApplyColorCorrectionHandler(photoReadRepo, colorRepo, correctionRepo)
   })
 
   it('throws when photo missing', async () => {
@@ -94,7 +87,6 @@ describe('ApplyColorCorrectionHandler', () => {
     })
     correctionRepo.findLatestForTarget.mockResolvedValue(null)
     correctionRepo.appendCorrection.mockResolvedValue({ id: 'corr-1' })
-    photoWriteRepo.save.mockResolvedValue(photo)
 
     const result = await handler.execute(
       new ApplyColorCorrectionCommand('p-1', 'c-1', 'primary_color', 'azul', 'r-1'),
@@ -122,7 +114,6 @@ describe('ApplyColorCorrectionHandler', () => {
     })
     correctionRepo.findLatestForTarget.mockResolvedValue(null)
     correctionRepo.appendCorrection.mockResolvedValue({ id: 'corr-2' })
-    photoWriteRepo.save.mockResolvedValue(photo)
 
     const result = await handler.execute(
       new ApplyColorCorrectionCommand('p-1', 'c-1', 'secondary_color', null, 'r-1'),
@@ -147,14 +138,14 @@ describe('ApplyColorCorrectionHandler', () => {
       secondaryColor: null,
     })
     correctionRepo.findLatestForTarget.mockResolvedValue(null)
-    photoWriteRepo.save.mockResolvedValue(photo)
 
     const result = await handler.execute(
       new ApplyColorCorrectionCommand('p-1', 'c-1', 'secondary_color', null, 'r-1'),
     )
     expect(result).toEqual({ changed: false })
     expect(correctionRepo.appendCorrection).not.toHaveBeenCalled()
-    expect(photo.status).toBe('reviewed')
+    expect(photo.status).toBe('processed')
+    expect(photo.reviewedAt).toBeNull()
   })
 
   it('uses latest correction newValue as effective when present', async () => {
@@ -173,7 +164,6 @@ describe('ApplyColorCorrectionHandler', () => {
       reviewerId: 'r-1',
     })
     correctionRepo.appendCorrection.mockResolvedValue({ id: 'c-new' })
-    photoWriteRepo.save.mockResolvedValue(buildPhoto())
 
     await handler.execute(
       new ApplyColorCorrectionCommand('p-1', 'c-1', 'primary_color', 'azul', 'r-1'),

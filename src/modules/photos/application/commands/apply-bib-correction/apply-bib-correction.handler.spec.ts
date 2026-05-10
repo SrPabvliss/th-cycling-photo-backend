@@ -29,20 +29,18 @@ const buildPhoto = (status: any = 'processed', reviewedAt: Date | null = null) =
 describe('ApplyBibCorrectionHandler', () => {
   let handler: ApplyBibCorrectionHandler
   let photoReadRepo: any
-  let photoWriteRepo: any
   let bibRepo: any
   let correctionRepo: any
 
   beforeEach(() => {
     photoReadRepo = { findById: jest.fn() }
-    photoWriteRepo = { save: jest.fn() }
     bibRepo = { findById: jest.fn(), save: jest.fn() }
     correctionRepo = {
       appendCorrection: jest.fn(),
       findLatestForTarget: jest.fn(),
       findLatestByTargets: jest.fn(),
     }
-    handler = new ApplyBibCorrectionHandler(photoReadRepo, photoWriteRepo, bibRepo, correctionRepo)
+    handler = new ApplyBibCorrectionHandler(photoReadRepo, bibRepo, correctionRepo)
   })
 
   it('throws when photo missing', async () => {
@@ -80,14 +78,12 @@ describe('ApplyBibCorrectionHandler', () => {
     photoReadRepo.findById.mockResolvedValue(photo)
     bibRepo.findById.mockResolvedValue({ id: 'b-1', photoId: 'p-1', digits: '42' })
     correctionRepo.findLatestForTarget.mockResolvedValue(null)
-    photoWriteRepo.save.mockResolvedValue(photo)
 
     const result = await handler.execute(new ApplyBibCorrectionCommand('p-1', 'b-1', '42', 'r-1'))
     expect(result).toEqual({ changed: false })
     expect(correctionRepo.appendCorrection).not.toHaveBeenCalled()
-    expect(photoWriteRepo.save).toHaveBeenCalled()
-    expect(photo.status).toBe('reviewed')
-    expect(photo.reviewedAt).toBeInstanceOf(Date)
+    expect(photo.status).toBe('processed')
+    expect(photo.reviewedAt).toBeNull()
   })
 
   it('applies correction when newValue differs', async () => {
@@ -96,7 +92,6 @@ describe('ApplyBibCorrectionHandler', () => {
     bibRepo.findById.mockResolvedValue({ id: 'b-1', photoId: 'p-1', digits: '20' })
     correctionRepo.findLatestForTarget.mockResolvedValue(null)
     correctionRepo.appendCorrection.mockResolvedValue({ id: 'c-1' })
-    photoWriteRepo.save.mockResolvedValue(photo)
 
     const result = await handler.execute(new ApplyBibCorrectionCommand('p-1', 'b-1', '42', 'r-1'))
     expect(result).toEqual({ changed: true, correctionId: 'c-1' })
@@ -122,7 +117,6 @@ describe('ApplyBibCorrectionHandler', () => {
       reviewerId: 'r-1',
     })
     correctionRepo.appendCorrection.mockResolvedValue({ id: 'c-new' })
-    photoWriteRepo.save.mockResolvedValue(buildPhoto())
 
     await handler.execute(new ApplyBibCorrectionCommand('p-1', 'b-1', '42', 'r-1'))
     expect(correctionRepo.appendCorrection).toHaveBeenCalledWith(

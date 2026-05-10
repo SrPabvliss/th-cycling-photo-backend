@@ -151,11 +151,11 @@ describe('Corrections endpoints (e2e)', () => {
       )
 
       const photo = await prisma.photo.findUniqueOrThrow({ where: { id: photoId } })
-      expect(photo.status).toBe('reviewed')
-      expect(photo.reviewed_at).not.toBeNull()
+      expect(photo.status).toBe('processed')
+      expect(photo.reviewed_at).toBeNull()
     })
 
-    it('same value as effective → 201 changed=false, no new correction row, photo still bumped', async () => {
+    it('same value as effective → 201 changed=false, no new correction row, photo not bumped', async () => {
       const photoId = await seedProcessedPhoto()
       const bibId = await seedBib(photoId, '20')
 
@@ -172,8 +172,8 @@ describe('Corrections endpoints (e2e)', () => {
       expect(rows).toHaveLength(0)
 
       const photo = await prisma.photo.findUniqueOrThrow({ where: { id: photoId } })
-      expect(photo.status).toBe('reviewed')
-      expect(photo.reviewed_at).not.toBeNull()
+      expect(photo.status).toBe('processed')
+      expect(photo.reviewed_at).toBeNull()
     })
 
     it('photo with status=processing → 422 BUSINESS_RULE', async () => {

@@ -6,10 +6,8 @@ import {
   type ICorrectionRepository,
   type IPhotoBibWriteRepository,
   type IPhotoReadRepository,
-  type IPhotoWriteRepository,
   PHOTO_BIB_WRITE_REPOSITORY,
   PHOTO_READ_REPOSITORY,
-  PHOTO_WRITE_REPOSITORY,
 } from '@photos/domain/ports'
 import { AppException } from '@shared/domain'
 import { ApplyBibCorrectionCommand } from './apply-bib-correction.command'
@@ -20,7 +18,6 @@ export class ApplyBibCorrectionHandler implements ICommandHandler<ApplyBibCorrec
 
   constructor(
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
-    @Inject(PHOTO_WRITE_REPOSITORY) private readonly photoWriteRepo: IPhotoWriteRepository,
     @Inject(PHOTO_BIB_WRITE_REPOSITORY) private readonly bibRepo: IPhotoBibWriteRepository,
     @Inject(CORRECTION_REPOSITORY) private readonly correctionRepo: ICorrectionRepository,
   ) {}
@@ -49,9 +46,6 @@ export class ApplyBibCorrectionHandler implements ICommandHandler<ApplyBibCorrec
       'digits',
     )
     const effective = latest?.newValue ?? bib.digits
-
-    photo.markReviewed()
-    await this.photoWriteRepo.save(photo)
 
     if (cmd.newValue === effective) {
       this.logger.log({

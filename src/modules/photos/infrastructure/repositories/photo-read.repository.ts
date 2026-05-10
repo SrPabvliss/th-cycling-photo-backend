@@ -289,7 +289,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
 
   /** Retrieves the review queue for an event with bib/color counts and min bib confidence. */
   async getReviewQueue(params: {
-    eventId: string
+    eventSlug: string
     onlyPending: boolean
     limit: number
     offset: number
@@ -306,7 +306,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     }>
     total: number
   }> {
-    const { eventId, onlyPending, limit, offset } = params
+    const { eventSlug, onlyPending, limit, offset } = params
 
     type Row = {
       id: string
@@ -325,7 +325,8 @@ export class PhotoReadRepository implements IPhotoReadRepository {
              (SELECT COUNT(*)::bigint FROM photo_bibs WHERE photo_id = p.id) AS bibs_count,
              (SELECT COUNT(*)::bigint FROM photo_colors WHERE photo_id = p.id) AS colors_count
       FROM photos p
-      WHERE p.event_id = ${eventId}::uuid
+      INNER JOIN events e ON e.id = p.event_id
+      WHERE e.slug = ${eventSlug}
         AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
         AND (NOT ${onlyPending}::bool OR p.reviewed_at IS NULL)
       ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) ASC NULLS FIRST,
@@ -336,7 +337,8 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     const totalRow = await this.prisma.$queryRaw<[{ count: bigint }]>`
       SELECT COUNT(*)::bigint AS count
       FROM photos p
-      WHERE p.event_id = ${eventId}::uuid
+      INNER JOIN events e ON e.id = p.event_id
+      WHERE e.slug = ${eventSlug}
         AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
         AND (NOT ${onlyPending}::bool OR p.reviewed_at IS NULL)
     `

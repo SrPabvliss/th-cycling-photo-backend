@@ -118,7 +118,7 @@ export class PhotosController {
   }
 
   /** Returns paid orders with photos pending retouching, ordered FIFO. */
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Get('photos/pending-retouch')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Get photos pending retouching grouped by order' })
@@ -293,20 +293,20 @@ export class PhotosController {
 
   /** Paginated review queue for an event, ordered by min(bib confidence) ASC NULLS FIRST (admin/operator). */
   @Roles('admin', 'operator')
-  @Get('events/:eventId/review-queue')
+  @Get('events/:eventSlug/review-queue')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Review queue ordered by min(bib confidence) ASC NULLS FIRST' })
-  @ApiParam({ name: 'eventId', format: 'uuid' })
+  @ApiParam({ name: 'eventSlug', description: 'Event public slug' })
   @ApiEnvelopeResponse({
     status: 200,
     description: 'Paginated review queue',
     type: ReviewQueueItemProjection,
     isArray: true,
   })
-  async getReviewQueue(@Param('eventId') eventId: string, @Query() dto: GetReviewQueueDto) {
+  async getReviewQueue(@Param('eventSlug') eventSlug: string, @Query() dto: GetReviewQueueDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 50)
     const onlyPending = dto.onlyPending ?? true
-    return this.queryBus.execute(new GetReviewQueueQuery(eventId, pagination, onlyPending))
+    return this.queryBus.execute(new GetReviewQueueQuery(eventSlug, pagination, onlyPending))
   }
 
   /** Retrieves a single photo's full detail (used by workspace). */

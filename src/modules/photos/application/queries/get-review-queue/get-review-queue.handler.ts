@@ -15,7 +15,7 @@ export class GetReviewQueueHandler implements IQueryHandler<GetReviewQueueQuery>
 
   async execute(query: GetReviewQueueQuery): Promise<PaginatedResult<ReviewQueueItemProjection>> {
     const { items, total } = await this.readRepo.getReviewQueue({
-      eventId: query.eventId,
+      eventSlug: query.eventSlug,
       onlyPending: query.onlyPending,
       limit: query.pagination.take,
       offset: query.pagination.skip,

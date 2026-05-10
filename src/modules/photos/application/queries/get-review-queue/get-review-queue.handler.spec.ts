@@ -31,7 +31,7 @@ describe('GetReviewQueueHandler', () => {
     readRepo.getReviewQueue.mockResolvedValue({ items: [], total: 0 })
     await handler.execute(new GetReviewQueueQuery('e-1', new Pagination(1, 50), true))
     expect(readRepo.getReviewQueue).toHaveBeenCalledWith({
-      eventId: 'e-1',
+      eventSlug: 'e-1',
       onlyPending: true,
       limit: 50,
       offset: 0,
