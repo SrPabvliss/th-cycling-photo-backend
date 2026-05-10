@@ -1,21 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
+import { PaginationQueryDto } from '@shared/application'
 import { Transform } from 'class-transformer'
-import { IsBoolean, IsInt, IsOptional, Max, Min } from 'class-validator'
+import { IsBoolean, IsOptional } from 'class-validator'
 
-export class GetNotificationsListDto {
-  @ApiPropertyOptional({ description: 'Page number (defaults to 1)', example: 1 })
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  page?: number
-
-  @ApiPropertyOptional({ description: 'Items per page (defaults to 20, max 50)', example: 20 })
-  @IsInt()
-  @Min(1)
-  @Max(50)
-  @IsOptional()
-  limit?: number
-
+export class GetNotificationsListDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filter by read status' })
   @IsBoolean()
   @IsOptional()
