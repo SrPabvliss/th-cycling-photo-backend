@@ -4,6 +4,7 @@ export {
   type IEventOperatorRepository,
 } from './event-operator-repository.port'
 export {
+  type AssignedEventStatus,
   EVENT_READ_REPOSITORY,
   type IEventReadRepository,
 } from './event-read-repository.port'

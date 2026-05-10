@@ -1,11 +1,11 @@
 export {
-  type AssignedEventRow,
-  type IOperatorDashboardRepository,
-  type LastActionDate,
-  OPERATOR_DASHBOARD_REPOSITORY,
+  type ActiveEventStats,
+  type CompletedEventStats,
+  type IOperatorReadRepository,
+  OPERATOR_READ_REPOSITORY,
   type RecentActivityRow,
-  type RetouchProgress,
-} from './operator-dashboard-repository.port'
+  type RecentActivityType,
+} from './operator-read-repository.port'
 export {
   type IOperatorRetouchRepository,
   OPERATOR_RETOUCH_REPOSITORY,

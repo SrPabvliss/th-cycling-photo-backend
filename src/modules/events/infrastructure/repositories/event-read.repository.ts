@@ -6,12 +6,13 @@ import { PrismaService } from '@shared/infrastructure'
 import type {
   EventDetailProjection,
   EventListProjection,
+  EventSummaryProjection,
   PublicEventDetailProjection,
   PublicEventListProjection,
   PublicPhotoProjection,
 } from '../../application/projections'
 import type { Event } from '../../domain/entities'
-import type { IEventReadRepository } from '../../domain/ports'
+import type { AssignedEventStatus, IEventReadRepository } from '../../domain/ports'
 import * as EventMapper from '../mappers/event.mapper'
 
 @Injectable()
@@ -79,6 +80,60 @@ export class EventReadRepository implements IEventReadRepository {
 
   async countAll(): Promise<number> {
     return this.prisma.event.count()
+  }
+
+  async getAssignedEventsByStatus(
+    operatorId: string,
+    status: AssignedEventStatus,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<EventSummaryProjection>> {
+    const where: Prisma.EventWhereInput = {
+      status,
+      deleted_at: null,
+      operators: { some: { user_id: operatorId } },
+    }
+
+    const [events, total] = await Promise.all([
+      this.prisma.event.findMany({
+        where,
+        select: EventMapper.eventSummarySelectConfig,
+        orderBy: { event_date: 'desc' },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+      this.prisma.event.count({ where }),
+    ])
+
+    const items = events.map((e) => EventMapper.toSummaryProjection(e, this.cdn))
+    return new PaginatedResult(items, total, pagination)
+  }
+
+  async countAssignedEventsByStatus(
+    operatorId: string,
+    status: AssignedEventStatus,
+  ): Promise<number> {
+    return this.prisma.event.count({
+      where: {
+        status,
+        deleted_at: null,
+        operators: { some: { user_id: operatorId } },
+      },
+    })
+  }
+
+  async getAssignedEventIdsByStatus(
+    operatorId: string,
+    status: AssignedEventStatus,
+  ): Promise<string[]> {
+    const rows = await this.prisma.event.findMany({
+      where: {
+        status,
+        deleted_at: null,
+        operators: { some: { user_id: operatorId } },
+      },
+      select: { id: true },
+    })
+    return rows.map((r) => r.id)
   }
 
   async getPublicEventsList(
