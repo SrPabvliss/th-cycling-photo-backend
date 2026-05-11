@@ -89,9 +89,7 @@ describe('GetReviewQueueHandler', () => {
   it('passes through status="all" when explicitly set', async () => {
     readRepo.getReviewQueue.mockResolvedValue({ items: [], total: 0 })
     await handler.execute(new GetReviewQueueQuery('e-1', new Pagination(1, 50), 'all'))
-    expect(readRepo.getReviewQueue).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'all' }),
-    )
+    expect(readRepo.getReviewQueue).toHaveBeenCalledWith(expect.objectContaining({ status: 'all' }))
   })
 
   it('passes through status="reviewed" when explicitly set', async () => {

@@ -1,8 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import {
-  REVIEW_QUEUE_STATUS_FILTERS,
-  type ReviewQueueStatusFilter,
-} from '@photos/domain/ports'
+import { REVIEW_QUEUE_STATUS_FILTERS, type ReviewQueueStatusFilter } from '@photos/domain/ports'
 import { PaginationQueryDto } from '@shared/application'
 import { IsIn, IsOptional, IsString } from 'class-validator'
 

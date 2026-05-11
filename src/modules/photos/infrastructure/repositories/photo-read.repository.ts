@@ -489,9 +489,8 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   }
 }
 
-
 function reviewedAtFilter(status: ReviewQueueStatusFilter): Prisma.Sql {
-  if (status === "pending") return Prisma.sql`AND p.reviewed_at IS NULL`
-  if (status === "reviewed") return Prisma.sql`AND p.reviewed_at IS NOT NULL`
+  if (status === 'pending') return Prisma.sql`AND p.reviewed_at IS NULL`
+  if (status === 'reviewed') return Prisma.sql`AND p.reviewed_at IS NOT NULL`
   return Prisma.empty
 }

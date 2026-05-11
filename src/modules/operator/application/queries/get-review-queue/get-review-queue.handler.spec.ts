@@ -10,7 +10,10 @@ import { GetOperatorReviewQueueQuery } from './get-review-queue.query'
 describe('GetOperatorReviewQueueHandler', () => {
   let handler: GetOperatorReviewQueueHandler
   let eventRead: jest.Mocked<
-    Pick<IEventReadRepository, 'getAssignedEventIdsByStatus' | 'getEventBriefsByIds' | 'existsActiveEventBySlug'>
+    Pick<
+      IEventReadRepository,
+      'getAssignedEventIdsByStatus' | 'getEventBriefsByIds' | 'existsActiveEventBySlug'
+    >
   >
   let photoRead: jest.Mocked<Pick<IPhotoReadRepository, 'getReviewQueueByEventIds'>>
   let cdn: jest.Mocked<Pick<CdnUrlBuilder, 'internalUrl'>>
@@ -23,7 +26,11 @@ describe('GetOperatorReviewQueueHandler', () => {
     }
     photoRead = { getReviewQueueByEventIds: jest.fn() }
     cdn = { internalUrl: jest.fn().mockReturnValue('https://cdn.test/thumb.jpg') }
-    handler = new GetOperatorReviewQueueHandler(eventRead as never, photoRead as never, cdn as never)
+    handler = new GetOperatorReviewQueueHandler(
+      eventRead as never,
+      photoRead as never,
+      cdn as never,
+    )
   })
 
   it('returns empty when operator has no assigned active events', async () => {
