@@ -14,6 +14,8 @@ import type {
 } from '../../domain/ports'
 import { HealthResponseV1Schema, PipelineResponseV1Schema } from './schemas-runtime'
 
+const SUPPORTED_SCHEMA_VERSIONS = new Set(['1.0', '1.1', '1.2'])
+
 @Injectable()
 export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter {
   private readonly logger = new Logger(CyclingAiPipelineAdapter.name)
@@ -36,6 +38,16 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
           image_url: request.imageUrl,
           event_id: request.eventId ?? null,
           confidence_threshold: request.confidenceThreshold ?? 0.25,
+          ...(request.cropUploadUrls
+            ? {
+                crop_upload_urls: {
+                  bibs: request.cropUploadUrls.bibs,
+                  colors_helmet: request.cropUploadUrls.colorsHelmet,
+                  colors_clothes: request.cropUploadUrls.colorsClothes,
+                  colors_bicycle: request.cropUploadUrls.colorsBicycle,
+                },
+              }
+            : {}),
         }),
         signal: AbortSignal.timeout(this.timeoutMs),
       })
@@ -94,13 +106,13 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
     }
     const raw = parsed.data
 
-    if (raw.schema_version !== '1.0') {
+    if (!SUPPORTED_SCHEMA_VERSIONS.has(raw.schema_version)) {
       throw new AppException(
         'ai_pipeline.unsupported_schema_version',
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { received: raw.schema_version, expected: '1.0' },
+        { received: raw.schema_version, expected: '1.0 | 1.1 | 1.2' },
       )
     }
 
@@ -147,6 +159,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
           bboxSource: b.bbox_source,
           rawOcrText: b.raw_ocr_text,
           processingMs: b.processing_ms,
+          cropPath: b.crop_path ?? null,
         }),
       ),
       colorAnalyses: raw.color_analyses.map(
@@ -158,6 +171,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
           bboxSource: c.bbox_source,
           strategy: c.strategy,
           processingMs: c.processing_ms,
+          cropPath: c.crop_path ?? null,
         }),
       ),
       imageWidth: raw.image_width,

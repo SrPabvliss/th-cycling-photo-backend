@@ -1,3 +1,9 @@
+import {
+  AttributeSource,
+  ColorRegion,
+  CorrectionTargetType,
+  type PrismaClient,
+} from '@generated/prisma/client'
 import type { INestApplication } from '@nestjs/common'
 import { ValidationPipe } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
@@ -11,6 +17,7 @@ import { ResponseInterceptor } from '../src/shared/http/interceptors/response.in
 import { PrismaService } from '../src/shared/infrastructure'
 import { STORAGE_ADAPTER } from '../src/shared/storage/domain/ports/storage-adapter.port'
 import { createAuthenticatedUser, type TestAuthUser } from './fixtures/factories/auth.factory'
+import { createPhotoFixture } from './fixtures/factories/photo.factory'
 
 describe('Photos Module (e2e)', () => {
   let app: INestApplication<App>
@@ -263,6 +270,176 @@ describe('Photos Module (e2e)', () => {
       expect(response.body.error).toHaveProperty('code')
       expect(response.body.error).toHaveProperty('message')
       expect(response.body.meta).toHaveProperty('requestId')
+    })
+  })
+
+  // --- GET /photos/detail/:slug — projection w/ corrections (Phase 6.5) ---
+  describe('GET /photos/detail/:slug — corrections projection', () => {
+    let detailPhotoId: string
+    let detailPhotoSlug: string
+
+    const seedPhoto = async (): Promise<{ id: string; slug: string }> => {
+      const id = await createPhotoFixture(prisma as unknown as PrismaClient, testEventId)
+      await prisma.photo.update({ where: { id }, data: { status: 'processed' } })
+      const photo = await prisma.photo.findUniqueOrThrow({
+        where: { id },
+        select: { public_slug: true },
+      })
+      return { id, slug: photo.public_slug }
+    }
+
+    afterEach(async () => {
+      if (detailPhotoId) {
+        await prisma.correction.deleteMany({ where: { photo_id: detailPhotoId } })
+        await prisma.photoBib.deleteMany({ where: { photo_id: detailPhotoId } })
+        await prisma.photoColor.deleteMany({ where: { photo_id: detailPhotoId } })
+        await prisma.photo.delete({ where: { id: detailPhotoId } }).catch(() => undefined)
+      }
+    })
+
+    it('photo with bib digits correction → wasCorrected=true, digitsOriginal raw, digits corrected, correctedAt set', async () => {
+      const seeded = await seedPhoto()
+      detailPhotoId = seeded.id
+      detailPhotoSlug = seeded.slug
+
+      const bib = await prisma.photoBib.create({
+        data: {
+          photo_id: detailPhotoId,
+          source: AttributeSource.ai,
+          digits: '2O',
+          confidence: 0.5,
+        },
+        select: { id: true },
+      })
+      await prisma.correction.create({
+        data: {
+          photo_id: detailPhotoId,
+          target_type: CorrectionTargetType.photo_bib,
+          target_id: bib.id,
+          field: 'digits',
+          old_value: '2O',
+          new_value: '20',
+          reviewer_id: admin.userId,
+        },
+      })
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/photos/detail/${detailPhotoSlug}`)
+        .set('Authorization', bearer)
+        .expect(200)
+
+      expect(res.body.data.bibs).toHaveLength(1)
+      const bibProjection = res.body.data.bibs[0]
+      expect(bibProjection).toEqual(
+        expect.objectContaining({
+          id: bib.id,
+          digits: '20',
+          digitsOriginal: '2O',
+          wasCorrected: true,
+        }),
+      )
+      expect(bibProjection.correctedAt).not.toBeNull()
+      expect(new Date(bibProjection.correctedAt).getTime()).toBeGreaterThan(0)
+    })
+
+    it('photo with primary_color correction → primaryColor corrected, primaryColorOriginal raw, primaryWasCorrected=true', async () => {
+      const seeded = await seedPhoto()
+      detailPhotoId = seeded.id
+      detailPhotoSlug = seeded.slug
+
+      const color = await prisma.photoColor.create({
+        data: {
+          photo_id: detailPhotoId,
+          source: AttributeSource.ai,
+          region: ColorRegion.helmet,
+          primary_color: 'rojo',
+          secondary_color: 'blanco',
+        },
+        select: { id: true },
+      })
+      await prisma.correction.create({
+        data: {
+          photo_id: detailPhotoId,
+          target_type: CorrectionTargetType.photo_color,
+          target_id: color.id,
+          field: 'primary_color',
+          old_value: 'rojo',
+          new_value: 'naranja',
+          reviewer_id: admin.userId,
+        },
+      })
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/photos/detail/${detailPhotoSlug}`)
+        .set('Authorization', bearer)
+        .expect(200)
+
+      expect(res.body.data.colors).toHaveLength(1)
+      const colorProjection = res.body.data.colors[0]
+      expect(colorProjection).toEqual(
+        expect.objectContaining({
+          id: color.id,
+          primaryColor: 'naranja',
+          primaryColorOriginal: 'rojo',
+          primaryWasCorrected: true,
+          secondaryColor: 'blanco',
+          secondaryColorOriginal: 'blanco',
+          secondaryWasCorrected: false,
+        }),
+      )
+    })
+
+    it('photo without corrections → wasCorrected=false on all attrs, originals match current values', async () => {
+      const seeded = await seedPhoto()
+      detailPhotoId = seeded.id
+      detailPhotoSlug = seeded.slug
+
+      const bib = await prisma.photoBib.create({
+        data: {
+          photo_id: detailPhotoId,
+          source: AttributeSource.ai,
+          digits: '42',
+          confidence: 0.9,
+        },
+        select: { id: true },
+      })
+      const color = await prisma.photoColor.create({
+        data: {
+          photo_id: detailPhotoId,
+          source: AttributeSource.ai,
+          region: ColorRegion.helmet,
+          primary_color: 'azul',
+          secondary_color: null,
+        },
+        select: { id: true },
+      })
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/photos/detail/${detailPhotoSlug}`)
+        .set('Authorization', bearer)
+        .expect(200)
+
+      const bibProjection = res.body.data.bibs.find((b: { id: string }) => b.id === bib.id)
+      expect(bibProjection).toEqual(
+        expect.objectContaining({
+          digits: '42',
+          digitsOriginal: '42',
+          wasCorrected: false,
+          correctedAt: null,
+        }),
+      )
+
+      const colorProjection = res.body.data.colors.find((c: { id: string }) => c.id === color.id)
+      expect(colorProjection).toEqual(
+        expect.objectContaining({
+          primaryColor: 'azul',
+          primaryColorOriginal: 'azul',
+          primaryWasCorrected: false,
+          secondaryColor: null,
+          secondaryColorOriginal: null,
+          secondaryWasCorrected: false,
+        }),
+      )
     })
   })
 })

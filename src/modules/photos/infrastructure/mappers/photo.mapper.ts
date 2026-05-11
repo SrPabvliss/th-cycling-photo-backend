@@ -1,12 +1,14 @@
-import { Prisma, type Photo as PrismaPhoto } from '@generated/prisma/client'
+import { CorrectionTargetType, Prisma, type Photo as PrismaPhoto } from '@generated/prisma/client'
 import type {
   PhotoDetailProjection,
   PhotoListProjection,
   PhotoViewProjection,
 } from '@photos/application/projections'
 import { Photo } from '@photos/domain/entities'
+import type { ICorrectionRepository } from '@photos/domain/ports'
 import type { PhotoStatusType } from '@photos/domain/value-objects/photo-status.vo'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
 
 // --- Select shapes for Prisma queries ---
 
@@ -39,6 +41,29 @@ export const photoDetailSelectConfig = {
   uploaded_at: true,
   processed_at: true,
   reviewed_at: true,
+  bibs: {
+    select: {
+      id: true,
+      source: true,
+      digits: true,
+      status: true,
+      confidence: true,
+      crop_path: true,
+    },
+    orderBy: { created_at: 'asc' as const },
+  },
+  colors: {
+    select: {
+      id: true,
+      source: true,
+      region: true,
+      primary_color: true,
+      secondary_color: true,
+      confidence: true,
+      crop_path: true,
+    },
+    orderBy: { created_at: 'asc' as const },
+  },
 } satisfies Prisma.PhotoSelect
 
 export type PhotoDetailSelect = Prisma.PhotoGetPayload<{ select: typeof photoDetailSelectConfig }>
@@ -127,11 +152,44 @@ export function toListProjection(record: PhotoListSelect, cdn: CdnUrlBuilder): P
   }
 }
 
-/** Converts a Prisma selected record to a detail projection. */
-export function toDetailProjection(
+/** Converts a Prisma selected record to a detail projection. Signs each crop_path via storage. */
+export async function toDetailProjection(
   record: PhotoDetailSelect,
   cdn: CdnUrlBuilder,
-): PhotoDetailProjection {
+  storage: IStorageAdapter,
+  correctionRepo: ICorrectionRepository,
+): Promise<PhotoDetailProjection> {
+  const cropPaths = Array.from(
+    new Set(
+      [...record.bibs.map((b) => b.crop_path), ...record.colors.map((c) => c.crop_path)].filter(
+        (p): p is string => p !== null,
+      ),
+    ),
+  )
+
+  const settled = await Promise.allSettled(
+    cropPaths.map(async (path) => {
+      const url = await storage.getPresignedDownloadUrl({ key: path, expiresIn: 3600 })
+      return [path, url] as const
+    }),
+  )
+
+  const signedByPath = new Map<string, string>(
+    settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : [])),
+  )
+
+  const correctionTargets = [
+    ...record.bibs.map((b) => ({
+      targetType: CorrectionTargetType.photo_bib,
+      targetId: b.id,
+    })),
+    ...record.colors.map((c) => ({
+      targetType: CorrectionTargetType.photo_color,
+      targetId: c.id,
+    })),
+  ]
+  const corrections = await correctionRepo.findLatestByTargets(correctionTargets)
+
   return {
     id: record.id,
     eventId: record.event_id,
@@ -154,6 +212,37 @@ export function toDetailProjection(
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
     reviewedAt: record.reviewed_at,
+    bibs: record.bibs.map((b) => {
+      const c = corrections.get(`photo_bib:${b.id}:digits`)
+      return {
+        id: b.id,
+        digits: c?.newValue ?? b.digits,
+        digitsOriginal: b.digits,
+        wasCorrected: !!c,
+        correctedAt: c?.correctedAt ?? null,
+        status: b.status,
+        confidence: b.confidence === null ? null : Number(b.confidence),
+        source: b.source,
+        cropUrl: b.crop_path ? (signedByPath.get(b.crop_path) ?? null) : null,
+      }
+    }),
+    colors: record.colors.map((c) => {
+      const cp = corrections.get(`photo_color:${c.id}:primary_color`)
+      const cs = corrections.get(`photo_color:${c.id}:secondary_color`)
+      return {
+        id: c.id,
+        region: c.region,
+        primaryColor: (cp?.newValue ?? c.primary_color) as string,
+        primaryColorOriginal: c.primary_color,
+        primaryWasCorrected: !!cp,
+        secondaryColor: cs?.newValue ?? c.secondary_color,
+        secondaryColorOriginal: c.secondary_color,
+        secondaryWasCorrected: !!cs,
+        confidence: c.confidence === null ? null : Number(c.confidence),
+        source: c.source,
+        cropUrl: c.crop_path ? (signedByPath.get(c.crop_path) ?? null) : null,
+      }
+    }),
   }
 }
 

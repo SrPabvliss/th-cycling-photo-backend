@@ -1,5 +1,5 @@
 import { PhotoStatus, Prisma } from '@generated/prisma/client'
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import type {
   PhotoDetailProjection,
   PhotoListProjection,
@@ -8,11 +8,20 @@ import type {
 } from '@photos/application/projections'
 import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { Photo } from '@photos/domain/entities'
-import type { IPhotoReadRepository } from '@photos/domain/ports'
+import {
+  CORRECTION_REPOSITORY,
+  type ICorrectionRepository,
+  type IPhotoReadRepository,
+  type ReviewQueueStatusFilter,
+} from '@photos/domain/ports'
 
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
+import {
+  type IStorageAdapter,
+  STORAGE_ADAPTER,
+} from '@shared/storage/domain/ports/storage-adapter.port'
 import * as PhotoMapper from '../mappers/photo.mapper'
 
 @Injectable()
@@ -20,6 +29,8 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cdn: CdnUrlBuilder,
+    @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
+    @Inject(CORRECTION_REPOSITORY) private readonly correctionRepo: ICorrectionRepository,
   ) {}
 
   /** Finds a photo by ID (no soft-delete filter — photos use hard delete). */
@@ -67,14 +78,28 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     )
   }
 
-  /** Retrieves a single photo's detail. */
+  /** Retrieves a single photo's detail by ID. */
   async getPhotoDetail(id: string): Promise<PhotoDetailProjection | null> {
     const record = await this.prisma.photo.findUnique({
       where: { id },
       select: PhotoMapper.photoDetailSelectConfig,
     })
 
-    return record ? PhotoMapper.toDetailProjection(record, this.cdn) : null
+    return record
+      ? await PhotoMapper.toDetailProjection(record, this.cdn, this.storage, this.correctionRepo)
+      : null
+  }
+
+  /** Retrieves a single photo's detail by public slug (admin/operator). */
+  async getPhotoDetailBySlug(slug: string): Promise<PhotoDetailProjection | null> {
+    const record = await this.prisma.photo.findFirst({
+      where: { public_slug: slug },
+      select: PhotoMapper.photoDetailSelectConfig,
+    })
+
+    return record
+      ? await PhotoMapper.toDetailProjection(record, this.cdn, this.storage, this.correctionRepo)
+      : null
   }
 
   /** Retrieves a lightweight photo view by public slug. */
@@ -263,6 +288,140 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     }))
   }
 
+  /** Retrieves the review queue for an event with bib/color counts and min bib confidence. */
+  async getReviewQueue(params: {
+    eventSlug: string
+    status: ReviewQueueStatusFilter
+    limit: number
+    offset: number
+  }): Promise<{
+    items: Array<{
+      id: string
+      publicSlug: string
+      filename: string
+      status: PhotoStatus
+      reviewedAt: Date | null
+      minBibConfidence: number | null
+      bibsCount: number
+      colorsCount: number
+    }>
+    total: number
+  }> {
+    const { eventSlug, status, limit, offset } = params
+    const reviewedFilter = reviewedAtFilter(status)
+
+    type Row = {
+      id: string
+      public_slug: string
+      filename: string
+      status: PhotoStatus
+      reviewed_at: Date | null
+      min_bib_confidence: number | string | null
+      bibs_count: bigint
+      colors_count: bigint
+    }
+
+    const items = await this.prisma.$queryRaw<Row[]>`
+      SELECT p.id, p.public_slug, p.filename, p.status, p.reviewed_at,
+             (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) AS min_bib_confidence,
+             (SELECT COUNT(*)::bigint FROM photo_bibs WHERE photo_id = p.id) AS bibs_count,
+             (SELECT COUNT(*)::bigint FROM photo_colors WHERE photo_id = p.id) AS colors_count
+      FROM photos p
+      INNER JOIN events e ON e.id = p.event_id
+      WHERE e.slug = ${eventSlug}
+        AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
+        ${reviewedFilter}
+      ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) ASC NULLS FIRST,
+               p.uploaded_at ASC
+      LIMIT ${limit} OFFSET ${offset}
+    `
+
+    const totalRow = await this.prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*)::bigint AS count
+      FROM photos p
+      INNER JOIN events e ON e.id = p.event_id
+      WHERE e.slug = ${eventSlug}
+        AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
+        ${reviewedFilter}
+    `
+
+    return {
+      items: items.map((r) => ({
+        id: r.id,
+        publicSlug: r.public_slug,
+        filename: r.filename,
+        status: r.status,
+        reviewedAt: r.reviewed_at,
+        minBibConfidence: r.min_bib_confidence === null ? null : Number(r.min_bib_confidence),
+        bibsCount: Number(r.bibs_count),
+        colorsCount: Number(r.colors_count),
+      })),
+      total: Number(totalRow[0]?.count ?? 0),
+    }
+  }
+
+  async getReviewQueueByEventIds(params: {
+    eventIds: string[]
+    status: ReviewQueueStatusFilter
+    limit: number
+    offset: number
+  }) {
+    const { eventIds, status, limit, offset } = params
+    const reviewedFilter = reviewedAtFilter(status)
+
+    if (eventIds.length === 0) return { items: [], total: 0 }
+
+    type Row = {
+      id: string
+      public_slug: string
+      filename: string
+      status: PhotoStatus
+      reviewed_at: Date | null
+      min_bib_confidence: number | string | null
+      bibs_count: bigint
+      colors_count: bigint
+      event_id: string
+    }
+
+    const items = await this.prisma.$queryRaw<Row[]>`
+      SELECT p.id, p.public_slug, p.filename, p.status, p.reviewed_at,
+             p.event_id,
+             (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) AS min_bib_confidence,
+             (SELECT COUNT(*)::bigint FROM photo_bibs WHERE photo_id = p.id) AS bibs_count,
+             (SELECT COUNT(*)::bigint FROM photo_colors WHERE photo_id = p.id) AS colors_count
+      FROM photos p
+      WHERE p.event_id = ANY(${eventIds}::uuid[])
+        AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
+        ${reviewedFilter}
+      ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) ASC NULLS FIRST,
+               p.uploaded_at ASC
+      LIMIT ${limit} OFFSET ${offset}
+    `
+
+    const totalRow = await this.prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*)::bigint AS count
+      FROM photos p
+      WHERE p.event_id = ANY(${eventIds}::uuid[])
+        AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
+        ${reviewedFilter}
+    `
+
+    return {
+      items: items.map((r) => ({
+        id: r.id,
+        publicSlug: r.public_slug,
+        filename: r.filename,
+        status: r.status,
+        reviewedAt: r.reviewed_at,
+        minBibConfidence: r.min_bib_confidence != null ? Number(r.min_bib_confidence) : null,
+        bibsCount: Number(r.bibs_count),
+        colorsCount: Number(r.colors_count),
+        eventId: r.event_id,
+      })),
+      total: Number(totalRow[0].count),
+    }
+  }
+
   /** Builds a Prisma where clause from search filters. */
   private buildSearchWhere(filters: SearchPhotosFilters): Prisma.PhotoWhereInput {
     const where: Prisma.PhotoWhereInput = {}
@@ -328,4 +487,10 @@ export class PhotoReadRepository implements IPhotoReadRepository {
 
     return where
   }
+}
+
+function reviewedAtFilter(status: ReviewQueueStatusFilter): Prisma.Sql {
+  if (status === 'pending') return Prisma.sql`AND p.reviewed_at IS NULL`
+  if (status === 'reviewed') return Prisma.sql`AND p.reviewed_at IS NOT NULL`
+  return Prisma.empty
 }

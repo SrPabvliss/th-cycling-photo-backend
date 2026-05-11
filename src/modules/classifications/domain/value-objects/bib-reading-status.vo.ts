@@ -4,14 +4,11 @@ import { AppException } from '@shared/domain'
 export class BibReadingStatusVo {
   private constructor(public readonly value: BibReadingStatus) {}
 
-  static matched(): BibReadingStatusVo {
-    return new BibReadingStatusVo(BibReadingStatus.matched)
+  static read(): BibReadingStatusVo {
+    return new BibReadingStatusVo(BibReadingStatus.read)
   }
   static abstained(): BibReadingStatusVo {
     return new BibReadingStatusVo(BibReadingStatus.abstained)
-  }
-  static unmatched(): BibReadingStatusVo {
-    return new BibReadingStatusVo(BibReadingStatus.unmatched)
   }
 
   static fromValue(v: string): BibReadingStatusVo {
@@ -21,7 +18,7 @@ export class BibReadingStatusVo {
     return new BibReadingStatusVo(v as BibReadingStatus)
   }
 
-  isMatched(): boolean {
-    return this.value === BibReadingStatus.matched
+  isRead(): boolean {
+    return this.value === BibReadingStatus.read
   }
 }

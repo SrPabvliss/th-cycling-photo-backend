@@ -1,4 +1,5 @@
 export { AuditContext } from './audit-context'
+export { PaginationQueryDto } from './dto/pagination-query.dto'
 export { PaginatedResult } from './paginated-result'
 export { Pagination } from './pagination'
 export { EntityIdProjection } from './projections/entity-id.projection'

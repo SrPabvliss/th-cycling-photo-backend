@@ -69,6 +69,7 @@ export class PhotoClassificationWriteRepository implements IPhotoClassificationW
             bbox_source: b.bboxSource ?? undefined,
             preprocessing_applied: b.preprocessingApplied ?? undefined,
             processing_ms: b.processingMs,
+            crop_path: b.cropPath,
           })),
         })
       }
@@ -86,6 +87,7 @@ export class PhotoClassificationWriteRepository implements IPhotoClassificationW
             bbox_source: c.bboxSource ?? undefined,
             strategy: c.strategy,
             processing_ms: c.processingMs,
+            crop_path: c.cropPath,
           })),
         })
       }

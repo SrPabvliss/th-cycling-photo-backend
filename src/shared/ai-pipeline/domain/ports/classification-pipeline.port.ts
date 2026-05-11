@@ -5,12 +5,21 @@ import {
   ProcessingStageStatus,
 } from '@generated/prisma/client'
 
+/** Pre-allocated signed PUT URLs the AI pipeline uses to upload crops directly to bucket storage. */
+export interface CropUploadUrls {
+  bibs: string[]
+  colorsHelmet: string[]
+  colorsClothes: string[]
+  colorsBicycle: string[]
+}
+
 /** Input for the classification pipeline adapter. */
 export interface ClassificationPipelineRequest {
   imageId: string
   imageUrl: string
   eventId?: string
   confidenceThreshold?: number
+  cropUploadUrls?: CropUploadUrls
 }
 
 export interface DetectionDto {
@@ -30,6 +39,7 @@ export interface BibReadingDto {
   bboxSource: [number, number, number, number]
   rawOcrText: string | null
   processingMs: number
+  cropPath: string | null
 }
 
 export interface ColorAnalysisDto {
@@ -40,6 +50,7 @@ export interface ColorAnalysisDto {
   bboxSource: [number, number, number, number]
   strategy: string
   processingMs: number
+  cropPath: string | null
 }
 
 export interface StageTimingsDto {

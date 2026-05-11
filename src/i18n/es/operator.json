@@ -1,3 +1,9 @@
 {
-  "not_assigned_to_event": "El operador no está asignado a este evento"
+  "not_assigned_to_event": "El operador no está asignado a este evento",
+  "activity": {
+    "review_one": "Revisaste {count} foto",
+    "review_other": "Revisaste {count} fotos",
+    "retouch_one": "Retoque entregado · {count} foto",
+    "retouch_other": "Retoque entregado · {count} fotos"
+  }
 }

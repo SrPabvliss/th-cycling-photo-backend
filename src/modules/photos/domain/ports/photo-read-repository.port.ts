@@ -1,3 +1,4 @@
+import type { PhotoStatus } from '@generated/prisma/client'
 import type {
   PhotoDetailProjection,
   PhotoListProjection,
@@ -7,6 +8,25 @@ import type {
 import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { PaginatedResult, Pagination } from '@shared/application'
 import type { Photo } from '../entities'
+
+export interface ReviewQueueRepoItem {
+  id: string
+  publicSlug: string
+  filename: string
+  status: PhotoStatus
+  reviewedAt: Date | null
+  minBibConfidence: number | null
+  bibsCount: number
+  colorsCount: number
+}
+
+export interface ReviewQueueByEventsRepoItem extends ReviewQueueRepoItem {
+  eventId: string
+}
+
+export type ReviewQueueStatusFilter = 'all' | 'pending' | 'reviewed'
+
+export const REVIEW_QUEUE_STATUS_FILTERS: ReviewQueueStatusFilter[] = ['all', 'pending', 'reviewed']
 
 export interface IPhotoReadRepository {
   findById(id: string): Promise<Photo | null>
@@ -18,6 +38,7 @@ export interface IPhotoReadRepository {
     photoCategoryId?: number,
   ): Promise<PaginatedResult<PhotoListProjection>>
   getPhotoDetail(id: string): Promise<PhotoDetailProjection | null>
+  getPhotoDetailBySlug(slug: string): Promise<PhotoDetailProjection | null>
   searchPhotos(
     filters: SearchPhotosFilters,
     pagination: Pagination,
@@ -36,6 +57,18 @@ export interface IPhotoReadRepository {
   getPhotoViewBySlug(slug: string): Promise<PhotoViewProjection | null>
   countAll(): Promise<number>
   sumAllFileSize(): Promise<number>
+  getReviewQueue(params: {
+    eventSlug: string
+    status: ReviewQueueStatusFilter
+    limit: number
+    offset: number
+  }): Promise<{ items: ReviewQueueRepoItem[]; total: number }>
+  getReviewQueueByEventIds(params: {
+    eventIds: string[]
+    status: ReviewQueueStatusFilter
+    limit: number
+    offset: number
+  }): Promise<{ items: ReviewQueueByEventsRepoItem[]; total: number }>
 }
 
 export const PHOTO_READ_REPOSITORY = Symbol('PHOTO_READ_REPOSITORY')

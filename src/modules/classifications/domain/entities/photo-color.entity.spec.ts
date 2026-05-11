@@ -13,6 +13,7 @@ describe('PhotoColor', () => {
       bboxSource: [5, 10, 60, 90],
       strategy: 'kmeans',
       processingMs: 75,
+      cropPath: null,
     })
     expect(color.id).toEqual(expect.any(String))
     expect(color.id.length).toBeGreaterThan(0)
@@ -27,5 +28,79 @@ describe('PhotoColor', () => {
     expect(color.strategy).toBe('kmeans')
     expect(color.processingMs).toBe(75)
     expect(color.createdById).toBeNull()
+    expect(color.cropPath).toBeNull()
+  })
+
+  describe('cropPath', () => {
+    it('createFromAi accepts cropPath and exposes it', () => {
+      const color = PhotoColor.createFromAi({
+        photoId: 'p1',
+        photoProcessingId: 'pp1',
+        region: ColorRegion.helmet,
+        primaryColor: 'rojo',
+        secondaryColor: null,
+        confidence: 0.9,
+        bboxSource: [0.1, 0.1, 0.2, 0.2],
+        strategy: 'gemini-2.5-flash',
+        processingMs: 1700,
+        cropPath: 'events/e1/photos/p1/crops/colors/helmet/0.jpg',
+      })
+      expect(color.cropPath).toBe('events/e1/photos/p1/crops/colors/helmet/0.jpg')
+    })
+
+    it('fromPersistence round-trips cropPath', () => {
+      const color = PhotoColor.fromPersistence({
+        id: 'c1',
+        photoId: 'p1',
+        photoProcessingId: 'pp1',
+        source: AttributeSource.ai,
+        region: ColorRegion.helmet,
+        primaryColor: 'rojo',
+        secondaryColor: null,
+        confidence: 0.9,
+        bboxSource: [0.1, 0.1, 0.2, 0.2],
+        strategy: 'gemini-2.5-flash',
+        processingMs: 1700,
+        createdById: null,
+        cropPath: 'events/e1/photos/p1/crops/colors/helmet/0.jpg',
+      })
+      expect(color.cropPath).toBe('events/e1/photos/p1/crops/colors/helmet/0.jpg')
+    })
+  })
+
+  describe('createManual', () => {
+    it('creates a reviewer-sourced color with null processing fields', () => {
+      const color = PhotoColor.createManual({
+        photoId: 'photo-1',
+        region: ColorRegion.helmet,
+        primaryColor: 'rojo',
+        secondaryColor: 'blanco',
+        reviewerId: 'reviewer-1',
+      })
+      expect(color.id).toBeDefined()
+      expect(color.photoId).toBe('photo-1')
+      expect(color.photoProcessingId).toBeNull()
+      expect(color.source).toBe(AttributeSource.reviewer)
+      expect(color.region).toBe(ColorRegion.helmet)
+      expect(color.primaryColor).toBe('rojo')
+      expect(color.secondaryColor).toBe('blanco')
+      expect(color.confidence).toBeNull()
+      expect(color.bboxSource).toBeNull()
+      expect(color.strategy).toBeNull()
+      expect(color.processingMs).toBeNull()
+      expect(color.cropPath).toBeNull()
+      expect(color.createdById).toBe('reviewer-1')
+    })
+
+    it('accepts secondaryColor=null', () => {
+      const color = PhotoColor.createManual({
+        photoId: 'photo-1',
+        region: ColorRegion.bicycle,
+        primaryColor: 'azul',
+        secondaryColor: null,
+        reviewerId: 'reviewer-1',
+      })
+      expect(color.secondaryColor).toBeNull()
+    })
   })
 })

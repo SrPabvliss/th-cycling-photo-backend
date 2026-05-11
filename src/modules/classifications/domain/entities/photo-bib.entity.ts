@@ -16,6 +16,7 @@ export class PhotoBib {
     public readonly preprocessingApplied: string[] | null,
     public readonly processingMs: number | null,
     public readonly createdById: string | null,
+    public readonly cropPath: string | null,
   ) {}
 
   static createFromAi(data: {
@@ -30,6 +31,7 @@ export class PhotoBib {
     bboxSource: [number, number, number, number]
     preprocessingApplied: string[]
     processingMs: number
+    cropPath: string | null
   }): PhotoBib {
     return new PhotoBib(
       crypto.randomUUID(),
@@ -45,6 +47,32 @@ export class PhotoBib {
       data.bboxSource,
       data.preprocessingApplied,
       data.processingMs,
+      null,
+      data.cropPath,
+    )
+  }
+
+  static createManual(data: {
+    photoId: string
+    digits: string
+    status?: BibReadingStatus
+    reviewerId: string
+  }): PhotoBib {
+    return new PhotoBib(
+      crypto.randomUUID(),
+      data.photoId,
+      null,
+      AttributeSource.reviewer,
+      data.digits,
+      null,
+      null,
+      data.status ?? BibReadingStatus.read,
+      null,
+      null,
+      null,
+      null,
+      null,
+      data.reviewerId,
       null,
     )
   }
@@ -64,6 +92,7 @@ export class PhotoBib {
     preprocessingApplied: string[] | null
     processingMs: number | null
     createdById: string | null
+    cropPath: string | null
   }): PhotoBib {
     return new PhotoBib(
       data.id,
@@ -80,6 +109,7 @@ export class PhotoBib {
       data.preprocessingApplied,
       data.processingMs,
       data.createdById,
+      data.cropPath,
     )
   }
 }

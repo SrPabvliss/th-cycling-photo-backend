@@ -14,6 +14,7 @@ export class PhotoColor {
     public readonly strategy: string | null,
     public readonly processingMs: number | null,
     public readonly createdById: string | null,
+    public readonly cropPath: string | null,
   ) {}
 
   static createFromAi(data: {
@@ -26,6 +27,7 @@ export class PhotoColor {
     bboxSource: [number, number, number, number]
     strategy: string
     processingMs: number
+    cropPath: string | null
   }): PhotoColor {
     return new PhotoColor(
       crypto.randomUUID(),
@@ -39,6 +41,31 @@ export class PhotoColor {
       data.bboxSource,
       data.strategy,
       data.processingMs,
+      null,
+      data.cropPath,
+    )
+  }
+
+  static createManual(data: {
+    photoId: string
+    region: ColorRegion
+    primaryColor: string
+    secondaryColor: string | null
+    reviewerId: string
+  }): PhotoColor {
+    return new PhotoColor(
+      crypto.randomUUID(),
+      data.photoId,
+      null,
+      AttributeSource.reviewer,
+      data.region,
+      data.primaryColor,
+      data.secondaryColor,
+      null,
+      null,
+      null,
+      null,
+      data.reviewerId,
       null,
     )
   }
@@ -56,6 +83,7 @@ export class PhotoColor {
     strategy: string | null
     processingMs: number | null
     createdById: string | null
+    cropPath: string | null
   }): PhotoColor {
     return new PhotoColor(
       data.id,
@@ -70,6 +98,7 @@ export class PhotoColor {
       data.strategy,
       data.processingMs,
       data.createdById,
+      data.cropPath,
     )
   }
 }

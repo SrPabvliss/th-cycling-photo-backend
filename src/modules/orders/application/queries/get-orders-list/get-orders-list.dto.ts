@@ -1,20 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator'
+import { PaginationQueryDto } from '@shared/application'
+import { IsOptional, IsString, IsUUID } from 'class-validator'
 
-export class GetOrdersListDto {
-  @ApiPropertyOptional({ description: 'Page number (defaults to 1)', example: 1 })
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  page?: number
-
-  @ApiPropertyOptional({ description: 'Items per page (defaults to 20, max 100)', example: 20 })
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  @IsOptional()
-  limit?: number
-
+export class GetOrdersListDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filter by event ID' })
   @IsUUID('4')
   @IsOptional()

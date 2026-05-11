@@ -16,6 +16,8 @@ import {
   STORAGE_ADAPTER,
 } from '@shared/storage/domain/ports/storage-adapter.port'
 import {
+  CROP_UPLOAD_URLS_SERVICE,
+  type ICropUploadUrlsService,
   type IPhotoClassificationWriteRepository,
   PHOTO_CLASSIFICATION_WRITE_REPOSITORY,
 } from '../../../domain/ports'
@@ -39,6 +41,8 @@ export class ProcessPhotoClassificationHandler
     private readonly pipeline: IClassificationPipelineAdapter,
     @Inject(PHOTO_CLASSIFICATION_WRITE_REPOSITORY)
     private readonly writeRepo: IPhotoClassificationWriteRepository,
+    @Inject(CROP_UPLOAD_URLS_SERVICE)
+    private readonly cropUrlsService: ICropUploadUrlsService,
   ) {}
 
   async execute(command: ProcessPhotoClassificationCommand): Promise<void> {
@@ -63,11 +67,14 @@ export class ProcessPhotoClassificationHandler
         expiresIn: 3600,
       })
 
+      const cropUploadUrls = await this.cropUrlsService.generate(photo.id, photo.eventId)
+
       const response = await this.pipeline.classify({
         imageId: photo.id,
         imageUrl,
         eventId: photo.eventId,
         confidenceThreshold: 0.25,
+        cropUploadUrls,
       })
 
       const completedAt = new Date()

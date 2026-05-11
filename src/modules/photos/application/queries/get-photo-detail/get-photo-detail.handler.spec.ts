@@ -27,6 +27,8 @@ describe('GetPhotoDetailHandler', () => {
     retouchedImageUrl: null,
     retouchedFileSize: null,
     retouchedAt: null,
+    bibs: [],
+    colors: [],
   }
 
   beforeEach(() => {
@@ -35,6 +37,7 @@ describe('GetPhotoDetailHandler', () => {
       existsByEventAndFilename: jest.fn(),
       getPhotosList: jest.fn(),
       getPhotoDetail: jest.fn(),
+      getPhotoDetailBySlug: jest.fn(),
       getPhotoViewBySlug: jest.fn(),
       searchPhotos: jest.fn(),
       getTotalFileSizeByEvent: jest.fn(),
@@ -48,6 +51,8 @@ describe('GetPhotoDetailHandler', () => {
       countByIds: jest.fn(),
       findSimilar: jest.fn(),
       countByIdsAndEvent: jest.fn(),
+      getReviewQueue: jest.fn(),
+      getReviewQueueByEventIds: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
     handler = new GetPhotoDetailHandler(readRepo)

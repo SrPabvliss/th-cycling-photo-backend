@@ -1,12 +1,16 @@
 import type {
+  EventBriefProjection,
   EventDetailProjection,
   EventListProjection,
+  EventSummaryProjection,
   PublicEventDetailProjection,
   PublicEventListProjection,
   PublicPhotoProjection,
 } from '@events/application/projections'
 import type { PaginatedResult, Pagination } from '@shared/application'
 import type { Event } from '../entities'
+
+export type AssignedEventStatus = 'active' | 'completed'
 
 export interface IEventReadRepository {
   findById(id: string, includeArchived?: boolean): Promise<Event | null>
@@ -17,6 +21,14 @@ export interface IEventReadRepository {
   ): Promise<PaginatedResult<EventListProjection>>
   getEventDetail(id: string): Promise<EventDetailProjection | null>
   getEventDetailBySlug(slug: string): Promise<EventDetailProjection | null>
+  getAssignedEventsByStatus(
+    operatorId: string,
+    status: AssignedEventStatus,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<EventSummaryProjection>>
+  countAssignedEventsByStatus(operatorId: string, status: AssignedEventStatus): Promise<number>
+  getAssignedEventIdsByStatus(operatorId: string, status: AssignedEventStatus): Promise<string[]>
+  getEventBriefsByIds(ids: string[]): Promise<EventBriefProjection[]>
   countAll(): Promise<number>
   getPublicEventsList(pagination: Pagination): Promise<PaginatedResult<PublicEventListProjection>>
   getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null>
