@@ -305,8 +305,8 @@ export class PhotosController {
   })
   async getReviewQueue(@Param('eventSlug') eventSlug: string, @Query() dto: GetReviewQueueDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 50)
-    const onlyPending = dto.onlyPending ?? true
-    return this.queryBus.execute(new GetReviewQueueQuery(eventSlug, pagination, onlyPending))
+    const status = dto.status ?? 'all'
+    return this.queryBus.execute(new GetReviewQueueQuery(eventSlug, pagination, status))
   }
 
   /** Retrieves a single photo's full detail (used by workspace). */

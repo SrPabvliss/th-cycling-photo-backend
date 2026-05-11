@@ -12,6 +12,7 @@ import {
   CORRECTION_REPOSITORY,
   type ICorrectionRepository,
   type IPhotoReadRepository,
+  type ReviewQueueStatusFilter,
 } from '@photos/domain/ports'
 
 import { PaginatedResult, type Pagination } from '@shared/application'
@@ -290,7 +291,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   /** Retrieves the review queue for an event with bib/color counts and min bib confidence. */
   async getReviewQueue(params: {
     eventSlug: string
-    onlyPending: boolean
+    status: ReviewQueueStatusFilter
     limit: number
     offset: number
   }): Promise<{
@@ -306,7 +307,8 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     }>
     total: number
   }> {
-    const { eventSlug, onlyPending, limit, offset } = params
+    const { eventSlug, status, limit, offset } = params
+    const reviewedFilter = reviewedAtFilter(status)
 
     type Row = {
       id: string
@@ -328,7 +330,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       INNER JOIN events e ON e.id = p.event_id
       WHERE e.slug = ${eventSlug}
         AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
-        AND (NOT ${onlyPending}::bool OR p.reviewed_at IS NULL)
+        ${reviewedFilter}
       ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) ASC NULLS FIRST,
                p.uploaded_at ASC
       LIMIT ${limit} OFFSET ${offset}
@@ -340,7 +342,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       INNER JOIN events e ON e.id = p.event_id
       WHERE e.slug = ${eventSlug}
         AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
-        AND (NOT ${onlyPending}::bool OR p.reviewed_at IS NULL)
+        ${reviewedFilter}
     `
 
     return {
@@ -355,6 +357,68 @@ export class PhotoReadRepository implements IPhotoReadRepository {
         colorsCount: Number(r.colors_count),
       })),
       total: Number(totalRow[0]?.count ?? 0),
+    }
+  }
+
+  async getReviewQueueByEventIds(params: {
+    eventIds: string[]
+    status: ReviewQueueStatusFilter
+    limit: number
+    offset: number
+  }) {
+    const { eventIds, status, limit, offset } = params
+    const reviewedFilter = reviewedAtFilter(status)
+
+    if (eventIds.length === 0) return { items: [], total: 0 }
+
+    type Row = {
+      id: string
+      public_slug: string
+      filename: string
+      status: PhotoStatus
+      reviewed_at: Date | null
+      min_bib_confidence: number | string | null
+      bibs_count: bigint
+      colors_count: bigint
+      event_id: string
+    }
+
+    const items = await this.prisma.$queryRaw<Row[]>`
+      SELECT p.id, p.public_slug, p.filename, p.status, p.reviewed_at,
+             p.event_id,
+             (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) AS min_bib_confidence,
+             (SELECT COUNT(*)::bigint FROM photo_bibs WHERE photo_id = p.id) AS bibs_count,
+             (SELECT COUNT(*)::bigint FROM photo_colors WHERE photo_id = p.id) AS colors_count
+      FROM photos p
+      WHERE p.event_id = ANY(${eventIds}::uuid[])
+        AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
+        ${reviewedFilter}
+      ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) ASC NULLS FIRST,
+               p.uploaded_at ASC
+      LIMIT ${limit} OFFSET ${offset}
+    `
+
+    const totalRow = await this.prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*)::bigint AS count
+      FROM photos p
+      WHERE p.event_id = ANY(${eventIds}::uuid[])
+        AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
+        ${reviewedFilter}
+    `
+
+    return {
+      items: items.map((r) => ({
+        id: r.id,
+        publicSlug: r.public_slug,
+        filename: r.filename,
+        status: r.status,
+        reviewedAt: r.reviewed_at,
+        minBibConfidence: r.min_bib_confidence != null ? Number(r.min_bib_confidence) : null,
+        bibsCount: Number(r.bibs_count),
+        colorsCount: Number(r.colors_count),
+        eventId: r.event_id,
+      })),
+      total: Number(totalRow[0].count),
     }
   }
 
@@ -423,4 +487,11 @@ export class PhotoReadRepository implements IPhotoReadRepository {
 
     return where
   }
+}
+
+
+function reviewedAtFilter(status: ReviewQueueStatusFilter): Prisma.Sql {
+  if (status === "pending") return Prisma.sql`AND p.reviewed_at IS NULL`
+  if (status === "reviewed") return Prisma.sql`AND p.reviewed_at IS NOT NULL`
+  return Prisma.empty
 }

@@ -9,6 +9,7 @@ import {
   DashboardSummaryProjection,
   OperatorActiveEventProjection,
   OperatorCompletedEventProjection,
+  OperatorReviewQueueItemProjection,
   RecentActivityProjection,
   RetouchQueueProjection,
 } from '../../application/projections'
@@ -20,6 +21,8 @@ import { GetDashboardSummaryQuery } from '../../application/queries/get-dashboar
 import { GetRecentActivityDto } from '../../application/queries/get-recent-activity/get-recent-activity.dto'
 import { GetRecentActivityQuery } from '../../application/queries/get-recent-activity/get-recent-activity.query'
 import { GetRetouchQueueQuery } from '../../application/queries/get-retouch-queue/get-retouch-queue.query'
+import { GetOperatorReviewQueueDto } from '../../application/queries/get-review-queue/get-review-queue.dto'
+import { GetOperatorReviewQueueQuery } from '../../application/queries/get-review-queue/get-review-queue.query'
 
 @ApiTags('Operator')
 @ApiBearerAuth()
@@ -84,6 +87,27 @@ export class OperatorController {
   ) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 10)
     return this.queryBus.execute(new GetRecentActivityQuery(user.userId, pagination, lang))
+  }
+
+  @Get('dashboard/review-queue')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'Cross-event review queue scoped to the operator' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Paginated review queue items',
+    type: OperatorReviewQueueItemProjection,
+    isArray: true,
+  })
+  async getReviewQueue(@CurrentUser() user: ICurrentUser, @Query() dto: GetOperatorReviewQueueDto) {
+    const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
+    return this.queryBus.execute(
+      new GetOperatorReviewQueueQuery(
+        user.userId,
+        pagination,
+        dto.status ?? 'all',
+        dto.eventSlug ?? null,
+      ),
+    )
   }
 
   @Get('events/:eventId/retouch-queue')

@@ -4,6 +4,7 @@ import { PaginatedResult, type Pagination } from '@shared/application'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 import type {
+  EventBriefProjection,
   EventDetailProjection,
   EventListProjection,
   EventSummaryProjection,
@@ -134,6 +135,15 @@ export class EventReadRepository implements IEventReadRepository {
       select: { id: true },
     })
     return rows.map((r) => r.id)
+  }
+
+  async getEventBriefsByIds(ids: string[]): Promise<EventBriefProjection[]> {
+    if (ids.length === 0) return []
+    const rows = await this.prisma.event.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, slug: true, name: true },
+    })
+    return rows.map((r) => ({ id: r.id, slug: r.slug, name: r.name }))
   }
 
   async getPublicEventsList(

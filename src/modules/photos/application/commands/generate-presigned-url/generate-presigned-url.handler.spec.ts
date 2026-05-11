@@ -46,6 +46,7 @@ describe('GeneratePresignedUrlHandler', () => {
       getAssignedEventsByStatus: jest.fn(),
       countAssignedEventsByStatus: jest.fn(),
       getAssignedEventIdsByStatus: jest.fn(),
+      getEventBriefsByIds: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoReadRepo = {
@@ -68,6 +69,7 @@ describe('GeneratePresignedUrlHandler', () => {
       findSimilar: jest.fn(),
       countByIdsAndEvent: jest.fn(),
       getReviewQueue: jest.fn(),
+      getReviewQueueByEventIds: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
     storageAdapter = {

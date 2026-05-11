@@ -1,10 +1,11 @@
 import type { ReviewQueueStatusFilter } from '@photos/domain/ports'
-import type { Pagination } from '@shared/application'
+import { Pagination } from '@shared/application'
 
-export class GetReviewQueueQuery {
+export class GetOperatorReviewQueueQuery {
   constructor(
-    public readonly eventSlug: string,
+    public readonly operatorId: string,
     public readonly pagination: Pagination,
     public readonly status: ReviewQueueStatusFilter,
+    public readonly eventSlug: string | null,
   ) {}
 }
