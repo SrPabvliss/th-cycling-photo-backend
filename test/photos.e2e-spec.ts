@@ -208,7 +208,7 @@ describe('Photos Module (e2e)', () => {
           name: 'Empty Event',
           slug: `empty-event-${Date.now()}`,
           event_date: futureDate,
-          event_type_id: eventType!.id,
+          event_type_id: eventType?.id,
         },
       })
 

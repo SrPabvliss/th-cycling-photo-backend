@@ -153,7 +153,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   private mapPrismaError(error: PrismaClientKnownRequestError): AppException {
     switch (error.code) {
       case 'P2002': {
-        const target = (error.meta?.['target'] as string[]) ?? []
+        const target = (error.meta?.target as string[]) ?? []
         return AppException.conflict('errors.CONFLICT', {
           fields: target.join(', '),
         })
@@ -164,10 +164,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           HttpStatus.NOT_FOUND,
           ErrorCode.NOT_FOUND,
           false,
-          { cause: error.meta?.['cause'] },
+          { cause: error.meta?.cause },
         )
       case 'P2003': {
-        const field = (error.meta?.['field_name'] as string) ?? 'unknown'
+        const field = (error.meta?.field_name as string) ?? 'unknown'
         return new AppException(
           'errors.FOREIGN_KEY_FAILED',
           HttpStatus.UNPROCESSABLE_ENTITY,
@@ -193,7 +193,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     const response = exceptionResponse as Record<string, unknown>
-    const messages = response['message']
+    const messages = response.message
 
     if (!Array.isArray(messages)) {
       return undefined

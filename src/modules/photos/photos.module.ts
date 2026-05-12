@@ -12,6 +12,7 @@ import { ConfirmRetouchedUploadHandler } from '@photos/application/commands/conf
 import { GeneratePresignedUrlHandler } from '@photos/application/commands/generate-presigned-url/generate-presigned-url.handler'
 import { GenerateRetouchedPresignedUrlHandler } from '@photos/application/commands/generate-retouched-presigned-url/generate-retouched-presigned-url.handler'
 import { MarkPhotoReviewedHandler } from '@photos/application/commands/mark-photo-reviewed/mark-photo-reviewed.handler'
+import { SetPhotoRetouchFlagHandler } from '@photos/application/commands/set-photo-retouch-flag/set-photo-retouch-flag.handler'
 import { FindSimilarPhotosHandler } from '@photos/application/queries/find-similar-photos/find-similar-photos.handler'
 import { GetDownloadManifestHandler } from '@photos/application/queries/get-download-manifest/get-download-manifest.handler'
 import { GetPendingRetouchHandler } from '@photos/application/queries/get-pending-retouch/get-pending-retouch.handler'
@@ -52,6 +53,7 @@ const CommandHandlers = [
   GeneratePresignedUrlHandler,
   GenerateRetouchedPresignedUrlHandler,
   MarkPhotoReviewedHandler,
+  SetPhotoRetouchFlagHandler,
 ]
 const QueryHandlers = [
   FindSimilarPhotosHandler,

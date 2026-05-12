@@ -104,8 +104,8 @@ describe('Mark photo reviewed (e2e)', () => {
     const photo = await prisma.photo.findUniqueOrThrow({ where: { id: photoId } })
     expect(photo.status).toBe('reviewed')
     expect(photo.reviewed_at).not.toBeNull()
-    expect(photo.reviewed_at!.getTime()).toBeGreaterThanOrEqual(before - 5000)
-    expect(photo.reviewed_at!.getTime()).toBeLessThanOrEqual(after + 5000)
+    expect(photo.reviewed_at?.getTime()).toBeGreaterThanOrEqual(before - 5000)
+    expect(photo.reviewed_at?.getTime()).toBeLessThanOrEqual(after + 5000)
   })
 
   it('idempotent: second call updates timestamp, status remains reviewed', async () => {
@@ -128,7 +128,7 @@ describe('Mark photo reviewed (e2e)', () => {
     const second = await prisma.photo.findUniqueOrThrow({ where: { id: photoId } })
 
     expect(second.status).toBe('reviewed')
-    expect(second.reviewed_at!.getTime()).toBeGreaterThanOrEqual(first.reviewed_at!.getTime())
+    expect(second.reviewed_at?.getTime()).toBeGreaterThanOrEqual(first.reviewed_at?.getTime())
   })
 
   it('photo with status=processing → 422 BUSINESS_RULE', async () => {

@@ -53,6 +53,7 @@ async function seedLocations() {
   )
 
   const ecuador = await prisma.country.findFirst({ where: { iso_code: 'EC' } })
+  if (!ecuador) throw new Error('Country EC missing — run countries seed first')
 
   let provincesCount = 0
   let cantonsCount = 0
@@ -60,8 +61,8 @@ async function seedLocations() {
   for (const province of provincesData) {
     const upserted = await prisma.province.upsert({
       where: { code: province.code },
-      update: { name: province.name, country_id: ecuador!.id },
-      create: { name: province.name, code: province.code, country_id: ecuador!.id },
+      update: { name: province.name, country_id: ecuador.id },
+      create: { name: province.name, code: province.code, country_id: ecuador.id },
     })
 
     provincesCount++

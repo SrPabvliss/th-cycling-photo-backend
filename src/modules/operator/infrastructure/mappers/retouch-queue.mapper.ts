@@ -4,35 +4,30 @@ import type {
   RetouchQueueOrderProjection,
   RetouchQueueProjection,
 } from '../../application/projections'
+import type { OperatorRetouchPhotoRow, OperatorRetouchQueueOrderRow } from '../../domain/ports'
 
-interface OrderRecord {
-  id: string
-  snap_first_name: string | null
-  snap_last_name: string | null
-  created_at: Date
-  items: { photo: PhotoRecord }[]
-}
-
-interface PhotoRecord {
-  id: string
-  public_slug: string
-  retouched_storage_key: string | null
-}
-
-function toItemProjection(photo: PhotoRecord, cdn: CdnUrlBuilder): RetouchQueueItemProjection {
+function toItemProjection(
+  photo: OperatorRetouchPhotoRow,
+  cdn: CdnUrlBuilder,
+): RetouchQueueItemProjection {
   return {
-    photoId: photo.id,
-    thumbnailUrl: cdn.internalUrl(photo.public_slug, 'thumb'),
-    isRetouched: photo.retouched_storage_key !== null,
+    photoId: photo.photoId,
+    thumbnailUrl: cdn.internalUrl(photo.publicSlug, 'thumb'),
+    isRetouched: photo.retouchedStorageKey !== null,
   }
 }
 
-function toOrderProjection(order: OrderRecord, cdn: CdnUrlBuilder): RetouchQueueOrderProjection {
-  const items = order.items.map((item) => toItemProjection(item.photo, cdn))
+function toOrderProjection(
+  order: OperatorRetouchQueueOrderRow,
+  cdn: CdnUrlBuilder,
+): RetouchQueueOrderProjection {
+  const items = order.items.map((item) => toItemProjection(item, cdn))
   return {
-    orderId: order.id,
-    buyerName: [order.snap_first_name, order.snap_last_name].filter(Boolean).join(' '),
-    createdAt: order.created_at.toISOString(),
+    orderId: order.orderId,
+    buyerName: order.buyerName,
+    eventId: order.eventId,
+    eventName: order.eventName,
+    createdAt: order.createdAt.toISOString(),
     totalItems: items.length,
     retouchedItems: items.filter((item) => item.isRetouched).length,
     items,
@@ -40,10 +35,10 @@ function toOrderProjection(order: OrderRecord, cdn: CdnUrlBuilder): RetouchQueue
 }
 
 export function toRetouchQueueProjection(
-  orders: OrderRecord[],
+  rows: OperatorRetouchQueueOrderRow[],
   cdn: CdnUrlBuilder,
 ): RetouchQueueProjection {
   return {
-    orders: orders.map((o) => toOrderProjection(o, cdn)),
+    orders: rows.map((row) => toOrderProjection(row, cdn)),
   }
 }
