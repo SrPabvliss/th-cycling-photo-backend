@@ -44,4 +44,12 @@ export class PhotoWriteRepository implements IPhotoWriteRepository {
     })
     return result.count
   }
+
+  /** Flips the requires_retouch flag on a single photo (admin re-mark / dismiss). */
+  async setRequiresRetouch(photoId: string, value: boolean): Promise<void> {
+    await this.prisma.photo.update({
+      where: { id: photoId },
+      data: { requires_retouch: value },
+    })
+  }
 }

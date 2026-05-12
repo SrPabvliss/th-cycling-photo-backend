@@ -7,6 +7,11 @@ export {
   type RecentActivityType,
 } from './operator-read-repository.port'
 export {
-  type IOperatorRetouchRepository,
-  OPERATOR_RETOUCH_REPOSITORY,
-} from './operator-retouch-repository.port'
+  type IOperatorRetouchReadRepository,
+  OPERATOR_RETOUCH_READ_REPOSITORY,
+  type OperatorRetouchOrderDetailRow,
+  type OperatorRetouchOrderRow,
+  type OperatorRetouchPhotoRow,
+  type OperatorRetouchQueueOrderRow,
+  type RetouchOrderScope,
+} from './operator-retouch-read-repository.port'

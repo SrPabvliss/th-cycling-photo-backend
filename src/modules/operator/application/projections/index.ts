@@ -8,6 +8,14 @@ export {
 export { OperatorCompletedEventProjection } from './operator-completed-event.projection'
 export { OperatorCompletedEventStatsProjection } from './operator-completed-event-stats.projection'
 export {
+  OperatorRetouchOrderDetailPhotoProjection,
+  OperatorRetouchOrderDetailProjection,
+} from './operator-retouch-order-detail.projection'
+export {
+  OperatorRetouchOrderPreviewPhotoProjection,
+  OperatorRetouchOrderProjection,
+} from './operator-retouch-orders.projection'
+export {
   OperatorReviewQueueItemEventProjection,
   OperatorReviewQueueItemProjection,
 } from './operator-review-queue-item.projection'

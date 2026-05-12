@@ -38,6 +38,7 @@ export class OperatorReadRepository implements IOperatorReadRepository {
       where: {
         event_id: { in: eventIds },
         retouched_at: null,
+        requires_retouch: true,
         order_items: { some: { order: { status: 'paid' } } },
       },
       select: { id: true },
@@ -61,6 +62,7 @@ export class OperatorReadRepository implements IOperatorReadRepository {
         where: {
           event_id: { in: eventIds },
           retouched_at: null,
+          requires_retouch: true,
           order_items: { some: { order: { status: 'paid' } } },
         },
         select: { event_id: true },

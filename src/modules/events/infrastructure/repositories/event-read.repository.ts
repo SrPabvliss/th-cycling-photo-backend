@@ -137,6 +137,17 @@ export class EventReadRepository implements IEventReadRepository {
     return rows.map((r) => r.id)
   }
 
+  async getAllAssignedEventIds(operatorId: string): Promise<string[]> {
+    const rows = await this.prisma.event.findMany({
+      where: {
+        deleted_at: null,
+        operators: { some: { user_id: operatorId } },
+      },
+      select: { id: true },
+    })
+    return rows.map((r) => r.id)
+  }
+
   async getEventBriefsByIds(ids: string[]): Promise<EventBriefProjection[]> {
     if (ids.length === 0) return []
     const rows = await this.prisma.event.findMany({

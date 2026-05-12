@@ -22,6 +22,8 @@ import {
   GenerateRetouchedPresignedUrlCommand,
   GenerateRetouchedPresignedUrlDto,
   MarkPhotoReviewedCommand,
+  SetPhotoRetouchFlagCommand,
+  SetPhotoRetouchFlagDto,
 } from '@photos/application/commands'
 import {
   ConfirmBatchProjection,
@@ -424,7 +426,7 @@ export class PhotosController {
   }
 
   /** Returns a download URL for the original or retouched photo. */
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Get('photos/:id/download')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download URL for a photo' })
@@ -453,5 +455,16 @@ export class PhotosController {
   async bulkAssignCategory(@Body() dto: BulkAssignCategoryDto) {
     const command = new BulkAssignCategoryCommand(dto.photoIds, dto.photoCategoryId ?? null)
     return this.commandBus.execute(command)
+  }
+
+  /** Sets the requires_retouch flag on a photo. Admin-only — used to flag a photo
+   *  back into the retouch queue or dismiss a wrongly-flagged photo. */
+  @Roles('admin')
+  @Patch('photos/:id/retouch-flag')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Marcar o desmarcar foto para retoque' })
+  @ApiParam({ name: 'id', description: 'UUID de la foto', format: 'uuid' })
+  async setRetouchFlag(@Param('id') id: string, @Body() dto: SetPhotoRetouchFlagDto) {
+    await this.commandBus.execute(new SetPhotoRetouchFlagCommand(id, dto.requiresRetouch))
   }
 }
