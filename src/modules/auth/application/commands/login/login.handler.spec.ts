@@ -1,4 +1,3 @@
-import { AppException } from '@shared/domain'
 import { hashSync } from 'bcryptjs'
 import type {
   IAuthUserRepository,

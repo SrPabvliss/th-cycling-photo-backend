@@ -23,10 +23,7 @@ export class GetOperatorRetouchOrderDetailHandler
   async execute(
     query: GetOperatorRetouchOrderDetailQuery,
   ): Promise<OperatorRetouchOrderDetailProjection> {
-    const row = await this.retouchRead.findOrderDetailRow(
-      query.orderId,
-      query.scope === 'pending',
-    )
+    const row = await this.retouchRead.findOrderDetailRow(query.orderId, query.scope === 'pending')
     if (!row) {
       throw AppException.notFound('Order', query.orderId)
     }

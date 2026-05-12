@@ -103,9 +103,7 @@ export class OperatorRetouchReadRepository implements IOperatorRetouchReadReposi
   ): Promise<{ items: OperatorRetouchOrderRow[]; total: number }> {
     const where = buildOrdersWhere(eventIds, scope)
     const previewItemsWhere =
-      scope === 'pending'
-        ? { photo: PENDING_PHOTO_FILTER }
-        : { photo: RETOUCHED_PHOTO_FILTER }
+      scope === 'pending' ? { photo: PENDING_PHOTO_FILTER } : { photo: RETOUCHED_PHOTO_FILTER }
 
     const orderScopeWhere = {
       order: {

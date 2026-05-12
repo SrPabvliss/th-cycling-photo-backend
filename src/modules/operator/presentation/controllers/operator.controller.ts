@@ -184,5 +184,4 @@ export class OperatorController {
       new GetRetouchQueueQuery(eventSlug, user.userId, scope ?? 'pending'),
     )
   }
-
 }

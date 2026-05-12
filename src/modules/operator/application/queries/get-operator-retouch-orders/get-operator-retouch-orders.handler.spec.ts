@@ -2,10 +2,7 @@ import type { IEventReadRepository } from '@events/domain/ports'
 import { ForbiddenException } from '@nestjs/common'
 import { PaginatedResult, Pagination } from '@shared/application'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
-import type {
-  IOperatorRetouchReadRepository,
-  OperatorRetouchOrderRow,
-} from '../../../domain/ports'
+import type { IOperatorRetouchReadRepository, OperatorRetouchOrderRow } from '../../../domain/ports'
 import { GetOperatorRetouchOrdersHandler } from './get-operator-retouch-orders.handler'
 import { GetOperatorRetouchOrdersQuery } from './get-operator-retouch-orders.query'
 
