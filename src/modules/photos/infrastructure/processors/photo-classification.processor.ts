@@ -8,7 +8,7 @@ export interface PhotoClassificationJobData {
   photoId: string
 }
 
-@Processor('photo-classification')
+@Processor('photo-classification', { concurrency: 3 })
 export class PhotoClassificationProcessor extends WorkerHost {
   private readonly logger = new Logger(PhotoClassificationProcessor.name)
 
