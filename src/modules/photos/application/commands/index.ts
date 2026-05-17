@@ -25,3 +25,6 @@ export { GenerateRetouchedPresignedUrlCommand } from './generate-retouched-presi
 export { GenerateRetouchedPresignedUrlDto } from './generate-retouched-presigned-url/generate-retouched-presigned-url.dto'
 export { MarkPhotoReviewedCommand } from './mark-photo-reviewed/mark-photo-reviewed.command'
 export { MarkPhotoReviewedHandler } from './mark-photo-reviewed/mark-photo-reviewed.handler'
+export { SetPhotoRetouchFlagCommand } from './set-photo-retouch-flag/set-photo-retouch-flag.command'
+export { SetPhotoRetouchFlagDto } from './set-photo-retouch-flag/set-photo-retouch-flag.dto'
+export { SetPhotoRetouchFlagHandler } from './set-photo-retouch-flag/set-photo-retouch-flag.handler'

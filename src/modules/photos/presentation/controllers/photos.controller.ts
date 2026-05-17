@@ -22,6 +22,8 @@ import {
   GenerateRetouchedPresignedUrlCommand,
   GenerateRetouchedPresignedUrlDto,
   MarkPhotoReviewedCommand,
+  SetPhotoRetouchFlagCommand,
+  SetPhotoRetouchFlagDto,
 } from '@photos/application/commands'
 import {
   ConfirmBatchProjection,
@@ -305,8 +307,8 @@ export class PhotosController {
   })
   async getReviewQueue(@Param('eventSlug') eventSlug: string, @Query() dto: GetReviewQueueDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 50)
-    const onlyPending = dto.onlyPending ?? true
-    return this.queryBus.execute(new GetReviewQueueQuery(eventSlug, pagination, onlyPending))
+    const status = dto.status ?? 'all'
+    return this.queryBus.execute(new GetReviewQueueQuery(eventSlug, pagination, status))
   }
 
   /** Retrieves a single photo's full detail (used by workspace). */
@@ -424,7 +426,7 @@ export class PhotosController {
   }
 
   /** Returns a download URL for the original or retouched photo. */
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Get('photos/:id/download')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download URL for a photo' })
@@ -453,5 +455,16 @@ export class PhotosController {
   async bulkAssignCategory(@Body() dto: BulkAssignCategoryDto) {
     const command = new BulkAssignCategoryCommand(dto.photoIds, dto.photoCategoryId ?? null)
     return this.commandBus.execute(command)
+  }
+
+  /** Sets the requires_retouch flag on a photo. Admin-only — used to flag a photo
+   *  back into the retouch queue or dismiss a wrongly-flagged photo. */
+  @Roles('admin')
+  @Patch('photos/:id/retouch-flag')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Marcar o desmarcar foto para retoque' })
+  @ApiParam({ name: 'id', description: 'UUID de la foto', format: 'uuid' })
+  async setRetouchFlag(@Param('id') id: string, @Body() dto: SetPhotoRetouchFlagDto) {
+    await this.commandBus.execute(new SetPhotoRetouchFlagCommand(id, dto.requiresRetouch))
   }
 }

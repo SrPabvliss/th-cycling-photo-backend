@@ -32,6 +32,7 @@ describe('DeleteEventHandler', () => {
       getAssignedEventsByStatus: jest.fn(),
       countAssignedEventsByStatus: jest.fn(),
       getAssignedEventIdsByStatus: jest.fn(),
+      getEventBriefsByIds: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     handler = new DeleteEventHandler(writeRepo, readRepo)

@@ -1,4 +1,5 @@
 import type {
+  EventBriefProjection,
   EventDetailProjection,
   EventListProjection,
   EventSummaryProjection,
@@ -27,6 +28,8 @@ export interface IEventReadRepository {
   ): Promise<PaginatedResult<EventSummaryProjection>>
   countAssignedEventsByStatus(operatorId: string, status: AssignedEventStatus): Promise<number>
   getAssignedEventIdsByStatus(operatorId: string, status: AssignedEventStatus): Promise<string[]>
+  getAllAssignedEventIds(operatorId: string): Promise<string[]>
+  getEventBriefsByIds(ids: string[]): Promise<EventBriefProjection[]>
   countAll(): Promise<number>
   getPublicEventsList(pagination: Pagination): Promise<PaginatedResult<PublicEventListProjection>>
   getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null>

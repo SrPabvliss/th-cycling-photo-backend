@@ -1,6 +1,9 @@
+import type { RetouchOrderScope } from '../../../domain/ports'
+
 export class GetRetouchQueueQuery {
   constructor(
-    public readonly eventId: string,
+    public readonly eventSlug: string,
     public readonly operatorId: string,
+    public readonly scope: RetouchOrderScope,
   ) {}
 }

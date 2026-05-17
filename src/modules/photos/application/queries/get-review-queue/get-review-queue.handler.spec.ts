@@ -19,7 +19,7 @@ describe('GetReviewQueueHandler', () => {
   it('returns empty PaginatedResult when no items', async () => {
     readRepo.getReviewQueue.mockResolvedValue({ items: [], total: 0 })
     const pagination = new Pagination(1, 50)
-    const result = await handler.execute(new GetReviewQueueQuery('e-1', pagination, true))
+    const result = await handler.execute(new GetReviewQueueQuery('e-1', pagination, 'pending'))
     expect(result).toBeInstanceOf(PaginatedResult)
     expect(result.items).toEqual([])
     expect(result.total).toBe(0)
@@ -27,12 +27,12 @@ describe('GetReviewQueueHandler', () => {
     expect(result.totalPages).toBe(0)
   })
 
-  it('passes pagination skip/take and onlyPending to repository', async () => {
+  it('passes pagination skip/take and status to repository', async () => {
     readRepo.getReviewQueue.mockResolvedValue({ items: [], total: 0 })
-    await handler.execute(new GetReviewQueueQuery('e-1', new Pagination(1, 50), true))
+    await handler.execute(new GetReviewQueueQuery('e-1', new Pagination(1, 50), 'pending'))
     expect(readRepo.getReviewQueue).toHaveBeenCalledWith({
       eventSlug: 'e-1',
-      onlyPending: true,
+      status: 'pending',
       limit: 50,
       offset: 0,
     })
@@ -40,7 +40,7 @@ describe('GetReviewQueueHandler', () => {
 
   it('computes offset from page and limit via Pagination', async () => {
     readRepo.getReviewQueue.mockResolvedValue({ items: [], total: 0 })
-    await handler.execute(new GetReviewQueueQuery('e-1', new Pagination(3, 20), true))
+    await handler.execute(new GetReviewQueueQuery('e-1', new Pagination(3, 20), 'pending'))
     expect(readRepo.getReviewQueue).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 20, offset: 40 }),
     )
@@ -75,7 +75,7 @@ describe('GetReviewQueueHandler', () => {
     cdn.internalUrl.mockImplementation((slug: string) => `https://cdn.test/thumb/${slug}.jpg`)
 
     const pagination = new Pagination(1, 50)
-    const result = await handler.execute(new GetReviewQueueQuery('e-1', pagination, true))
+    const result = await handler.execute(new GetReviewQueueQuery('e-1', pagination, 'pending'))
     expect(result).toBeInstanceOf(PaginatedResult)
     expect(cdn.internalUrl).toHaveBeenCalledWith('s-1', 'thumb')
     expect(cdn.internalUrl).toHaveBeenCalledWith('s-2', 'thumb')
@@ -86,11 +86,17 @@ describe('GetReviewQueueHandler', () => {
     expect(result.totalPages).toBe(1)
   })
 
-  it('passes through onlyPending=false when explicitly set', async () => {
+  it('passes through status="all" when explicitly set', async () => {
     readRepo.getReviewQueue.mockResolvedValue({ items: [], total: 0 })
-    await handler.execute(new GetReviewQueueQuery('e-1', new Pagination(1, 50), false))
+    await handler.execute(new GetReviewQueueQuery('e-1', new Pagination(1, 50), 'all'))
+    expect(readRepo.getReviewQueue).toHaveBeenCalledWith(expect.objectContaining({ status: 'all' }))
+  })
+
+  it('passes through status="reviewed" when explicitly set', async () => {
+    readRepo.getReviewQueue.mockResolvedValue({ items: [], total: 0 })
+    await handler.execute(new GetReviewQueueQuery('e-1', new Pagination(1, 50), 'reviewed'))
     expect(readRepo.getReviewQueue).toHaveBeenCalledWith(
-      expect.objectContaining({ onlyPending: false }),
+      expect.objectContaining({ status: 'reviewed' }),
     )
   })
 })

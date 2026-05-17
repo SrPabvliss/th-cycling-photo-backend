@@ -21,7 +21,7 @@ interface RawActivityEvent {
 export class OperatorReadRepository implements IOperatorReadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async countPendingReview(operatorId: string, eventIds: string[]): Promise<number> {
+  async countPendingReview(_operatorId: string, eventIds: string[]): Promise<number> {
     if (eventIds.length === 0) return 0
     return this.prisma.photo.count({
       where: {
@@ -38,6 +38,7 @@ export class OperatorReadRepository implements IOperatorReadRepository {
       where: {
         event_id: { in: eventIds },
         retouched_at: null,
+        requires_retouch: true,
         order_items: { some: { order: { status: 'paid' } } },
       },
       select: { id: true },
@@ -61,6 +62,7 @@ export class OperatorReadRepository implements IOperatorReadRepository {
         where: {
           event_id: { in: eventIds },
           retouched_at: null,
+          requires_retouch: true,
           order_items: { some: { order: { status: 'paid' } } },
         },
         select: { event_id: true },

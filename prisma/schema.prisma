@@ -348,6 +348,8 @@ model Photo {
 
   status PhotoStatus @default(pending)
 
+  requires_retouch Boolean @default(true) @db.Boolean
+
   retouched_storage_key String?   @unique @db.VarChar(500)
   retouched_public_slug String?   @unique @db.VarChar(30)
   retouched_file_size   BigInt?

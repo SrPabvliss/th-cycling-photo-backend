@@ -20,6 +20,14 @@ export interface ReviewQueueRepoItem {
   colorsCount: number
 }
 
+export interface ReviewQueueByEventsRepoItem extends ReviewQueueRepoItem {
+  eventId: string
+}
+
+export type ReviewQueueStatusFilter = 'all' | 'pending' | 'reviewed'
+
+export const REVIEW_QUEUE_STATUS_FILTERS: ReviewQueueStatusFilter[] = ['all', 'pending', 'reviewed']
+
 export interface IPhotoReadRepository {
   findById(id: string): Promise<Photo | null>
   existsByEventAndFilename(eventId: string, filename: string): Promise<boolean>
@@ -51,10 +59,16 @@ export interface IPhotoReadRepository {
   sumAllFileSize(): Promise<number>
   getReviewQueue(params: {
     eventSlug: string
-    onlyPending: boolean
+    status: ReviewQueueStatusFilter
     limit: number
     offset: number
   }): Promise<{ items: ReviewQueueRepoItem[]; total: number }>
+  getReviewQueueByEventIds(params: {
+    eventIds: string[]
+    status: ReviewQueueStatusFilter
+    limit: number
+    offset: number
+  }): Promise<{ items: ReviewQueueByEventsRepoItem[]; total: number }>
 }
 
 export const PHOTO_READ_REPOSITORY = Symbol('PHOTO_READ_REPOSITORY')

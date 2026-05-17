@@ -48,7 +48,7 @@ async function verifyHmacToken(url, secret) {
   const expiration = parseInt(token.substring(0, dashIdx), 10)
   const hmacHex = token.substring(dashIdx + 1)
 
-  if (isNaN(expiration)) return { valid: false, reason: 'invalid expiration' }
+  if (Number.isNaN(expiration)) return { valid: false, reason: 'invalid expiration' }
   if (Math.floor(Date.now() / 1000) > expiration) return { valid: false, reason: 'expired' }
 
   const key = await importHmacKey(secret)
@@ -171,7 +171,7 @@ async function fetchWatermarked(slug, env) {
     cf: {
       image: {
         width: 800,
-        quality: parseInt(env.DEFAULT_QUALITY) || 40,
+        quality: parseInt(env.DEFAULT_QUALITY, 10) || 40,
         format: 'jpeg',
         draw: [
           {

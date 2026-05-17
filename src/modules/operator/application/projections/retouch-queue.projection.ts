@@ -9,6 +9,8 @@ export class RetouchQueueItemProjection {
 export class RetouchQueueOrderProjection {
   @ApiProperty() orderId: string
   @ApiProperty() buyerName: string
+  @ApiProperty() eventId: string
+  @ApiProperty() eventName: string
   @ApiProperty() createdAt: string
   @ApiProperty() totalItems: number
   @ApiProperty() retouchedItems: number

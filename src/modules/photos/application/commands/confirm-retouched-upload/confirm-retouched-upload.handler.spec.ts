@@ -61,6 +61,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
       findSimilar: jest.fn(),
       countByIdsAndEvent: jest.fn(),
       getReviewQueue: jest.fn(),
+      getReviewQueueByEventIds: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
     photoWriteRepo = {

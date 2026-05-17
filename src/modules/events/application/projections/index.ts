@@ -1,3 +1,4 @@
+export { EventBriefProjection } from './event-brief.projection'
 export { EventDetailProjection } from './event-detail.projection'
 export { EventListProjection } from './event-list.projection'
 export { EventSummaryProjection } from './event-summary.projection'

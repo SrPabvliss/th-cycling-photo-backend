@@ -237,7 +237,7 @@ export class OrderReadRepository implements IOrderReadRepository {
     const orders = await this.prisma.order.findMany({
       where: {
         items: { some: { photo_id: photoId } },
-        NOT: { items: { some: { photo: { retouched_at: null } } } },
+        NOT: { items: { some: { photo: { retouched_at: null, requires_retouch: true } } } },
       },
       select: {
         id: true,
