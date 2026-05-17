@@ -10,7 +10,7 @@ export interface EmbeddingGenerationJobData {
   photoId: string
 }
 
-@Processor('embedding-generation')
+@Processor('embedding-generation', { concurrency: 3 })
 export class EmbeddingGenerationProcessor extends WorkerHost {
   private readonly logger = new Logger(EmbeddingGenerationProcessor.name)
 
