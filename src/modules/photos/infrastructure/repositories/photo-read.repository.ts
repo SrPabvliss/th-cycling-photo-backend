@@ -145,7 +145,13 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     filters: SearchPhotosFilters,
     pagination: Pagination,
   ): Promise<PaginatedResult<PhotoListProjection>> {
+    const matchedIds = await this.findPhotoIdsByAttributeFilters(filters)
+    if (matchedIds !== null && matchedIds.length === 0) {
+      return new PaginatedResult<PhotoListProjection>([], 0, pagination)
+    }
+
     const where = this.buildSearchWhere(filters)
+    if (matchedIds !== null) where.id = { in: matchedIds }
 
     const [photos, total] = await Promise.all([
       this.prisma.photo.findMany({
@@ -450,82 +456,122 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     }
   }
 
-  /** Builds a Prisma where clause from search filters. */
+  /**
+   * Resolves bib/color filters to a set of matching photo ids, taking
+   * the latest correction into account. Returns `null` when no attribute
+   * filter is present (caller should not narrow by id). An empty array
+   * means "no photo matches any filter combination" — caller short-circuits.
+   */
+  private async findPhotoIdsByAttributeFilters(
+    filters: SearchPhotosFilters,
+  ): Promise<string[] | null> {
+    const hasBib = !!filters.plateNumber
+    const helmet = filters.helmetColor ? expandColorVariants(filters.helmetColor.split(',')) : []
+    const clothing = filters.clothingColor
+      ? expandColorVariants(filters.clothingColor.split(','))
+      : []
+    const bike = filters.bikeColor ? expandColorVariants(filters.bikeColor.split(',')) : []
+
+    if (!hasBib && helmet.length === 0 && clothing.length === 0 && bike.length === 0) return null
+
+    const idSets: Array<Set<string>> = []
+
+    if (hasBib) {
+      idSets.push(
+        await this.findPhotoIdsMatchingBibDigits(
+          filters.plateNumber as string,
+          filters.bibMatch ?? 'exact',
+        ),
+      )
+    }
+    if (helmet.length > 0) idSets.push(await this.findPhotoIdsMatchingColor('helmet', helmet))
+    if (clothing.length > 0)
+      idSets.push(await this.findPhotoIdsMatchingColor('cyclist_clothes', clothing))
+    if (bike.length > 0) idSets.push(await this.findPhotoIdsMatchingColor('bicycle', bike))
+
+    if (idSets.length === 0) return null
+    const [first, ...rest] = idSets
+    return [...first].filter((id) => rest.every((s) => s.has(id)))
+  }
+
+  /** Returns photo ids whose effective (latest-correction) bib digits match. */
+  private async findPhotoIdsMatchingBibDigits(
+    value: string,
+    match: 'exact' | 'starts' | 'contains',
+  ): Promise<Set<string>> {
+    const escaped = value.replace(/[\\%_]/g, (c) => `\\${c}`)
+    const pattern =
+      match === 'starts' ? `${escaped}%` : match === 'contains' ? `%${escaped}%` : escaped
+
+    const sql =
+      match === 'exact'
+        ? Prisma.sql`
+            SELECT DISTINCT pb.photo_id
+            FROM photo_bibs pb
+            LEFT JOIN LATERAL (
+              SELECT new_value AS corrected_value, TRUE AS has_correction
+              FROM corrections
+              WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
+              ORDER BY corrected_at DESC LIMIT 1
+            ) latest ON TRUE
+            WHERE pb.deleted_at IS NULL
+              AND LOWER(
+                CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
+              ) = LOWER(${value})
+          `
+        : Prisma.sql`
+            SELECT DISTINCT pb.photo_id
+            FROM photo_bibs pb
+            LEFT JOIN LATERAL (
+              SELECT new_value AS corrected_value, TRUE AS has_correction
+              FROM corrections
+              WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
+              ORDER BY corrected_at DESC LIMIT 1
+            ) latest ON TRUE
+            WHERE pb.deleted_at IS NULL
+              AND (
+                CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
+              ) ILIKE ${pattern} ESCAPE '\\'
+          `
+
+    const rows = await this.prisma.$queryRaw<Array<{ photo_id: string }>>(sql)
+    return new Set(rows.map((r) => r.photo_id))
+  }
+
+  /** Returns photo ids whose effective (latest-correction) color matches in the given region. */
+  private async findPhotoIdsMatchingColor(
+    region: 'helmet' | 'cyclist_clothes' | 'bicycle',
+    colorsLower: string[],
+  ): Promise<Set<string>> {
+    if (colorsLower.length === 0) return new Set()
+
+    const lower = colorsLower.map((c) => c.toLowerCase())
+
+    const rows = await this.prisma.$queryRaw<Array<{ photo_id: string }>>(Prisma.sql`
+      SELECT DISTINCT pc.photo_id
+      FROM photo_colors pc
+      LEFT JOIN LATERAL (
+        SELECT new_value AS corrected_value, TRUE AS has_correction
+        FROM corrections
+        WHERE target_type = 'photo_color' AND target_id = pc.id AND field = 'primary_color'
+        ORDER BY corrected_at DESC LIMIT 1
+      ) latest ON TRUE
+      WHERE pc.deleted_at IS NULL
+        AND pc.region = ${region}::"ColorRegion"
+        AND LOWER(
+          CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pc.primary_color END
+        ) = ANY(${lower}::text[])
+    `)
+
+    return new Set(rows.map((r) => r.photo_id))
+  }
+
+  /** Builds a Prisma where clause from search filters (non-attribute filters only). */
   private buildSearchWhere(filters: SearchPhotosFilters): Prisma.PhotoWhereInput {
     const where: Prisma.PhotoWhereInput = {}
 
     if (filters.eventId) where.event_id = filters.eventId
     if (filters.status) where.status = filters.status as Prisma.EnumPhotoStatusFilter
-
-    const conditions: Prisma.PhotoWhereInput[] = []
-
-    if (filters.plateNumber) {
-      const digitsClause = (() => {
-        switch (filters.bibMatch) {
-          case 'starts':
-            return { startsWith: filters.plateNumber, mode: 'insensitive' as const }
-          case 'contains':
-            return { contains: filters.plateNumber, mode: 'insensitive' as const }
-          default:
-            return { equals: filters.plateNumber, mode: 'insensitive' as const }
-        }
-      })()
-
-      conditions.push({
-        bibs: {
-          some: { digits: digitsClause, deleted_at: null },
-        },
-      })
-    }
-
-    const helmetColors = filters.helmetColor
-      ? expandColorVariants(filters.helmetColor.split(','))
-      : []
-    if (helmetColors.length > 0) {
-      conditions.push({
-        colors: {
-          some: {
-            region: 'helmet',
-            primary_color: { in: helmetColors, mode: 'insensitive' },
-            deleted_at: null,
-          },
-        },
-      })
-    }
-
-    const clothingColors = filters.clothingColor
-      ? expandColorVariants(filters.clothingColor.split(','))
-      : []
-    if (clothingColors.length > 0) {
-      conditions.push({
-        colors: {
-          some: {
-            region: 'cyclist_clothes',
-            primary_color: { in: clothingColors, mode: 'insensitive' },
-            deleted_at: null,
-          },
-        },
-      })
-    }
-
-    const bicycleColors = filters.bikeColor ? expandColorVariants(filters.bikeColor.split(',')) : []
-    if (bicycleColors.length > 0) {
-      conditions.push({
-        colors: {
-          some: {
-            region: 'bicycle',
-            primary_color: { in: bicycleColors, mode: 'insensitive' },
-            deleted_at: null,
-          },
-        },
-      })
-    }
-
-    if (conditions.length > 0) {
-      where.AND = where.AND
-        ? [...(where.AND as Prisma.PhotoWhereInput[]), ...conditions]
-        : conditions
-    }
 
     if (filters.fromDate || filters.toDate) {
       where.uploaded_at = {}
