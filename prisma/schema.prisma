@@ -220,6 +220,8 @@ model User {
   photos_retouched       Photo[]         @relation("PhotoRetouchedBy")
   created_bibs           PhotoBib[]      @relation("UserCreatedBibs")
   created_colors         PhotoColor[]    @relation("UserCreatedColors")
+  deleted_bibs           PhotoBib[]      @relation("UserDeletedBibs")
+  deleted_colors         PhotoColor[]    @relation("UserDeletedColors")
   corrections            Correction[]    @relation("UserCorrections")
   preview_links_created  PreviewLink[]   @relation("PreviewLinkCreatedBy")
   orders_confirmed       Order[]         @relation("OrderConfirmedBy")
@@ -466,13 +468,17 @@ model PhotoBib {
   crop_path             String?           @db.VarChar(255)
   created_at            DateTime          @default(now())
   created_by_id         String?           @db.Uuid
+  deleted_at            DateTime?         @db.Timestamptz
+  deleted_by_id         String?           @db.Uuid
 
   photo      Photo            @relation(fields: [photo_id], references: [id], onDelete: Cascade)
   processing PhotoProcessing? @relation(fields: [photo_processing_id], references: [id], onDelete: SetNull)
   created_by User?            @relation("UserCreatedBibs", fields: [created_by_id], references: [id])
+  deleted_by User?            @relation("UserDeletedBibs", fields: [deleted_by_id], references: [id], onDelete: SetNull)
 
   @@index([photo_id])
   @@index([digits])
+  @@index([deleted_at])
   @@map("photo_bibs")
 }
 
@@ -491,13 +497,17 @@ model PhotoColor {
   crop_path           String?         @db.VarChar(255)
   created_at          DateTime        @default(now())
   created_by_id       String?         @db.Uuid
+  deleted_at          DateTime?       @db.Timestamptz
+  deleted_by_id       String?         @db.Uuid
 
   photo      Photo            @relation(fields: [photo_id], references: [id], onDelete: Cascade)
   processing PhotoProcessing? @relation(fields: [photo_processing_id], references: [id], onDelete: SetNull)
   created_by User?            @relation("UserCreatedColors", fields: [created_by_id], references: [id])
+  deleted_by User?            @relation("UserDeletedColors", fields: [deleted_by_id], references: [id], onDelete: SetNull)
 
   @@index([photo_id])
   @@index([region, primary_color])
+  @@index([deleted_at])
   @@map("photo_colors")
 }
 
