@@ -13,7 +13,7 @@ import {
   OperatorRetouchOrderProjection,
   OperatorReviewQueueItemProjection,
   RecentActivityProjection,
-  RetouchQueueProjection,
+  RetouchQueueOrderProjection,
 } from '../../application/projections'
 import { GetActiveEventsDto } from '../../application/queries/get-active-events/get-active-events.dto'
 import { GetActiveEventsQuery } from '../../application/queries/get-active-events/get-active-events.query'
@@ -25,6 +25,7 @@ import { GetOperatorRetouchOrdersDto } from '../../application/queries/get-opera
 import { GetOperatorRetouchOrdersQuery } from '../../application/queries/get-operator-retouch-orders/get-operator-retouch-orders.query'
 import { GetRecentActivityDto } from '../../application/queries/get-recent-activity/get-recent-activity.dto'
 import { GetRecentActivityQuery } from '../../application/queries/get-recent-activity/get-recent-activity.query'
+import { GetRetouchQueueDto } from '../../application/queries/get-retouch-queue/get-retouch-queue.dto'
 import { GetRetouchQueueQuery } from '../../application/queries/get-retouch-queue/get-retouch-queue.query'
 import { GetOperatorReviewQueueDto } from '../../application/queries/get-review-queue/get-review-queue.dto'
 import { GetOperatorReviewQueueQuery } from '../../application/queries/get-review-queue/get-review-queue.query'
@@ -172,16 +173,18 @@ export class OperatorController {
   @ApiParam({ name: 'eventSlug', description: 'Event slug' })
   @ApiEnvelopeResponse({
     status: 200,
-    description: 'Retouch queue ordered FIFO by order creation date',
-    type: RetouchQueueProjection,
+    description: 'Paginated retouch queue ordered FIFO by order creation date',
+    type: RetouchQueueOrderProjection,
+    isArray: true,
   })
   async getRetouchQueue(
     @Param('eventSlug') eventSlug: string,
     @CurrentUser() user: ICurrentUser,
-    @Query('scope') scope?: 'pending' | 'completed',
+    @Query() dto: GetRetouchQueueDto,
   ) {
+    const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     return this.queryBus.execute(
-      new GetRetouchQueueQuery(eventSlug, user.userId, scope ?? 'pending'),
+      new GetRetouchQueueQuery(eventSlug, user.userId, pagination, dto.scope ?? 'pending'),
     )
   }
 }
