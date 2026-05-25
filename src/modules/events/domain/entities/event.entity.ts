@@ -7,8 +7,8 @@ export class Event {
     public readonly id: string,
     public name: string,
     public slug: string,
-    public description: string | null,
-    public date: Date,
+    public startDate: Date,
+    public endDate: Date,
     public provinceId: number | null,
     public cantonId: number | null,
     public eventTypeId: number,
@@ -18,21 +18,21 @@ export class Event {
 
   static create(data: {
     name: string
-    description: string | null
-    date: Date
+    startDate: Date
+    endDate: Date
     provinceId: number | null
     cantonId: number | null
     eventTypeId: number
   }): Event {
     Event.validateName(data.name)
-    Event.validateDate(data.date)
+    Event.validateDateRange(data.startDate, data.endDate)
 
     return new Event(
       crypto.randomUUID(),
       data.name,
       Event.generateSlug(data.name),
-      data.description,
-      data.date,
+      data.startDate,
+      data.endDate,
       data.provinceId,
       data.cantonId,
       data.eventTypeId,
@@ -43,8 +43,8 @@ export class Event {
 
   update(data: {
     name?: string
-    description?: string | null
-    date?: Date
+    startDate?: Date
+    endDate?: Date
     provinceId?: number | null
     cantonId?: number | null
     eventTypeId?: number
@@ -55,11 +55,12 @@ export class Event {
       this.slug = Event.generateSlug(data.name)
     }
 
-    if (data.description !== undefined) this.description = data.description
-
-    if (data.date !== undefined) {
-      Event.validateDate(data.date)
-      this.date = data.date
+    const nextStart = data.startDate ?? this.startDate
+    const nextEnd = data.endDate ?? this.endDate
+    if (data.startDate !== undefined || data.endDate !== undefined) {
+      Event.validateDateRange(nextStart, nextEnd)
+      this.startDate = nextStart
+      this.endDate = nextEnd
     }
 
     if (data.provinceId !== undefined) this.provinceId = data.provinceId
@@ -96,18 +97,18 @@ export class Event {
     }
   }
 
-  private static validateDate(date: Date): void {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    if (date < today) throw AppException.businessRule('event.date_in_past')
+  private static validateDateRange(startDate: Date, endDate: Date): void {
+    if (endDate < startDate) {
+      throw AppException.businessRule('event.date_range_invalid')
+    }
   }
 
   static fromPersistence(data: {
     id: string
     name: string
     slug: string
-    description: string | null
-    date: Date
+    startDate: Date
+    endDate: Date
     provinceId: number | null
     cantonId: number | null
     eventTypeId: number
@@ -122,8 +123,8 @@ export class Event {
       data.id,
       data.name,
       data.slug,
-      data.description,
-      data.date,
+      data.startDate,
+      data.endDate,
       data.provinceId,
       data.cantonId,
       data.eventTypeId,

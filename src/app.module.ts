@@ -16,6 +16,7 @@ import { CartModule } from './modules/cart/cart.module'
 import { ClassificationsModule } from './modules/classifications/classifications.module'
 import { DeliveriesModule } from './modules/deliveries/deliveries.module'
 import { EventAssetsModule } from './modules/event-assets/event-assets.module'
+import { EventTypesModule } from './modules/event-types/event-types.module'
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
@@ -76,6 +77,7 @@ import { StorageModule } from './shared/storage/storage.module'
     ClassificationsModule,
     DeliveriesModule,
     EventAssetsModule,
+    EventTypesModule,
     EventsModule,
     LocationsModule,
     OperatorModule,

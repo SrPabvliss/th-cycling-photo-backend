@@ -47,7 +47,7 @@ export class EventAssetsController {
   @ApiParam({
     name: 'assetType',
     description: 'Asset type',
-    enum: ['cover_image', 'event_logo', 'hero_image', 'poster'],
+    enum: ['cover_image'],
   })
   @ApiEnvelopeResponse({
     status: 201,
@@ -77,7 +77,7 @@ export class EventAssetsController {
   @ApiParam({
     name: 'assetType',
     description: 'Asset type',
-    enum: ['cover_image', 'event_logo', 'hero_image', 'poster'],
+    enum: ['cover_image'],
   })
   @ApiEnvelopeResponse({
     status: 200,

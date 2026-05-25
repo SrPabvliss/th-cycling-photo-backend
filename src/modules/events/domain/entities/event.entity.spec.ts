@@ -2,13 +2,15 @@ import { AppException } from '@shared/domain'
 import { Event } from './event.entity'
 
 describe('Event Entity', () => {
-  const futureDate = new Date()
-  futureDate.setFullYear(futureDate.getFullYear() + 1)
+  const futureStart = new Date()
+  futureStart.setFullYear(futureStart.getFullYear() + 1)
+  const futureEnd = new Date(futureStart)
+  futureEnd.setDate(futureEnd.getDate() + 2)
 
   const validData = {
     name: 'Vuelta Ciclística de Ambato',
-    description: null as string | null,
-    date: futureDate,
+    startDate: futureStart,
+    endDate: futureEnd,
     provinceId: 18 as number | null,
     cantonId: 1 as number | null,
     eventTypeId: 1,
@@ -22,7 +24,8 @@ describe('Event Entity', () => {
       expect(event.id).toBeDefined()
       expect(event.name).toBe(validData.name)
       expect(event.slug).toBe('vuelta-ciclistica-de-ambato')
-      expect(event.date).toBe(futureDate)
+      expect(event.startDate).toBe(futureStart)
+      expect(event.endDate).toBe(futureEnd)
       expect(event.provinceId).toBe(18)
       expect(event.cantonId).toBe(1)
       expect(event.status).toBe('active')
@@ -62,21 +65,6 @@ describe('Event Entity', () => {
       const event = Event.create({ ...validData, name: name200 })
       expect(event.name).toBe(name200)
     })
-
-    it('should throw for date in the past', () => {
-      const pastDate = new Date('2020-01-01')
-
-      expect(() => Event.create({ ...validData, date: pastDate })).toThrow(AppException)
-      expect(() => Event.create({ ...validData, date: pastDate })).toThrow('event.date_in_past')
-    })
-
-    it('should accept today as event date', () => {
-      const today = new Date()
-      today.setHours(12, 0, 0, 0)
-
-      const event = Event.create({ ...validData, date: today })
-      expect(event.date).toBe(today)
-    })
   })
 
   describe('update', () => {
@@ -88,14 +76,17 @@ describe('Event Entity', () => {
       expect(event.slug).toBe('new-name')
     })
 
-    it('should update date when valid', () => {
+    it('should update startDate and endDate when valid', () => {
       const event = Event.create(validData)
-      const newDate = new Date()
-      newDate.setFullYear(newDate.getFullYear() + 2)
+      const newStart = new Date()
+      newStart.setFullYear(newStart.getFullYear() + 2)
+      const newEnd = new Date(newStart)
+      newEnd.setDate(newEnd.getDate() + 1)
 
-      event.update({ date: newDate })
+      event.update({ startDate: newStart, endDate: newEnd })
 
-      expect(event.date).toBe(newDate)
+      expect(event.startDate).toBe(newStart)
+      expect(event.endDate).toBe(newEnd)
     })
 
     it('should throw for invalid name on update', () => {
@@ -105,21 +96,23 @@ describe('Event Entity', () => {
       expect(() => event.update({ name: 'AB' })).toThrow('event.name_invalid_length')
     })
 
-    it('should throw for past date on update', () => {
+    it('should throw when endDate becomes before startDate on update', () => {
       const event = Event.create(validData)
+      const earlier = new Date(event.startDate)
+      earlier.setDate(earlier.getDate() - 5)
 
-      expect(() => event.update({ date: new Date('2020-01-01') })).toThrow(AppException)
-      expect(() => event.update({ date: new Date('2020-01-01') })).toThrow('event.date_in_past')
+      expect(() => event.update({ endDate: earlier })).toThrow(AppException)
+      expect(() => event.update({ endDate: earlier })).toThrow('event.date_range_invalid')
     })
 
     it('should not modify fields not provided', () => {
       const event = Event.create(validData)
-      const originalDate = event.date
+      const originalStart = event.startDate
 
       event.update({ name: 'Only Name Changed' })
 
       expect(event.name).toBe('Only Name Changed')
-      expect(event.date).toBe(originalDate)
+      expect(event.startDate).toBe(originalStart)
     })
 
     it('should update updatedAt timestamp via audit', () => {
@@ -174,13 +167,14 @@ describe('Event Entity', () => {
 
   describe('fromPersistence', () => {
     it('should reconstitute entity without validations', () => {
-      const pastDate = new Date('2020-01-01')
+      const pastStart = new Date('2020-01-01')
+      const pastEnd = new Date('2020-01-02')
       const event = Event.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Past Event',
         slug: 'past-event',
-        description: null,
-        date: pastDate,
+        startDate: pastStart,
+        endDate: pastEnd,
         provinceId: null,
         cantonId: null,
         eventTypeId: 1,
@@ -192,7 +186,8 @@ describe('Event Entity', () => {
 
       expect(event).toBeInstanceOf(Event)
       expect(event.id).toBe('550e8400-e29b-41d4-a716-446655440000')
-      expect(event.date).toBe(pastDate)
+      expect(event.startDate).toBe(pastStart)
+      expect(event.endDate).toBe(pastEnd)
       expect(event.status).toBe('active')
       expect(event.audit.deletedAt).toBeNull()
       expect(event.audit.isDeleted).toBe(false)
@@ -204,8 +199,8 @@ describe('Event Entity', () => {
         id: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Archived Event',
         slug: 'archived-event',
-        description: null,
-        date: new Date('2024-01-01'),
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-02'),
         provinceId: 18,
         cantonId: 1,
         eventTypeId: 1,
@@ -218,6 +213,51 @@ describe('Event Entity', () => {
       expect(event.status).toBe('archived')
       expect(event.audit.deletedAt).toBe(deletedDate)
       expect(event.audit.isDeleted).toBe(true)
+    })
+  })
+
+  describe('Event entity (TitanTV alignment)', () => {
+    const baseInput = {
+      name: 'Vuelta al Cotopaxi 2026',
+      startDate: new Date('2026-06-15'),
+      endDate: new Date('2026-06-17'),
+      provinceId: 18,
+      cantonId: null,
+      eventTypeId: 1,
+    }
+
+    it('accepts past start dates', () => {
+      const event = Event.create({
+        ...baseInput,
+        startDate: new Date('2020-01-01'),
+        endDate: new Date('2020-01-02'),
+      })
+      expect(event.startDate).toEqual(new Date('2020-01-01'))
+    })
+
+    it('accepts single-day ranges (start === end)', () => {
+      const event = Event.create({
+        ...baseInput,
+        startDate: new Date('2026-06-15'),
+        endDate: new Date('2026-06-15'),
+      })
+      expect(event.endDate).toEqual(event.startDate)
+    })
+
+    it('rejects ranges where endDate is before startDate', () => {
+      expect(() =>
+        Event.create({
+          ...baseInput,
+          startDate: new Date('2026-06-17'),
+          endDate: new Date('2026-06-15'),
+        }),
+      ).toThrow(/event\.date_range_invalid/)
+    })
+
+    it('does not expose description or isFeatured', () => {
+      const event = Event.create(baseInput)
+      expect((event as unknown as Record<string, unknown>).description).toBeUndefined()
+      expect((event as unknown as Record<string, unknown>).isFeatured).toBeUndefined()
     })
   })
 })

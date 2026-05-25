@@ -20,26 +20,22 @@ export class CreateEventDto {
   name: string
 
   @ApiProperty({
-    description: 'Date when the event takes place',
-    example: '2026-06-15T08:00:00.000Z',
+    description: 'First day of the event (inclusive). May be in the past.',
+    example: '2026-06-15T00:00:00.000Z',
   })
   @IsDate()
   @Type(() => Date)
-  date: Date
+  startDate: Date
 
-  @ApiPropertyOptional({
-    description: 'Optional description of the event',
-    example: 'Competencia de ciclismo de montaña en la ruta del volcán Cotopaxi',
+  @ApiProperty({
+    description: 'Last day of the event (inclusive). Must be >= startDate.',
+    example: '2026-06-17T00:00:00.000Z',
   })
-  @IsString()
-  @MaxLength(1000)
-  @IsOptional()
-  description?: string
+  @IsDate()
+  @Type(() => Date)
+  endDate: Date
 
-  @ApiPropertyOptional({
-    description: 'Province ID where the event takes place',
-    example: 18,
-  })
+  @ApiPropertyOptional({ description: 'Province ID where the event takes place', example: 18 })
   @IsInt()
   @Min(1)
   @IsOptional()
@@ -47,7 +43,7 @@ export class CreateEventDto {
   provinceId?: number
 
   @ApiPropertyOptional({
-    description: 'Canton ID where the event takes place (requires provinceId)',
+    description: 'Canton ID where the event takes place. Optional even when provinceId is set.',
     example: 1,
   })
   @IsInt()
@@ -56,10 +52,7 @@ export class CreateEventDto {
   @Type(() => Number)
   cantonId?: number
 
-  @ApiProperty({
-    description: 'Event type ID',
-    example: 1,
-  })
+  @ApiProperty({ description: 'Event type ID', example: 1 })
   @IsInt()
   @Min(1)
   @Type(() => Number)

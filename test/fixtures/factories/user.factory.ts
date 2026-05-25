@@ -20,7 +20,7 @@ export async function createUserFixture(prisma: PrismaClient): Promise<string> {
 
 /**
  * Creates a minimal Event fixture, upserting the required EventType.
- * Schema requires: name, slug (unique), event_date (Date), event_type_id (FK Int).
+ * Schema requires: name, slug (unique), start_date+end_date (Date), event_type_id (FK Int).
  */
 export async function createEventFixture(prisma: PrismaClient): Promise<string> {
   const eventType = await prisma.eventType.upsert({
@@ -35,7 +35,8 @@ export async function createEventFixture(prisma: PrismaClient): Promise<string> 
     data: {
       name: `Test Event ${suffix}`,
       slug: `test-event-${suffix}`,
-      event_date: new Date(),
+      start_date: new Date(),
+      end_date: new Date(),
       event_type_id: eventType.id,
     },
     select: { id: true },

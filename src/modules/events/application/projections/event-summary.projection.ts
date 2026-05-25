@@ -10,8 +10,10 @@ export class EventSummaryProjection {
   slug: string
   /** Name of the event */
   name: string
-  /** Date when the event takes place */
-  date: Date
+  /** First day of the event (inclusive) */
+  startDate: Date
+  /** Last day of the event (inclusive) */
+  endDate: Date
   /** Resolved location (canton, province) */
   location: string
   /** Cover image public CDN URL (null if no cover uploaded) */
