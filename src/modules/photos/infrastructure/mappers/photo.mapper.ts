@@ -42,6 +42,7 @@ export const photoDetailSelectConfig = {
   processed_at: true,
   reviewed_at: true,
   bibs: {
+    where: { deleted_at: null },
     select: {
       id: true,
       source: true,
@@ -53,6 +54,7 @@ export const photoDetailSelectConfig = {
     orderBy: { created_at: 'asc' as const },
   },
   colors: {
+    where: { deleted_at: null },
     select: {
       id: true,
       source: true,

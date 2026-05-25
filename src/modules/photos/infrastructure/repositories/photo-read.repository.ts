@@ -294,7 +294,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     >(
       `SELECT p.id, p.filename, p.public_slug,
         1 - (p.embedding <=> (SELECT embedding FROM photos WHERE id = $1::uuid)) as similarity,
-        EXISTS(SELECT 1 FROM photo_bibs pb WHERE pb.photo_id = p.id) as has_classifications
+        EXISTS(SELECT 1 FROM photo_bibs pb WHERE pb.photo_id = p.id AND pb.deleted_at IS NULL) as has_classifications
       FROM photos p
       WHERE p.event_id = $2::uuid
         AND p.id != $1::uuid
@@ -351,15 +351,15 @@ export class PhotoReadRepository implements IPhotoReadRepository {
 
     const items = await this.prisma.$queryRaw<Row[]>`
       SELECT p.id, p.public_slug, p.filename, p.status, p.reviewed_at,
-             (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) AS min_bib_confidence,
-             (SELECT COUNT(*)::bigint FROM photo_bibs WHERE photo_id = p.id) AS bibs_count,
-             (SELECT COUNT(*)::bigint FROM photo_colors WHERE photo_id = p.id) AS colors_count
+             (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id AND deleted_at IS NULL) AS min_bib_confidence,
+             (SELECT COUNT(*)::bigint FROM photo_bibs WHERE photo_id = p.id AND deleted_at IS NULL) AS bibs_count,
+             (SELECT COUNT(*)::bigint FROM photo_colors WHERE photo_id = p.id AND deleted_at IS NULL) AS colors_count
       FROM photos p
       INNER JOIN events e ON e.id = p.event_id
       WHERE e.slug = ${eventSlug}
         AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
         ${reviewedFilter}
-      ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) ASC NULLS FIRST,
+      ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id AND deleted_at IS NULL) ASC NULLS FIRST,
                p.uploaded_at ASC
       LIMIT ${limit} OFFSET ${offset}
     `
@@ -414,14 +414,14 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     const items = await this.prisma.$queryRaw<Row[]>`
       SELECT p.id, p.public_slug, p.filename, p.status, p.reviewed_at,
              p.event_id,
-             (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) AS min_bib_confidence,
-             (SELECT COUNT(*)::bigint FROM photo_bibs WHERE photo_id = p.id) AS bibs_count,
-             (SELECT COUNT(*)::bigint FROM photo_colors WHERE photo_id = p.id) AS colors_count
+             (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id AND deleted_at IS NULL) AS min_bib_confidence,
+             (SELECT COUNT(*)::bigint FROM photo_bibs WHERE photo_id = p.id AND deleted_at IS NULL) AS bibs_count,
+             (SELECT COUNT(*)::bigint FROM photo_colors WHERE photo_id = p.id AND deleted_at IS NULL) AS colors_count
       FROM photos p
       WHERE p.event_id = ANY(${eventIds}::uuid[])
         AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
         ${reviewedFilter}
-      ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id) ASC NULLS FIRST,
+      ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id AND deleted_at IS NULL) ASC NULLS FIRST,
                p.uploaded_at ASC
       LIMIT ${limit} OFFSET ${offset}
     `
@@ -473,7 +473,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
 
       conditions.push({
         bibs: {
-          some: { digits: digitsClause },
+          some: { digits: digitsClause, deleted_at: null },
         },
       })
     }
@@ -484,7 +484,11 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     if (helmetColors.length > 0) {
       conditions.push({
         colors: {
-          some: { region: 'helmet', primary_color: { in: helmetColors, mode: 'insensitive' } },
+          some: {
+            region: 'helmet',
+            primary_color: { in: helmetColors, mode: 'insensitive' },
+            deleted_at: null,
+          },
         },
       })
     }
@@ -498,6 +502,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
           some: {
             region: 'cyclist_clothes',
             primary_color: { in: clothingColors, mode: 'insensitive' },
+            deleted_at: null,
           },
         },
       })
@@ -507,7 +512,11 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     if (bicycleColors.length > 0) {
       conditions.push({
         colors: {
-          some: { region: 'bicycle', primary_color: { in: bicycleColors, mode: 'insensitive' } },
+          some: {
+            region: 'bicycle',
+            primary_color: { in: bicycleColors, mode: 'insensitive' },
+            deleted_at: null,
+          },
         },
       })
     }
