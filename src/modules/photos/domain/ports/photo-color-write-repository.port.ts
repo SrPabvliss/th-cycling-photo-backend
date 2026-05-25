@@ -1,9 +1,11 @@
 import type { PhotoColor } from '@classifications/domain/entities'
+import type { ColorRegion } from '@generated/prisma/client'
 
 export interface IPhotoColorWriteRepository {
   findById(colorId: string): Promise<{
     id: string
     photoId: string
+    region: ColorRegion
     primaryColor: string
     secondaryColor: string | null
   } | null>

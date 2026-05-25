@@ -27,12 +27,14 @@ describe('PhotoColorWriteRepository', () => {
     prisma.photoColor.findUnique.mockResolvedValue({
       id: 'c-1',
       photo_id: 'p-1',
+      region: ColorRegion.helmet,
       primary_color: 'red',
       secondary_color: 'blue',
     })
     expect(await repo.findById('c-1')).toEqual({
       id: 'c-1',
       photoId: 'p-1',
+      region: ColorRegion.helmet,
       primaryColor: 'red',
       secondaryColor: 'blue',
     })

@@ -1,4 +1,5 @@
 import type { PhotoColor } from '@classifications/domain/entities'
+import type { ColorRegion } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { type IPhotoColorWriteRepository } from '@photos/domain/ports'
 import { PrismaService } from '@shared/infrastructure'
@@ -10,17 +11,25 @@ export class PhotoColorWriteRepository implements IPhotoColorWriteRepository {
   async findById(colorId: string): Promise<{
     id: string
     photoId: string
+    region: ColorRegion
     primaryColor: string
     secondaryColor: string | null
   } | null> {
     const row = await this.prisma.photoColor.findUnique({
       where: { id: colorId },
-      select: { id: true, photo_id: true, primary_color: true, secondary_color: true },
+      select: {
+        id: true,
+        photo_id: true,
+        region: true,
+        primary_color: true,
+        secondary_color: true,
+      },
     })
     return row
       ? {
           id: row.id,
           photoId: row.photo_id,
+          region: row.region,
           primaryColor: row.primary_color,
           secondaryColor: row.secondary_color,
         }
