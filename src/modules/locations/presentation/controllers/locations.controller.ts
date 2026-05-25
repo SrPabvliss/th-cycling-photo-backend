@@ -12,10 +12,12 @@ import {
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common'
 import { QueryBus } from '@nestjs/cqrs'
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { SkipThrottle } from '@nestjs/throttler'
 import { Public } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Locations')
+@SkipThrottle()
 @Controller()
 export class LocationsController {
   constructor(private readonly queryBus: QueryBus) {}

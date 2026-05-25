@@ -62,12 +62,18 @@ import { StorageModule } from './shared/storage/storage.module'
       inject: [ConfigService],
     }),
     ThrottlerModule.forRoot([
-      { name: 'short', ttl: 1000, limit: 200 },
-      { name: 'medium', ttl: 10000, limit: 1500 },
-      { name: 'long', ttl: 60000, limit: 3000 },
-      // Endpoint-scoped throttler for sensitive public token lookups
-      // (delivery link, preview link). Apply via @Throttle({ sensitive_token: { ... } }).
-      { name: 'sensitive_token', ttl: 60000, limit: 10 },
+      // Global DoS guards (per IP, evaluated by ThrottlerGuard). Sized to
+      // accommodate bursty admin/operator flows (review queue + photo
+      // detail + invalidation refetches) while still bounding abuse.
+      { name: 'short', ttl: 1000, limit: 1000 },
+      { name: 'medium', ttl: 10000, limit: 5000 },
+      { name: 'long', ttl: 60000, limit: 15000 },
+      // Endpoint-scoped throttler for sensitive public token lookups.
+      // Named throttlers registered here apply to EVERY route by default;
+      // the high limit acts as a no-op for unrelated endpoints, and
+      // @Throttle({ sensitive_token: { limit: 10, ttl: 60000 } }) on the
+      // delivery/preview controllers tightens it where it matters.
+      { name: 'sensitive_token', ttl: 60000, limit: 100000 },
     ]),
     EventEmitterModule.forRoot(),
     PrismaModule,
