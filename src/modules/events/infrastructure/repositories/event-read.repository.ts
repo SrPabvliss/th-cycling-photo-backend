@@ -203,12 +203,33 @@ export class EventReadRepository implements IEventReadRepository {
   async getPublicPhotos(
     eventId: string,
     pagination: Pagination,
-    photoCategoryId?: number | null,
+    options: {
+      photoCategoryId: number | null
+      bibNumber: string | null
+      bibMatch: 'exact' | 'starts' | 'contains'
+    },
   ): Promise<PaginatedResult<PublicPhotoProjection>> {
     const where: Prisma.PhotoWhereInput = { event_id: eventId }
 
-    if (photoCategoryId) {
-      where.photo_category_id = photoCategoryId
+    if (options.photoCategoryId) {
+      where.photo_category_id = options.photoCategoryId
+    }
+
+    if (options.bibNumber) {
+      const digitsClause = (() => {
+        switch (options.bibMatch) {
+          case 'starts':
+            return { startsWith: options.bibNumber, mode: 'insensitive' as const }
+          case 'contains':
+            return { contains: options.bibNumber, mode: 'insensitive' as const }
+          default:
+            return { equals: options.bibNumber, mode: 'insensitive' as const }
+        }
+      })()
+
+      where.bibs = {
+        some: { digits: digitsClause },
+      }
     }
 
     const [photos, total] = await Promise.all([

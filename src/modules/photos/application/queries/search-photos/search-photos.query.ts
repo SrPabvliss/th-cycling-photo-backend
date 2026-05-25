@@ -3,7 +3,8 @@ import type { Pagination } from '@shared/application'
 export interface SearchPhotosFilters {
   eventId?: string
   status?: string
-  plateNumber?: number
+  plateNumber?: string
+  bibMatch?: 'exact' | 'starts' | 'contains'
   helmetColor?: string
   clothingColor?: string
   bikeColor?: string

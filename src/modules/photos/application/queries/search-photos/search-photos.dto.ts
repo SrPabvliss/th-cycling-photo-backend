@@ -2,7 +2,7 @@ import { PhotoStatus } from '@generated/prisma/client'
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { PaginationQueryDto } from '@shared/application'
 import { Type } from 'class-transformer'
-import { IsDate, IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator'
+import { IsDate, IsEnum, IsIn, IsOptional, IsString, IsUUID, Matches } from 'class-validator'
 
 export class SearchPhotosDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filter by event UUID', format: 'uuid' })
@@ -19,13 +19,24 @@ export class SearchPhotosDto extends PaginationQueryDto {
   @IsOptional()
   status?: PhotoStatus
 
-  @ApiPropertyOptional({ description: 'Search by plate number (1-999)', example: 42 })
-  @IsInt()
-  @Min(1)
-  @Max(999)
+  @ApiPropertyOptional({
+    description:
+      'Search by bib digits (partial prefix match, e.g. "14" matches "14", "141", "142")',
+    example: '14',
+  })
+  @IsString()
   @IsOptional()
-  @Type(() => Number)
-  plateNumber?: number
+  @Matches(/^[0-9]{1,10}$/, { message: 'plateNumber must be 1-10 digits' })
+  plateNumber?: string
+
+  @ApiPropertyOptional({
+    description: 'Match mode for bib search (default: exact)',
+    enum: ['exact', 'starts', 'contains'],
+    example: 'exact',
+  })
+  @IsIn(['exact', 'starts', 'contains'])
+  @IsOptional()
+  bibMatch?: 'exact' | 'starts' | 'contains'
 
   @ApiPropertyOptional({
     description: 'Filter photos captured from this date',
