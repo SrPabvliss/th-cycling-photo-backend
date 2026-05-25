@@ -24,7 +24,7 @@ export const previewDataSelectConfig = {
   token: true,
   status: true,
   expires_at: true,
-  event: { select: { name: true, event_date: true } },
+  event: { select: { name: true, start_date: true, end_date: true } },
   photos: {
     select: {
       photo: { select: { id: true, public_slug: true } },
@@ -83,7 +83,8 @@ export function toPreviewDataProjection(record: PreviewDataSelect): PreviewDataP
   return {
     token: record.token,
     eventName: record.event.name,
-    eventDate: record.event.event_date,
+    startDate: record.event.start_date,
+    endDate: record.event.end_date,
     status: record.status,
     expiresAt: record.expires_at,
     photos: record.photos.map((plp) => ({

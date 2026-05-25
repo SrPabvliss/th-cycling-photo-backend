@@ -31,8 +31,8 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
 
     event.update({
       name: command.name,
-      description: command.description,
-      date: command.date,
+      startDate: command.startDate,
+      endDate: command.endDate,
       provinceId: command.provinceId,
       cantonId: command.cantonId,
       eventTypeId: command.eventTypeId,

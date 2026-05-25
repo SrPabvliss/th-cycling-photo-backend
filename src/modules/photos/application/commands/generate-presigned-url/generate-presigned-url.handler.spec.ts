@@ -19,8 +19,8 @@ describe('GeneratePresignedUrlHandler', () => {
     slug: 'test-event',
     id: '550e8400-e29b-41d4-a716-446655440000',
     name: 'Test Event',
-    description: null,
-    date: futureDate,
+    startDate: futureDate,
+    endDate: futureDate,
 
     provinceId: null,
     cantonId: null,
@@ -46,6 +46,7 @@ describe('GeneratePresignedUrlHandler', () => {
       getAssignedEventsByStatus: jest.fn(),
       countAssignedEventsByStatus: jest.fn(),
       getAssignedEventIdsByStatus: jest.fn(),
+      getAllAssignedEventIds: jest.fn().mockResolvedValue([]),
       getEventBriefsByIds: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 

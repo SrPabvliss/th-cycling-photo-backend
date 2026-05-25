@@ -43,7 +43,7 @@ export class EventReadRepository implements IEventReadRepository {
       this.prisma.event.findMany({
         where,
         select: EventMapper.eventListSelectConfig,
-        orderBy: { event_date: 'desc' },
+        orderBy: { start_date: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
       }),
@@ -98,7 +98,7 @@ export class EventReadRepository implements IEventReadRepository {
       this.prisma.event.findMany({
         where,
         select: EventMapper.eventSummarySelectConfig,
-        orderBy: { event_date: 'desc' },
+        orderBy: { start_date: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
       }),
@@ -172,7 +172,7 @@ export class EventReadRepository implements IEventReadRepository {
       this.prisma.event.findMany({
         where,
         select: EventMapper.publicEventListSelectConfig,
-        orderBy: { event_date: 'desc' },
+        orderBy: { start_date: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
       }),

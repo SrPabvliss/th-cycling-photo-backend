@@ -69,6 +69,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
       saveMany: jest.fn(),
       delete: jest.fn(),
       bulkUpdateCategory: jest.fn(),
+      setRequiresRetouch: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IPhotoWriteRepository>
 
     storageAdapter = {

@@ -89,7 +89,7 @@ async function seedLocations() {
 }
 
 async function seedEventTypes() {
-  const types = ['Downhill', 'Ruta', 'Trail', 'Rally', 'Triatlón']
+  const types = ['Downhill', 'Enduro', 'Ruta', 'Trail', 'Rally', 'Triatlón']
 
   for (const name of types) {
     await prisma.eventType.upsert({

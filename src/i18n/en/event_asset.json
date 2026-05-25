@@ -1,0 +1,4 @@
+{
+  "unsupported_type": "Only cover_image uploads are accepted.",
+  "invalid_storage_key": "The storage key does not match the expected asset path for this event."
+}

@@ -18,17 +18,17 @@ export class PublicEventListProjection {
   @ApiProperty({ description: 'Event name' })
   name: string
 
-  @ApiProperty({ description: 'Event date' })
-  date: Date
+  @ApiProperty({ description: 'First day of the event (inclusive)' })
+  startDate: Date
+
+  @ApiProperty({ description: 'Last day of the event (inclusive)' })
+  endDate: Date
 
   @ApiPropertyOptional({ description: 'Province name' })
   provinceName: string | null
 
   @ApiPropertyOptional({ description: 'Canton name' })
   cantonName: string | null
-
-  @ApiProperty({ description: 'Whether this event is featured' })
-  isFeatured: boolean
 
   @ApiProperty({ description: 'Number of photos' })
   photoCount: number
