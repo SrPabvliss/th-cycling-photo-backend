@@ -60,6 +60,7 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
       eventName: detail?.eventName ?? '',
       customerName,
       deliveredAt: order.deliveredAt!,
+      actorUserId: command.audit.userId,
     })
 
     // 9. Build WhatsApp template

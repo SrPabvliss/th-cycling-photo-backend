@@ -89,6 +89,7 @@ export class CreateOrderFromPreviewHandler
       customerName: detail?.userName ?? '',
       photoCount: command.photoIds.length,
       createdAt: saved.createdAt,
+      actorUserId: command.userId,
     })
 
     return { id: saved.id }
