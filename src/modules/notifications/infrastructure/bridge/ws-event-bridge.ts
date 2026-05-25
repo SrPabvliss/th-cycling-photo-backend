@@ -40,6 +40,7 @@ export class WsEventBridge {
     wsEvent: string,
     payload: Record<string, unknown>,
     extraUserIds: string[] = [],
+    actorUserId?: string,
   ): Promise<void> {
     const template = NOTIFICATION_TEMPLATES[eventType]
     if (!template) {
@@ -52,7 +53,9 @@ export class WsEventBridge {
 
     try {
       const adminIds = await this.userReadRepo.findActiveAdminIds()
-      const allUserIds = [...new Set([...adminIds, ...extraUserIds])]
+      const allUserIds = [...new Set([...adminIds, ...extraUserIds])].filter(
+        (id) => id !== actorUserId,
+      )
       if (allUserIds.length === 0) return
 
       const notifications = allUserIds.map((userId) => ({
@@ -65,7 +68,7 @@ export class WsEventBridge {
 
       const ids = await this.notificationWriteRepo.createMany(notifications)
 
-      this.gateway.emitToAll(wsEvent, {
+      this.gateway.emitToUsers(allUserIds, wsEvent, {
         id: ids[0] ?? null,
         type: eventType,
         title,
@@ -75,14 +78,6 @@ export class WsEventBridge {
       })
     } catch (error) {
       this.logger.error(`Failed to persist notification for ${eventType}`, error)
-      this.gateway.emitToAll(wsEvent, {
-        id: null,
-        type: eventType,
-        title,
-        message,
-        data: payload,
-        createdAt: new Date(),
-      })
     }
   }
 
@@ -108,6 +103,8 @@ export class WsEventBridge {
       NotificationEvent.ORDER_CREATED,
       'order:created',
       payload as unknown as Record<string, unknown>,
+      [],
+      payload.actorUserId,
     )
   }
 
@@ -120,6 +117,7 @@ export class WsEventBridge {
       'order:paid',
       payload as unknown as Record<string, unknown>,
       operatorIds,
+      payload.confirmedBy,
     )
   }
 
@@ -130,6 +128,8 @@ export class WsEventBridge {
       NotificationEvent.ORDER_DELIVERED,
       'order:delivered',
       payload as unknown as Record<string, unknown>,
+      [],
+      payload.actorUserId,
     )
   }
 

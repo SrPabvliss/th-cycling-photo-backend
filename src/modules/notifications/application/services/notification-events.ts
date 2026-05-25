@@ -19,6 +19,7 @@ export interface OrderCreatedPayload {
   customerName: string
   photoCount: number
   createdAt: Date
+  actorUserId?: string
 }
 
 export interface OrderPaidPayload {
@@ -36,6 +37,7 @@ export interface OrderDeliveredPayload {
   eventName: string
   customerName: string
   deliveredAt: Date
+  actorUserId?: string
 }
 
 export interface OrderRetouchCompletedPayload {

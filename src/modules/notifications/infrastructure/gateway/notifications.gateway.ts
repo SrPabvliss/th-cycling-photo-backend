@@ -46,6 +46,10 @@ export class NotificationsGateway
       const payload = await this.jwtService.verifyAsync(token)
       client.data.user = payload
 
+      if (payload?.sub) {
+        client.join(`user:${payload.sub}`)
+      }
+
       this.logger.log(`Client connected: ${client.id} (user: ${payload.email})`)
     } catch {
       this.logger.warn(`Client ${client.id} disconnected: invalid token`)
@@ -60,5 +64,12 @@ export class NotificationsGateway
   /** Emits an event to all authenticated connected clients. */
   emitToAll(event: string, payload: unknown): void {
     this.nsp.emit(event, payload)
+  }
+
+  /** Emits an event only to the sockets of the given user ids. */
+  emitToUsers(userIds: string[], event: string, payload: unknown): void {
+    if (userIds.length === 0) return
+    const rooms = userIds.map((id) => `user:${id}`)
+    this.nsp.to(rooms).emit(event, payload)
   }
 }
