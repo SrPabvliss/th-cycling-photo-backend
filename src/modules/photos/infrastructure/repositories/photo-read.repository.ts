@@ -24,6 +24,34 @@ import {
 } from '@shared/storage/domain/ports/storage-adapter.port'
 import * as PhotoMapper from '../mappers/photo.mapper'
 
+const ES_TO_EN_COLOR: Record<string, string> = {
+  rojo: 'red',
+  naranja: 'orange',
+  amarillo: 'yellow',
+  verde: 'green',
+  azul: 'blue',
+  celeste: 'cyan',
+  morado: 'purple',
+  rosa: 'pink',
+  fucsia: 'magenta',
+  marron: 'brown',
+  negro: 'black',
+  gris: 'gray',
+  blanco: 'white',
+  dorado: 'gold',
+  plateado: 'silver',
+}
+
+const expandColorVariants = (input: string[]): string[] => {
+  return input
+    .map((c) => c.trim().toLowerCase())
+    .filter(Boolean)
+    .flatMap((c) => {
+      const en = ES_TO_EN_COLOR[c]
+      return en ? [c, en] : [c]
+    })
+}
+
 @Injectable()
 export class PhotoReadRepository implements IPhotoReadRepository {
   constructor(
@@ -431,16 +459,27 @@ export class PhotoReadRepository implements IPhotoReadRepository {
 
     const conditions: Prisma.PhotoWhereInput[] = []
 
-    if (filters.plateNumber !== undefined) {
+    if (filters.plateNumber) {
+      const digitsClause = (() => {
+        switch (filters.bibMatch) {
+          case 'starts':
+            return { startsWith: filters.plateNumber, mode: 'insensitive' as const }
+          case 'contains':
+            return { contains: filters.plateNumber, mode: 'insensitive' as const }
+          default:
+            return { equals: filters.plateNumber, mode: 'insensitive' as const }
+        }
+      })()
+
       conditions.push({
         bibs: {
-          some: { digits: String(filters.plateNumber) },
+          some: { digits: digitsClause },
         },
       })
     }
 
     const helmetColors = filters.helmetColor
-      ? filters.helmetColor.split(',').map((c) => c.trim())
+      ? expandColorVariants(filters.helmetColor.split(','))
       : []
     if (helmetColors.length > 0) {
       conditions.push({
@@ -451,7 +490,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     }
 
     const clothingColors = filters.clothingColor
-      ? filters.clothingColor.split(',').map((c) => c.trim())
+      ? expandColorVariants(filters.clothingColor.split(','))
       : []
     if (clothingColors.length > 0) {
       conditions.push({
@@ -464,7 +503,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       })
     }
 
-    const bicycleColors = filters.bikeColor ? filters.bikeColor.split(',').map((c) => c.trim()) : []
+    const bicycleColors = filters.bikeColor ? expandColorVariants(filters.bikeColor.split(',')) : []
     if (bicycleColors.length > 0) {
       conditions.push({
         colors: {

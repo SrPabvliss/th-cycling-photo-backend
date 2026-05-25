@@ -239,7 +239,7 @@ describe('Photos Module (e2e)', () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/photos/search')
         .set('Authorization', bearer)
-        .query({ plateNumber: 999 })
+        .query({ plateNumber: '999' })
         .expect(200)
 
       expect(response.body.data).toEqual([])
