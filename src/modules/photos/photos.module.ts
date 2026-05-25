@@ -9,6 +9,8 @@ import { ApplyColorCorrectionHandler } from '@photos/application/commands/apply-
 import { BulkAssignCategoryHandler } from '@photos/application/commands/bulk-assign-category/bulk-assign-category.handler'
 import { ConfirmPhotoBatchHandler } from '@photos/application/commands/confirm-photo-batch/confirm-photo-batch.handler'
 import { ConfirmRetouchedUploadHandler } from '@photos/application/commands/confirm-retouched-upload/confirm-retouched-upload.handler'
+import { DeletePhotoBibHandler } from '@photos/application/commands/delete-photo-bib/delete-photo-bib.handler'
+import { DeletePhotoColorHandler } from '@photos/application/commands/delete-photo-color/delete-photo-color.handler'
 import { GeneratePresignedUrlHandler } from '@photos/application/commands/generate-presigned-url/generate-presigned-url.handler'
 import { GenerateRetouchedPresignedUrlHandler } from '@photos/application/commands/generate-retouched-presigned-url/generate-retouched-presigned-url.handler'
 import { MarkPhotoReviewedHandler } from '@photos/application/commands/mark-photo-reviewed/mark-photo-reviewed.handler'
@@ -50,6 +52,8 @@ const CommandHandlers = [
   BulkAssignCategoryHandler,
   ConfirmPhotoBatchHandler,
   ConfirmRetouchedUploadHandler,
+  DeletePhotoBibHandler,
+  DeletePhotoColorHandler,
   GeneratePresignedUrlHandler,
   GenerateRetouchedPresignedUrlHandler,
   MarkPhotoReviewedHandler,
