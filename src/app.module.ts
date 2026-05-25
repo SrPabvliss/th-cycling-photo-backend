@@ -16,6 +16,7 @@ import { CartModule } from './modules/cart/cart.module'
 import { ClassificationsModule } from './modules/classifications/classifications.module'
 import { DeliveriesModule } from './modules/deliveries/deliveries.module'
 import { EventAssetsModule } from './modules/event-assets/event-assets.module'
+import { EventTypesModule } from './modules/event-types/event-types.module'
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
@@ -64,6 +65,9 @@ import { StorageModule } from './shared/storage/storage.module'
       { name: 'short', ttl: 1000, limit: 200 },
       { name: 'medium', ttl: 10000, limit: 1500 },
       { name: 'long', ttl: 60000, limit: 3000 },
+      // Endpoint-scoped throttler for sensitive public token lookups
+      // (delivery link, preview link). Apply via @Throttle({ sensitive_token: { ... } }).
+      { name: 'sensitive_token', ttl: 60000, limit: 10 },
     ]),
     EventEmitterModule.forRoot(),
     PrismaModule,
@@ -76,6 +80,7 @@ import { StorageModule } from './shared/storage/storage.module'
     ClassificationsModule,
     DeliveriesModule,
     EventAssetsModule,
+    EventTypesModule,
     EventsModule,
     LocationsModule,
     OperatorModule,

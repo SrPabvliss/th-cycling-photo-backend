@@ -75,17 +75,6 @@ export class DeliveryLink {
     return false
   }
 
-  /** Records an access: sets firstDownloadedAt on first visit, increments downloadCount, marks downloaded. */
-  recordAccess(): void {
-    if (!this.firstDownloadedAt) {
-      this.firstDownloadedAt = new Date()
-    }
-    this.downloadCount++
-    if (this.status === DeliveryLinkStatus.ACTIVE) {
-      this.status = DeliveryLinkStatus.DOWNLOADED
-    }
-  }
-
   /** Invalidates this delivery link (used when regenerating). */
   invalidate(): void {
     if (this.status === DeliveryLinkStatus.EXPIRED) {

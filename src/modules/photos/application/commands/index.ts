@@ -19,6 +19,8 @@ export { ConfirmPhotoBatchCommand } from './confirm-photo-batch/confirm-photo-ba
 export { ConfirmPhotoBatchDto } from './confirm-photo-batch/confirm-photo-batch.dto'
 export { ConfirmRetouchedUploadCommand } from './confirm-retouched-upload/confirm-retouched-upload.command'
 export { ConfirmRetouchedUploadDto } from './confirm-retouched-upload/confirm-retouched-upload.dto'
+export * from './delete-photo-bib'
+export * from './delete-photo-color'
 export { GeneratePresignedUrlCommand } from './generate-presigned-url/generate-presigned-url.command'
 export { GeneratePresignedUrlDto } from './generate-presigned-url/generate-presigned-url.dto'
 export { GenerateRetouchedPresignedUrlCommand } from './generate-retouched-presigned-url/generate-retouched-presigned-url.command'

@@ -18,6 +18,10 @@ export class GenerateAssetPresignedUrlHandler
   ) {}
 
   async execute(command: GenerateAssetPresignedUrlCommand): Promise<AssetPresignedUrlProjection> {
+    if (command.assetType !== 'cover_image') {
+      throw AppException.businessRule('event_asset.unsupported_type')
+    }
+
     const event = await this.eventReadRepo.findById(command.eventId)
     if (!event) throw AppException.notFound('Event', command.eventId)
 

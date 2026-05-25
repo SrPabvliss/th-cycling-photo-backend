@@ -28,4 +28,35 @@ export class DeliveryLinkWriteRepository implements IDeliveryLinkWriteRepository
       data: { status: 'expired' },
     })
   }
+
+  /**
+   * Single atomic UPDATE that both increments the counter and enforces the cap.
+   * Returns false when 0 rows matched — that means the cap was reached (the
+   * status guard alone would never fail here because the caller already
+   * checked expiry, so a 0-row result is unambiguous: limit exceeded).
+   */
+  async tryRecordAccess(id: string, maxAccesses: number): Promise<boolean> {
+    const now = new Date()
+    const result = await this.prisma.deliveryLink.updateMany({
+      where: {
+        id,
+        download_count: { lt: maxAccesses },
+        status: { in: ['active', 'downloaded'] },
+      },
+      data: {
+        download_count: { increment: 1 },
+        status: 'downloaded',
+        last_downloaded_at: now,
+        first_downloaded_at: undefined,
+      },
+    })
+    if (result.count === 0) return false
+    // Ensure first_downloaded_at is set if NULL (Prisma doesn't support
+    // conditional update in updateMany; a follow-up no-op fills it).
+    await this.prisma.deliveryLink.updateMany({
+      where: { id, first_downloaded_at: null },
+      data: { first_downloaded_at: now },
+    })
+    return true
+  }
 }

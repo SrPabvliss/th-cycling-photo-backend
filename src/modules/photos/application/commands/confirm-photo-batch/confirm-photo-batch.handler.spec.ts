@@ -23,8 +23,8 @@ describe('ConfirmPhotoBatchHandler', () => {
     slug: 'test-event',
     id: eventId,
     name: 'Test Event',
-    description: null,
-    date: futureDate,
+    startDate: futureDate,
+    endDate: futureDate,
 
     provinceId: null,
     cantonId: null,
@@ -59,6 +59,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       getAssignedEventsByStatus: jest.fn(),
       countAssignedEventsByStatus: jest.fn(),
       getAssignedEventIdsByStatus: jest.fn(),
+      getAllAssignedEventIds: jest.fn().mockResolvedValue([]),
       getEventBriefsByIds: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
@@ -67,6 +68,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       saveMany: jest.fn(),
       delete: jest.fn(),
       bulkUpdateCategory: jest.fn(),
+      setRequiresRetouch: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IPhotoWriteRepository>
 
     kvStorage = { writeBulk: jest.fn().mockResolvedValue(undefined) }

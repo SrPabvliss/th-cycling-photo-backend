@@ -14,50 +14,38 @@ export class UpdateEventDto {
   name?: string
 
   @ApiPropertyOptional({
-    description: 'Date when the event takes place',
-    example: '2026-06-15T08:00:00.000Z',
+    description: 'First day of the event (inclusive).',
+    example: '2026-06-15T00:00:00.000Z',
   })
   @IsDate()
   @Type(() => Date)
   @IsOptional()
-  date?: Date
+  startDate?: Date
 
   @ApiPropertyOptional({
-    description: 'Optional description of the event (null to clear)',
-    example: 'Competencia de ciclismo de montaña en la ruta del volcán Cotopaxi',
-    nullable: true,
+    description: 'Last day of the event (inclusive). Must be >= startDate.',
+    example: '2026-06-17T00:00:00.000Z',
   })
-  @IsString()
-  @MaxLength(1000)
+  @IsDate()
+  @Type(() => Date)
   @IsOptional()
-  description?: string | null
+  endDate?: Date
 
-  @ApiPropertyOptional({
-    description: 'Province ID where the event takes place (null to clear)',
-    example: 18,
-    nullable: true,
-  })
+  @ApiPropertyOptional({ description: 'Province ID (null to clear)', example: 18, nullable: true })
   @IsInt()
   @Min(1)
   @IsOptional()
   @Type(() => Number)
   provinceId?: number | null
 
-  @ApiPropertyOptional({
-    description: 'Canton ID where the event takes place (null to clear, requires provinceId)',
-    example: 1,
-    nullable: true,
-  })
+  @ApiPropertyOptional({ description: 'Canton ID (null to clear)', example: 1, nullable: true })
   @IsInt()
   @Min(1)
   @IsOptional()
   @Type(() => Number)
   cantonId?: number | null
 
-  @ApiPropertyOptional({
-    description: 'Event type ID',
-    example: 1,
-  })
+  @ApiPropertyOptional({ description: 'Event type ID', example: 1 })
   @IsInt()
   @Min(1)
   @IsOptional()

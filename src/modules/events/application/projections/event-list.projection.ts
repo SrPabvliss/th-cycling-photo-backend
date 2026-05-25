@@ -5,8 +5,10 @@ export class EventListProjection {
   slug: string
   /** Name of the cycling event */
   name: string
-  /** Date when the event takes place */
-  date: Date
+  /** First day of the event (inclusive) */
+  startDate: Date
+  /** Last day of the event (inclusive) */
+  endDate: Date
   /** Province name (resolved from relation) */
   provinceName: string | null
   /** Canton name (resolved from relation) */
@@ -15,8 +17,6 @@ export class EventListProjection {
   coverImageUrl: string | null
   /** Public slug of the cover asset — used to build Worker preset URLs. */
   coverImageSlug: string | null
-  /** Whether this event is currently featured */
-  isFeatured: boolean
   /** Current event status */
   status: string
   /** Number of photos associated with this event (computed) */

@@ -58,6 +58,8 @@ export class PublicEventsController {
   @ApiOperation({ summary: 'List completed photos for a public event (watermarked)' })
   @ApiParam({ name: 'slug', description: 'Event URL slug', example: 'vuelta-al-cotopaxi-2026' })
   @ApiQuery({ name: 'photoCategoryId', required: false, type: Number })
+  @ApiQuery({ name: 'bibNumber', required: false, type: String })
+  @ApiQuery({ name: 'bibMatch', required: false, enum: ['exact', 'starts', 'contains'] })
   @ApiEnvelopeResponse({
     status: 200,
     description: 'Paginated list of watermarked photos',
@@ -68,7 +70,13 @@ export class PublicEventsController {
   async findPhotos(@Param('slug') slug: string, @Query() dto: GetPublicEventPhotosDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     return this.queryBus.execute(
-      new GetPublicEventPhotosQuery(slug, pagination, dto.photoCategoryId ?? null),
+      new GetPublicEventPhotosQuery(
+        slug,
+        pagination,
+        dto.photoCategoryId ?? null,
+        dto.bibNumber ?? null,
+        dto.bibMatch ?? 'exact',
+      ),
     )
   }
 }

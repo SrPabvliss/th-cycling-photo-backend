@@ -37,4 +37,11 @@ export class PhotoBibWriteRepository implements IPhotoBibWriteRepository {
     })
     return bib
   }
+
+  async softDelete(bibId: string, reviewerId: string): Promise<void> {
+    await this.prisma.photoBib.update({
+      where: { id: bibId },
+      data: { deleted_at: new Date(), deleted_by_id: reviewerId },
+    })
+  }
 }

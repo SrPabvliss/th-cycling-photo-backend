@@ -15,8 +15,11 @@ export class CartViewEventGroupProjection {
   @ApiProperty({ description: 'Event name' })
   eventName: string
 
-  @ApiProperty({ description: 'Event date' })
-  eventDate: Date
+  @ApiProperty({ description: 'Event start date' })
+  startDate: Date
+
+  @ApiProperty({ description: 'Event end date' })
+  endDate: Date
 
   @ApiProperty({ description: 'Photos in this event group', type: [CartViewPhotoProjection] })
   photos: CartViewPhotoProjection[]

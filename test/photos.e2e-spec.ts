@@ -86,7 +86,8 @@ describe('Photos Module (e2e)', () => {
       data: {
         name: 'E2E Photos Test Event',
         slug: `e2e-photos-${Date.now()}`,
-        event_date: futureDate,
+        start_date: futureDate,
+        end_date: futureDate,
         event_type_id: eventType.id,
       },
     })
@@ -207,8 +208,9 @@ describe('Photos Module (e2e)', () => {
         data: {
           name: 'Empty Event',
           slug: `empty-event-${Date.now()}`,
-          event_date: futureDate,
-          event_type_id: eventType?.id,
+          start_date: futureDate,
+          end_date: futureDate,
+          event_type_id: eventType!.id,
         },
       })
 
@@ -237,7 +239,7 @@ describe('Photos Module (e2e)', () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/photos/search')
         .set('Authorization', bearer)
-        .query({ plateNumber: 999 })
+        .query({ plateNumber: '999' })
         .expect(200)
 
       expect(response.body.data).toEqual([])

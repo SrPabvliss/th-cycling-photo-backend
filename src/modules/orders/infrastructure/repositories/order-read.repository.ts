@@ -26,6 +26,13 @@ const ORDER_LIST_SELECT = {
   event: { select: { name: true } },
   _count: { select: { items: true } },
   delivery_link: { select: { id: true } },
+  items: {
+    take: 3,
+    orderBy: { photo: { id: 'asc' } },
+    select: {
+      photo: { select: { id: true, public_slug: true, filename: true } },
+    },
+  },
 } as const
 
 @Injectable()
@@ -81,6 +88,12 @@ export class OrderReadRepository implements IOrderReadRepository {
         eventName: o.event.name,
         photoCount: o._count.items,
         hasDeliveryLink: o.delivery_link !== null,
+        previewPhotos: o.items.map((it) => ({
+          photoId: it.photo.id,
+          publicSlug: it.photo.public_slug,
+          filename: it.photo.filename,
+          thumbnailUrl: this.cdn.internalUrl(it.photo.public_slug, 'thumb'),
+        })),
       })),
       total,
       pagination,
@@ -150,7 +163,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         filename: oi.photo.filename,
         publicSlug: oi.photo.public_slug,
         thumbnailUrl: this.cdn.internalUrl(oi.photo.public_slug, 'thumb'),
-        fullUrl: this.cdn.internalUrl(oi.photo.public_slug),
+        fullUrl: this.cdn.internalUrl(oi.photo.public_slug, 'workspace'),
       })),
       deliveryLink: record.delivery_link
         ? {

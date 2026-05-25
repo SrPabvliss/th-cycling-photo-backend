@@ -36,7 +36,11 @@ export interface IEventReadRepository {
   getPublicPhotos(
     eventId: string,
     pagination: Pagination,
-    photoCategoryId?: number | null,
+    options: {
+      photoCategoryId: number | null
+      bibNumber: string | null
+      bibMatch: 'exact' | 'starts' | 'contains'
+    },
   ): Promise<PaginatedResult<PublicPhotoProjection>>
   existsActiveEvent(eventId: string): Promise<{ id: string; name: string } | null>
   existsActiveEventBySlug(slug: string): Promise<{ id: string; name: string } | null>

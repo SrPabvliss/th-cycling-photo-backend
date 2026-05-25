@@ -73,6 +73,7 @@ export class CreateOrderFromGalleryHandler
       customerName: [snapData.firstName, snapData.lastName].filter(Boolean).join(' '),
       photoCount: command.photoIds.length,
       createdAt: saved.createdAt,
+      actorUserId: command.userId,
     })
 
     return { id: saved.id }

@@ -10,8 +10,10 @@ export class PreviewDataProjection {
   token: string
   /** Event name */
   eventName: string
-  /** Event date */
-  eventDate: Date
+  /** Event start date */
+  startDate: Date
+  /** Event end date */
+  endDate: Date
   /** Current status */
   status: string
   /** When the link expires */

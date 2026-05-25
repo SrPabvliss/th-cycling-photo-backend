@@ -12,6 +12,10 @@ import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/po
 import { GetDeliveryByTokenQuery } from './get-delivery-by-token.query'
 
 const PRESIGNED_URL_EXPIRY_SECONDS = 3600 // 1 hour
+// Hard cap on how many times a single delivery token can return presigned
+// URLs. Legitimate use is ~1 fetch per page load + occasional refresh; this
+// cap blocks "shared link with 50 friends" abuse without burdening users.
+const MAX_DELIVERY_ACCESSES = 50
 
 @QueryHandler(GetDeliveryByTokenQuery)
 export class GetDeliveryByTokenHandler implements IQueryHandler<GetDeliveryByTokenQuery> {
@@ -33,9 +37,14 @@ export class GetDeliveryByTokenHandler implements IQueryHandler<GetDeliveryByTok
       throw new AppException('delivery.link_expired', HttpStatus.GONE)
     }
 
-    // Record access (first_downloaded_at + download_count + status)
-    deliveryLink.recordAccess()
-    await this.writeRepo.save(deliveryLink)
+    // Atomic access record + cap enforcement. Done as a single UPDATE so
+    // concurrent requests cannot race past the cap (issue: parallel hits
+    // would otherwise read the same `download_count` and both increment it
+    // independently).
+    const recorded = await this.writeRepo.tryRecordAccess(deliveryLink.id, MAX_DELIVERY_ACCESSES)
+    if (!recorded) {
+      throw new AppException('delivery.access_limit_exceeded', HttpStatus.GONE)
+    }
 
     // Get delivery data with photos (returns raw with storageKey)
     const data = await this.readRepo.getDeliveryData(query.token)

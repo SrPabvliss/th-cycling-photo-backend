@@ -16,6 +16,10 @@ export class GetPublicEventPhotosHandler implements IQueryHandler<GetPublicEvent
     const event = await this.eventReadRepo.existsActiveEventBySlug(query.slug)
     if (!event) throw AppException.notFound('entities.event', query.slug)
 
-    return this.eventReadRepo.getPublicPhotos(event.id, query.pagination, query.photoCategoryId)
+    return this.eventReadRepo.getPublicPhotos(event.id, query.pagination, {
+      photoCategoryId: query.photoCategoryId,
+      bibNumber: query.bibNumber,
+      bibMatch: query.bibMatch,
+    })
   }
 }

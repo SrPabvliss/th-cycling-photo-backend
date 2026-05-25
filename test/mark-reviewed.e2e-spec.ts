@@ -128,7 +128,7 @@ describe('Mark photo reviewed (e2e)', () => {
     const second = await prisma.photo.findUniqueOrThrow({ where: { id: photoId } })
 
     expect(second.status).toBe('reviewed')
-    expect(second.reviewed_at?.getTime()).toBeGreaterThanOrEqual(first.reviewed_at?.getTime())
+    expect(second.reviewed_at?.getTime()).toBeGreaterThanOrEqual(first.reviewed_at!.getTime())
   })
 
   it('photo with status=processing → 422 BUSINESS_RULE', async () => {

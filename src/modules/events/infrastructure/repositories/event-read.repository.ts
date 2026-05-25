@@ -1,4 +1,4 @@
-import type { Prisma } from '@generated/prisma/client'
+import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
@@ -43,7 +43,7 @@ export class EventReadRepository implements IEventReadRepository {
       this.prisma.event.findMany({
         where,
         select: EventMapper.eventListSelectConfig,
-        orderBy: { event_date: 'desc' },
+        orderBy: { start_date: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
       }),
@@ -98,7 +98,7 @@ export class EventReadRepository implements IEventReadRepository {
       this.prisma.event.findMany({
         where,
         select: EventMapper.eventSummarySelectConfig,
-        orderBy: { event_date: 'desc' },
+        orderBy: { start_date: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
       }),
@@ -172,7 +172,7 @@ export class EventReadRepository implements IEventReadRepository {
       this.prisma.event.findMany({
         where,
         select: EventMapper.publicEventListSelectConfig,
-        orderBy: { event_date: 'desc' },
+        orderBy: { start_date: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
       }),
@@ -203,18 +203,30 @@ export class EventReadRepository implements IEventReadRepository {
   async getPublicPhotos(
     eventId: string,
     pagination: Pagination,
-    photoCategoryId?: number | null,
+    options: {
+      photoCategoryId: number | null
+      bibNumber: string | null
+      bibMatch: 'exact' | 'starts' | 'contains'
+    },
   ): Promise<PaginatedResult<PublicPhotoProjection>> {
     const where: Prisma.PhotoWhereInput = { event_id: eventId }
 
-    if (photoCategoryId) {
-      where.photo_category_id = photoCategoryId
+    if (options.photoCategoryId) {
+      where.photo_category_id = options.photoCategoryId
+    }
+
+    if (options.bibNumber) {
+      const ids = await this.findMatchingBibPhotoIds(eventId, options.bibNumber, options.bibMatch)
+      if (ids.length === 0) {
+        return new PaginatedResult<PublicPhotoProjection>([], 0, pagination)
+      }
+      where.id = { in: ids }
     }
 
     const [photos, total] = await Promise.all([
       this.prisma.photo.findMany({
         where,
-        select: { id: true, public_slug: true },
+        select: { id: true, public_slug: true, width: true, height: true },
         orderBy: { uploaded_at: 'desc' },
         skip: pagination.skip,
         take: pagination.take,
@@ -226,6 +238,8 @@ export class EventReadRepository implements IEventReadRepository {
       photos.map((p) => ({
         id: p.id,
         publicSlug: p.public_slug,
+        width: p.width,
+        height: p.height,
       })),
       total,
       pagination,
@@ -256,5 +270,56 @@ export class EventReadRepository implements IEventReadRepository {
       },
       select: { id: true, name: true },
     })
+  }
+
+  /**
+   * Returns photo ids for the given event whose effective (latest-correction)
+   * bib digits match. Skips soft-deleted bibs. A correction with `new_value = NULL`
+   * is honored — the row will NOT match (we use CASE, not COALESCE).
+   */
+  private async findMatchingBibPhotoIds(
+    eventId: string,
+    value: string,
+    match: 'exact' | 'starts' | 'contains',
+  ): Promise<string[]> {
+    const escaped = value.replace(/[\\%_]/g, (c) => `\\${c}`)
+    const pattern =
+      match === 'starts' ? `${escaped}%` : match === 'contains' ? `%${escaped}%` : escaped
+
+    const sql =
+      match === 'exact'
+        ? Prisma.sql`
+            SELECT DISTINCT pb.photo_id
+            FROM photo_bibs pb
+            JOIN photos p ON p.id = pb.photo_id AND p.event_id = ${eventId}::uuid
+            LEFT JOIN LATERAL (
+              SELECT new_value AS corrected_value, TRUE AS has_correction
+              FROM corrections
+              WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
+              ORDER BY corrected_at DESC LIMIT 1
+            ) latest ON TRUE
+            WHERE pb.deleted_at IS NULL
+              AND LOWER(
+                CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
+              ) = LOWER(${value})
+          `
+        : Prisma.sql`
+            SELECT DISTINCT pb.photo_id
+            FROM photo_bibs pb
+            JOIN photos p ON p.id = pb.photo_id AND p.event_id = ${eventId}::uuid
+            LEFT JOIN LATERAL (
+              SELECT new_value AS corrected_value, TRUE AS has_correction
+              FROM corrections
+              WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
+              ORDER BY corrected_at DESC LIMIT 1
+            ) latest ON TRUE
+            WHERE pb.deleted_at IS NULL
+              AND (
+                CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
+              ) ILIKE ${pattern} ESCAPE '\\'
+          `
+
+    const rows = await this.prisma.$queryRaw<Array<{ photo_id: string }>>(sql)
+    return rows.map((r) => r.photo_id)
   }
 }

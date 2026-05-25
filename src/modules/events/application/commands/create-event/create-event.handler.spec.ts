@@ -12,13 +12,14 @@ describe('CreateEventHandler', () => {
   let operatorRepo: jest.Mocked<IEventOperatorRepository>
   let locationValidator: jest.Mocked<LocationValidator>
 
-  const futureDate = new Date()
-  futureDate.setFullYear(futureDate.getFullYear() + 1)
+  const futureStart = new Date()
+  futureStart.setFullYear(futureStart.getFullYear() + 1)
+  const futureEnd = new Date(futureStart)
+  futureEnd.setDate(futureEnd.getDate() + 2)
 
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
-      setFeatured: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
 
     operatorRepo = {
@@ -37,7 +38,7 @@ describe('CreateEventHandler', () => {
   })
 
   it('should create and save event, returning id', async () => {
-    const command = new CreateEventCommand('Test Event', futureDate, null, null, null, 1)
+    const command = new CreateEventCommand('Test Event', futureStart, futureEnd, null, null, 1)
 
     writeRepo.save.mockImplementation(async (event: Event) => event)
 
@@ -56,7 +57,7 @@ describe('CreateEventHandler', () => {
   })
 
   it('should create event with valid province and canton', async () => {
-    const command = new CreateEventCommand('Test Event', futureDate, null, 18, 1, 1)
+    const command = new CreateEventCommand('Test Event', futureStart, futureEnd, 18, 1, 1)
 
     writeRepo.save.mockImplementation(async (event: Event) => event)
 
@@ -67,7 +68,7 @@ describe('CreateEventHandler', () => {
   })
 
   it('should propagate location validation errors', async () => {
-    const command = new CreateEventCommand('Test Event', futureDate, null, 999, null, 1)
+    const command = new CreateEventCommand('Test Event', futureStart, futureEnd, 999, null, 1)
 
     locationValidator.validate.mockRejectedValue(
       AppException.businessRule('event.province_not_found'),
@@ -80,8 +81,8 @@ describe('CreateEventHandler', () => {
   it('should propagate entity validation errors without calling save', async () => {
     const command = new CreateEventCommand(
       'Test Event',
-      new Date('2020-01-01'),
-      null,
+      new Date('2026-06-17'),
+      new Date('2026-06-15'),
       null,
       null,
       1,

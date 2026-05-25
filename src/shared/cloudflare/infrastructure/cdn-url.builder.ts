@@ -33,9 +33,14 @@ export class CdnUrlBuilder {
     return `${this.baseUrl}/assets/${presetSegment}${slug}.jpg`
   }
 
-  /** Generates HMAC token: ?token={expiration}-{hexHmac} */
+  /**
+   * Generates HMAC token: ?token={expiration}-{hexHmac}.
+   * Internal-URL TTL kept short on purpose: frontend queries holding these
+   * URLs refresh well before expiry (see INTERNAL_IMAGE_QUERY_DEFAULTS on
+   * the frontend); shorter TTL limits the replay window if a payload leaks.
+   */
   private signUrl(pathname: string): string {
-    const expiration = Math.floor(Date.now() / 1000) + 3600
+    const expiration = Math.floor(Date.now() / 1000) + 600
     const data = `${pathname}${expiration}`
     const hmac = createHmac('sha256', this.hmacSecret).update(data).digest('hex')
     return `?token=${expiration}-${hmac}`

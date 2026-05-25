@@ -23,23 +23,6 @@ export class EventWriteRepository implements IEventWriteRepository {
     return EventMapper.toEntity(saved)
   }
 
-  /** Sets featured status atomically — unfeatures all others when setting true. */
-  async setFeatured(eventId: string, isFeatured: boolean): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      if (isFeatured) {
-        await tx.event.updateMany({
-          where: { is_featured: true },
-          data: { is_featured: false },
-        })
-      }
-
-      await tx.event.update({
-        where: { id: eventId },
-        data: { is_featured: isFeatured },
-      })
-    })
-  }
-
   /** Ensures event.slug is unique, appending a short random suffix if it collides. */
   private async ensureUniqueSlug(event: Event): Promise<void> {
     const existing = await this.prisma.event.findFirst({

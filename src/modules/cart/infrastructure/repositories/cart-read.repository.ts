@@ -35,7 +35,7 @@ export class CartReadRepository implements ICartReadRepository {
       where: { cart_id: cartId, removed_at: null },
       select: {
         photo: { select: { id: true, public_slug: true } },
-        event: { select: { id: true, name: true, event_date: true } },
+        event: { select: { id: true, name: true, start_date: true, end_date: true } },
       },
       orderBy: { added_at: 'asc' },
     })
@@ -45,7 +45,8 @@ export class CartReadRepository implements ICartReadRepository {
       {
         eventId: string
         eventName: string
-        eventDate: Date
+        startDate: Date
+        endDate: Date
         photos: { id: string; publicSlug: string }[]
       }
     >()
@@ -56,7 +57,8 @@ export class CartReadRepository implements ICartReadRepository {
         eventMap.set(eventId, {
           eventId,
           eventName: item.event.name,
-          eventDate: item.event.event_date,
+          startDate: item.event.start_date,
+          endDate: item.event.end_date,
           photos: [],
         })
       }

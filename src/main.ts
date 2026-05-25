@@ -20,6 +20,13 @@ async function bootstrap() {
   app.use(cookieParser())
   app.setGlobalPrefix('api/v1')
 
+  // Trust the first proxy hop so req.ip reflects the real client IP via
+  // X-Forwarded-For (Cloudflare/Render/etc. set this). Required for
+  // ThrottlerGuard to rate-limit per actual user — otherwise every
+  // request would share the edge proxy's IP and global throttles would
+  // accidentally cap the whole app at the per-IP limit.
+  app.getHttpAdapter().getInstance().set('trust proxy', 1)
+
   const corsOrigin = configService.get('cors.origin', '*')
   const allowedOrigins = corsOrigin.split(',').map((o: string) => o.trim())
   app.enableCors({

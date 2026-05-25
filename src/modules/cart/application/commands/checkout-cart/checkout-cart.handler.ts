@@ -91,6 +91,7 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
         customerName: [snapData.firstName, snapData.lastName].filter(Boolean).join(' '),
         photoCount: cartEvent.photoIds.length,
         createdAt: saved.createdAt,
+        actorUserId: command.userId,
       })
     }
 

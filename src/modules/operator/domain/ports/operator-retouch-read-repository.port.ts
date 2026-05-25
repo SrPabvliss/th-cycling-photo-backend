@@ -38,10 +38,12 @@ export type OperatorRetouchQueueOrderRow = {
 }
 
 export interface IOperatorRetouchReadRepository {
-  getRetouchQueueRows(
+  getRetouchQueuePage(
     eventId: string,
     scope: RetouchOrderScope,
-  ): Promise<OperatorRetouchQueueOrderRow[]>
+    skip: number,
+    take: number,
+  ): Promise<{ items: OperatorRetouchQueueOrderRow[]; total: number }>
   findOperatorRetouchOrdersPage(
     eventIds: string[],
     scope: RetouchOrderScope,

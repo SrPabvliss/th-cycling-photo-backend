@@ -162,7 +162,9 @@ async function fetchWatermarked(slug, env) {
   const originUrl = getB2Url(env, objectPath)
   const signedReq = await b2.sign(originUrl)
 
-  const watermarkUrl = `https://${env.PUBLIC_DOMAIN}/gallery/_assets/watermark.png`
+  // Bumped suffix busts the long-lived (immutable, 1y) cache on the
+  // watermark asset whenever the underlying PNG changes in KV.
+  const watermarkUrl = `https://${env.PUBLIC_DOMAIN}/gallery/_assets/watermark.png?v=3`
   const publicUrl = `https://${env.PUBLIC_DOMAIN}/gallery/${slug}.jpg`
   const qrUrl = `https://${env.QR_WORKER_HOST}/?url=${encodeURIComponent(publicUrl)}&v=2`
 

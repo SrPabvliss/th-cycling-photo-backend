@@ -23,5 +23,4 @@ export { RecentActivityProjection } from './recent-activity.projection'
 export {
   RetouchQueueItemProjection,
   RetouchQueueOrderProjection,
-  RetouchQueueProjection,
 } from './retouch-queue.projection'

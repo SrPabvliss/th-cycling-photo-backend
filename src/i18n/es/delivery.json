@@ -1,5 +1,6 @@
 {
   "link_expired": "Este enlace de entrega ha expirado",
   "already_expired": "El enlace de entrega ya está expirado",
-  "expires_in_days_invalid": "La expiración debe ser entre 1 y 90 días"
+  "expires_in_days_invalid": "La expiración debe ser entre 1 y 90 días",
+  "access_limit_exceeded": "Este enlace de entrega ha alcanzado el límite de accesos permitidos"
 }
