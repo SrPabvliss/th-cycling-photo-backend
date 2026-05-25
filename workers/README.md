@@ -2,6 +2,8 @@
 
 Two Workers that apply watermark overlays to cycling photos served from B2.
 
+> **Billing (2026-05-17):** account on **Workers Paid ($5/month)**. Upgraded from free tier after KV daily reads hit 50% during bulk classification of 633 photos in dev event "COTO BIKE 2026" (free tier would have 429'd before event finished). Paid plan includes 10M KV reads/day, 1M KV writes/day, 10M Worker requests/day. Cancelable anytime post-thesis. Worth periodically reviewing bundled features (Durable Objects, Queues, R2 bindings) for possible reuse.
+
 ## Architecture
 
 ```
@@ -65,9 +67,11 @@ wrangler secret put ALLOWED_DOMAINS
 2. Select your zone
 3. Go to **Images** → **Transformations**
 4. Click **Enable transformations**
-5. Under **Allowed origins**, add your B2 hostname (the `B2_ORIGIN_HOST` value)
+5. Under **Allowed origins**, add **every B2 bucket hostname** the workers can hit. Each bucket has its own S3 hostname: `cycling-photo-dev.s3.us-east-005.backblazeb2.com`, `cycling-photo-prod.s3.us-east-005.backblazeb2.com`. Wildcard `*.s3.us-east-005.backblazeb2.com` covers both.
 
 > This is FREE — 5,000 unique transformations/month included.
+
+> **Gotcha:** Missing an origin causes a 502 with B2 body `ERROR 9401: Transformation origin is not in allowed origins list`. Dev funciona, prod no = bucket prod no agregado.
 
 ## Step 2: Authenticate Wrangler
 
