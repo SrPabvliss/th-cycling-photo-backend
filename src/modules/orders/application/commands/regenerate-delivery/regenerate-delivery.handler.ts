@@ -4,7 +4,7 @@ import {
   DELIVERY_LINK_WRITE_REPOSITORY,
   type IDeliveryLinkWriteRepository,
 } from '@deliveries/domain/ports'
-import { Inject } from '@nestjs/common'
+import { Inject, Logger } from '@nestjs/common'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { OrderPaymentConfirmedProjection } from '@orders/application/projections'
 import { type IOrderReadRepository, ORDER_READ_REPOSITORY } from '@orders/domain/ports'
@@ -14,6 +14,8 @@ import { RegenerateDeliveryCommand } from './regenerate-delivery.command'
 
 @CommandHandler(RegenerateDeliveryCommand)
 export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeliveryCommand> {
+  private readonly logger = new Logger(RegenerateDeliveryHandler.name)
+
   constructor(
     @Inject(ORDER_READ_REPOSITORY) private readonly orderReadRepo: IOrderReadRepository,
     @Inject(DELIVERY_LINK_WRITE_REPOSITORY)
@@ -39,6 +41,16 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
       CreateDeliveryLinkCommand,
       DeliveryLinkCreatedProjection
     >(new CreateDeliveryLinkCommand(order.id))
+
+    // 5. Audit log — captures who regenerated, when, for which order.
+    //    Old token is not logged on purpose: leaking it to logs defeats
+    //    the security purpose of regeneration.
+    this.logger.log({
+      event: 'delivery_link.regenerated',
+      orderId: order.id,
+      regeneratedBy: command.audit.userId,
+      at: new Date().toISOString(),
+    })
 
     // 5. Build WhatsApp template
     const detail = await this.orderReadRepo.getDetail(order.id)
