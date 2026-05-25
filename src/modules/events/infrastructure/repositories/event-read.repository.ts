@@ -216,11 +216,7 @@ export class EventReadRepository implements IEventReadRepository {
     }
 
     if (options.bibNumber) {
-      const ids = await this.findMatchingBibPhotoIds(
-        eventId,
-        options.bibNumber,
-        options.bibMatch,
-      )
+      const ids = await this.findMatchingBibPhotoIds(eventId, options.bibNumber, options.bibMatch)
       if (ids.length === 0) {
         return new PaginatedResult<PublicPhotoProjection>([], 0, pagination)
       }

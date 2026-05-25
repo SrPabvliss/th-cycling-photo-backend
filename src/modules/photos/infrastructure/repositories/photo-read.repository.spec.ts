@@ -1,8 +1,8 @@
+import type { ICorrectionRepository } from '@photos/domain/ports'
+import { Pagination } from '@shared/application'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import type { PrismaService } from '@shared/infrastructure'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
-import type { ICorrectionRepository } from '@photos/domain/ports'
-import { Pagination } from '@shared/application'
 import { PhotoReadRepository } from './photo-read.repository'
 
 describe('PhotoReadRepository.searchPhotos (correction-aware filters)', () => {
