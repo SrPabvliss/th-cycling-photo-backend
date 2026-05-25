@@ -35,9 +35,7 @@ describe('DeletePhotoBibHandler', () => {
     photoReadRepo = { findById: jest.fn() }
     bibRepo = { findById: jest.fn(), save: jest.fn(), softDelete: jest.fn() }
     handler = new DeletePhotoBibHandler(photoReadRepo, bibRepo)
-    loggerSpy = jest
-      .spyOn((handler as any).logger, 'log')
-      .mockImplementation(() => undefined)
+    loggerSpy = jest.spyOn((handler as any).logger, 'log').mockImplementation(() => undefined)
   })
 
   afterEach(() => {
