@@ -163,7 +163,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         filename: oi.photo.filename,
         publicSlug: oi.photo.public_slug,
         thumbnailUrl: this.cdn.internalUrl(oi.photo.public_slug, 'thumb'),
-        fullUrl: this.cdn.internalUrl(oi.photo.public_slug),
+        fullUrl: this.cdn.internalUrl(oi.photo.public_slug, 'workspace'),
       })),
       deliveryLink: record.delivery_link
         ? {
