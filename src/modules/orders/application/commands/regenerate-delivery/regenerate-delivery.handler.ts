@@ -56,7 +56,7 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
     const detail = await this.orderReadRepo.getDetail(order.id)
     const photoCount = detail?.photos.length ?? 0
     const customerFirstName = detail?.snapFirstName ?? ''
-    const whatsappTemplate = `¡Hola ${customerFirstName}! 🔄 Te enviamos un nuevo enlace de descarga para tus ${photoCount} fotos: ${deliveryResult.deliveryUrl}. Estará disponible por 7 días. ¡Gracias! 🎉`
+    const whatsappTemplate = `¡Hola ${customerFirstName}! \u{1F504} Te enviamos un nuevo enlace de descarga para tus ${photoCount} fotos: ${deliveryResult.deliveryUrl}. Estará disponible por 7 días. ¡Gracias! \u{1F389}`
 
     return {
       orderId: order.id,

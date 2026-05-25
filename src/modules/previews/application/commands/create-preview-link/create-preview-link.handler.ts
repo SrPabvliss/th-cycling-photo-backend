@@ -49,7 +49,7 @@ export class CreatePreviewLinkHandler implements ICommandHandler<CreatePreviewLi
 
     // Build response
     const previewUrl = `${this.previewBaseUrl}/${saved.token}`
-    const shareTemplate = `¡Hola! 👋 Soy de Titan TV. Encontramos ${command.photoIds.length} fotos tuyas del evento "${event.name}". Revísalas aquí: ${previewUrl}. Selecciona las que quieras y completa el formulario. ¡Estaremos atentos! 📸`
+    const shareTemplate = `¡Hola! \u{1F44B} Soy de Titan TV. Encontramos ${command.photoIds.length} fotos tuyas del evento "${event.name}". Revísalas aquí: ${previewUrl}. Selecciona las que quieras y completa el formulario. ¡Estaremos atentos! \u{1F4F8}`
 
     return {
       id: saved.id,
