@@ -47,4 +47,11 @@ export class PhotoColorWriteRepository implements IPhotoColorWriteRepository {
     })
     return color
   }
+
+  async softDelete(colorId: string, reviewerId: string): Promise<void> {
+    await this.prisma.photoColor.update({
+      where: { id: colorId },
+      data: { deleted_at: new Date(), deleted_by_id: reviewerId },
+    })
+  }
 }

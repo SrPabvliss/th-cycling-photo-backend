@@ -1,5 +1,6 @@
 import { PhotoColor } from '@classifications/domain/entities'
 import { AttributeSource, ColorRegion } from '@generated/prisma/client'
+import { photoDetailSelectConfig } from '../mappers/photo.mapper'
 import { PhotoColorWriteRepository } from './photo-color-write.repository'
 
 describe('PhotoColorWriteRepository', () => {
@@ -11,6 +12,7 @@ describe('PhotoColorWriteRepository', () => {
       photoColor: {
         findUnique: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
       },
     }
     repo = new PhotoColorWriteRepository(prisma)
@@ -34,6 +36,23 @@ describe('PhotoColorWriteRepository', () => {
       primaryColor: 'red',
       secondaryColor: 'blue',
     })
+  })
+
+  it('softDelete stamps deleted_at and deleted_by_id without removing the row', async () => {
+    prisma.photoColor.update.mockResolvedValue({ id: 'c-1' })
+    await repo.softDelete('c-1', 'r-1')
+    expect(prisma.photoColor.update).toHaveBeenCalledWith({
+      where: { id: 'c-1' },
+      data: expect.objectContaining({
+        deleted_at: expect.any(Date),
+        deleted_by_id: 'r-1',
+      }),
+    })
+    expect(prisma.photoColor.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('photoDetailSelectConfig excludes soft-deleted colors from the detail include', () => {
+    expect(photoDetailSelectConfig.colors.where).toEqual({ deleted_at: null })
   })
 
   it('save persists manual color via create', async () => {
