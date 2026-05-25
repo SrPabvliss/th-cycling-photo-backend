@@ -34,10 +34,12 @@ function buildOrdersWhere(eventIds: string[], scope: RetouchOrderScope) {
 export class OperatorRetouchReadRepository implements IOperatorRetouchReadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getRetouchQueueRows(
+  async getRetouchQueuePage(
     eventId: string,
     scope: RetouchOrderScope,
-  ): Promise<OperatorRetouchQueueOrderRow[]> {
+    skip: number,
+    take: number,
+  ): Promise<{ items: OperatorRetouchQueueOrderRow[]; total: number }> {
     const where =
       scope === 'pending'
         ? {
@@ -54,33 +56,38 @@ export class OperatorRetouchReadRepository implements IOperatorRetouchReadReposi
 
     const itemsWhere = scope === 'pending' ? { photo: PENDING_PHOTO_FILTER } : undefined
 
-    const orders = await this.prisma.order.findMany({
-      where,
-      orderBy: { created_at: 'asc' },
-      select: {
-        id: true,
-        event_id: true,
-        event: { select: { name: true } },
-        snap_first_name: true,
-        snap_last_name: true,
-        created_at: true,
-        items: {
-          where: itemsWhere,
-          select: {
-            photo: {
-              select: {
-                id: true,
-                public_slug: true,
-                filename: true,
-                retouched_storage_key: true,
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        orderBy: { created_at: 'asc' },
+        skip,
+        take,
+        select: {
+          id: true,
+          event_id: true,
+          event: { select: { name: true } },
+          snap_first_name: true,
+          snap_last_name: true,
+          created_at: true,
+          items: {
+            where: itemsWhere,
+            select: {
+              photo: {
+                select: {
+                  id: true,
+                  public_slug: true,
+                  filename: true,
+                  retouched_storage_key: true,
+                },
               },
             },
           },
         },
-      },
-    })
+      }),
+      this.prisma.order.count({ where }),
+    ])
 
-    return orders.map((order) => ({
+    const items: OperatorRetouchQueueOrderRow[] = orders.map((order) => ({
       orderId: order.id,
       buyerName: [order.snap_first_name, order.snap_last_name].filter(Boolean).join(' '),
       eventId: order.event_id,
@@ -93,6 +100,8 @@ export class OperatorRetouchReadRepository implements IOperatorRetouchReadReposi
         retouchedStorageKey: item.photo.retouched_storage_key,
       })),
     }))
+
+    return { items, total }
   }
 
   async findOperatorRetouchOrdersPage(

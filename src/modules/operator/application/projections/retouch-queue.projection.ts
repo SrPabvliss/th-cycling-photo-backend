@@ -16,7 +16,3 @@ export class RetouchQueueOrderProjection {
   @ApiProperty() retouchedItems: number
   @ApiProperty({ type: [RetouchQueueItemProjection] }) items: RetouchQueueItemProjection[]
 }
-
-export class RetouchQueueProjection {
-  @ApiProperty({ type: [RetouchQueueOrderProjection] }) orders: RetouchQueueOrderProjection[]
-}

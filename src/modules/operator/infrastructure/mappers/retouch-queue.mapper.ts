@@ -2,7 +2,6 @@ import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import type {
   RetouchQueueItemProjection,
   RetouchQueueOrderProjection,
-  RetouchQueueProjection,
 } from '../../application/projections'
 import type { OperatorRetouchPhotoRow, OperatorRetouchQueueOrderRow } from '../../domain/ports'
 
@@ -34,11 +33,9 @@ function toOrderProjection(
   }
 }
 
-export function toRetouchQueueProjection(
+export function toRetouchQueueOrdersList(
   rows: OperatorRetouchQueueOrderRow[],
   cdn: CdnUrlBuilder,
-): RetouchQueueProjection {
-  return {
-    orders: rows.map((row) => toOrderProjection(row, cdn)),
-  }
+): RetouchQueueOrderProjection[] {
+  return rows.map((row) => toOrderProjection(row, cdn))
 }
