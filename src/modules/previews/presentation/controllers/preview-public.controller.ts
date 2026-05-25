@@ -1,6 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common'
 import { QueryBus } from '@nestjs/cqrs'
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { PreviewDataProjection } from '@previews/application/projections'
 import { GetPreviewByTokenQuery } from '@previews/application/queries'
 import { Public } from '@shared/auth'
@@ -11,6 +12,10 @@ import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@
 export class PreviewPublicController {
   constructor(private readonly queryBus: QueryBus) {}
 
+  // Token enumeration guard. Matches the limit applied to the delivery
+  // token endpoint (10 lookups/min/IP) since the threat model is the
+  // same: anyone with the URL can fetch; brute force should be slow.
+  @Throttle({ sensitive_token: { limit: 10, ttl: 60000 } })
   @Public()
   @Get(':token')
   @SuccessMessage('success.FETCHED', { entity: 'entities.preview_link' })

@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
 import { AppException } from '@shared/domain'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
@@ -41,6 +42,10 @@ export class AuthController {
     }
   }
 
+  // Brute-force / spam guard. Bypasses the very permissive global short
+  // bucket (1000/sec/IP) which would not stop credential stuffing or
+  // automated registration.
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
   @Public()
   @Post('register')
   @SuccessMessage('success.CREATED', { entity: 'entities.user' })
@@ -81,6 +86,7 @@ export class AuthController {
     return result.tokens
   }
 
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
   @Public()
   @Post('login')
   @SuccessMessage('success.CREATED', { entity: 'entities.session' })
@@ -106,6 +112,7 @@ export class AuthController {
     return result.tokens
   }
 
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
   @Public()
   @Post('refresh')
   @SuccessMessage('success.CREATED', { entity: 'entities.access_token' })

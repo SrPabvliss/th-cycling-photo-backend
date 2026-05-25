@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { SkipThrottle } from '@nestjs/throttler'
 import { EntityIdProjection } from '@shared/application'
 import { Public, Roles } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
@@ -35,6 +36,7 @@ export class PhotoCategoriesController {
 
   // ─── Global category endpoints ────────────────────────────────────────────
 
+  @SkipThrottle()
   @Public()
   @Get('photo-categories')
   @SuccessMessage('success.LIST')
@@ -61,6 +63,7 @@ export class PhotoCategoriesController {
 
   // ─── Event-scoped category endpoints ──────────────────────────────────────
 
+  @SkipThrottle()
   @Public()
   @Get('events/:eventId/photo-categories')
   @SuccessMessage('success.LIST')
