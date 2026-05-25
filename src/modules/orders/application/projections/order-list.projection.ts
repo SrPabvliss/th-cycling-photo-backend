@@ -1,3 +1,14 @@
+export class OrderListPreviewPhotoProjection {
+  /** Photo UUID */
+  photoId: string
+  /** Public slug (CDN) */
+  publicSlug: string
+  /** Pre-built CDN thumbnail URL */
+  thumbnailUrl: string
+  /** Original filename */
+  filename: string
+}
+
 export class OrderListProjection {
   /** Order UUID */
   id: string
@@ -19,4 +30,6 @@ export class OrderListProjection {
   photoCount: number
   /** Whether a delivery link exists for this order */
   hasDeliveryLink: boolean
+  /** First few photos in the order for thumbnail preview (max 3) */
+  previewPhotos: OrderListPreviewPhotoProjection[]
 }
