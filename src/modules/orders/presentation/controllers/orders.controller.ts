@@ -125,8 +125,8 @@ export class OrdersController {
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
   @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not delivered' })
-  async regenerateDelivery(@Param('id') id: string) {
-    return this.commandBus.execute(new RegenerateDeliveryCommand(id))
+  async regenerateDelivery(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new RegenerateDeliveryCommand(id, new AuditContext(user.userId)))
   }
 
   @Roles('admin')

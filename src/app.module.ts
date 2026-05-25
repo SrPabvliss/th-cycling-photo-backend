@@ -65,6 +65,9 @@ import { StorageModule } from './shared/storage/storage.module'
       { name: 'short', ttl: 1000, limit: 200 },
       { name: 'medium', ttl: 10000, limit: 1500 },
       { name: 'long', ttl: 60000, limit: 3000 },
+      // Endpoint-scoped throttler for sensitive public token lookups
+      // (delivery link, preview link). Apply via @Throttle({ sensitive_token: { ... } }).
+      { name: 'sensitive_token', ttl: 60000, limit: 10 },
     ]),
     EventEmitterModule.forRoot(),
     PrismaModule,
