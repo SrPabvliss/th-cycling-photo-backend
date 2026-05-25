@@ -1,11 +1,13 @@
 import { Controller, Get, ParseIntPipe, Query } from '@nestjs/common'
 import { QueryBus } from '@nestjs/cqrs'
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
+import { SkipThrottle } from '@nestjs/throttler'
 import { Public } from '@shared/auth'
 import { SuccessMessage } from '@shared/http'
 import { GetParticipantCategoriesQuery } from '../../application/queries/get-participant-categories'
 
 @ApiTags('participant-categories')
+@SkipThrottle()
 @Controller('participant-categories')
 export class ParticipantCategoriesController {
   constructor(private readonly queryBus: QueryBus) {}
