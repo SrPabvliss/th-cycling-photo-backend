@@ -8,6 +8,7 @@ export interface IPhotoColorWriteRepository {
     secondaryColor: string | null
   } | null>
   save(color: PhotoColor): Promise<PhotoColor>
+  softDelete(colorId: string, reviewerId: string): Promise<void>
 }
 
 export const PHOTO_COLOR_WRITE_REPOSITORY = Symbol('PHOTO_COLOR_WRITE_REPOSITORY')
