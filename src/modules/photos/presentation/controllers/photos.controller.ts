@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { BulkCategoryResultProjection } from '@photo-categories/application/projections'
@@ -17,6 +17,8 @@ import {
   ConfirmPhotoBatchDto,
   ConfirmRetouchedUploadCommand,
   ConfirmRetouchedUploadDto,
+  DeletePhotoBibCommand,
+  DeletePhotoColorCommand,
   GeneratePresignedUrlCommand,
   GeneratePresignedUrlDto,
   GenerateRetouchedPresignedUrlCommand,
@@ -266,6 +268,23 @@ export class PhotosController {
     )
   }
 
+  /** Soft-delete a bib (admin/operator). Marks `deleted_at`; crop file is retained as tech debt. */
+  @Roles('admin', 'operator')
+  @Delete('photos/:photoId/bibs/:bibId')
+  @HttpCode(200)
+  @SuccessMessage('success.DELETED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Soft-delete a photo bib (reviewer)' })
+  @ApiParam({ name: 'photoId', format: 'uuid' })
+  @ApiParam({ name: 'bibId', format: 'uuid' })
+  @ApiEnvelopeResponse({ status: 200, description: 'Bib soft-deleted', type: EntityIdProjection })
+  async deletePhotoBib(
+    @Param('photoId') photoId: string,
+    @Param('bibId') bibId: string,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(new DeletePhotoBibCommand(photoId, bibId, user.userId))
+  }
+
   /** Add a manual reviewer-sourced color to a photo (admin/operator). */
   @Roles('admin', 'operator')
   @Post('photos/:photoId/colors')
@@ -291,6 +310,23 @@ export class PhotosController {
         user.userId,
       ),
     )
+  }
+
+  /** Soft-delete a color (admin/operator). Marks `deleted_at`. */
+  @Roles('admin', 'operator')
+  @Delete('photos/:photoId/colors/:colorId')
+  @HttpCode(200)
+  @SuccessMessage('success.DELETED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Soft-delete a photo color (reviewer)' })
+  @ApiParam({ name: 'photoId', format: 'uuid' })
+  @ApiParam({ name: 'colorId', format: 'uuid' })
+  @ApiEnvelopeResponse({ status: 200, description: 'Color soft-deleted', type: EntityIdProjection })
+  async deletePhotoColor(
+    @Param('photoId') photoId: string,
+    @Param('colorId') colorId: string,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(new DeletePhotoColorCommand(photoId, colorId, user.userId))
   }
 
   /** Paginated review queue for an event, ordered by min(bib confidence) ASC NULLS FIRST (admin/operator). */
