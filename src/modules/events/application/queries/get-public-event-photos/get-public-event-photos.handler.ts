@@ -20,6 +20,7 @@ export class GetPublicEventPhotosHandler implements IQueryHandler<GetPublicEvent
       photoCategoryId: query.photoCategoryId,
       bibNumber: query.bibNumber,
       bibMatch: query.bibMatch,
+      section: query.section,
     })
   }
 }

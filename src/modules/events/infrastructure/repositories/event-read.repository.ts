@@ -207,8 +207,19 @@ export class EventReadRepository implements IEventReadRepository {
       photoCategoryId: number | null
       bibNumber: string | null
       bibMatch: 'exact' | 'starts' | 'contains'
+      section: 'matched' | 'no_bib' | null
     },
   ): Promise<PaginatedResult<PublicPhotoProjection>> {
+    // The "no_bib" section is independent from the bib filter — it returns
+    // photos in the event with no non-deleted bib so the rider can find
+    // themselves when OCR missed the plate. Same category filter still
+    // applies. Caller is expected to set `section: 'no_bib'`; we don't
+    // require `bibNumber` here because the set itself doesn't depend on
+    // the searched digits, only on the absence of any detected bib.
+    if (options.section === 'no_bib') {
+      return this.getPhotosWithoutBib(eventId, pagination, options.photoCategoryId)
+    }
+
     const where: Prisma.PhotoWhereInput = { event_id: eventId }
 
     if (options.photoCategoryId) {
@@ -221,6 +232,50 @@ export class EventReadRepository implements IEventReadRepository {
         return new PaginatedResult<PublicPhotoProjection>([], 0, pagination)
       }
       where.id = { in: ids }
+    }
+
+    const [photos, total] = await Promise.all([
+      this.prisma.photo.findMany({
+        where,
+        select: { id: true, public_slug: true, width: true, height: true },
+        orderBy: { uploaded_at: 'desc' },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+      this.prisma.photo.count({ where }),
+    ])
+
+    return new PaginatedResult(
+      photos.map((p) => ({
+        id: p.id,
+        publicSlug: p.public_slug,
+        width: p.width,
+        height: p.height,
+      })),
+      total,
+      pagination,
+    )
+  }
+
+  /**
+   * Returns paginated photos in the given event that have no detected
+   * bib at all (or whose bibs were all soft-deleted). Used to feed the
+   * "no plate detected" companion section of the public gallery search,
+   * so a rider whose plate wasn't visible to OCR can still browse their
+   * own photos.
+   */
+  private async getPhotosWithoutBib(
+    eventId: string,
+    pagination: Pagination,
+    photoCategoryId: number | null,
+  ): Promise<PaginatedResult<PublicPhotoProjection>> {
+    const where: Prisma.PhotoWhereInput = {
+      event_id: eventId,
+      bibs: { none: { deleted_at: null } },
+    }
+
+    if (photoCategoryId) {
+      where.photo_category_id = photoCategoryId
     }
 
     const [photos, total] = await Promise.all([

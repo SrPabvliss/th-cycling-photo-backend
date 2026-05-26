@@ -40,6 +40,7 @@ export interface IEventReadRepository {
       photoCategoryId: number | null
       bibNumber: string | null
       bibMatch: 'exact' | 'starts' | 'contains'
+      section: 'matched' | 'no_bib' | null
     },
   ): Promise<PaginatedResult<PublicPhotoProjection>>
   existsActiveEvent(eventId: string): Promise<{ id: string; name: string } | null>
