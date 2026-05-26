@@ -60,6 +60,7 @@ export class PublicEventsController {
   @ApiQuery({ name: 'photoCategoryId', required: false, type: Number })
   @ApiQuery({ name: 'bibNumber', required: false, type: String })
   @ApiQuery({ name: 'bibMatch', required: false, enum: ['exact', 'starts', 'contains'] })
+  @ApiQuery({ name: 'section', required: false, enum: ['matched', 'no_bib'] })
   @ApiEnvelopeResponse({
     status: 200,
     description: 'Paginated list of watermarked photos',
@@ -76,6 +77,7 @@ export class PublicEventsController {
         dto.photoCategoryId ?? null,
         dto.bibNumber ?? null,
         dto.bibMatch ?? 'exact',
+        dto.section ?? null,
       ),
     )
   }
