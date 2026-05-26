@@ -7,5 +7,6 @@ export class GetPublicEventPhotosQuery {
     public readonly photoCategoryId: number | null,
     public readonly bibNumber: string | null,
     public readonly bibMatch: 'exact' | 'starts' | 'contains',
+    public readonly section: 'matched' | 'no_bib' | null,
   ) {}
 }
