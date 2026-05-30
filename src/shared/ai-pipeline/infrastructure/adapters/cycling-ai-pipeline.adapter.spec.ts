@@ -29,6 +29,17 @@ describe('CyclingAiPipelineAdapter', () => {
     adapter = new CyclingAiPipelineAdapter(baseConfig as ConfigService)
   })
 
+  it('calls pipeline with color=none (TIT-9: color stage disabled)', async () => {
+    fetchMock.mockResolvedValueOnce(buildResponse(singleCyclist))
+    await adapter.classify({
+      imageId: '00000000-0000-0000-0000-000000000001',
+      imageUrl: 'https://x/y.jpg',
+    })
+    const calledUrl = fetchMock.mock.calls[0][0] as string
+    expect(calledUrl).toContain('color=none')
+    expect(calledUrl).not.toContain('color=gemini')
+  })
+
   it('parses a v1.0 happy-path response', async () => {
     fetchMock.mockResolvedValueOnce(buildResponse(singleCyclist))
     const r = await adapter.classify({
