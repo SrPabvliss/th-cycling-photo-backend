@@ -10,7 +10,12 @@ export interface EmbeddingGenerationJobData {
   photoId: string
 }
 
-@Processor('embedding-generation', { concurrency: 3 })
+const EMBEDDING_CONCURRENCY = Number.parseInt(
+  process.env.EMBEDDING_GENERATION_CONCURRENCY ?? '3',
+  10,
+)
+
+@Processor('embedding-generation', { concurrency: EMBEDDING_CONCURRENCY })
 export class EmbeddingGenerationProcessor extends WorkerHost {
   private readonly logger = new Logger(EmbeddingGenerationProcessor.name)
 

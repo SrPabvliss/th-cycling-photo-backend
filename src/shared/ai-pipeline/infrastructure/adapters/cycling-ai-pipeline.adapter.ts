@@ -30,7 +30,11 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
   async classify(request: ClassificationPipelineRequest): Promise<ClassificationPipelineResponse> {
     let response: Response
     try {
-      response = await fetch(`${this.baseUrl}/pipeline?detector=yolo&ocr=parseq&color=gemini`, {
+      // TIT-9: color stage disabled (?color=none). Gemini call removed because
+      // it consumed ~70-80% of per-photo time without discriminating value.
+      // Pipeline returns color_analyses=[] → no photo_colors rows inserted.
+      // Reviewers can still add colors manually from the admin UI.
+      response = await fetch(`${this.baseUrl}/pipeline?detector=yolo&ocr=parseq&color=none`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
