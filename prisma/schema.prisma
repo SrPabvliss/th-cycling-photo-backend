@@ -86,6 +86,7 @@ enum PreviewLinkStatus {
 
 enum OrderStatus {
   pending
+  payment_info_sent
   paid
   delivered
   cancelled
@@ -225,6 +226,7 @@ model User {
   corrections            Correction[]    @relation("UserCorrections")
   preview_links_created  PreviewLink[]   @relation("PreviewLinkCreatedBy")
   orders_confirmed       Order[]         @relation("OrderConfirmedBy")
+  orders_notified        Order[]         @relation("OrderNotifiedBy")
   orders_placed          Order[]         @relation("OrderUser")
   carts                  Cart[]
   notifications          Notification[]
@@ -588,14 +590,17 @@ model Order {
   snap_canton_id     Int?
   snap_category_name String?     @db.VarChar(100)
   created_at         DateTime    @default(now()) @db.Timestamptz
+  notified_at        DateTime?   @db.Timestamptz
   paid_at            DateTime?   @db.Timestamptz
   delivered_at       DateTime?   @db.Timestamptz
   cancelled_at       DateTime?   @db.Timestamptz
+  notified_by_id     String?     @db.Uuid
   confirmed_by_id    String?     @db.Uuid
 
   preview_link  PreviewLink?  @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
   event         Event         @relation(fields: [event_id], references: [id], onDelete: Restrict)
   user          User          @relation("OrderUser", fields: [user_id], references: [id], onDelete: Restrict)
+  notified_by   User?         @relation("OrderNotifiedBy", fields: [notified_by_id], references: [id], onDelete: Restrict)
   confirmed_by  User?         @relation("OrderConfirmedBy", fields: [confirmed_by_id], references: [id], onDelete: Restrict)
   items         OrderItem[]
   delivery_link DeliveryLink?
@@ -605,6 +610,7 @@ model Order {
   @@index([user_id])
   @@index([status])
   @@index([confirmed_by_id])
+  @@index([notified_by_id])
   @@index([created_at(sort: Desc)])
   @@index([user_id, created_at(sort: Desc)], map: "idx_order_user_date")
   @@index([event_id, created_at(sort: Desc)], map: "idx_order_event_date")

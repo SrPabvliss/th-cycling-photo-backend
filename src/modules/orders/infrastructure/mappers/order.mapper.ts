@@ -15,9 +15,11 @@ export function toPersistence(entity: Order): Prisma.OrderUncheckedCreateInput {
     bib_number: entity.bibNumber,
     subtotal: entity.subtotal,
     created_at: entity.createdAt,
+    notified_at: entity.notifiedAt,
     paid_at: entity.paidAt,
     delivered_at: entity.deliveredAt,
     cancelled_at: entity.cancelledAt,
+    notified_by_id: entity.notifiedById,
     confirmed_by_id: entity.confirmedById,
   }
 }
@@ -34,9 +36,11 @@ export function toEntity(record: PrismaOrder): Order {
     bibNumber: record.bib_number,
     subtotal: record.subtotal ? Number(record.subtotal) : null,
     createdAt: record.created_at,
+    notifiedAt: record.notified_at,
     paidAt: record.paid_at,
     deliveredAt: record.delivered_at,
     cancelledAt: record.cancelled_at,
+    notifiedById: record.notified_by_id,
     confirmedById: record.confirmed_by_id,
   })
 }

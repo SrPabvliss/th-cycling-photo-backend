@@ -22,6 +22,8 @@ export class OrderDetailProjection {
   notes: string | null
   /** When the order was created */
   createdAt: Date
+  /** When the admin sent payment info to the customer */
+  notifiedAt: Date | null
   /** When payment was confirmed */
   paidAt: Date | null
   /** When photos were delivered */

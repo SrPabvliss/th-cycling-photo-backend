@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import {
   CancelOrderCommand,
   ConfirmOrderPaymentCommand,
+  NotifyPaymentInfoCommand,
   RegenerateDeliveryCommand,
   SendDeliveryCommand,
 } from '@orders/application/commands'
@@ -78,6 +79,25 @@ export class OrdersController {
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
   async findOne(@Param('id') id: string) {
     return this.queryBus.execute(new GetOrderDetailQuery(id))
+  }
+
+  @Roles('admin')
+  @Patch(':id/notify-payment-info')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
+  @ApiOperation({
+    summary: 'Mark payment info as sent (pending → payment_info_sent). Idempotent on re-notify.',
+  })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Payment info notification recorded',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not pending' })
+  async notifyPaymentInfo(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    const command = new NotifyPaymentInfoCommand(id, new AuditContext(user.userId))
+    return this.commandBus.execute(command)
   }
 
   @Roles('admin')

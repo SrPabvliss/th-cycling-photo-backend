@@ -12,10 +12,12 @@ export class OrderListPreviewPhotoProjection {
 export class OrderListProjection {
   /** Order UUID */
   id: string
-  /** Current status: pending, paid, delivered, cancelled */
+  /** Current status: pending, payment_info_sent, paid, delivered, cancelled */
   status: string
   /** When the order was created */
   createdAt: Date
+  /** When the admin sent payment info to the customer (null if not notified yet) */
+  notifiedAt: Date | null
   /** When payment was confirmed (null if pending) */
   paidAt: Date | null
   /** When photos were delivered (null if not yet) */
