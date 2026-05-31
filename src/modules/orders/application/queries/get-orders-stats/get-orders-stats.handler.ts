@@ -12,13 +12,15 @@ export class GetOrdersStatsHandler implements IQueryHandler<GetOrdersStatsQuery>
     const counts = await this.readRepo.countByStatus()
 
     const pending = counts.pending ?? 0
+    const paymentInfoSent = counts.payment_info_sent ?? 0
     const paid = counts.paid ?? 0
     const delivered = counts.delivered ?? 0
     const cancelled = counts.cancelled ?? 0
 
     return {
-      totalOrders: pending + paid + delivered + cancelled,
+      totalOrders: pending + paymentInfoSent + paid + delivered + cancelled,
       pendingCount: pending,
+      paymentInfoSentCount: paymentInfoSent,
       paidCount: paid + delivered,
       deliveredCount: delivered,
       cancelledCount: cancelled,
