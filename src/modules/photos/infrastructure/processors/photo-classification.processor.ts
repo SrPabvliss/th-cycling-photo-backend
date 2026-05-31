@@ -8,7 +8,12 @@ export interface PhotoClassificationJobData {
   photoId: string
 }
 
-@Processor('photo-classification', { concurrency: 3 })
+const CLASSIFICATION_CONCURRENCY = Number.parseInt(
+  process.env.PHOTO_CLASSIFICATION_CONCURRENCY ?? '3',
+  10,
+)
+
+@Processor('photo-classification', { concurrency: CLASSIFICATION_CONCURRENCY })
 export class PhotoClassificationProcessor extends WorkerHost {
   private readonly logger = new Logger(PhotoClassificationProcessor.name)
 
