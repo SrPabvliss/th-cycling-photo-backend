@@ -25,7 +25,19 @@ const ORDER_LIST_SELECT = {
   snap_phone: true,
   subtotal: true,
   snap_currency: true,
-  user: { select: { first_name: true, last_name: true } },
+  user: {
+    select: {
+      id: true,
+      first_name: true,
+      last_name: true,
+      email: true,
+      phones: {
+        where: { is_primary: true },
+        take: 1,
+        select: { phone_number: true },
+      },
+    },
+  },
   event: { select: { name: true } },
   _count: { select: { items: true } },
   delivery_link: { select: { id: true } },
@@ -61,10 +73,19 @@ export class OrderReadRepository implements IOrderReadRepository {
     if (filters.eventId) where.event_id = filters.eventId
     if (filters.status) where.status = filters.status as Prisma.EnumOrderStatusFilter
     if (filters.search) {
+      const term = filters.search
       where.OR = [
-        { snap_first_name: { contains: filters.search, mode: 'insensitive' } },
-        { snap_last_name: { contains: filters.search, mode: 'insensitive' } },
-        { snap_phone: { contains: filters.search, mode: 'insensitive' } },
+        { snap_first_name: { contains: term, mode: 'insensitive' } },
+        { snap_last_name: { contains: term, mode: 'insensitive' } },
+        { snap_phone: { contains: term, mode: 'insensitive' } },
+        { user: { first_name: { contains: term, mode: 'insensitive' } } },
+        { user: { last_name: { contains: term, mode: 'insensitive' } } },
+        { user: { email: { contains: term, mode: 'insensitive' } } },
+        {
+          user: {
+            phones: { some: { phone_number: { contains: term, mode: 'insensitive' } } },
+          },
+        },
       ]
     }
 
@@ -87,7 +108,12 @@ export class OrderReadRepository implements IOrderReadRepository {
         notifiedAt: o.notified_at,
         paidAt: o.paid_at,
         deliveredAt: o.delivered_at,
-        userName: [o.user.first_name, o.user.last_name].filter(Boolean).join(' '),
+        userName: [o.snap_first_name, o.snap_last_name].filter(Boolean).join(' '),
+        userId: o.user.id,
+        customerFirstName: o.user.first_name,
+        customerLastName: o.user.last_name,
+        customerEmail: o.user.email,
+        customerPrimaryPhone: o.user.phones[0]?.phone_number ?? null,
         snapWhatsapp: o.snap_phone,
         eventName: o.event.name,
         photoCount: o._count.items,
