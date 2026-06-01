@@ -1,0 +1,8 @@
+{
+  "invalid_tier_min_qty": "La cantidad mínima debe ser un entero positivo",
+  "invalid_tier_max_qty": "La cantidad máxima debe ser nula o un entero mayor o igual a la cantidad mínima",
+  "invalid_tier_price": "El precio por foto no puede ser negativo",
+  "invalid_quantity": "La cantidad debe ser un entero positivo",
+  "no_tiers_configured": "No hay tramos de precio configurados",
+  "quantity_not_covered": "Ningún tramo de precio cubre la cantidad solicitada"
+}

@@ -32,7 +32,8 @@
       "@orders/*": ["src/modules/orders/*"],
       "@notifications/*": ["src/modules/notifications/*"],
       "@auth/*": ["src/modules/auth/*"],
-      "@cart/*": ["src/modules/cart/*"]
+      "@cart/*": ["src/modules/cart/*"],
+      "@pricing/*": ["src/modules/pricing/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

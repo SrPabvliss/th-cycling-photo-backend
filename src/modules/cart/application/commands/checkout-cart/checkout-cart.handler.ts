@@ -11,6 +11,11 @@ import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { NotificationsService } from '@notifications/application/services/notifications.service'
 import { Order } from '@orders/domain/entities'
 import { type IOrderWriteRepository, ORDER_WRITE_REPOSITORY } from '@orders/domain/ports'
+import { PricingCalculator } from '@pricing/domain/services/pricing-calculator.service'
+import {
+  DEFAULT_CURRENCY,
+  DEFAULT_PRICING_TIERS,
+} from '@pricing/infrastructure/config/default-pricing-tiers'
 import { AppException } from '@shared/domain'
 import { CheckoutCartCommand } from './checkout-cart.command'
 
@@ -50,6 +55,27 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
       throw AppException.businessRule('order.customer_profile_required')
     }
 
+    /**
+     * Pricing is calculated at the CART level (across all events) using the default
+     * tiers. This was a deliberate decision (see TIT-10 spec): while every event
+     * uses the same default tier list, applying per-event tiers would punish
+     * customers who split a single purchase across multiple events (e.g. 1+10
+     * photos across two events should be billed as 11 photos in the top tier, not
+     * as two separate small purchases).
+     *
+     * When per-event pricing override goes live, this will need bucket logic:
+     * group cart items by their pricing config identity, calculate per bucket,
+     * sum across buckets. That change carries product implications (UX of mixed-
+     * bucket carts, total/subtotal display, etc.) — defer until a real per-event
+     * override is requested. See TIT-XX (follow-up).
+     */
+    const totalPhotos = command.items.reduce((sum, item) => {
+      const cartEvent = cartEventMap.get(item.eventId)
+      return sum + (cartEvent ? cartEvent.photoIds.length : 0)
+    }, 0)
+    const calc = PricingCalculator.calculate(totalPhotos, DEFAULT_PRICING_TIERS)
+    const snapPricingConfig = DEFAULT_PRICING_TIERS.map((t) => t.toJSON())
+
     // 6. Create one order per event
     const orderResults: { orderId: string; eventName: string; photoCount: number }[] = []
 
@@ -57,12 +83,17 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
       const cartEvent = cartEventMap.get(item.eventId)
       if (!cartEvent) continue
 
+      const orderSubtotal = Math.round(calc.unitPrice * cartEvent.photoIds.length * 100) / 100
+
       const order = Order.create({
         previewLinkId: null,
         eventId: item.eventId,
         userId: command.userId,
         notes: null,
         bibNumber: item.bibNumber ?? null,
+        subtotal: orderSubtotal,
+        snapCurrency: DEFAULT_CURRENCY,
+        snapPricingConfig,
       })
 
       const saved = await this.orderWriteRepo.saveWithSnap(order, {
@@ -76,7 +107,10 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
         snapCategoryName: item.snapCategoryName ?? null,
       })
 
-      await this.orderWriteRepo.savePhotos(saved.id, cartEvent.photoIds)
+      await this.orderWriteRepo.savePhotos(
+        saved.id,
+        cartEvent.photoIds.map((id) => ({ photoId: id, unitPrice: calc.unitPrice })),
+      )
 
       orderResults.push({
         orderId: saved.id,
@@ -90,6 +124,8 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
         eventName: cartEvent.eventName,
         customerName: [snapData.firstName, snapData.lastName].filter(Boolean).join(' '),
         photoCount: cartEvent.photoIds.length,
+        subtotal: orderSubtotal,
+        currency: DEFAULT_CURRENCY,
         createdAt: saved.createdAt,
         actorUserId: command.userId,
       })

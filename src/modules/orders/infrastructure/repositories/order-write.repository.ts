@@ -54,12 +54,16 @@ export class OrderWriteRepository implements IOrderWriteRepository {
     return OrderMapper.toEntity(saved)
   }
 
-  /** Creates photo associations for an order. */
-  async savePhotos(orderId: string, photoIds: string[]): Promise<void> {
+  /** Creates photo associations for an order with per-item unit price. */
+  async savePhotos(
+    orderId: string,
+    items: { photoId: string; unitPrice: number | null }[],
+  ): Promise<void> {
     await this.prisma.orderItem.createMany({
-      data: photoIds.map((photoId) => ({
+      data: items.map((i) => ({
         order_id: orderId,
-        photo_id: photoId,
+        photo_id: i.photoId,
+        unit_price: i.unitPrice,
       })),
       skipDuplicates: true,
     })

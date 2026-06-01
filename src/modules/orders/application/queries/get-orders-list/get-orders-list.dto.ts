@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
+import { OrderStatus, type OrderStatusType } from '@orders/domain/value-objects/order-status.vo'
 import { PaginationQueryDto } from '@shared/application'
-import { IsOptional, IsString, IsUUID } from 'class-validator'
+import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator'
 
 export class GetOrdersListDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filter by event ID' })
@@ -8,10 +9,14 @@ export class GetOrdersListDto extends PaginationQueryDto {
   @IsOptional()
   eventId?: string
 
-  @ApiPropertyOptional({ description: 'Filter by status', example: 'pending' })
-  @IsString()
+  @ApiPropertyOptional({
+    description: 'Filter by status',
+    enum: Object.values(OrderStatus),
+    example: 'pending',
+  })
+  @IsEnum(OrderStatus)
   @IsOptional()
-  status?: string
+  status?: OrderStatusType
 
   @ApiPropertyOptional({ description: 'Search by customer name or WhatsApp', example: 'Carlos' })
   @IsString()

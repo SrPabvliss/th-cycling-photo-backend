@@ -26,6 +26,7 @@ import { ParticipantCategoriesModule } from './modules/participant-categories/pa
 import { PhotoCategoriesModule } from './modules/photo-categories/photo-categories.module'
 import { PhotosModule } from './modules/photos/photos.module'
 import { PreviewsModule } from './modules/previews/previews.module'
+import { PricingModule } from './modules/pricing/pricing.module'
 import { UsersModule } from './modules/users/users.module'
 import { AiPipelineModule } from './shared/ai-pipeline/ai-pipeline.module'
 import { RolesGuard } from './shared/auth'
@@ -91,6 +92,7 @@ import { StorageModule } from './shared/storage/storage.module'
     LocationsModule,
     OperatorModule,
     OrdersModule,
+    PricingModule,
     ParticipantCategoriesModule,
     PhotoCategoriesModule,
     PhotosModule,

@@ -14,7 +14,7 @@ export type OrderSnapData = {
 export interface IOrderWriteRepository {
   save(order: Order): Promise<Order>
   saveWithSnap(order: Order, snap: OrderSnapData): Promise<Order>
-  savePhotos(orderId: string, photoIds: string[]): Promise<void>
+  savePhotos(orderId: string, items: { photoId: string; unitPrice: number | null }[]): Promise<void>
   updateItemsDeliveredAs(orderId: string): Promise<void>
 }
 
