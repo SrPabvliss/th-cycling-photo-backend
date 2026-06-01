@@ -279,18 +279,19 @@ model RefreshToken {
 }
 
 model Event {
-  id            String      @id @default(uuid()) @db.Uuid
-  name          String      @db.VarChar(200)
-  slug          String      @unique @db.VarChar(250)
-  start_date    DateTime    @db.Date
-  end_date      DateTime    @db.Date
-  event_type_id Int
-  province_id   Int?
-  canton_id     Int?
-  status        EventStatus @default(active)
-  created_at    DateTime    @default(now()) @db.Timestamptz
-  updated_at    DateTime    @default(now()) @updatedAt @db.Timestamptz
-  deleted_at    DateTime?   @db.Timestamptz
+  id             String      @id @default(uuid()) @db.Uuid
+  name           String      @db.VarChar(200)
+  slug           String      @unique @db.VarChar(250)
+  start_date     DateTime    @db.Date
+  end_date       DateTime    @db.Date
+  event_type_id  Int
+  province_id    Int?
+  canton_id      Int?
+  status         EventStatus @default(active)
+  pricing_config Json?
+  created_at     DateTime    @default(now()) @db.Timestamptz
+  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz
+  deleted_at     DateTime?   @db.Timestamptz
 
   created_by_id String? @db.Uuid
   updated_by_id String? @db.Uuid
@@ -573,29 +574,31 @@ model PreviewLinkPhoto {
 }
 
 model Order {
-  id                 String      @id @default(uuid()) @db.Uuid
-  preview_link_id    String?     @db.Uuid
-  event_id           String      @db.Uuid
-  user_id            String      @db.Uuid
-  status             OrderStatus @default(pending)
-  bib_number         String?     @db.VarChar(20)
-  subtotal           Decimal?    @db.Decimal(10, 2)
-  notes              String?     @db.Text
-  snap_first_name    String?     @db.VarChar(100)
-  snap_last_name     String?     @db.VarChar(100)
-  snap_email         String?     @db.VarChar(255)
-  snap_phone         String?     @db.VarChar(20)
-  snap_country_id    Int?
-  snap_province_id   Int?
-  snap_canton_id     Int?
-  snap_category_name String?     @db.VarChar(100)
-  created_at         DateTime    @default(now()) @db.Timestamptz
-  notified_at        DateTime?   @db.Timestamptz
-  paid_at            DateTime?   @db.Timestamptz
-  delivered_at       DateTime?   @db.Timestamptz
-  cancelled_at       DateTime?   @db.Timestamptz
-  notified_by_id     String?     @db.Uuid
-  confirmed_by_id    String?     @db.Uuid
+  id                  String      @id @default(uuid()) @db.Uuid
+  preview_link_id     String?     @db.Uuid
+  event_id            String      @db.Uuid
+  user_id             String      @db.Uuid
+  status              OrderStatus @default(pending)
+  bib_number          String?     @db.VarChar(20)
+  subtotal            Decimal?    @db.Decimal(10, 2)
+  snap_currency       String?     @db.VarChar(3)
+  snap_pricing_config Json?
+  notes               String?     @db.Text
+  snap_first_name     String?     @db.VarChar(100)
+  snap_last_name      String?     @db.VarChar(100)
+  snap_email          String?     @db.VarChar(255)
+  snap_phone          String?     @db.VarChar(20)
+  snap_country_id     Int?
+  snap_province_id    Int?
+  snap_canton_id      Int?
+  snap_category_name  String?     @db.VarChar(100)
+  created_at          DateTime    @default(now()) @db.Timestamptz
+  notified_at         DateTime?   @db.Timestamptz
+  paid_at             DateTime?   @db.Timestamptz
+  delivered_at        DateTime?   @db.Timestamptz
+  cancelled_at        DateTime?   @db.Timestamptz
+  notified_by_id      String?     @db.Uuid
+  confirmed_by_id     String?     @db.Uuid
 
   preview_link  PreviewLink?  @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
   event         Event         @relation(fields: [event_id], references: [id], onDelete: Restrict)

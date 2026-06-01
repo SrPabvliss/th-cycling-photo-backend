@@ -12,6 +12,7 @@ import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { OrdersModule } from '@orders/orders.module'
 import { PhotosModule } from '@photos/photos.module'
+import { PricingModule } from '@pricing/pricing.module'
 
 const CommandHandlers = [
   AddToCartHandler,
@@ -27,6 +28,7 @@ const QueryHandlers = [GetCartHandler]
     forwardRef(() => AuthModule),
     forwardRef(() => OrdersModule),
     forwardRef(() => PhotosModule),
+    PricingModule,
   ],
   controllers: [CartController],
   providers: [

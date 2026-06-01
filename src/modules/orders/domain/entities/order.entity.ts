@@ -1,3 +1,4 @@
+import { type PricingTierSnapshot } from '@pricing/domain/value-objects'
 import { AppException } from '@shared/domain'
 import { OrderStatus, type OrderStatusType } from '../value-objects/order-status.vo'
 
@@ -11,6 +12,8 @@ export class Order {
     public readonly notes: string | null,
     public readonly bibNumber: string | null,
     public readonly subtotal: number | null,
+    public readonly snapCurrency: string | null,
+    public readonly snapPricingConfig: PricingTierSnapshot[] | null,
     public readonly createdAt: Date,
     public notifiedAt: Date | null,
     public paidAt: Date | null,
@@ -31,6 +34,8 @@ export class Order {
     notes: string | null
     bibNumber?: string | null
     subtotal?: number | null
+    snapCurrency?: string | null
+    snapPricingConfig?: PricingTierSnapshot[] | null
   }): Order {
     return new Order(
       crypto.randomUUID(),
@@ -41,6 +46,8 @@ export class Order {
       data.notes,
       data.bibNumber ?? null,
       data.subtotal ?? null,
+      data.snapCurrency ?? null,
+      data.snapPricingConfig ?? null,
       new Date(),
       null,
       null,
@@ -64,6 +71,8 @@ export class Order {
     notes: string | null
     bibNumber: string | null
     subtotal: number | null
+    snapCurrency: string | null
+    snapPricingConfig: PricingTierSnapshot[] | null
     createdAt: Date
     notifiedAt: Date | null
     paidAt: Date | null
@@ -81,6 +90,8 @@ export class Order {
       data.notes,
       data.bibNumber,
       data.subtotal,
+      data.snapCurrency,
+      data.snapPricingConfig,
       data.createdAt,
       data.notifiedAt,
       data.paidAt,

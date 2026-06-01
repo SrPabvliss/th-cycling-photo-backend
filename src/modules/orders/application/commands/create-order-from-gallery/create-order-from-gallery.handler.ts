@@ -64,7 +64,10 @@ export class CreateOrderFromGalleryHandler
     })
 
     // 5. Save order items (photo associations)
-    await this.orderWriteRepo.savePhotos(saved.id, command.photoIds)
+    await this.orderWriteRepo.savePhotos(
+      saved.id,
+      command.photoIds.map((id) => ({ photoId: id, unitPrice: null })),
+    )
 
     // 6. Emit notification
     this.notifications.emitOrderCreated({

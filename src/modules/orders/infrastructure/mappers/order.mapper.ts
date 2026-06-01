@@ -1,7 +1,8 @@
-import type { Prisma, Order as PrismaOrder } from '@generated/prisma/client'
+import { Prisma, type Order as PrismaOrder } from '@generated/prisma/client'
 import type { RetouchCompletedOrderProjection } from '@orders/application/projections'
 import { Order } from '@orders/domain/entities'
 import type { OrderStatusType } from '@orders/domain/value-objects/order-status.vo'
+import type { PricingTierSnapshot } from '@pricing/domain/value-objects'
 
 /** Converts a domain entity to a Prisma create input. */
 export function toPersistence(entity: Order): Prisma.OrderUncheckedCreateInput {
@@ -14,6 +15,11 @@ export function toPersistence(entity: Order): Prisma.OrderUncheckedCreateInput {
     notes: entity.notes,
     bib_number: entity.bibNumber,
     subtotal: entity.subtotal,
+    snap_currency: entity.snapCurrency,
+    snap_pricing_config:
+      entity.snapPricingConfig === null
+        ? Prisma.DbNull
+        : (entity.snapPricingConfig as unknown as Prisma.InputJsonValue),
     created_at: entity.createdAt,
     notified_at: entity.notifiedAt,
     paid_at: entity.paidAt,
@@ -34,7 +40,9 @@ export function toEntity(record: PrismaOrder): Order {
     status: record.status as OrderStatusType,
     notes: record.notes,
     bibNumber: record.bib_number,
-    subtotal: record.subtotal ? Number(record.subtotal) : null,
+    subtotal: record.subtotal != null ? Number(record.subtotal) : null,
+    snapCurrency: record.snap_currency,
+    snapPricingConfig: record.snap_pricing_config as unknown as PricingTierSnapshot[] | null,
     createdAt: record.created_at,
     notifiedAt: record.notified_at,
     paidAt: record.paid_at,

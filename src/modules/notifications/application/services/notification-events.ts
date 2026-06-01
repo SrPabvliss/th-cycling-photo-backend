@@ -18,6 +18,8 @@ export interface OrderCreatedPayload {
   eventName: string
   customerName: string
   photoCount: number
+  subtotal?: number | null
+  currency?: string | null
   createdAt: Date
   actorUserId?: string
 }

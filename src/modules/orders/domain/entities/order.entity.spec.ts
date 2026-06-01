@@ -19,7 +19,7 @@ describe('Order.notifyPaymentInfo', () => {
     expect(order.status).toBe(OrderStatus.PAYMENT_INFO_SENT)
     expect(order.notifiedById).toBe('admin-1')
     expect(order.notifiedAt).toBeInstanceOf(Date)
-    expect(order.notifiedAt!.getTime()).toBeGreaterThanOrEqual(before)
+    expect((order.notifiedAt as Date).getTime()).toBeGreaterThanOrEqual(before)
   })
 
   it('is idempotent: re-notifying does not overwrite original audit fields', () => {
@@ -113,5 +113,33 @@ describe('Order.cancel (extended)', () => {
     order.confirmPayment('admin-1')
 
     expect(() => order.cancel()).toThrow(AppException)
+  })
+})
+
+describe('Order.create (snapshot pricing)', () => {
+  it('Order.create accepts snapshot pricing fields', () => {
+    const order = Order.create({
+      previewLinkId: null,
+      eventId: 'e1',
+      userId: 'u1',
+      notes: null,
+      subtotal: 17.5,
+      snapCurrency: 'USD',
+      snapPricingConfig: [{ minQty: 7, maxQty: 9, pricePerPhoto: 2.5 }],
+    })
+    expect(order.subtotal).toBe(17.5)
+    expect(order.snapCurrency).toBe('USD')
+    expect(order.snapPricingConfig).toEqual([{ minQty: 7, maxQty: 9, pricePerPhoto: 2.5 }])
+  })
+
+  it('Order.create defaults snapshot pricing fields to null', () => {
+    const order = Order.create({
+      previewLinkId: null,
+      eventId: 'e1',
+      userId: 'u1',
+      notes: null,
+    })
+    expect(order.snapCurrency).toBeNull()
+    expect(order.snapPricingConfig).toBeNull()
   })
 })

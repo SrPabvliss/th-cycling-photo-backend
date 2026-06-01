@@ -42,6 +42,10 @@ export class OrderDetailProjection {
   snapEmail: string | null
   /** Event name */
   eventName: string
+  /** Order subtotal (Decimal serialized as string to preserve precision) */
+  subtotal: string | null
+  /** Currency code snapshot at time of order (e.g. USD) */
+  snapCurrency: string | null
   /** Preview link token that originated this order (nullable) */
   previewLinkToken: string | null
   /** Retouch progress for the order */

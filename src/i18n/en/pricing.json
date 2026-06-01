@@ -1,0 +1,8 @@
+{
+  "invalid_tier_min_qty": "minQty must be a positive integer",
+  "invalid_tier_max_qty": "maxQty must be null or an integer >= minQty",
+  "invalid_tier_price": "pricePerPhoto must be non-negative",
+  "invalid_quantity": "quantity must be a positive integer",
+  "no_tiers_configured": "no pricing tiers configured",
+  "quantity_not_covered": "no pricing tier covers the requested quantity"
+}
