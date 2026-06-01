@@ -73,7 +73,10 @@ export class CreateOrderFromPreviewHandler
     })
 
     const saved = await this.orderWriteRepo.save(order)
-    await this.orderWriteRepo.savePhotos(saved.id, command.photoIds)
+    await this.orderWriteRepo.savePhotos(
+      saved.id,
+      command.photoIds.map((id) => ({ photoId: id, unitPrice: null })),
+    )
 
     // 5. Transition preview link to converted (if first order)
     if (previewLink.status === PreviewLinkStatus.ACTIVE) {

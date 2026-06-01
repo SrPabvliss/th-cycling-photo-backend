@@ -30,6 +30,10 @@ export class OrderListProjection {
   eventName: string
   /** Number of photos in the order */
   photoCount: number
+  /** Order subtotal (Decimal serialized as string to preserve precision) */
+  subtotal: string | null
+  /** Currency code snapshot at time of order (e.g. USD) */
+  snapCurrency: string | null
   /** Whether a delivery link exists for this order */
   hasDeliveryLink: boolean
   /** First few photos in the order for thumbnail preview (max 3) */

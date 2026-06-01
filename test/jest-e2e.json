@@ -23,6 +23,7 @@
     "^@notifications/(.*)$": "<rootDir>/../src/modules/notifications/$1",
     "^@auth/(.*)$": "<rootDir>/../src/modules/auth/$1",
     "^@cart/(.*)$": "<rootDir>/../src/modules/cart/$1",
+    "^@pricing/(.*)$": "<rootDir>/../src/modules/pricing/$1",
     "^(\\.{1,2}/.*)\\.js$": "$1"
   }
 }
