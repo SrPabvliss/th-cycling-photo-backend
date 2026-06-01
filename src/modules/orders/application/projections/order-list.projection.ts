@@ -22,8 +22,18 @@ export class OrderListProjection {
   paidAt: Date | null
   /** When photos were delivered (null if not yet) */
   deliveredAt: Date | null
-  /** User display name */
+  /** Display name from snapshot at order creation time (snap_first_name + snap_last_name). For the current live customer identity, use customerFirstName/customerLastName. */
   userName: string
+  /** Live user UUID (used to visually group orders by customer) */
+  userId: string
+  /** Live user first name (current value, not snapshot) */
+  customerFirstName: string | null
+  /** Live user last name (current value, not snapshot) */
+  customerLastName: string | null
+  /** Live user email (current value, not snapshot) */
+  customerEmail: string
+  /** Live user primary phone number (null if user has none flagged as primary) */
+  customerPrimaryPhone: string | null
   /** Snap WhatsApp at time of order */
   snapWhatsapp: string | null
   /** Event name */
