@@ -54,6 +54,8 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
       provinceId: command.provinceId,
       cantonId: command.cantonId,
       phoneNumber: command.phoneNumber,
+      birthDate: command.birthDate ? new Date(command.birthDate) : null,
+      gender: command.gender,
     })
 
     const role = 'customer'

@@ -73,6 +73,8 @@ export class AuthController {
       dto.countryId,
       dto.provinceId ?? null,
       dto.cantonId ?? null,
+      dto.birthDate ?? null,
+      dto.gender ?? null,
       req.ip ?? null,
       req.headers['user-agent'] ?? null,
     )

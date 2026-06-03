@@ -1,6 +1,9 @@
+import { Gender } from '@generated/prisma/client'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import {
+  IsDateString,
   IsEmail,
+  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -57,4 +60,14 @@ export class RegisterDto {
   @IsInt()
   @Min(1)
   cantonId?: number
+
+  @ApiPropertyOptional({ description: 'Birth date (YYYY-MM-DD)', example: '1995-04-23' })
+  @IsOptional()
+  @IsDateString()
+  birthDate?: string
+
+  @ApiPropertyOptional({ enum: Gender, description: 'Gender', example: 'female' })
+  @IsOptional()
+  @IsEnum(Gender)
+  gender?: Gender
 }

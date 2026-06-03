@@ -1,0 +1,329 @@
+{
+  "country_code": "UY",
+  "regions": [
+    {
+      "code": "UY-AR",
+      "name": "Artigas",
+      "cities": [
+        "Artigas",
+        "Bella Unión",
+        "Tomás Gomensoro",
+        "Baltasar Brum",
+        "Coronado",
+        "Las Piedras",
+        "Sequeira",
+        "Cuaró",
+        "Javier de Viana",
+        "Cainsa"
+      ]
+    },
+    {
+      "code": "UY-CA",
+      "name": "Canelones",
+      "cities": [
+        "Canelones",
+        "Las Piedras",
+        "Pando",
+        "Ciudad de la Costa",
+        "La Paz",
+        "Santa Lucía",
+        "Progreso",
+        "Sauce",
+        "Tala",
+        "San Ramón",
+        "Atlántida",
+        "Salinas",
+        "Parque del Plata",
+        "San José de Carrasco",
+        "Toledo"
+      ]
+    },
+    {
+      "code": "UY-CL",
+      "name": "Cerro Largo",
+      "cities": [
+        "Melo",
+        "Río Branco",
+        "Fraile Muerto",
+        "Aceguá",
+        "Isidoro Noblía",
+        "Tupambaé",
+        "Arbolito",
+        "Plácido Rosas",
+        "Arévalo",
+        "Bañado de Medina"
+      ]
+    },
+    {
+      "code": "UY-CO",
+      "name": "Colonia",
+      "cities": [
+        "Colonia del Sacramento",
+        "Carmelo",
+        "Juan Lacaze",
+        "Nueva Helvecia",
+        "Nueva Palmira",
+        "Rosario",
+        "Tarariras",
+        "Florencio Sánchez",
+        "Ombúes de Lavalle",
+        "Colonia Valdense",
+        "Colonia Miguelete",
+        "Conchillas",
+        "Riachuelo"
+      ]
+    },
+    {
+      "code": "UY-DU",
+      "name": "Durazno",
+      "cities": [
+        "Durazno",
+        "Sarandí del Yí",
+        "Villa del Carmen",
+        "La Paloma",
+        "Blanquillo",
+        "Carlos Reyles",
+        "Centenario",
+        "Santa Bernardina",
+        "Aguas Buenas",
+        "Pueblo de Álvarez"
+      ]
+    },
+    {
+      "code": "UY-FS",
+      "name": "Flores",
+      "cities": [
+        "Trinidad",
+        "Ismael Cortinas",
+        "La Casilla",
+        "Andresito",
+        "Cerro Colorado",
+        "Juan José Castro",
+        "Cañada Nieto"
+      ]
+    },
+    {
+      "code": "UY-FD",
+      "name": "Florida",
+      "cities": [
+        "Florida",
+        "Sarandí Grande",
+        "Casupá",
+        "Fray Marcos",
+        "25 de Mayo",
+        "25 de Agosto",
+        "Cardal",
+        "Capilla del Sauce",
+        "Mendoza",
+        "Reboledo"
+      ]
+    },
+    {
+      "code": "UY-LA",
+      "name": "Lavalleja",
+      "cities": [
+        "Minas",
+        "José Pedro Varela",
+        "Solís de Mataojo",
+        "Mariscala",
+        "Pirarajá",
+        "Batlle y Ordóñez",
+        "Villa Velázquez",
+        "Zapicán",
+        "Illescas",
+        "Polanco del Yí"
+      ]
+    },
+    {
+      "code": "UY-MA",
+      "name": "Maldonado",
+      "cities": [
+        "Maldonado",
+        "Punta del Este",
+        "San Carlos",
+        "Piriápolis",
+        "Pan de Azúcar",
+        "Aiguá",
+        "Solís",
+        "La Barra",
+        "José Ignacio",
+        "Punta Ballena",
+        "Garzón",
+        "Gregorio Aznárez",
+        "Cerro Pelado"
+      ]
+    },
+    {
+      "code": "UY-MO",
+      "name": "Montevideo",
+      "cities": [
+        "Montevideo",
+        "Ciudad Vieja",
+        "Centro",
+        "Cordón",
+        "Pocitos",
+        "Punta Carretas",
+        "Carrasco",
+        "Malvín",
+        "Buceo",
+        "Prado",
+        "Cerro",
+        "Sayago",
+        "Colón",
+        "Punta Gorda",
+        "Aguada"
+      ]
+    },
+    {
+      "code": "UY-PA",
+      "name": "Paysandú",
+      "cities": [
+        "Paysandú",
+        "Guichón",
+        "Quebracho",
+        "Piedras Coloradas",
+        "Lorenzo Geyres",
+        "Porvenir",
+        "Tambores",
+        "Chapicuy",
+        "Beisso",
+        "Cerro Chato",
+        "Casa Blanca",
+        "Merinos"
+      ]
+    },
+    {
+      "code": "UY-RN",
+      "name": "Río Negro",
+      "cities": [
+        "Fray Bentos",
+        "Young",
+        "Nuevo Berlín",
+        "San Javier",
+        "Algorta",
+        "Paso de los Mellizos",
+        "Grecco",
+        "Sarandí de Navarro",
+        "Tres Quintas",
+        "Menafra"
+      ]
+    },
+    {
+      "code": "UY-RV",
+      "name": "Rivera",
+      "cities": [
+        "Rivera",
+        "Tranqueras",
+        "Vichadero",
+        "Minas de Corrales",
+        "Santa Teresa",
+        "Lapuente",
+        "Masoller",
+        "Cerrillada",
+        "Amarillo",
+        "Moirones"
+      ]
+    },
+    {
+      "code": "UY-RO",
+      "name": "Rocha",
+      "cities": [
+        "Rocha",
+        "Chuy",
+        "Castillos",
+        "Lascano",
+        "La Paloma",
+        "Cebollatí",
+        "18 de Julio",
+        "La Coronilla",
+        "Velázquez",
+        "San Luis al Medio",
+        "Punta del Diablo",
+        "Aguas Dulces"
+      ]
+    },
+    {
+      "code": "UY-SA",
+      "name": "Salto",
+      "cities": [
+        "Salto",
+        "Constitución",
+        "Belén",
+        "Villa Constitución",
+        "San Antonio",
+        "Colonia Lavalleja",
+        "Rincón de Valentín",
+        "Pueblo Fernández",
+        "Saucedo",
+        "Termas del Daymán",
+        "Termas del Arapey"
+      ]
+    },
+    {
+      "code": "UY-SJ",
+      "name": "San José",
+      "cities": [
+        "San José de Mayo",
+        "Ciudad del Plata",
+        "Libertad",
+        "Rodríguez",
+        "Ecilda Paullier",
+        "Mal Abrigo",
+        "Capurro",
+        "Puntas de Valdez",
+        "Ituzaingó",
+        "Villa María",
+        "Raigón"
+      ]
+    },
+    {
+      "code": "UY-SO",
+      "name": "Soriano",
+      "cities": [
+        "Mercedes",
+        "Dolores",
+        "Cardona",
+        "José Enrique Rodó",
+        "Palmitas",
+        "Santa Catalina",
+        "Villa Soriano",
+        "Egaña",
+        "Risso",
+        "Agraciada",
+        "Palmar"
+      ]
+    },
+    {
+      "code": "UY-TA",
+      "name": "Tacuarembó",
+      "cities": [
+        "Tacuarembó",
+        "Paso de los Toros",
+        "San Gregorio de Polanco",
+        "Ansina",
+        "Tambores",
+        "Curtina",
+        "Las Toscas de Caraguatá",
+        "Achar",
+        "Cuchilla del Ombú",
+        "Villa Tambores"
+      ]
+    },
+    {
+      "code": "UY-TT",
+      "name": "Treinta y Tres",
+      "cities": [
+        "Treinta y Tres",
+        "Vergara",
+        "Santa Clara de Olimar",
+        "Cerro Chato",
+        "José Pedro Varela",
+        "Villa Sara",
+        "Isla Patrulla",
+        "María Albina",
+        "Rincón",
+        "Arrozal Treinta y Tres"
+      ]
+    }
+  ]
+}

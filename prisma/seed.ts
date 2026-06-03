@@ -23,8 +23,14 @@ const prisma = new PrismaClient({ adapter })
 console.log(`Environment: ${env} | Database: ${DB_NAME}@${DB_HOST}:${DB_PORT}`)
 
 type CountryEntry = { name: string; iso_code: string }
-type ProvinceEntry = { name: string; code: string }
-type CantonsByProvince = Record<string, string[]>
+type LocationFile = {
+  country_code: string
+  regions: Array<{
+    code: string
+    name: string
+    cities: string[]
+  }>
+}
 
 async function seedCountries() {
   const countriesData: CountryEntry[] = JSON.parse(
@@ -45,47 +51,52 @@ async function seedCountries() {
 }
 
 async function seedLocations() {
-  const provincesData: ProvinceEntry[] = JSON.parse(
-    fs.readFileSync(path.join(__dirname, 'seed-data/provinces.json'), 'utf-8'),
-  )
-  const cantonsData: CantonsByProvince = JSON.parse(
-    fs.readFileSync(path.join(__dirname, 'seed-data/cantons.json'), 'utf-8'),
-  )
-
-  const ecuador = await prisma.country.findFirst({ where: { iso_code: 'EC' } })
-  if (!ecuador) throw new Error('Country EC missing — run countries seed first')
-
-  let provincesCount = 0
-  let cantonsCount = 0
-
-  for (const province of provincesData) {
-    const upserted = await prisma.province.upsert({
-      where: { code: province.code },
-      update: { name: province.name, country_id: ecuador.id },
-      create: { name: province.name, code: province.code, country_id: ecuador.id },
-    })
-
-    provincesCount++
-
-    const cantonNames = cantonsData[province.code] || []
-    for (const cantonName of cantonNames) {
-      await prisma.canton.upsert({
-        where: {
-          id: await prisma.canton
-            .findFirst({
-              where: { name: cantonName, province_id: upserted.id },
-              select: { id: true },
-            })
-            .then((c) => c?.id ?? 0),
-        },
-        update: { name: cantonName },
-        create: { name: cantonName, province_id: upserted.id },
-      })
-      cantonsCount++
-    }
+  const dir = path.join(__dirname, 'seed-data/locations')
+  if (!fs.existsSync(dir)) {
+    console.warn('seed-data/locations not found — skipping locations seed')
+    return
   }
 
-  console.log(`Seeded ${provincesCount} provinces and ${cantonsCount} cantons`)
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'))
+  let regionsCount = 0
+  let citiesCount = 0
+  let countriesProcessed = 0
+
+  for (const file of files) {
+    const data: LocationFile = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf-8'))
+    const country = await prisma.country.findUnique({
+      where: { iso_code: data.country_code },
+    })
+    if (!country) {
+      console.warn(`Country ${data.country_code} not in countries seed — skipping ${file}`)
+      continue
+    }
+
+    for (const region of data.regions) {
+      const upserted = await prisma.province.upsert({
+        where: { code: region.code },
+        update: { name: region.name, country_id: country.id },
+        create: { name: region.name, code: region.code, country_id: country.id },
+      })
+      regionsCount++
+
+      for (const cityName of region.cities) {
+        await prisma.canton.upsert({
+          where: {
+            name_province_id: { name: cityName, province_id: upserted.id },
+          },
+          update: {},
+          create: { name: cityName, province_id: upserted.id },
+        })
+        citiesCount++
+      }
+    }
+    countriesProcessed++
+  }
+
+  console.log(
+    `Seeded ${regionsCount} regions and ${citiesCount} cities across ${countriesProcessed} countries`,
+  )
 }
 
 async function seedEventTypes() {

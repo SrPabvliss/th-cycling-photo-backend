@@ -1,0 +1,422 @@
+{
+  "country_code": "AR",
+  "regions": [
+    {
+      "code": "AR-C",
+      "name": "Ciudad Autónoma de Buenos Aires",
+      "cities": ["Buenos Aires"]
+    },
+    {
+      "code": "AR-B",
+      "name": "Buenos Aires",
+      "cities": [
+        "La Plata",
+        "La Matanza",
+        "General Pueyrredón",
+        "Lomas de Zamora",
+        "Quilmes",
+        "Almirante Brown",
+        "Merlo",
+        "Lanús",
+        "Moreno",
+        "Florencio Varela",
+        "Tigre",
+        "Avellaneda",
+        "Bahía Blanca",
+        "San Isidro",
+        "Tres de Febrero"
+      ]
+    },
+    {
+      "code": "AR-K",
+      "name": "Catamarca",
+      "cities": [
+        "San Fernando del Valle de Catamarca",
+        "Valle Viejo",
+        "Fray Mamerto Esquiú",
+        "Andalgalá",
+        "Belén",
+        "Tinogasta",
+        "Recreo",
+        "Santa María",
+        "Capayán",
+        "Pomán",
+        "Saujil"
+      ]
+    },
+    {
+      "code": "AR-H",
+      "name": "Chaco",
+      "cities": [
+        "Resistencia",
+        "Barranqueras",
+        "Fontana",
+        "Puerto Vilelas",
+        "Presidencia Roque Sáenz Peña",
+        "Villa Ángela",
+        "Charata",
+        "General José de San Martín",
+        "Quitilipi",
+        "Castelli",
+        "Las Breñas",
+        "Machagai"
+      ]
+    },
+    {
+      "code": "AR-U",
+      "name": "Chubut",
+      "cities": [
+        "Comodoro Rivadavia",
+        "Trelew",
+        "Puerto Madryn",
+        "Rawson",
+        "Esquel",
+        "Rada Tilly",
+        "Sarmiento",
+        "Gaiman",
+        "Dolavon",
+        "El Maitén",
+        "Trevelin",
+        "Lago Puelo"
+      ]
+    },
+    {
+      "code": "AR-X",
+      "name": "Córdoba",
+      "cities": [
+        "Córdoba",
+        "Río Cuarto",
+        "Villa María",
+        "San Francisco",
+        "Villa Carlos Paz",
+        "Río Tercero",
+        "Alta Gracia",
+        "Bell Ville",
+        "Marcos Juárez",
+        "Jesús María",
+        "La Falda",
+        "Cosquín",
+        "Villa Dolores",
+        "Las Varillas",
+        "Cruz del Eje"
+      ]
+    },
+    {
+      "code": "AR-W",
+      "name": "Corrientes",
+      "cities": [
+        "Corrientes",
+        "Goya",
+        "Mercedes",
+        "Curuzú Cuatiá",
+        "Paso de los Libres",
+        "Bella Vista",
+        "Santo Tomé",
+        "Esquina",
+        "Monte Caseros",
+        "Ituzaingó",
+        "Saladas",
+        "Empedrado"
+      ]
+    },
+    {
+      "code": "AR-E",
+      "name": "Entre Ríos",
+      "cities": [
+        "Paraná",
+        "Concordia",
+        "Gualeguaychú",
+        "Concepción del Uruguay",
+        "Gualeguay",
+        "Victoria",
+        "La Paz",
+        "Villaguay",
+        "Chajarí",
+        "Federación",
+        "Nogoyá",
+        "Diamante",
+        "Colón"
+      ]
+    },
+    {
+      "code": "AR-P",
+      "name": "Formosa",
+      "cities": [
+        "Formosa",
+        "Clorinda",
+        "Pirané",
+        "El Colorado",
+        "Las Lomitas",
+        "Ingeniero Juárez",
+        "Ibarreta",
+        "Comandante Fontana",
+        "General Belgrano",
+        "Estanislao del Campo",
+        "Villa Dos Trece"
+      ]
+    },
+    {
+      "code": "AR-Y",
+      "name": "Jujuy",
+      "cities": [
+        "San Salvador de Jujuy",
+        "San Pedro de Jujuy",
+        "Libertador General San Martín",
+        "Palpalá",
+        "La Quiaca",
+        "Perico",
+        "El Carmen",
+        "Humahuaca",
+        "Tilcara",
+        "Monterrico",
+        "Abra Pampa",
+        "Fraile Pintado"
+      ]
+    },
+    {
+      "code": "AR-L",
+      "name": "La Pampa",
+      "cities": [
+        "Santa Rosa",
+        "General Pico",
+        "Toay",
+        "Realicó",
+        "General Acha",
+        "Eduardo Castex",
+        "Intendente Alvear",
+        "Victorica",
+        "Macachín",
+        "Catriló",
+        "Quemú Quemú",
+        "Guatraché"
+      ]
+    },
+    {
+      "code": "AR-F",
+      "name": "La Rioja",
+      "cities": [
+        "La Rioja",
+        "Chilecito",
+        "Aimogasta",
+        "Chamical",
+        "Chepes",
+        "Olta",
+        "Villa Unión",
+        "Famatina",
+        "Tama",
+        "Ulapes",
+        "Villa Castelli"
+      ]
+    },
+    {
+      "code": "AR-M",
+      "name": "Mendoza",
+      "cities": [
+        "Mendoza",
+        "San Rafael",
+        "Godoy Cruz",
+        "Guaymallén",
+        "Las Heras",
+        "Maipú",
+        "Luján de Cuyo",
+        "San Martín",
+        "Rivadavia",
+        "Tunuyán",
+        "Tupungato",
+        "General Alvear",
+        "Malargüe",
+        "Junín",
+        "La Paz"
+      ]
+    },
+    {
+      "code": "AR-N",
+      "name": "Misiones",
+      "cities": [
+        "Posadas",
+        "Oberá",
+        "Eldorado",
+        "Puerto Iguazú",
+        "Apóstoles",
+        "Leandro N. Alem",
+        "Montecarlo",
+        "Puerto Rico",
+        "San Vicente",
+        "Wanda",
+        "Jardín América",
+        "San Ignacio"
+      ]
+    },
+    {
+      "code": "AR-Q",
+      "name": "Neuquén",
+      "cities": [
+        "Neuquén",
+        "Cutral Có",
+        "Plottier",
+        "Centenario",
+        "Zapala",
+        "San Martín de los Andes",
+        "Villa La Angostura",
+        "Plaza Huincul",
+        "Junín de los Andes",
+        "Rincón de los Sauces",
+        "Chos Malal",
+        "Senillosa"
+      ]
+    },
+    {
+      "code": "AR-R",
+      "name": "Río Negro",
+      "cities": [
+        "San Carlos de Bariloche",
+        "General Roca",
+        "Cipolletti",
+        "Viedma",
+        "Villa Regina",
+        "Allen",
+        "Cinco Saltos",
+        "Catriel",
+        "El Bolsón",
+        "Choele Choel",
+        "Río Colorado",
+        "Ingeniero Jacobacci"
+      ]
+    },
+    {
+      "code": "AR-A",
+      "name": "Salta",
+      "cities": [
+        "Salta",
+        "San Ramón de la Nueva Orán",
+        "Tartagal",
+        "General Güemes",
+        "Metán",
+        "Rosario de la Frontera",
+        "Cafayate",
+        "Cerrillos",
+        "Embarcación",
+        "Joaquín V. González",
+        "Pichanal",
+        "Las Lajitas"
+      ]
+    },
+    {
+      "code": "AR-J",
+      "name": "San Juan",
+      "cities": [
+        "San Juan",
+        "Rivadavia",
+        "Rawson",
+        "Chimbas",
+        "Santa Lucía",
+        "Pocito",
+        "Caucete",
+        "Albardón",
+        "Sarmiento",
+        "Jáchal",
+        "Calingasta",
+        "Iglesia"
+      ]
+    },
+    {
+      "code": "AR-D",
+      "name": "San Luis",
+      "cities": [
+        "San Luis",
+        "Villa Mercedes",
+        "Merlo",
+        "La Punta",
+        "Justo Daract",
+        "Tilisarao",
+        "Concarán",
+        "Santa Rosa del Conlara",
+        "Quines",
+        "Naschel",
+        "La Toma",
+        "Buena Esperanza"
+      ]
+    },
+    {
+      "code": "AR-Z",
+      "name": "Santa Cruz",
+      "cities": [
+        "Río Gallegos",
+        "Caleta Olivia",
+        "Pico Truncado",
+        "El Calafate",
+        "Las Heras",
+        "Puerto Deseado",
+        "Puerto San Julián",
+        "Perito Moreno",
+        "Río Turbio",
+        "28 de Noviembre",
+        "Gobernador Gregores",
+        "El Chaltén"
+      ]
+    },
+    {
+      "code": "AR-S",
+      "name": "Santa Fe",
+      "cities": [
+        "Rosario",
+        "Santa Fe",
+        "Rafaela",
+        "Villa Gobernador Gálvez",
+        "Venado Tuerto",
+        "Reconquista",
+        "Santo Tomé",
+        "Esperanza",
+        "San Lorenzo",
+        "Casilda",
+        "Cañada de Gómez",
+        "Sunchales",
+        "Firmat",
+        "Funes",
+        "Pérez"
+      ]
+    },
+    {
+      "code": "AR-G",
+      "name": "Santiago del Estero",
+      "cities": [
+        "Santiago del Estero",
+        "La Banda",
+        "Termas de Río Hondo",
+        "Añatuya",
+        "Frías",
+        "Fernández",
+        "Quimilí",
+        "Loreto",
+        "Monte Quemado",
+        "Suncho Corral",
+        "Pinto",
+        "Clodomira"
+      ]
+    },
+    {
+      "code": "AR-V",
+      "name": "Tierra del Fuego, Antártida e Islas del Atlántico Sur",
+      "cities": ["Ushuaia", "Río Grande", "Tolhuin"]
+    },
+    {
+      "code": "AR-T",
+      "name": "Tucumán",
+      "cities": [
+        "San Miguel de Tucumán",
+        "Yerba Buena",
+        "Tafí Viejo",
+        "Banda del Río Salí",
+        "Concepción",
+        "Aguilares",
+        "Monteros",
+        "Famaillá",
+        "Lules",
+        "Bella Vista",
+        "Alderetes",
+        "Las Talitas",
+        "Tafí del Valle"
+      ]
+    }
+  ]
+}

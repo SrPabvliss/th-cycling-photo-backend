@@ -1,0 +1,118 @@
+{
+  "country_code": "CR",
+  "regions": [
+    {
+      "code": "CR-SJ",
+      "name": "San José",
+      "cities": [
+        "San José",
+        "Escazú",
+        "Desamparados",
+        "Puriscal",
+        "Tarrazú",
+        "Aserrí",
+        "Mora",
+        "Goicoechea",
+        "Santa Ana",
+        "Alajuelita",
+        "Vázquez de Coronado",
+        "Tibás",
+        "Moravia",
+        "Montes de Oca",
+        "Curridabat"
+      ]
+    },
+    {
+      "code": "CR-A",
+      "name": "Alajuela",
+      "cities": [
+        "Alajuela",
+        "San Ramón",
+        "Grecia",
+        "San Mateo",
+        "Atenas",
+        "Naranjo",
+        "Palmares",
+        "Poás",
+        "Orotina",
+        "San Carlos",
+        "Zarcero",
+        "Sarchí",
+        "Upala",
+        "Los Chiles",
+        "Guatuso"
+      ]
+    },
+    {
+      "code": "CR-C",
+      "name": "Cartago",
+      "cities": [
+        "Cartago",
+        "Paraíso",
+        "La Unión",
+        "Jiménez",
+        "Turrialba",
+        "Alvarado",
+        "Oreamuno",
+        "El Guarco"
+      ]
+    },
+    {
+      "code": "CR-H",
+      "name": "Heredia",
+      "cities": [
+        "Heredia",
+        "Barva",
+        "Santo Domingo",
+        "Santa Bárbara",
+        "San Rafael",
+        "San Isidro",
+        "Belén",
+        "Flores",
+        "San Pablo",
+        "Sarapiquí"
+      ]
+    },
+    {
+      "code": "CR-G",
+      "name": "Guanacaste",
+      "cities": [
+        "Liberia",
+        "Nicoya",
+        "Santa Cruz",
+        "Bagaces",
+        "Carrillo",
+        "Cañas",
+        "Abangares",
+        "Tilarán",
+        "Nandayure",
+        "La Cruz",
+        "Hojancha"
+      ]
+    },
+    {
+      "code": "CR-P",
+      "name": "Puntarenas",
+      "cities": [
+        "Puntarenas",
+        "Esparza",
+        "Buenos Aires",
+        "Montes de Oro",
+        "Osa",
+        "Quepos",
+        "Golfito",
+        "Coto Brus",
+        "Parrita",
+        "Corredores",
+        "Garabito",
+        "Monteverde",
+        "Puerto Jiménez"
+      ]
+    },
+    {
+      "code": "CR-L",
+      "name": "Limón",
+      "cities": ["Limón", "Pococí", "Siquirres", "Talamanca", "Matina", "Guácimo"]
+    }
+  ]
+}

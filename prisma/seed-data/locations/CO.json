@@ -1,0 +1,610 @@
+{
+  "country_code": "CO",
+  "regions": [
+    {
+      "code": "CO-AMA",
+      "name": "Amazonas",
+      "cities": [
+        "Leticia",
+        "Puerto Nariño",
+        "La Chorrera",
+        "La Pedrera",
+        "La Victoria",
+        "Mirití-Paraná",
+        "Puerto Alegría",
+        "Puerto Arica",
+        "Puerto Santander",
+        "Tarapacá",
+        "El Encanto"
+      ]
+    },
+    {
+      "code": "CO-ANT",
+      "name": "Antioquia",
+      "cities": [
+        "Medellín",
+        "Bello",
+        "Itagüí",
+        "Envigado",
+        "Apartadó",
+        "Turbo",
+        "Rionegro",
+        "Sabaneta",
+        "Copacabana",
+        "La Estrella",
+        "Caucasia",
+        "Girardota",
+        "Necoclí",
+        "Marinilla",
+        "Caldas"
+      ]
+    },
+    {
+      "code": "CO-ARA",
+      "name": "Arauca",
+      "cities": [
+        "Arauca",
+        "Saravena",
+        "Tame",
+        "Arauquita",
+        "Fortul",
+        "Puerto Rondón",
+        "Cravo Norte"
+      ]
+    },
+    {
+      "code": "CO-ATL",
+      "name": "Atlántico",
+      "cities": [
+        "Barranquilla",
+        "Soledad",
+        "Malambo",
+        "Sabanalarga",
+        "Puerto Colombia",
+        "Galapa",
+        "Baranoa",
+        "Sabanagrande",
+        "Santo Tomás",
+        "Palmar de Varela",
+        "Ponedera",
+        "Luruaco",
+        "Campo de la Cruz",
+        "Juan de Acosta",
+        "Tubará"
+      ]
+    },
+    {
+      "code": "CO-BOL",
+      "name": "Bolívar",
+      "cities": [
+        "Cartagena de Indias",
+        "Magangué",
+        "Turbaco",
+        "Arjona",
+        "El Carmen de Bolívar",
+        "María la Baja",
+        "San Pablo",
+        "Mompós",
+        "San Juan Nepomuceno",
+        "Santa Rosa del Sur",
+        "Simití",
+        "San Jacinto",
+        "Mahates",
+        "Morales",
+        "Santa Rosa"
+      ]
+    },
+    {
+      "code": "CO-BOY",
+      "name": "Boyacá",
+      "cities": [
+        "Tunja",
+        "Duitama",
+        "Sogamoso",
+        "Chiquinquirá",
+        "Paipa",
+        "Puerto Boyacá",
+        "Villa de Leyva",
+        "Moniquirá",
+        "Garagoa",
+        "Samacá",
+        "Nobsa",
+        "Ramiriquí",
+        "Tibasosa",
+        "Otanche",
+        "Soatá"
+      ]
+    },
+    {
+      "code": "CO-CAL",
+      "name": "Caldas",
+      "cities": [
+        "Manizales",
+        "La Dorada",
+        "Chinchiná",
+        "Villamaría",
+        "Riosucio",
+        "Anserma",
+        "Supía",
+        "Salamina",
+        "Manzanares",
+        "Aguadas",
+        "Neira",
+        "Pensilvania",
+        "Pácora",
+        "Aranzazu",
+        "Palestina"
+      ]
+    },
+    {
+      "code": "CO-CAQ",
+      "name": "Caquetá",
+      "cities": [
+        "Florencia",
+        "San Vicente del Caguán",
+        "Puerto Rico",
+        "La Montañita",
+        "El Doncello",
+        "Belén de los Andaquíes",
+        "Cartagena del Chairá",
+        "Curillo",
+        "El Paujil",
+        "Albania",
+        "Morelia",
+        "Milán",
+        "Solano",
+        "Solita",
+        "Valparaíso"
+      ]
+    },
+    {
+      "code": "CO-CAS",
+      "name": "Casanare",
+      "cities": [
+        "Yopal",
+        "Aguazul",
+        "Tauramena",
+        "Villanueva",
+        "Paz de Ariporo",
+        "Monterrey",
+        "Maní",
+        "Hato Corozal",
+        "Trinidad",
+        "Pore",
+        "Orocué",
+        "Nunchía",
+        "San Luis de Palenque",
+        "Sácama",
+        "Recetor"
+      ]
+    },
+    {
+      "code": "CO-CAU",
+      "name": "Cauca",
+      "cities": [
+        "Popayán",
+        "Santander de Quilichao",
+        "Puerto Tejada",
+        "Patía",
+        "Piendamó",
+        "Caloto",
+        "Miranda",
+        "Corinto",
+        "Guapi",
+        "Timbío",
+        "Cajibío",
+        "Bolívar",
+        "El Tambo",
+        "Silvia",
+        "Toribío"
+      ]
+    },
+    {
+      "code": "CO-CES",
+      "name": "Cesar",
+      "cities": [
+        "Valledupar",
+        "Aguachica",
+        "Bosconia",
+        "Codazzi",
+        "La Jagua de Ibirico",
+        "Curumaní",
+        "Chiriguaná",
+        "Pailitas",
+        "San Alberto",
+        "San Martín",
+        "El Copey",
+        "El Paso",
+        "Becerril",
+        "Pueblo Bello",
+        "La Paz"
+      ]
+    },
+    {
+      "code": "CO-CHO",
+      "name": "Chocó",
+      "cities": [
+        "Quibdó",
+        "Istmina",
+        "Tadó",
+        "Condoto",
+        "Acandí",
+        "Riosucio",
+        "Bahía Solano",
+        "Nuquí",
+        "Bagadó",
+        "Lloró",
+        "Unguía",
+        "Carmen del Darién",
+        "El Carmen de Atrato",
+        "Bojayá",
+        "Alto Baudó"
+      ]
+    },
+    {
+      "code": "CO-COR",
+      "name": "Córdoba",
+      "cities": [
+        "Montería",
+        "Lorica",
+        "Cereté",
+        "Sahagún",
+        "Planeta Rica",
+        "Montelíbano",
+        "Tierralta",
+        "Ciénaga de Oro",
+        "Chinú",
+        "Puerto Libertador",
+        "San Pelayo",
+        "San Antero",
+        "Moñitos",
+        "Pueblo Nuevo",
+        "Ayapel"
+      ]
+    },
+    {
+      "code": "CO-CUN",
+      "name": "Cundinamarca",
+      "cities": [
+        "Soacha",
+        "Facatativá",
+        "Zipaquirá",
+        "Chía",
+        "Fusagasugá",
+        "Girardot",
+        "Mosquera",
+        "Madrid",
+        "Funza",
+        "Cajicá",
+        "Cota",
+        "Sibaté",
+        "La Calera",
+        "Ubaté",
+        "Tocancipá"
+      ]
+    },
+    {
+      "code": "CO-DC",
+      "name": "Bogotá D.C.",
+      "cities": [
+        "Bogotá",
+        "Usaquén",
+        "Chapinero",
+        "Suba",
+        "Kennedy",
+        "Engativá",
+        "Fontibón",
+        "Bosa",
+        "Ciudad Bolívar",
+        "Teusaquillo",
+        "Puente Aranda",
+        "Barrios Unidos",
+        "San Cristóbal",
+        "Usme",
+        "Tunjuelito"
+      ]
+    },
+    {
+      "code": "CO-GUA",
+      "name": "Guainía",
+      "cities": [
+        "Inírida",
+        "Barranco Minas",
+        "Mapiripana",
+        "San Felipe",
+        "Puerto Colombia",
+        "La Guadalupe",
+        "Cacahual",
+        "Pana Pana",
+        "Morichal"
+      ]
+    },
+    {
+      "code": "CO-GUV",
+      "name": "Guaviare",
+      "cities": ["San José del Guaviare", "El Retorno", "Calamar", "Miraflores"]
+    },
+    {
+      "code": "CO-HUI",
+      "name": "Huila",
+      "cities": [
+        "Neiva",
+        "Pitalito",
+        "Garzón",
+        "La Plata",
+        "Campoalegre",
+        "Gigante",
+        "Aipe",
+        "Palermo",
+        "Rivera",
+        "San Agustín",
+        "Acevedo",
+        "Suaza",
+        "Isnos",
+        "Timaná",
+        "Hobo"
+      ]
+    },
+    {
+      "code": "CO-LAG",
+      "name": "La Guajira",
+      "cities": [
+        "Riohacha",
+        "Maicao",
+        "Uribia",
+        "Manaure",
+        "San Juan del Cesar",
+        "Villanueva",
+        "Fonseca",
+        "Barrancas",
+        "Dibulla",
+        "Albania",
+        "Hatonuevo",
+        "Distracción",
+        "El Molino",
+        "La Jagua del Pilar",
+        "Urumita"
+      ]
+    },
+    {
+      "code": "CO-MAG",
+      "name": "Magdalena",
+      "cities": [
+        "Santa Marta",
+        "Ciénaga",
+        "Fundación",
+        "El Banco",
+        "Plato",
+        "Aracataca",
+        "Zona Bananera",
+        "Pivijay",
+        "Pueblo Viejo",
+        "Sitionuevo",
+        "Salamina",
+        "El Retén",
+        "Algarrobo",
+        "Tenerife",
+        "Guamal"
+      ]
+    },
+    {
+      "code": "CO-MET",
+      "name": "Meta",
+      "cities": [
+        "Villavicencio",
+        "Acacías",
+        "Granada",
+        "Puerto López",
+        "Puerto Gaitán",
+        "San Martín",
+        "Cumaral",
+        "Restrepo",
+        "Guamal",
+        "Castilla la Nueva",
+        "El Dorado",
+        "San Carlos de Guaroa",
+        "Mesetas",
+        "Vistahermosa",
+        "La Macarena"
+      ]
+    },
+    {
+      "code": "CO-NAR",
+      "name": "Nariño",
+      "cities": [
+        "Pasto",
+        "Tumaco",
+        "Ipiales",
+        "Túquerres",
+        "La Unión",
+        "Samaniego",
+        "Sandoná",
+        "El Charco",
+        "Barbacoas",
+        "La Cruz",
+        "Ricaurte",
+        "Buesaco",
+        "Cumbal",
+        "Guachucal",
+        "Pupiales"
+      ]
+    },
+    {
+      "code": "CO-NSA",
+      "name": "Norte de Santander",
+      "cities": [
+        "Cúcuta",
+        "Ocaña",
+        "Pamplona",
+        "Villa del Rosario",
+        "Los Patios",
+        "El Zulia",
+        "Tibú",
+        "Chinácota",
+        "Sardinata",
+        "Ábrego",
+        "Convención",
+        "El Carmen",
+        "Salazar",
+        "Toledo",
+        "Bochalema"
+      ]
+    },
+    {
+      "code": "CO-PUT",
+      "name": "Putumayo",
+      "cities": [
+        "Mocoa",
+        "Puerto Asís",
+        "Orito",
+        "Valle del Guamuez",
+        "Puerto Caicedo",
+        "Puerto Guzmán",
+        "Puerto Leguízamo",
+        "San Miguel",
+        "Sibundoy",
+        "Villagarzón",
+        "Colón",
+        "San Francisco",
+        "Santiago"
+      ]
+    },
+    {
+      "code": "CO-QUI",
+      "name": "Quindío",
+      "cities": [
+        "Armenia",
+        "Calarcá",
+        "La Tebaida",
+        "Montenegro",
+        "Quimbaya",
+        "Circasia",
+        "Filandia",
+        "Salento",
+        "Génova",
+        "Pijao",
+        "Córdoba",
+        "Buenavista"
+      ]
+    },
+    {
+      "code": "CO-RIS",
+      "name": "Risaralda",
+      "cities": [
+        "Pereira",
+        "Dosquebradas",
+        "Santa Rosa de Cabal",
+        "La Virginia",
+        "Belén de Umbría",
+        "Quinchía",
+        "Marsella",
+        "Apía",
+        "Mistrató",
+        "Santuario",
+        "Balboa",
+        "Guática",
+        "La Celia",
+        "Pueblo Rico"
+      ]
+    },
+    {
+      "code": "CO-SAN",
+      "name": "Santander",
+      "cities": [
+        "Bucaramanga",
+        "Floridablanca",
+        "Girón",
+        "Piedecuesta",
+        "Barrancabermeja",
+        "San Gil",
+        "Socorro",
+        "Málaga",
+        "Vélez",
+        "Lebrija",
+        "Barbosa",
+        "Sabana de Torres",
+        "Puerto Wilches",
+        "Rionegro",
+        "Zapatoca"
+      ]
+    },
+    {
+      "code": "CO-SAP",
+      "name": "San Andrés, Providencia y Santa Catalina",
+      "cities": ["San Andrés", "Providencia", "Santa Catalina"]
+    },
+    {
+      "code": "CO-SUC",
+      "name": "Sucre",
+      "cities": [
+        "Sincelejo",
+        "Corozal",
+        "Sampués",
+        "San Marcos",
+        "San Onofre",
+        "Tolú",
+        "Coveñas",
+        "Sincé",
+        "Los Palmitos",
+        "Morroa",
+        "Ovejas",
+        "Galeras",
+        "Majagual",
+        "Sucre",
+        "San Benito Abad"
+      ]
+    },
+    {
+      "code": "CO-TOL",
+      "name": "Tolima",
+      "cities": [
+        "Ibagué",
+        "Espinal",
+        "Melgar",
+        "Honda",
+        "Líbano",
+        "Mariquita",
+        "Chaparral",
+        "Flandes",
+        "Purificación",
+        "Guamo",
+        "Lérida",
+        "Fresno",
+        "Cajamarca",
+        "Ortega",
+        "Saldaña"
+      ]
+    },
+    {
+      "code": "CO-VAC",
+      "name": "Valle del Cauca",
+      "cities": [
+        "Cali",
+        "Palmira",
+        "Buenaventura",
+        "Tuluá",
+        "Cartago",
+        "Buga",
+        "Jamundí",
+        "Yumbo",
+        "Candelaria",
+        "Florida",
+        "Pradera",
+        "Sevilla",
+        "Zarzal",
+        "Roldanillo",
+        "El Cerrito"
+      ]
+    },
+    {
+      "code": "CO-VAU",
+      "name": "Vaupés",
+      "cities": ["Mitú", "Carurú", "Taraira", "Pacoa", "Papunaua", "Yavaraté"]
+    },
+    {
+      "code": "CO-VID",
+      "name": "Vichada",
+      "cities": ["Puerto Carreño", "La Primavera", "Santa Rosalía", "Cumaribo"]
+    }
+  ]
+}

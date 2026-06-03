@@ -1,0 +1,349 @@
+{
+  "country_code": "PY",
+  "regions": [
+    {
+      "code": "PY-ASU",
+      "name": "Asunción",
+      "cities": ["Asunción"]
+    },
+    {
+      "code": "PY-1",
+      "name": "Concepción",
+      "cities": [
+        "Concepción",
+        "Belén",
+        "Horqueta",
+        "Loreto",
+        "San Carlos del Apa",
+        "San Lázaro",
+        "Yby Yaú",
+        "Azotey",
+        "Sargento José Félix López",
+        "San Alfredo",
+        "Paso Barreto",
+        "Arroyito"
+      ]
+    },
+    {
+      "code": "PY-2",
+      "name": "San Pedro",
+      "cities": [
+        "San Pedro de Ycuamandiyú",
+        "Antequera",
+        "Choré",
+        "General Elizardo Aquino",
+        "Itacurubí del Rosario",
+        "Lima",
+        "Nueva Germania",
+        "San Estanislao",
+        "San Pablo",
+        "Tacuatí",
+        "Unión",
+        "25 de Diciembre",
+        "Villa del Rosario",
+        "Yataity del Norte",
+        "Guayaibí"
+      ]
+    },
+    {
+      "code": "PY-3",
+      "name": "Cordillera",
+      "cities": [
+        "Caacupé",
+        "Altos",
+        "Arroyos y Esteros",
+        "Atyrá",
+        "Caraguatay",
+        "Emboscada",
+        "Eusebio Ayala",
+        "Isla Pucú",
+        "Itacurubí de la Cordillera",
+        "Juan de Mena",
+        "Loma Grande",
+        "Mbocayaty del Yhaguy",
+        "Nueva Colombia",
+        "Piribebuy",
+        "Primero de Marzo",
+        "San Bernardino",
+        "Tobatí",
+        "Valenzuela"
+      ]
+    },
+    {
+      "code": "PY-4",
+      "name": "Guairá",
+      "cities": [
+        "Villarrica",
+        "Borja",
+        "Capitán Mauricio José Troche",
+        "Coronel Martínez",
+        "Félix Pérez Cardozo",
+        "General Eugenio A. Garay",
+        "Independencia",
+        "Itapé",
+        "Iturbe",
+        "José Fassardi",
+        "Mbocayaty",
+        "Natalicio Talavera",
+        "Ñumi",
+        "Paso Yobái",
+        "San Salvador",
+        "Yataity"
+      ]
+    },
+    {
+      "code": "PY-5",
+      "name": "Caaguazú",
+      "cities": [
+        "Coronel Oviedo",
+        "Caaguazú",
+        "Carayaó",
+        "Doctor Cecilio Báez",
+        "Santa Rosa del Mbutuy",
+        "Doctor Juan Manuel Frutos",
+        "Repatriación",
+        "Nueva Londres",
+        "San Joaquín",
+        "San José de los Arroyos",
+        "Yhú",
+        "Doctor Juan Eulogio Estigarribia",
+        "Raúl Arsenio Oviedo",
+        "José Domingo Ocampos",
+        "Mariscal Francisco Solano López",
+        "La Pastora",
+        "3 de Febrero",
+        "Simón Bolívar",
+        "Vaquería"
+      ]
+    },
+    {
+      "code": "PY-6",
+      "name": "Caazapá",
+      "cities": [
+        "Caazapá",
+        "Abaí",
+        "Buena Vista",
+        "Doctor Moisés Bertoni",
+        "General Higinio Morínigo",
+        "Maciel",
+        "San Juan Nepomuceno",
+        "Tavaí",
+        "Yegros",
+        "Yuty",
+        "3 de Mayo",
+        "Fulgencio Yegros"
+      ]
+    },
+    {
+      "code": "PY-7",
+      "name": "Itapúa",
+      "cities": [
+        "Encarnación",
+        "Bella Vista",
+        "Cambyretá",
+        "Capitán Meza",
+        "Capitán Miranda",
+        "Carlos Antonio López",
+        "Coronel Bogado",
+        "Edelira",
+        "General Artigas",
+        "General Delgado",
+        "Hohenau",
+        "Jesús",
+        "José Leandro Oviedo",
+        "La Paz",
+        "Mayor Julio Dionisio Otaño",
+        "Natalio",
+        "Nueva Alborada",
+        "Obligado",
+        "Pirapó",
+        "San Cosme y Damián",
+        "San Juan del Paraná",
+        "San Pedro del Paraná",
+        "San Rafael del Paraná",
+        "Tomás Romero Pereira",
+        "Trinidad",
+        "Yatytay"
+      ]
+    },
+    {
+      "code": "PY-8",
+      "name": "Misiones",
+      "cities": [
+        "San Juan Bautista",
+        "Ayolas",
+        "San Ignacio",
+        "San Miguel",
+        "San Patricio",
+        "Santa María",
+        "Santa Rosa",
+        "Santiago",
+        "Villa Florida",
+        "Yabebyry"
+      ]
+    },
+    {
+      "code": "PY-9",
+      "name": "Paraguarí",
+      "cities": [
+        "Paraguarí",
+        "Acahay",
+        "Caapucú",
+        "Carapeguá",
+        "Escobar",
+        "La Colmena",
+        "Mbuyapey",
+        "Pirayú",
+        "Quiindy",
+        "Quyquyhó",
+        "San Roque González de Santa Cruz",
+        "Sapucai",
+        "Tebicuarymí",
+        "Yaguarón",
+        "Ybycuí",
+        "Ybytymí"
+      ]
+    },
+    {
+      "code": "PY-10",
+      "name": "Alto Paraná",
+      "cities": [
+        "Ciudad del Este",
+        "Doctor Juan León Mallorquín",
+        "Hernandarias",
+        "Iruña",
+        "Itakyry",
+        "Juan Emilio O'Leary",
+        "Los Cedrales",
+        "Mbaracayú",
+        "Minga Guazú",
+        "Minga Porá",
+        "Naranjal",
+        "Ñacunday",
+        "Presidente Franco",
+        "San Alberto",
+        "San Cristóbal",
+        "Santa Fe del Paraná",
+        "Santa Rita",
+        "Santa Rosa del Monday",
+        "Tavapy",
+        "Yguazú"
+      ]
+    },
+    {
+      "code": "PY-11",
+      "name": "Central",
+      "cities": [
+        "Areguá",
+        "Capiatá",
+        "Fernando de la Mora",
+        "Guarambaré",
+        "Itá",
+        "Itauguá",
+        "Lambaré",
+        "Limpio",
+        "Luque",
+        "Mariano Roque Alonso",
+        "Nueva Italia",
+        "Ñemby",
+        "San Antonio",
+        "San Lorenzo",
+        "Villa Elisa",
+        "Villeta",
+        "Ypacaraí",
+        "Ypané",
+        "J. Augusto Saldívar"
+      ]
+    },
+    {
+      "code": "PY-12",
+      "name": "Ñeembucú",
+      "cities": [
+        "Pilar",
+        "Alberdi",
+        "Cerrito",
+        "Desmochados",
+        "General José Eduvigis Díaz",
+        "Guazú Cuá",
+        "Humaitá",
+        "Isla Umbú",
+        "Laureles",
+        "Mayor José J. Martínez",
+        "Paso de Patria",
+        "San Juan Bautista de Ñeembucú",
+        "Tacuaras",
+        "Villa Franca",
+        "Villa Oliva",
+        "Villalbín"
+      ]
+    },
+    {
+      "code": "PY-13",
+      "name": "Amambay",
+      "cities": [
+        "Pedro Juan Caballero",
+        "Bella Vista Norte",
+        "Capitán Bado",
+        "Karapaí",
+        "Zanja Pytã"
+      ]
+    },
+    {
+      "code": "PY-14",
+      "name": "Canindeyú",
+      "cities": [
+        "Salto del Guairá",
+        "Corpus Christi",
+        "Curuguaty",
+        "Itanará",
+        "Katueté",
+        "La Paloma",
+        "Nueva Esperanza",
+        "Yasy Cañy",
+        "Ybyrarobaná",
+        "Ygatimí",
+        "Ypejhú",
+        "General Francisco Caballero Álvarez",
+        "Maracaná",
+        "Yby Pytã"
+      ]
+    },
+    {
+      "code": "PY-15",
+      "name": "Presidente Hayes",
+      "cities": [
+        "Villa Hayes",
+        "Benjamín Aceval",
+        "Doctor José Falcón",
+        "Nanawa",
+        "Puerto Pinasco",
+        "Tte. 1° Manuel Irala Fernández",
+        "General José María Bruguez",
+        "Tte. Esteban Martínez",
+        "Pozo Colorado"
+      ]
+    },
+    {
+      "code": "PY-16",
+      "name": "Boquerón",
+      "cities": [
+        "Filadelfia",
+        "Loma Plata",
+        "Mariscal José Félix Estigarribia",
+        "Neuland",
+        "Pedro P. Peña"
+      ]
+    },
+    {
+      "code": "PY-19",
+      "name": "Alto Paraguay",
+      "cities": [
+        "Fuerte Olimpo",
+        "Bahía Negra",
+        "Carmelo Peralta",
+        "Puerto Casado",
+        "María Auxiliadora"
+      ]
+    }
+  ]
+}

@@ -90,6 +90,8 @@ export class AuthUserRepository implements IAuthUserRepository {
           country_id: payload.countryId,
           province_id: payload.provinceId,
           canton_id: payload.cantonId,
+          birth_date: payload.birthDate,
+          gender: payload.gender,
         },
       })
 

@@ -1,0 +1,342 @@
+{
+  "country_code": "HN",
+  "regions": [
+    {
+      "code": "HN-AT",
+      "name": "Atlántida",
+      "cities": [
+        "La Ceiba",
+        "Tela",
+        "El Porvenir",
+        "La Másica",
+        "San Francisco",
+        "Arizona",
+        "Esparta",
+        "Jutiapa"
+      ]
+    },
+    {
+      "code": "HN-CH",
+      "name": "Choluteca",
+      "cities": [
+        "Choluteca",
+        "El Triunfo",
+        "Apacilagua",
+        "Concepción de María",
+        "Duyure",
+        "El Corpus",
+        "Marcovia",
+        "Morolica",
+        "Namasigüe",
+        "Orocuina",
+        "Pespire",
+        "San Antonio de Flores",
+        "San Isidro",
+        "San José",
+        "San Marcos de Colón",
+        "Santa Ana de Yusguare"
+      ]
+    },
+    {
+      "code": "HN-CL",
+      "name": "Colón",
+      "cities": [
+        "Trujillo",
+        "Balfate",
+        "Iriona",
+        "Limón",
+        "Sabá",
+        "Santa Fe",
+        "Santa Rosa de Aguán",
+        "Sonaguera",
+        "Tocoa",
+        "Bonito Oriental"
+      ]
+    },
+    {
+      "code": "HN-CM",
+      "name": "Comayagua",
+      "cities": [
+        "Comayagua",
+        "Ajuterique",
+        "El Rosario",
+        "Esquías",
+        "Humuya",
+        "La Libertad",
+        "Lamaní",
+        "La Trinidad",
+        "Lejamaní",
+        "Meámbar",
+        "Minas de Oro",
+        "Ojos de Agua",
+        "San Jerónimo",
+        "Siguatepeque",
+        "Villa de San Antonio"
+      ]
+    },
+    {
+      "code": "HN-CP",
+      "name": "Copán",
+      "cities": [
+        "Santa Rosa de Copán",
+        "Cabañas",
+        "Concepción",
+        "Copán Ruinas",
+        "Corquín",
+        "Cucuyagua",
+        "Dolores",
+        "Dulce Nombre",
+        "El Paraíso",
+        "Florida",
+        "La Jigua",
+        "La Unión",
+        "Nueva Arcadia",
+        "San Agustín",
+        "San Antonio"
+      ]
+    },
+    {
+      "code": "HN-CR",
+      "name": "Cortés",
+      "cities": [
+        "San Pedro Sula",
+        "Choloma",
+        "Villanueva",
+        "La Lima",
+        "Puerto Cortés",
+        "Omoa",
+        "Pimienta",
+        "Potrerillos",
+        "San Antonio de Cortés",
+        "San Francisco de Yojoa",
+        "San Manuel",
+        "Santa Cruz de Yojoa"
+      ]
+    },
+    {
+      "code": "HN-EP",
+      "name": "El Paraíso",
+      "cities": [
+        "Yuscarán",
+        "Alauca",
+        "Danlí",
+        "El Paraíso",
+        "Güinope",
+        "Jacaleapa",
+        "Liure",
+        "Morocelí",
+        "Oropolí",
+        "Potrerillos",
+        "San Antonio de Flores",
+        "San Lucas",
+        "San Matías",
+        "Soledad",
+        "Teupasenti",
+        "Trojes"
+      ]
+    },
+    {
+      "code": "HN-FM",
+      "name": "Francisco Morazán",
+      "cities": [
+        "Tegucigalpa",
+        "Comayagüela",
+        "Alubarén",
+        "Cedros",
+        "Curarén",
+        "El Porvenir",
+        "Guaimaca",
+        "La Libertad",
+        "La Venta",
+        "Lepaterique",
+        "Maraita",
+        "Ojojona",
+        "Sabanagrande",
+        "San Antonio de Oriente",
+        "Talanga",
+        "Valle de Ángeles"
+      ]
+    },
+    {
+      "code": "HN-GD",
+      "name": "Gracias a Dios",
+      "cities": [
+        "Puerto Lempira",
+        "Brus Laguna",
+        "Ahuas",
+        "Juan Francisco Bulnes",
+        "Ramón Villeda Morales",
+        "Wampusirpi"
+      ]
+    },
+    {
+      "code": "HN-IN",
+      "name": "Intibucá",
+      "cities": [
+        "La Esperanza",
+        "Camasca",
+        "Colomoncagua",
+        "Concepción",
+        "Dolores",
+        "Intibucá",
+        "Jesús de Otoro",
+        "Magdalena",
+        "Masaguara",
+        "San Antonio",
+        "San Isidro",
+        "San Juan",
+        "San Marcos de la Sierra",
+        "San Miguel Guancapla",
+        "Santa Lucía",
+        "Yamaranguila"
+      ]
+    },
+    {
+      "code": "HN-IB",
+      "name": "Islas de la Bahía",
+      "cities": ["Roatán", "Guanaja", "José Santos Guardiola", "Utila"]
+    },
+    {
+      "code": "HN-LP",
+      "name": "La Paz",
+      "cities": [
+        "La Paz",
+        "Aguanqueterique",
+        "Cabañas",
+        "Cane",
+        "Chinacla",
+        "Guajiquiro",
+        "Lauterique",
+        "Marcala",
+        "Mercedes de Oriente",
+        "Opatoro",
+        "San Antonio del Norte",
+        "San José",
+        "San Juan",
+        "San Pedro de Tutule",
+        "Santa Ana",
+        "Santa Elena"
+      ]
+    },
+    {
+      "code": "HN-LE",
+      "name": "Lempira",
+      "cities": [
+        "Gracias",
+        "Belén",
+        "Candelaria",
+        "Cololaca",
+        "Erandique",
+        "Gualcince",
+        "Guarita",
+        "La Campa",
+        "La Iguala",
+        "Las Flores",
+        "La Unión",
+        "La Virtud",
+        "Lepaera",
+        "Mapulaca",
+        "Piraera",
+        "San Andrés"
+      ]
+    },
+    {
+      "code": "HN-OC",
+      "name": "Ocotepeque",
+      "cities": [
+        "Nueva Ocotepeque",
+        "Belén Gualcho",
+        "Concepción",
+        "Dolores Merendón",
+        "Fraternidad",
+        "La Encarnación",
+        "La Labor",
+        "Lucerna",
+        "Mercedes",
+        "San Fernando",
+        "San Francisco del Valle",
+        "San Jorge",
+        "San Marcos",
+        "Santa Fe",
+        "Sensenti",
+        "Sinuapa"
+      ]
+    },
+    {
+      "code": "HN-OL",
+      "name": "Olancho",
+      "cities": [
+        "Juticalpa",
+        "Catacamas",
+        "Campamento",
+        "Concordia",
+        "Dulce Nombre de Culmí",
+        "El Rosario",
+        "Esquipulas del Norte",
+        "Gualaco",
+        "Guarizama",
+        "Guata",
+        "Guayape",
+        "Jano",
+        "La Unión",
+        "Mangulile",
+        "Manto",
+        "Patuca"
+      ]
+    },
+    {
+      "code": "HN-SB",
+      "name": "Santa Bárbara",
+      "cities": [
+        "Santa Bárbara",
+        "Arada",
+        "Atima",
+        "Azacualpa",
+        "Ceguaca",
+        "Chinda",
+        "Concepción del Norte",
+        "Concepción del Sur",
+        "Gualala",
+        "Ilama",
+        "Las Vegas",
+        "Macuelizo",
+        "Naranjito",
+        "Nuevo Celilac",
+        "Petoa",
+        "Protección"
+      ]
+    },
+    {
+      "code": "HN-VA",
+      "name": "Valle",
+      "cities": [
+        "Nacaome",
+        "Alianza",
+        "Amapala",
+        "Aramecina",
+        "Caridad",
+        "Goascorán",
+        "Langue",
+        "San Francisco de Coray",
+        "San Lorenzo"
+      ]
+    },
+    {
+      "code": "HN-YO",
+      "name": "Yoro",
+      "cities": [
+        "Yoro",
+        "Arenal",
+        "El Negrito",
+        "El Progreso",
+        "Jocón",
+        "Morazán",
+        "Olanchito",
+        "Santa Rita",
+        "Sulaco",
+        "Victoria",
+        "Yorito"
+      ]
+    }
+  ]
+}
