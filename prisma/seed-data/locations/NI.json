@@ -1,0 +1,256 @@
+{
+  "country_code": "NI",
+  "regions": [
+    {
+      "code": "NI-BO",
+      "name": "Boaco",
+      "cities": [
+        "Boaco",
+        "Camoapa",
+        "Santa Lucía",
+        "San José de los Remates",
+        "San Lorenzo",
+        "Teustepe"
+      ]
+    },
+    {
+      "code": "NI-CA",
+      "name": "Carazo",
+      "cities": [
+        "Jinotepe",
+        "Diriamba",
+        "San Marcos",
+        "Dolores",
+        "El Rosario",
+        "La Conquista",
+        "La Paz de Carazo",
+        "Santa Teresa",
+        "San Gregorio"
+      ]
+    },
+    {
+      "code": "NI-CI",
+      "name": "Chinandega",
+      "cities": [
+        "Chinandega",
+        "El Viejo",
+        "Corinto",
+        "Chichigalpa",
+        "Posoltega",
+        "Puerto Morazán",
+        "Somotillo",
+        "Villanueva",
+        "El Realejo",
+        "San Pedro del Norte",
+        "San Francisco del Norte",
+        "Santo Tomás del Norte",
+        "Cinco Pinos"
+      ]
+    },
+    {
+      "code": "NI-CO",
+      "name": "Chontales",
+      "cities": [
+        "Juigalpa",
+        "Acoyapa",
+        "Comalapa",
+        "El Coral",
+        "La Libertad",
+        "San Pedro de Lóvago",
+        "Santo Domingo",
+        "Santo Tomás",
+        "Villa Sandino",
+        "Cuapa",
+        "El Ayote"
+      ]
+    },
+    {
+      "code": "NI-ES",
+      "name": "Estelí",
+      "cities": [
+        "Estelí",
+        "Condega",
+        "Pueblo Nuevo",
+        "La Trinidad",
+        "San Juan de Limay",
+        "San Nicolás"
+      ]
+    },
+    {
+      "code": "NI-GR",
+      "name": "Granada",
+      "cities": ["Granada", "Nandaime", "Diriá", "Diriomo"]
+    },
+    {
+      "code": "NI-JI",
+      "name": "Jinotega",
+      "cities": [
+        "Jinotega",
+        "San Rafael del Norte",
+        "San Sebastián de Yalí",
+        "La Concordia",
+        "Santa María de Pantasma",
+        "Wiwilí de Jinotega",
+        "El Cuá",
+        "San José de Bocay"
+      ]
+    },
+    {
+      "code": "NI-LE",
+      "name": "León",
+      "cities": [
+        "León",
+        "La Paz Centro",
+        "Nagarote",
+        "Telica",
+        "Quezalguaque",
+        "Larreynaga",
+        "El Sauce",
+        "Achuapa",
+        "El Jicaral",
+        "Santa Rosa del Peñón"
+      ]
+    },
+    {
+      "code": "NI-MD",
+      "name": "Madriz",
+      "cities": [
+        "Somoto",
+        "Totogalpa",
+        "Telpaneca",
+        "San Juan de Río Coco",
+        "Palacagüina",
+        "Yalagüina",
+        "San Lucas",
+        "Las Sabanas",
+        "San José de Cusmapa"
+      ]
+    },
+    {
+      "code": "NI-MN",
+      "name": "Managua",
+      "cities": [
+        "Managua",
+        "Ciudad Sandino",
+        "Tipitapa",
+        "El Crucero",
+        "Mateare",
+        "San Francisco Libre",
+        "San Rafael del Sur",
+        "Ticuantepe",
+        "Villa El Carmen"
+      ]
+    },
+    {
+      "code": "NI-MS",
+      "name": "Masaya",
+      "cities": [
+        "Masaya",
+        "Catarina",
+        "La Concepción",
+        "Masatepe",
+        "Nandasmo",
+        "Nindirí",
+        "Niquinohomo",
+        "San Juan de Oriente",
+        "Tisma"
+      ]
+    },
+    {
+      "code": "NI-MT",
+      "name": "Matagalpa",
+      "cities": [
+        "Matagalpa",
+        "Sébaco",
+        "San Isidro",
+        "Ciudad Darío",
+        "Terrabona",
+        "Esquipulas",
+        "San Dionisio",
+        "San Ramón",
+        "Muy Muy",
+        "Matiguás",
+        "Río Blanco",
+        "Rancho Grande",
+        "El Tuma - La Dalia"
+      ]
+    },
+    {
+      "code": "NI-NS",
+      "name": "Nueva Segovia",
+      "cities": [
+        "Ocotal",
+        "Ciudad Antigua",
+        "Dipilto",
+        "El Jícaro",
+        "Jalapa",
+        "Macuelizo",
+        "Mozonte",
+        "Murra",
+        "Quilalí",
+        "San Fernando",
+        "Santa María",
+        "Wiwilí de Nueva Segovia"
+      ]
+    },
+    {
+      "code": "NI-SJ",
+      "name": "Río San Juan",
+      "cities": [
+        "San Carlos",
+        "El Almendro",
+        "El Castillo",
+        "Morrito",
+        "San Miguelito",
+        "San Juan de Nicaragua"
+      ]
+    },
+    {
+      "code": "NI-RI",
+      "name": "Rivas",
+      "cities": [
+        "Rivas",
+        "Altagracia",
+        "Belén",
+        "Buenos Aires",
+        "Cárdenas",
+        "Moyogalpa",
+        "Potosí",
+        "San Jorge",
+        "San Juan del Sur",
+        "Tola"
+      ]
+    },
+    {
+      "code": "NI-AN",
+      "name": "Costa Caribe Norte",
+      "cities": [
+        "Bilwi",
+        "Waspán",
+        "Rosita",
+        "Bonanza",
+        "Siuna",
+        "Mulukukú",
+        "Prinzapolka",
+        "Waslala"
+      ]
+    },
+    {
+      "code": "NI-AS",
+      "name": "Costa Caribe Sur",
+      "cities": [
+        "Bluefields",
+        "Corn Island",
+        "Kukra Hill",
+        "Laguna de Perlas",
+        "La Cruz de Río Grande",
+        "El Tortuguero",
+        "El Rama",
+        "Muelle de los Bueyes",
+        "Nueva Guinea",
+        "El Ayote",
+        "Desembocadura de Río Grande"
+      ]
+    }
+  ]
+}

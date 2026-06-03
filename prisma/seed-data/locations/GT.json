@@ -1,0 +1,418 @@
+{
+  "country_code": "GT",
+  "regions": [
+    {
+      "code": "GT-AV",
+      "name": "Alta Verapaz",
+      "cities": [
+        "Cobán",
+        "San Pedro Carchá",
+        "San Juan Chamelco",
+        "Tactic",
+        "Tucurú",
+        "Panzós",
+        "Senahú",
+        "Cahabón",
+        "Lanquín",
+        "Chahal",
+        "Fray Bartolomé de las Casas",
+        "Chisec",
+        "Raxruhá",
+        "Santa Cruz Verapaz",
+        "San Cristóbal Verapaz"
+      ]
+    },
+    {
+      "code": "GT-BV",
+      "name": "Baja Verapaz",
+      "cities": [
+        "Salamá",
+        "San Miguel Chicaj",
+        "Rabinal",
+        "Cubulco",
+        "Granados",
+        "El Chol",
+        "San Jerónimo",
+        "Purulhá"
+      ]
+    },
+    {
+      "code": "GT-CM",
+      "name": "Chimaltenango",
+      "cities": [
+        "Chimaltenango",
+        "San José Poaquil",
+        "San Martín Jilotepeque",
+        "Comalapa",
+        "Santa Apolonia",
+        "Tecpán Guatemala",
+        "Patzún",
+        "Pochuta",
+        "Patzicía",
+        "Santa Cruz Balanyá",
+        "Acatenango",
+        "Yepocapa",
+        "San Andrés Itzapa",
+        "Parramos",
+        "Zaragoza",
+        "El Tejar"
+      ]
+    },
+    {
+      "code": "GT-CQ",
+      "name": "Chiquimula",
+      "cities": [
+        "Chiquimula",
+        "San José la Arada",
+        "San Juan Ermita",
+        "Jocotán",
+        "Camotán",
+        "Olopa",
+        "Esquipulas",
+        "Concepción Las Minas",
+        "Quezaltepeque",
+        "San Jacinto",
+        "Ipala"
+      ]
+    },
+    {
+      "code": "GT-PR",
+      "name": "El Progreso",
+      "cities": [
+        "Guastatoya",
+        "Morazán",
+        "San Agustín Acasaguastlán",
+        "San Cristóbal Acasaguastlán",
+        "El Jícaro",
+        "Sansare",
+        "Sanarate",
+        "San Antonio La Paz"
+      ]
+    },
+    {
+      "code": "GT-ES",
+      "name": "Escuintla",
+      "cities": [
+        "Escuintla",
+        "Santa Lucía Cotzumalguapa",
+        "La Democracia",
+        "Siquinalá",
+        "Masagua",
+        "Tiquisate",
+        "La Gomera",
+        "Guanagazapa",
+        "San José",
+        "Iztapa",
+        "Palín",
+        "San Vicente Pacaya",
+        "Nueva Concepción"
+      ]
+    },
+    {
+      "code": "GT-GU",
+      "name": "Guatemala",
+      "cities": [
+        "Ciudad de Guatemala",
+        "Mixco",
+        "Villa Nueva",
+        "San Miguel Petapa",
+        "Santa Catarina Pinula",
+        "Villa Canales",
+        "San José Pinula",
+        "Amatitlán",
+        "Fraijanes",
+        "Chinautla",
+        "San Pedro Ayampuc",
+        "San Juan Sacatepéquez",
+        "San Pedro Sacatepéquez",
+        "San Raymundo",
+        "Palencia"
+      ]
+    },
+    {
+      "code": "GT-HU",
+      "name": "Huehuetenango",
+      "cities": [
+        "Huehuetenango",
+        "Chiantla",
+        "Malacatancito",
+        "Cuilco",
+        "Nentón",
+        "San Pedro Necta",
+        "Jacaltenango",
+        "Soloma",
+        "Santa Eulalia",
+        "San Mateo Ixtatán",
+        "Barillas",
+        "Aguacatán",
+        "San Sebastián Huehuetenango",
+        "La Democracia",
+        "La Libertad"
+      ]
+    },
+    {
+      "code": "GT-IZ",
+      "name": "Izabal",
+      "cities": ["Puerto Barrios", "Livingston", "El Estor", "Morales", "Los Amates"]
+    },
+    {
+      "code": "GT-JA",
+      "name": "Jalapa",
+      "cities": [
+        "Jalapa",
+        "San Pedro Pinula",
+        "San Luis Jilotepeque",
+        "San Manuel Chaparrón",
+        "San Carlos Alzatate",
+        "Monjas",
+        "Mataquescuintla"
+      ]
+    },
+    {
+      "code": "GT-JU",
+      "name": "Jutiapa",
+      "cities": [
+        "Jutiapa",
+        "El Progreso",
+        "Santa Catarina Mita",
+        "Agua Blanca",
+        "Asunción Mita",
+        "Yupiltepeque",
+        "Atescatempa",
+        "Jerez",
+        "El Adelanto",
+        "Zapotitlán",
+        "Comapa",
+        "Jalpatagua",
+        "Conguaco",
+        "Moyuta",
+        "Pasaco",
+        "San José Acatempa",
+        "Quesada"
+      ]
+    },
+    {
+      "code": "GT-PE",
+      "name": "Petén",
+      "cities": [
+        "Flores",
+        "San José",
+        "San Benito",
+        "San Andrés",
+        "La Libertad",
+        "San Francisco",
+        "Santa Ana",
+        "Dolores",
+        "San Luis",
+        "Sayaxché",
+        "Melchor de Mencos",
+        "Poptún"
+      ]
+    },
+    {
+      "code": "GT-QZ",
+      "name": "Quetzaltenango",
+      "cities": [
+        "Quetzaltenango",
+        "Salcajá",
+        "Olintepeque",
+        "San Carlos Sija",
+        "Sibilia",
+        "Cabricán",
+        "Cajolá",
+        "San Miguel Sigüilá",
+        "Ostuncalco",
+        "San Mateo",
+        "Concepción Chiquirichapa",
+        "San Martín Sacatepéquez",
+        "Almolonga",
+        "Cantel",
+        "Huitán",
+        "Zunil",
+        "Coatepeque"
+      ]
+    },
+    {
+      "code": "GT-QC",
+      "name": "Quiché",
+      "cities": [
+        "Santa Cruz del Quiché",
+        "Chiché",
+        "Chinique",
+        "Zacualpa",
+        "Chajul",
+        "Chichicastenango",
+        "Patzité",
+        "San Antonio Ilotenango",
+        "San Pedro Jocopilas",
+        "Cunén",
+        "San Juan Cotzal",
+        "Joyabaj",
+        "Nebaj",
+        "Uspantán",
+        "Sacapulas",
+        "Pachalum",
+        "Playa Grande Ixcán"
+      ]
+    },
+    {
+      "code": "GT-RE",
+      "name": "Retalhuleu",
+      "cities": [
+        "Retalhuleu",
+        "San Sebastián",
+        "Santa Cruz Muluá",
+        "San Martín Zapotitlán",
+        "San Felipe",
+        "San Andrés Villa Seca",
+        "Champerico",
+        "Nuevo San Carlos",
+        "El Asintal"
+      ]
+    },
+    {
+      "code": "GT-SA",
+      "name": "Sacatepéquez",
+      "cities": [
+        "Antigua Guatemala",
+        "Jocotenango",
+        "Pastores",
+        "Sumpango",
+        "Santo Domingo Xenacoj",
+        "Santiago Sacatepéquez",
+        "San Bartolomé Milpas Altas",
+        "San Lucas Sacatepéquez",
+        "Santa Lucía Milpas Altas",
+        "Magdalena Milpas Altas",
+        "Santa María de Jesús",
+        "Ciudad Vieja",
+        "San Miguel Dueñas",
+        "Alotenango",
+        "San Antonio Aguas Calientes",
+        "Santa Catarina Barahona"
+      ]
+    },
+    {
+      "code": "GT-SM",
+      "name": "San Marcos",
+      "cities": [
+        "San Marcos",
+        "San Pedro Sacatepéquez",
+        "Comitancillo",
+        "San Antonio Sacatepéquez",
+        "San Miguel Ixtahuacán",
+        "Concepción Tutuapa",
+        "Tacaná",
+        "Sibinal",
+        "Tajumulco",
+        "Tejutla",
+        "San Rafael Pie de la Cuesta",
+        "Nuevo Progreso",
+        "El Tumbador",
+        "Malacatán",
+        "Catarina",
+        "Ayutla",
+        "Ocós",
+        "Pajapita"
+      ]
+    },
+    {
+      "code": "GT-SR",
+      "name": "Santa Rosa",
+      "cities": [
+        "Cuilapa",
+        "Barberena",
+        "Santa Rosa de Lima",
+        "Casillas",
+        "San Rafael Las Flores",
+        "Oratorio",
+        "San Juan Tecuaco",
+        "Chiquimulilla",
+        "Taxisco",
+        "Santa María Ixhuatán",
+        "Guazacapán",
+        "Santa Cruz Naranjo",
+        "Pueblo Nuevo Viñas",
+        "Nueva Santa Rosa"
+      ]
+    },
+    {
+      "code": "GT-SO",
+      "name": "Sololá",
+      "cities": [
+        "Sololá",
+        "San José Chacayá",
+        "Santa María Visitación",
+        "Santa Lucía Utatlán",
+        "Nahualá",
+        "Santa Catarina Ixtahuacán",
+        "Santa Clara La Laguna",
+        "Concepción",
+        "San Andrés Semetabaj",
+        "Panajachel",
+        "Santa Catarina Palopó",
+        "San Antonio Palopó",
+        "San Lucas Tolimán",
+        "Santa Cruz La Laguna",
+        "San Pablo La Laguna",
+        "San Marcos La Laguna",
+        "San Juan La Laguna",
+        "San Pedro La Laguna",
+        "Santiago Atitlán"
+      ]
+    },
+    {
+      "code": "GT-SU",
+      "name": "Suchitepéquez",
+      "cities": [
+        "Mazatenango",
+        "Cuyotenango",
+        "San Francisco Zapotitlán",
+        "San Bernardino",
+        "San José El Ídolo",
+        "Santo Domingo Suchitepéquez",
+        "San Lorenzo",
+        "Samayac",
+        "San Pablo Jocopilas",
+        "San Antonio Suchitepéquez",
+        "San Miguel Panán",
+        "San Gabriel",
+        "Chicacao",
+        "Patulul",
+        "Santa Bárbara",
+        "Río Bravo"
+      ]
+    },
+    {
+      "code": "GT-TO",
+      "name": "Totonicapán",
+      "cities": [
+        "Totonicapán",
+        "San Cristóbal Totonicapán",
+        "San Francisco El Alto",
+        "San Andrés Xecul",
+        "Momostenango",
+        "Santa María Chiquimula",
+        "Santa Lucía La Reforma",
+        "San Bartolo Aguas Calientes"
+      ]
+    },
+    {
+      "code": "GT-ZA",
+      "name": "Zacapa",
+      "cities": [
+        "Zacapa",
+        "Estanzuela",
+        "Río Hondo",
+        "Gualán",
+        "Teculután",
+        "Usumatlán",
+        "Cabañas",
+        "San Diego",
+        "La Unión",
+        "Huité",
+        "San Jorge"
+      ]
+    }
+  ]
+}

@@ -127,6 +127,15 @@ enum CartStatus {
   @@map("cart_status")
 }
 
+enum Gender {
+  female
+  male
+  other
+  prefer_not_to_say
+
+  @@map("gender")
+}
+
 // ─── Reference Tables ───────────────────────────────────────────────────────
 
 model Province {
@@ -722,6 +731,8 @@ model CustomerProfile {
   country_id  Int
   province_id Int?
   canton_id   Int?
+  birth_date  DateTime? @db.Date
+  gender      Gender?
   created_at  DateTime @default(now()) @db.Timestamptz
   updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz
 

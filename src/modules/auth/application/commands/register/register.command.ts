@@ -1,3 +1,5 @@
+import type { Gender } from '@generated/prisma/client'
+
 export class RegisterCommand {
   constructor(
     public readonly email: string,
@@ -8,6 +10,8 @@ export class RegisterCommand {
     public readonly countryId: number,
     public readonly provinceId: number | null,
     public readonly cantonId: number | null,
+    public readonly birthDate: string | null,
+    public readonly gender: Gender | null,
     public readonly ipAddress: string | null,
     public readonly userAgent: string | null,
   ) {}

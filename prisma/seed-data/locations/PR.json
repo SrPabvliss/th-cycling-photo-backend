@@ -1,0 +1,1135 @@
+{
+  "country_code": "PR",
+  "regions": [
+    {
+      "code": "PR-AD",
+      "name": "Adjuntas",
+      "cities": [
+        "Adjuntas Pueblo",
+        "Capáez",
+        "Garzas",
+        "Guayabo Dulce",
+        "Guilarte",
+        "Juan González",
+        "Limaní",
+        "Pellejas",
+        "Portillo",
+        "Portugués"
+      ]
+    },
+    {
+      "code": "PR-AG",
+      "name": "Aguada",
+      "cities": [
+        "Aguada Pueblo",
+        "Asomante",
+        "Atalaya",
+        "Carrizal",
+        "Cerro Gordo",
+        "Espinar",
+        "Guaniquilla",
+        "Guayabo",
+        "Jagüey",
+        "Lagunas"
+      ]
+    },
+    {
+      "code": "PR-AS",
+      "name": "Aguadilla",
+      "cities": [
+        "Aguadilla Pueblo",
+        "Aguacate",
+        "Arenales Altos",
+        "Arenales Bajos",
+        "Borinquen",
+        "Caimital Alto",
+        "Caimital Bajo",
+        "Camaseyes",
+        "Ceiba Alta",
+        "Maleza Alta"
+      ]
+    },
+    {
+      "code": "PR-AB",
+      "name": "Aguas Buenas",
+      "cities": [
+        "Aguas Buenas Pueblo",
+        "Bairoa",
+        "Bayamoncito",
+        "Cagüitas",
+        "Jagüeyes",
+        "Juan Asencio",
+        "Mula",
+        "Mulas",
+        "Sonadora",
+        "Sumidero"
+      ]
+    },
+    {
+      "code": "PR-AI",
+      "name": "Aibonito",
+      "cities": [
+        "Aibonito Pueblo",
+        "Algarrobo",
+        "Asomante",
+        "Caonillas",
+        "Cuyón",
+        "Llanos",
+        "La Plata",
+        "Pasto",
+        "Plata",
+        "Robles"
+      ]
+    },
+    {
+      "code": "PR-AN",
+      "name": "Añasco",
+      "cities": [
+        "Añasco Pueblo",
+        "Caguabo",
+        "Caracol",
+        "Carreras",
+        "Cerro Gordo",
+        "Cidra",
+        "Corcovada",
+        "Daguey",
+        "Hatillo",
+        "Marías"
+      ]
+    },
+    {
+      "code": "PR-AR",
+      "name": "Arecibo",
+      "cities": [
+        "Arecibo Pueblo",
+        "Arenalejos",
+        "Cambalache",
+        "Carreras",
+        "Domingo Ruiz",
+        "Dominguito",
+        "Esperanza",
+        "Factor",
+        "Garrochales",
+        "Hato Abajo"
+      ]
+    },
+    {
+      "code": "PR-AO",
+      "name": "Arroyo",
+      "cities": [
+        "Arroyo Pueblo",
+        "Ancones",
+        "Cuatro Calles",
+        "Guásimas",
+        "Palmas",
+        "Pitahaya",
+        "Yaurel"
+      ]
+    },
+    {
+      "code": "PR-BC",
+      "name": "Barceloneta",
+      "cities": [
+        "Barceloneta Pueblo",
+        "Florida Afuera",
+        "Garrochales",
+        "Magueyes",
+        "Palmas Altas",
+        "Palmas Altas Sur",
+        "Tierras Nuevas Saliente"
+      ]
+    },
+    {
+      "code": "PR-BR",
+      "name": "Barranquitas",
+      "cities": [
+        "Barranquitas Pueblo",
+        "Barrancas",
+        "Cañabón",
+        "Helechal",
+        "Honduras",
+        "Palo Hincado",
+        "Quebrada Grande",
+        "Quebradillas"
+      ]
+    },
+    {
+      "code": "PR-BY",
+      "name": "Bayamón",
+      "cities": [
+        "Bayamón Pueblo",
+        "Buena Vista",
+        "Cerro Gordo",
+        "Dajaos",
+        "Guaraguao Abajo",
+        "Guaraguao Arriba",
+        "Hato Tejas",
+        "Juan Sánchez",
+        "Minillas",
+        "Nuevo"
+      ]
+    },
+    {
+      "code": "PR-CB",
+      "name": "Cabo Rojo",
+      "cities": [
+        "Cabo Rojo Pueblo",
+        "Bajura",
+        "Boquerón",
+        "Guanajibo",
+        "Llanos Costa",
+        "Llanos Tuna",
+        "Miradero",
+        "Monte Grande",
+        "Pedernales",
+        "Puerto Real"
+      ]
+    },
+    {
+      "code": "PR-CG",
+      "name": "Caguas",
+      "cities": [
+        "Caguas Pueblo",
+        "Bairoa",
+        "Beatriz",
+        "Borinquen",
+        "Cañabón",
+        "Cañaboncito",
+        "Río Cañas",
+        "San Antonio",
+        "San Salvador",
+        "Tomás de Castro"
+      ]
+    },
+    {
+      "code": "PR-CA",
+      "name": "Camuy",
+      "cities": [
+        "Camuy Pueblo",
+        "Abra Honda",
+        "Cibao",
+        "Ciénegas",
+        "Membrillo",
+        "Piedra Gorda",
+        "Puente",
+        "Puertos",
+        "Quebrada",
+        "Yeguada"
+      ]
+    },
+    {
+      "code": "PR-CN",
+      "name": "Canóvanas",
+      "cities": [
+        "Canóvanas Pueblo",
+        "Campo Rico",
+        "Cubuy",
+        "Hato Puerco",
+        "Lomas",
+        "Torrecilla Alta",
+        "Torrecilla Baja"
+      ]
+    },
+    {
+      "code": "PR-CR",
+      "name": "Carolina",
+      "cities": [
+        "Carolina Pueblo",
+        "Barrazas",
+        "Cacao",
+        "Canovanillas",
+        "Cangrejo Arriba",
+        "Carruzos",
+        "Cedro",
+        "Hoyo Mulas",
+        "Martín González",
+        "Trujillo Bajo"
+      ]
+    },
+    {
+      "code": "PR-CT",
+      "name": "Cataño",
+      "cities": ["Cataño Pueblo", "Palmas", "Palmas Bajas", "Las Vegas"]
+    },
+    {
+      "code": "PR-CY",
+      "name": "Cayey",
+      "cities": [
+        "Cayey Pueblo",
+        "Beatriz",
+        "Cedro",
+        "Cercadillo",
+        "Culebras Alto",
+        "Culebras Bajo",
+        "Farallón",
+        "Guavate",
+        "Jájome Alto",
+        "Pasto Viejo"
+      ]
+    },
+    {
+      "code": "PR-CE",
+      "name": "Ceiba",
+      "cities": ["Ceiba Pueblo", "Chupacallos", "Daguao", "Guayacán", "Machos", "Río Abajo", "Saco"]
+    },
+    {
+      "code": "PR-CI",
+      "name": "Ciales",
+      "cities": [
+        "Ciales Pueblo",
+        "Cialitos",
+        "Cordillera",
+        "Frontón",
+        "Hato Viejo",
+        "Jaguas",
+        "Pesas",
+        "Pozas",
+        "Toro Negro"
+      ]
+    },
+    {
+      "code": "PR-CD",
+      "name": "Cidra",
+      "cities": [
+        "Cidra Pueblo",
+        "Arenas",
+        "Bayamón",
+        "Beatriz",
+        "Ceiba",
+        "Certenejas",
+        "Honduras",
+        "Montellano",
+        "Rabanal",
+        "Salto"
+      ]
+    },
+    {
+      "code": "PR-CO",
+      "name": "Coamo",
+      "cities": [
+        "Coamo Pueblo",
+        "Cuyón",
+        "Hayales",
+        "Los Llanos",
+        "Palmarejo",
+        "Pasto",
+        "Pedro García",
+        "Pulguillas",
+        "San Ildefonso",
+        "Santa Catalina"
+      ]
+    },
+    {
+      "code": "PR-CM",
+      "name": "Comerío",
+      "cities": [
+        "Comerío Pueblo",
+        "Cedrito",
+        "Cejas",
+        "Doña Elena",
+        "Naranjo",
+        "Palomas",
+        "Piñas",
+        "Río Hondo",
+        "Vega Redonda"
+      ]
+    },
+    {
+      "code": "PR-CV",
+      "name": "Corozal",
+      "cities": [
+        "Corozal Pueblo",
+        "Abras",
+        "Cibuco",
+        "Cuchillas",
+        "Dos Bocas",
+        "Magueyes",
+        "Maná",
+        "Mavilla",
+        "Negros",
+        "Padilla"
+      ]
+    },
+    {
+      "code": "PR-CU",
+      "name": "Culebra",
+      "cities": [
+        "Dewey",
+        "Flamenco",
+        "Fraile",
+        "Playa Sardinas I",
+        "Playa Sardinas II",
+        "San Isidro"
+      ]
+    },
+    {
+      "code": "PR-DO",
+      "name": "Dorado",
+      "cities": ["Dorado Pueblo", "Espinosa", "Higuillar", "Maguayo", "Mameyal", "Río Lajas"]
+    },
+    {
+      "code": "PR-FA",
+      "name": "Fajardo",
+      "cities": [
+        "Fajardo Pueblo",
+        "Demajagua",
+        "Florencio",
+        "Mata Redonda",
+        "Naranjo",
+        "Quebrada Fajardo",
+        "Río Arriba",
+        "Sardinera"
+      ]
+    },
+    {
+      "code": "PR-FL",
+      "name": "Florida",
+      "cities": ["Florida Pueblo", "Pajonal"]
+    },
+    {
+      "code": "PR-GU",
+      "name": "Guánica",
+      "cities": [
+        "Guánica Pueblo",
+        "Arena",
+        "Caña Gorda",
+        "Carenero",
+        "Ciénaga",
+        "Ensenada",
+        "Magas",
+        "Montalva",
+        "Susúa Baja"
+      ]
+    },
+    {
+      "code": "PR-GA",
+      "name": "Guayama",
+      "cities": [
+        "Guayama Pueblo",
+        "Algarrobos",
+        "Caimital",
+        "Carite",
+        "Carmen",
+        "Guamaní",
+        "Jobos",
+        "Machete",
+        "Palmas",
+        "Pozo Hondo"
+      ]
+    },
+    {
+      "code": "PR-GN",
+      "name": "Guayanilla",
+      "cities": [
+        "Guayanilla Pueblo",
+        "Barrero",
+        "Boca",
+        "Cedro",
+        "Indios",
+        "Jagua Pasto",
+        "Jagua Tuna",
+        "Llano",
+        "Macaná",
+        "Magas"
+      ]
+    },
+    {
+      "code": "PR-GY",
+      "name": "Guaynabo",
+      "cities": [
+        "Guaynabo Pueblo",
+        "Camarones",
+        "Frailes",
+        "Guaraguao",
+        "Hato Nuevo",
+        "Mamey",
+        "Pueblo Viejo",
+        "Río",
+        "Santa Rosa",
+        "Sonadora"
+      ]
+    },
+    {
+      "code": "PR-GR",
+      "name": "Gurabo",
+      "cities": [
+        "Gurabo Pueblo",
+        "Celada",
+        "Hato Nuevo",
+        "Jagüal",
+        "Jaguar",
+        "Mamey",
+        "Masas",
+        "Navarro",
+        "Quebrada Infierno",
+        "Rincón"
+      ]
+    },
+    {
+      "code": "PR-HA",
+      "name": "Hatillo",
+      "cities": [
+        "Hatillo Pueblo",
+        "Aibonito",
+        "Bayaney",
+        "Buena Vista",
+        "Campo Alegre",
+        "Capáez",
+        "Carrizales",
+        "Corcovado",
+        "Naranjito"
+      ]
+    },
+    {
+      "code": "PR-HO",
+      "name": "Hormigueros",
+      "cities": ["Hormigueros Pueblo", "Benavente", "Guanajibo", "Jagüitas", "Lavadero"]
+    },
+    {
+      "code": "PR-HU",
+      "name": "Humacao",
+      "cities": [
+        "Humacao Pueblo",
+        "Antón Ruiz",
+        "Buena Vista",
+        "Candelero Abajo",
+        "Candelero Arriba",
+        "Cataño",
+        "Collores",
+        "Mabú",
+        "Mambiche",
+        "Punta Santiago"
+      ]
+    },
+    {
+      "code": "PR-IS",
+      "name": "Isabela",
+      "cities": [
+        "Isabela Pueblo",
+        "Arenales Altos",
+        "Arenales Bajos",
+        "Bajuras",
+        "Bejucos",
+        "Coto",
+        "Galateo Alto",
+        "Galateo Bajo",
+        "Guayabos",
+        "Jobos"
+      ]
+    },
+    {
+      "code": "PR-JD",
+      "name": "Jayuya",
+      "cities": [
+        "Jayuya Pueblo",
+        "Coabey",
+        "Collores",
+        "Jayuya Abajo",
+        "Mameyes Arriba",
+        "Pica",
+        "Río Grande",
+        "Saliente",
+        "Veguitas",
+        "Zamas"
+      ]
+    },
+    {
+      "code": "PR-JC",
+      "name": "Juana Díaz",
+      "cities": [
+        "Juana Díaz Pueblo",
+        "Amuelas",
+        "Callabo",
+        "Capitanejo",
+        "Cintrona",
+        "Collores",
+        "Emajagual",
+        "Guayabal",
+        "Jacaguas",
+        "Lomas"
+      ]
+    },
+    {
+      "code": "PR-JU",
+      "name": "Juncos",
+      "cities": [
+        "Juncos Pueblo",
+        "Caimito",
+        "Ceiba Norte",
+        "Ceiba Sur",
+        "Gurabo Abajo",
+        "Lirios",
+        "Mamey",
+        "Valenciano Abajo",
+        "Valenciano Arriba"
+      ]
+    },
+    {
+      "code": "PR-LA",
+      "name": "Lajas",
+      "cities": [
+        "Lajas Pueblo",
+        "Candelaria",
+        "Costa",
+        "La Parguera",
+        "Lajas Arriba",
+        "Llanos",
+        "París",
+        "Palmarejo",
+        "Plata",
+        "Sabana Yeguas"
+      ]
+    },
+    {
+      "code": "PR-LR",
+      "name": "Lares",
+      "cities": [
+        "Lares Pueblo",
+        "Bartolo",
+        "Buenos Aires",
+        "Callejones",
+        "Espino",
+        "Mirasol",
+        "Pezuela",
+        "Piletas",
+        "Río Prieto"
+      ]
+    },
+    {
+      "code": "PR-LM",
+      "name": "Las Marías",
+      "cities": [
+        "Las Marías Pueblo",
+        "Alto Sano",
+        "Anones",
+        "Bucarabones",
+        "Cerrote",
+        "Chamorro",
+        "Espino",
+        "Furnias",
+        "Maravilla Este",
+        "Naranjales"
+      ]
+    },
+    {
+      "code": "PR-LP",
+      "name": "Las Piedras",
+      "cities": [
+        "Las Piedras Pueblo",
+        "Boquerón",
+        "Ceiba",
+        "Collores",
+        "El Río",
+        "La Fermina",
+        "Montones",
+        "Quebrada Arenas",
+        "Río",
+        "Tejas"
+      ]
+    },
+    {
+      "code": "PR-LO",
+      "name": "Loíza",
+      "cities": [
+        "Loíza Pueblo",
+        "Canóvanas",
+        "Las Cuevas",
+        "Medianía Alta",
+        "Medianía Baja",
+        "Torrecilla Alta",
+        "Torrecilla Baja"
+      ]
+    },
+    {
+      "code": "PR-LQ",
+      "name": "Luquillo",
+      "cities": [
+        "Luquillo Pueblo",
+        "Juan Martín",
+        "Mameyes I",
+        "Mata de Plátano",
+        "Pitahaya",
+        "Sabana"
+      ]
+    },
+    {
+      "code": "PR-MA",
+      "name": "Manatí",
+      "cities": [
+        "Manatí Pueblo",
+        "Bajura Adentro",
+        "Bajura Afuera",
+        "Coto Norte",
+        "Coto Sur",
+        "Río Arriba Poniente",
+        "Río Arriba Saliente",
+        "Tierras Nuevas Poniente",
+        "Tierras Nuevas Saliente"
+      ]
+    },
+    {
+      "code": "PR-MR",
+      "name": "Maricao",
+      "cities": [
+        "Maricao Pueblo",
+        "Bucarabones",
+        "Indiera Alta",
+        "Indiera Baja",
+        "Indiera Fría",
+        "Maricao Afuera",
+        "Montoso"
+      ]
+    },
+    {
+      "code": "PR-MB",
+      "name": "Maunabo",
+      "cities": [
+        "Maunabo Pueblo",
+        "Calzada",
+        "Emajagua",
+        "Lizas",
+        "Matuyas Alto",
+        "Matuyas Bajo",
+        "Palo Seco",
+        "Quebrada Arenas",
+        "Talante",
+        "Tumbao"
+      ]
+    },
+    {
+      "code": "PR-MG",
+      "name": "Mayagüez",
+      "cities": [
+        "Mayagüez Pueblo",
+        "Algarrobos",
+        "Bateyes",
+        "Guanajibo",
+        "Juan Alonso",
+        "Leguízamo",
+        "Limón",
+        "Mayagüez Arriba",
+        "Miradero",
+        "Quemado"
+      ]
+    },
+    {
+      "code": "PR-MC",
+      "name": "Moca",
+      "cities": [
+        "Moca Pueblo",
+        "Aceitunas",
+        "Capá",
+        "Centro",
+        "Cerro Gordo",
+        "Cruz",
+        "Cuchillas",
+        "Marías",
+        "Naranjo",
+        "Pueblo"
+      ]
+    },
+    {
+      "code": "PR-MO",
+      "name": "Morovis",
+      "cities": [
+        "Morovis Pueblo",
+        "Barahona",
+        "Cuchillas",
+        "Fránquez",
+        "Monte Llano",
+        "Morovis Norte",
+        "Morovis Sud",
+        "Pasto",
+        "Perchas",
+        "Río Grande"
+      ]
+    },
+    {
+      "code": "PR-NA",
+      "name": "Naguabo",
+      "cities": [
+        "Naguabo Pueblo",
+        "Daguao",
+        "Duque",
+        "Húcares",
+        "Maizales",
+        "Mariana",
+        "Peña Pobre",
+        "Río",
+        "Río Blanco",
+        "Santiago y Lima"
+      ]
+    },
+    {
+      "code": "PR-NR",
+      "name": "Naranjito",
+      "cities": [
+        "Naranjito Pueblo",
+        "Achiote",
+        "Anones",
+        "Cedro Abajo",
+        "Cedro Arriba",
+        "Guadiana",
+        "Lomas",
+        "Nuevo"
+      ]
+    },
+    {
+      "code": "PR-OR",
+      "name": "Orocovis",
+      "cities": [
+        "Orocovis Pueblo",
+        "Ala de la Piedra",
+        "Bauta Abajo",
+        "Bauta Arriba",
+        "Botijas",
+        "Cacaos",
+        "Collores",
+        "Damián Abajo",
+        "Damián Arriba",
+        "Gato"
+      ]
+    },
+    {
+      "code": "PR-PA",
+      "name": "Patillas",
+      "cities": [
+        "Patillas Pueblo",
+        "Apeadero",
+        "Bajos",
+        "Cacao Alto",
+        "Cacao Bajo",
+        "Egozcue",
+        "Guardarraya",
+        "Jagual",
+        "Mamey",
+        "Quebrada Arriba"
+      ]
+    },
+    {
+      "code": "PR-PE",
+      "name": "Peñuelas",
+      "cities": [
+        "Peñuelas Pueblo",
+        "Barreal",
+        "Coto",
+        "Cuebas",
+        "Encarnación",
+        "Jaguas",
+        "Macaná",
+        "Quebrada Ceiba",
+        "Rucio",
+        "Santo Domingo"
+      ]
+    },
+    {
+      "code": "PR-PO",
+      "name": "Ponce",
+      "cities": [
+        "Ponce Pueblo",
+        "Anón",
+        "Bucaná",
+        "Canas",
+        "Capitanejo",
+        "Coto Laurel",
+        "Machuelo Abajo",
+        "Machuelo Arriba",
+        "Magueyes",
+        "Maragüez"
+      ]
+    },
+    {
+      "code": "PR-QB",
+      "name": "Quebradillas",
+      "cities": [
+        "Quebradillas Pueblo",
+        "Cacao",
+        "Charcas",
+        "Cocos",
+        "Guajataca",
+        "San Antonio",
+        "San José",
+        "Terranova"
+      ]
+    },
+    {
+      "code": "PR-RI",
+      "name": "Rincón",
+      "cities": [
+        "Rincón Pueblo",
+        "Atalaya",
+        "Barrero",
+        "Calvache",
+        "Cruces",
+        "Ensenada",
+        "Jagüey",
+        "Pueblo",
+        "Puntas",
+        "Río Grande"
+      ]
+    },
+    {
+      "code": "PR-RG",
+      "name": "Río Grande",
+      "cities": [
+        "Río Grande Pueblo",
+        "Ciénaga Alta",
+        "Ciénaga Baja",
+        "Guzmán Abajo",
+        "Guzmán Arriba",
+        "Herrera",
+        "Jiménez",
+        "Mameyes II",
+        "Palmer",
+        "Zarzal"
+      ]
+    },
+    {
+      "code": "PR-SB",
+      "name": "Sabana Grande",
+      "cities": [
+        "Sabana Grande Pueblo",
+        "Machuchal",
+        "Pueblo",
+        "Rayo",
+        "Rincón",
+        "Santana",
+        "Susúa",
+        "Tabonuco",
+        "Torre"
+      ]
+    },
+    {
+      "code": "PR-SL",
+      "name": "Salinas",
+      "cities": ["Salinas Pueblo", "Aguirre", "Lapa", "Palmas", "Quebrada Yeguas", "Río Jueyes"]
+    },
+    {
+      "code": "PR-SA",
+      "name": "San Germán",
+      "cities": [
+        "San Germán Pueblo",
+        "Ancones",
+        "Caín Alto",
+        "Caín Bajo",
+        "Cotuí",
+        "Duey Alto",
+        "Duey Bajo",
+        "Guamá",
+        "Hoconuco Alto",
+        "Hoconuco Bajo"
+      ]
+    },
+    {
+      "code": "PR-SJ",
+      "name": "San Juan",
+      "cities": [
+        "Viejo San Juan",
+        "Santurce",
+        "Hato Rey Norte",
+        "Hato Rey Central",
+        "Hato Rey Sur",
+        "Río Piedras",
+        "Condado",
+        "Ocean Park",
+        "Caimito",
+        "Cupey"
+      ]
+    },
+    {
+      "code": "PR-SN",
+      "name": "San Lorenzo",
+      "cities": [
+        "San Lorenzo Pueblo",
+        "Cayaguas",
+        "Cerro Gordo",
+        "Espino",
+        "Florida",
+        "Hato",
+        "Jagual",
+        "Quebrada",
+        "Quebrada Arenas",
+        "Quemados"
+      ]
+    },
+    {
+      "code": "PR-SS",
+      "name": "San Sebastián",
+      "cities": [
+        "San Sebastián Pueblo",
+        "Aibonito",
+        "Alto Sano",
+        "Bahomamey",
+        "Calabazas",
+        "Cidral",
+        "Culebrinas",
+        "Eneas",
+        "Guacio",
+        "Guajataca"
+      ]
+    },
+    {
+      "code": "PR-SI",
+      "name": "Santa Isabel",
+      "cities": [
+        "Santa Isabel Pueblo",
+        "Boca Velázquez",
+        "Descalabrado",
+        "Felicia 1",
+        "Felicia 2",
+        "Jauca 1",
+        "Jauca 2",
+        "Playa"
+      ]
+    },
+    {
+      "code": "PR-TA",
+      "name": "Toa Alta",
+      "cities": [
+        "Toa Alta Pueblo",
+        "Contorno",
+        "Galateo",
+        "Mucarabones",
+        "Ortiz",
+        "Piñas",
+        "Quebrada Arenas",
+        "Quebrada Cruz",
+        "Río Lajas"
+      ]
+    },
+    {
+      "code": "PR-TB",
+      "name": "Toa Baja",
+      "cities": [
+        "Toa Baja Pueblo",
+        "Candelaria",
+        "Levittown",
+        "Media Luna",
+        "Palo Seco",
+        "Sabana Seca"
+      ]
+    },
+    {
+      "code": "PR-TR",
+      "name": "Trujillo Alto",
+      "cities": [
+        "Trujillo Alto Pueblo",
+        "Carraízo",
+        "Cuevas",
+        "Dos Bocas",
+        "La Gloria",
+        "Quebrada Grande",
+        "Quebrada Negrito",
+        "St. Just"
+      ]
+    },
+    {
+      "code": "PR-UT",
+      "name": "Utuado",
+      "cities": [
+        "Utuado Pueblo",
+        "Ángeles",
+        "Arenas",
+        "Caguana",
+        "Caníaco",
+        "Caonillas Abajo",
+        "Caonillas Arriba",
+        "Consejo",
+        "Don Alonso",
+        "Guaonico"
+      ]
+    },
+    {
+      "code": "PR-VA",
+      "name": "Vega Alta",
+      "cities": [
+        "Vega Alta Pueblo",
+        "Bajura",
+        "Candelaria",
+        "Cienegueta",
+        "Espinosa",
+        "Maricao",
+        "Mavilla",
+        "Sabana"
+      ]
+    },
+    {
+      "code": "PR-VB",
+      "name": "Vega Baja",
+      "cities": [
+        "Vega Baja Pueblo",
+        "Algarrobo",
+        "Almirante Norte",
+        "Almirante Sur",
+        "Cabo Caribe",
+        "Ceiba Alta",
+        "Ceiba Baja",
+        "Cibuco",
+        "Pugnado Afuera",
+        "Quebrada Arenas"
+      ]
+    },
+    {
+      "code": "PR-VQ",
+      "name": "Vieques",
+      "cities": [
+        "Isabel Segunda",
+        "Esperanza",
+        "Florida",
+        "Llave",
+        "Mosquito",
+        "Puerto Diablo",
+        "Puerto Ferro",
+        "Puerto Real",
+        "Punta Arenas"
+      ]
+    },
+    {
+      "code": "PR-VI",
+      "name": "Villalba",
+      "cities": [
+        "Villalba Pueblo",
+        "Caonillas Abajo",
+        "Caonillas Arriba",
+        "Hato Puerco Abajo",
+        "Hato Puerco Arriba",
+        "Romero",
+        "Vacas",
+        "Villalba Abajo",
+        "Villalba Arriba"
+      ]
+    },
+    {
+      "code": "PR-YB",
+      "name": "Yabucoa",
+      "cities": [
+        "Yabucoa Pueblo",
+        "Aguacate",
+        "Calabazas",
+        "Camino Nuevo",
+        "Guayabota",
+        "Jácanas",
+        "Juan Martín",
+        "Limones",
+        "Playa",
+        "Tejas"
+      ]
+    },
+    {
+      "code": "PR-YA",
+      "name": "Yauco",
+      "cities": [
+        "Yauco Pueblo",
+        "Aguas Blancas",
+        "Algarrobo",
+        "Almácigo Alto",
+        "Almácigo Bajo",
+        "Barinas",
+        "Caimito",
+        "Diego Hernández",
+        "Duey",
+        "Frailes"
+      ]
+    }
+  ]
+}

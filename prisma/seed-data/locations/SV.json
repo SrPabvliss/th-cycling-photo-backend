@@ -1,0 +1,286 @@
+{
+  "country_code": "SV",
+  "regions": [
+    {
+      "code": "SV-AH",
+      "name": "Ahuachapán",
+      "cities": [
+        "Ahuachapán",
+        "Atiquizaya",
+        "Concepción de Ataco",
+        "El Refugio",
+        "Guaymango",
+        "Jujutla",
+        "San Francisco Menéndez",
+        "San Lorenzo",
+        "San Pedro Puxtla",
+        "Tacuba",
+        "Apaneca",
+        "Turín"
+      ]
+    },
+    {
+      "code": "SV-CA",
+      "name": "Cabañas",
+      "cities": [
+        "Sensuntepeque",
+        "Ilobasco",
+        "Victoria",
+        "Cinquera",
+        "Dolores",
+        "Guacotecti",
+        "Jutiapa",
+        "San Isidro",
+        "Tejutepeque",
+        "Villa Dolores"
+      ]
+    },
+    {
+      "code": "SV-CH",
+      "name": "Chalatenango",
+      "cities": [
+        "Chalatenango",
+        "Nueva Concepción",
+        "La Palma",
+        "Tejutla",
+        "Agua Caliente",
+        "Arcatao",
+        "Citalá",
+        "Concepción Quezaltepeque",
+        "Dulce Nombre de María",
+        "El Paraíso",
+        "La Reina",
+        "San Ignacio",
+        "San Francisco Lempa",
+        "Las Vueltas"
+      ]
+    },
+    {
+      "code": "SV-CU",
+      "name": "Cuscatlán",
+      "cities": [
+        "Cojutepeque",
+        "Suchitoto",
+        "San Pedro Perulapán",
+        "San Rafael Cedros",
+        "Tenancingo",
+        "El Carmen",
+        "El Rosario",
+        "Candelaria",
+        "Monte San Juan",
+        "Oratorio de Concepción",
+        "San Bartolomé Perulapía",
+        "San Cristóbal",
+        "San José Guayabal",
+        "San Ramón",
+        "Santa Cruz Analquito"
+      ]
+    },
+    {
+      "code": "SV-LI",
+      "name": "La Libertad",
+      "cities": [
+        "Santa Tecla",
+        "Antiguo Cuscatlán",
+        "Ciudad Arce",
+        "Colón",
+        "Comasagua",
+        "Chiltiupán",
+        "Huizúcar",
+        "Jayaque",
+        "Jicalapa",
+        "La Libertad",
+        "Nuevo Cuscatlán",
+        "Quezaltepeque",
+        "San Juan Opico",
+        "Tamanique",
+        "Zaragoza"
+      ]
+    },
+    {
+      "code": "SV-MO",
+      "name": "Morazán",
+      "cities": [
+        "San Francisco Gotera",
+        "Jocoro",
+        "Corinto",
+        "Sociedad",
+        "Cacaopera",
+        "Chilanga",
+        "El Divisadero",
+        "Guatajiagua",
+        "Lolotiquillo",
+        "Osicala",
+        "Perquín",
+        "San Carlos",
+        "San Simón",
+        "Sensembra",
+        "Yamabal"
+      ]
+    },
+    {
+      "code": "SV-PA",
+      "name": "La Paz",
+      "cities": [
+        "Zacatecoluca",
+        "San Pedro Masahuat",
+        "San Luis Talpa",
+        "Olocuilta",
+        "San Juan Nonualco",
+        "Santiago Nonualco",
+        "San Rafael Obrajuelo",
+        "El Rosario",
+        "Cuyultitán",
+        "San Pedro Nonualco",
+        "Tapalhuaca",
+        "San Francisco Chinameca",
+        "Mercedes La Ceiba",
+        "San Antonio Masahuat",
+        "Jerusalén"
+      ]
+    },
+    {
+      "code": "SV-SM",
+      "name": "San Miguel",
+      "cities": [
+        "San Miguel",
+        "Chinameca",
+        "Chirilagua",
+        "Ciudad Barrios",
+        "El Tránsito",
+        "Lolotique",
+        "Moncagua",
+        "Nueva Guadalupe",
+        "Quelepa",
+        "San Jorge",
+        "San Rafael Oriente",
+        "Sesori",
+        "Uluazapa",
+        "Comacarán",
+        "Carolina"
+      ]
+    },
+    {
+      "code": "SV-SS",
+      "name": "San Salvador",
+      "cities": [
+        "San Salvador",
+        "Soyapango",
+        "Mejicanos",
+        "Apopa",
+        "Ciudad Delgado",
+        "Ilopango",
+        "San Martín",
+        "Cuscatancingo",
+        "Ayutuxtepeque",
+        "Tonacatepeque",
+        "Nejapa",
+        "Santo Tomás",
+        "San Marcos",
+        "Aguilares",
+        "Panchimalco"
+      ]
+    },
+    {
+      "code": "SV-SV",
+      "name": "San Vicente",
+      "cities": [
+        "San Vicente",
+        "Apastepeque",
+        "Tecoluca",
+        "Verapaz",
+        "Guadalupe",
+        "San Sebastián",
+        "Santo Domingo",
+        "Tepetitán",
+        "San Cayetano Istepeque",
+        "San Esteban Catarina",
+        "San Ildefonso",
+        "San Lorenzo",
+        "Santa Clara"
+      ]
+    },
+    {
+      "code": "SV-SA",
+      "name": "Santa Ana",
+      "cities": [
+        "Santa Ana",
+        "Chalchuapa",
+        "Metapán",
+        "Coatepeque",
+        "Texistepeque",
+        "El Congo",
+        "Candelaria de la Frontera",
+        "San Sebastián Salitrillo",
+        "El Porvenir",
+        "Santiago de la Frontera",
+        "Santa Rosa Guachipilín",
+        "Masahuat",
+        "San Antonio Pajonal"
+      ]
+    },
+    {
+      "code": "SV-SO",
+      "name": "Sonsonate",
+      "cities": [
+        "Sonsonate",
+        "Acajutla",
+        "Izalco",
+        "Nahuizalco",
+        "Juayúa",
+        "Armenia",
+        "San Antonio del Monte",
+        "Sonzacate",
+        "Salcoatitán",
+        "Santa Catarina Masahuat",
+        "Santo Domingo de Guzmán",
+        "Caluco",
+        "Cuisnahuat",
+        "Nahulingo",
+        "San Julián"
+      ]
+    },
+    {
+      "code": "SV-UN",
+      "name": "La Unión",
+      "cities": [
+        "La Unión",
+        "Santa Rosa de Lima",
+        "Pasaquina",
+        "Conchagua",
+        "El Carmen",
+        "Anamorós",
+        "Bolívar",
+        "Concepción de Oriente",
+        "El Sauce",
+        "Intipucá",
+        "Lislique",
+        "Meanguera del Golfo",
+        "Nueva Esparta",
+        "Polorós",
+        "San Alejo"
+      ]
+    },
+    {
+      "code": "SV-US",
+      "name": "Usulután",
+      "cities": [
+        "Usulután",
+        "Jiquilisco",
+        "Santiago de María",
+        "Berlín",
+        "Jucuapa",
+        "Puerto El Triunfo",
+        "Alegría",
+        "Concepción Batres",
+        "El Triunfo",
+        "Estanzuelas",
+        "Jucuarán",
+        "Mercedes Umaña",
+        "Ozatlán",
+        "San Agustín",
+        "Tecapán"
+      ]
+    }
+  ]
+}
