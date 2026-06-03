@@ -1,3 +1,5 @@
+import type { Gender } from '@generated/prisma/client'
+
 export interface RegisterUserPayload {
   email: string
   passwordHash: string
@@ -7,4 +9,6 @@ export interface RegisterUserPayload {
   provinceId: number | null
   cantonId: number | null
   phoneNumber: string
+  birthDate: Date | null
+  gender: Gender | null
 }

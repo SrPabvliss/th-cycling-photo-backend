@@ -1,0 +1,274 @@
+{
+  "country_code": "CL",
+  "regions": [
+    {
+      "code": "CL-AP",
+      "name": "Región de Arica y Parinacota",
+      "cities": ["Arica", "Camarones", "Putre", "General Lagos"]
+    },
+    {
+      "code": "CL-TA",
+      "name": "Región de Tarapacá",
+      "cities": ["Iquique", "Alto Hospicio", "Pozo Almonte", "Pica", "Huara", "Camiña", "Colchane"]
+    },
+    {
+      "code": "CL-AN",
+      "name": "Región de Antofagasta",
+      "cities": [
+        "Antofagasta",
+        "Calama",
+        "Tocopilla",
+        "Mejillones",
+        "Taltal",
+        "María Elena",
+        "San Pedro de Atacama",
+        "Sierra Gorda",
+        "Ollagüe"
+      ]
+    },
+    {
+      "code": "CL-AT",
+      "name": "Región de Atacama",
+      "cities": [
+        "Copiapó",
+        "Vallenar",
+        "Caldera",
+        "Chañaral",
+        "Tierra Amarilla",
+        "Diego de Almagro",
+        "Huasco",
+        "Freirina",
+        "Alto del Carmen"
+      ]
+    },
+    {
+      "code": "CL-CO",
+      "name": "Región de Coquimbo",
+      "cities": [
+        "La Serena",
+        "Coquimbo",
+        "Ovalle",
+        "Illapel",
+        "Vicuña",
+        "Salamanca",
+        "Los Vilos",
+        "Monte Patria",
+        "Andacollo",
+        "Combarbalá",
+        "Punitaqui",
+        "Paihuano"
+      ]
+    },
+    {
+      "code": "CL-VS",
+      "name": "Región de Valparaíso",
+      "cities": [
+        "Valparaíso",
+        "Viña del Mar",
+        "Quilpué",
+        "Villa Alemana",
+        "San Antonio",
+        "Quillota",
+        "Los Andes",
+        "San Felipe",
+        "La Calera",
+        "Concón",
+        "Limache",
+        "La Ligua",
+        "Casablanca",
+        "Cartagena",
+        "Quintero"
+      ]
+    },
+    {
+      "code": "CL-RM",
+      "name": "Región Metropolitana de Santiago",
+      "cities": [
+        "Santiago",
+        "Puente Alto",
+        "Maipú",
+        "La Florida",
+        "Las Condes",
+        "San Bernardo",
+        "Peñalolén",
+        "Pudahuel",
+        "La Pintana",
+        "El Bosque",
+        "Quilicura",
+        "Ñuñoa",
+        "Recoleta",
+        "Renca",
+        "Providencia"
+      ]
+    },
+    {
+      "code": "CL-LI",
+      "name": "Región del Libertador General Bernardo O'Higgins",
+      "cities": [
+        "Rancagua",
+        "San Fernando",
+        "Machalí",
+        "Rengo",
+        "Graneros",
+        "Santa Cruz",
+        "San Vicente",
+        "Pichilemu",
+        "Chimbarongo",
+        "Mostazal",
+        "Requínoa",
+        "Codegua",
+        "Doñihue"
+      ]
+    },
+    {
+      "code": "CL-ML",
+      "name": "Región del Maule",
+      "cities": [
+        "Talca",
+        "Curicó",
+        "Linares",
+        "Cauquenes",
+        "Constitución",
+        "Molina",
+        "San Javier",
+        "Parral",
+        "Maule",
+        "Longaví",
+        "Teno",
+        "Romeral",
+        "San Clemente",
+        "Pelarco"
+      ]
+    },
+    {
+      "code": "CL-NB",
+      "name": "Región de Ñuble",
+      "cities": [
+        "Chillán",
+        "Chillán Viejo",
+        "San Carlos",
+        "Bulnes",
+        "Quirihue",
+        "Yungay",
+        "Coihueco",
+        "Quillón",
+        "El Carmen",
+        "Pinto",
+        "San Nicolás",
+        "Ñiquén"
+      ]
+    },
+    {
+      "code": "CL-BI",
+      "name": "Región del Biobío",
+      "cities": [
+        "Concepción",
+        "Talcahuano",
+        "Los Ángeles",
+        "Coronel",
+        "Chiguayante",
+        "San Pedro de la Paz",
+        "Hualpén",
+        "Lota",
+        "Tomé",
+        "Penco",
+        "Cañete",
+        "Arauco",
+        "Lebu",
+        "Mulchén",
+        "Nacimiento"
+      ]
+    },
+    {
+      "code": "CL-AR",
+      "name": "Región de La Araucanía",
+      "cities": [
+        "Temuco",
+        "Padre Las Casas",
+        "Villarrica",
+        "Angol",
+        "Victoria",
+        "Pucón",
+        "Lautaro",
+        "Nueva Imperial",
+        "Carahue",
+        "Loncoche",
+        "Collipulli",
+        "Traiguén",
+        "Pitrufquén",
+        "Freire"
+      ]
+    },
+    {
+      "code": "CL-LR",
+      "name": "Región de Los Ríos",
+      "cities": [
+        "Valdivia",
+        "La Unión",
+        "Río Bueno",
+        "Panguipulli",
+        "Paillaco",
+        "Los Lagos",
+        "Mariquina",
+        "Lanco",
+        "Futrono",
+        "Máfil",
+        "Corral",
+        "Lago Ranco"
+      ]
+    },
+    {
+      "code": "CL-LL",
+      "name": "Región de Los Lagos",
+      "cities": [
+        "Puerto Montt",
+        "Osorno",
+        "Castro",
+        "Ancud",
+        "Puerto Varas",
+        "Calbuco",
+        "Frutillar",
+        "Llanquihue",
+        "Quellón",
+        "Purranque",
+        "Río Negro",
+        "Fresia",
+        "Chonchi",
+        "Dalcahue"
+      ]
+    },
+    {
+      "code": "CL-AI",
+      "name": "Región de Aysén del General Carlos Ibáñez del Campo",
+      "cities": [
+        "Coyhaique",
+        "Puerto Aysén",
+        "Chile Chico",
+        "Cochrane",
+        "Cisnes",
+        "Lago Verde",
+        "Río Ibáñez",
+        "Tortel",
+        "O'Higgins",
+        "Guaitecas"
+      ]
+    },
+    {
+      "code": "CL-MA",
+      "name": "Región de Magallanes y de la Antártica Chilena",
+      "cities": [
+        "Punta Arenas",
+        "Puerto Natales",
+        "Porvenir",
+        "Puerto Williams",
+        "Natales",
+        "Río Verde",
+        "San Gregorio",
+        "Laguna Blanca",
+        "Primavera",
+        "Timaukel",
+        "Torres del Paine"
+      ]
+    }
+  ]
+}

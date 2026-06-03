@@ -1,0 +1,489 @@
+{
+  "country_code": "VE",
+  "regions": [
+    {
+      "code": "VE-A",
+      "name": "Distrito Capital",
+      "cities": [
+        "Caracas",
+        "Catia",
+        "El Paraíso",
+        "La Pastora",
+        "Petare",
+        "San Agustín",
+        "San Bernardino",
+        "San Pedro",
+        "Santa Rosalía",
+        "Sucre",
+        "23 de Enero",
+        "Antímano",
+        "El Junquito",
+        "Macarao",
+        "El Recreo"
+      ]
+    },
+    {
+      "code": "VE-B",
+      "name": "Anzoátegui",
+      "cities": [
+        "Barcelona",
+        "Puerto La Cruz",
+        "Lechería",
+        "El Tigre",
+        "Anaco",
+        "Cantaura",
+        "Puerto Píritu",
+        "Clarines",
+        "Aragua de Barcelona",
+        "Pariaguán",
+        "San Tomé",
+        "Onoto",
+        "Boca de Uchire",
+        "Soledad",
+        "Guanta"
+      ]
+    },
+    {
+      "code": "VE-C",
+      "name": "Apure",
+      "cities": [
+        "San Fernando de Apure",
+        "Achaguas",
+        "Biruaca",
+        "Bruzual",
+        "Elorza",
+        "Guasdualito",
+        "Mantecal",
+        "Puerto Páez",
+        "San Juan de Payara",
+        "El Amparo",
+        "La Victoria",
+        "El Nula",
+        "Guachara"
+      ]
+    },
+    {
+      "code": "VE-D",
+      "name": "Aragua",
+      "cities": [
+        "Maracay",
+        "Turmero",
+        "La Victoria",
+        "Cagua",
+        "Villa de Cura",
+        "El Limón",
+        "Palo Negro",
+        "San Mateo",
+        "Santa Cruz",
+        "La Colonia Tovar",
+        "Las Tejerías",
+        "El Consejo",
+        "Choroní",
+        "Ocumare de la Costa",
+        "Camatagua"
+      ]
+    },
+    {
+      "code": "VE-E",
+      "name": "Barinas",
+      "cities": [
+        "Barinas",
+        "Barinitas",
+        "Santa Bárbara",
+        "Sabaneta",
+        "Socopó",
+        "Ciudad Bolivia",
+        "Libertad",
+        "Ciudad de Nutrias",
+        "El Cantón",
+        "Arismendi",
+        "Obispos",
+        "Barrancas"
+      ]
+    },
+    {
+      "code": "VE-F",
+      "name": "Bolívar",
+      "cities": [
+        "Ciudad Bolívar",
+        "Ciudad Guayana",
+        "Upata",
+        "Tumeremo",
+        "El Callao",
+        "Caicara del Orinoco",
+        "Guasipati",
+        "Santa Elena de Uairén",
+        "El Palmar",
+        "El Dorado",
+        "Maripa",
+        "La Paragua",
+        "Ciudad Piar"
+      ]
+    },
+    {
+      "code": "VE-G",
+      "name": "Carabobo",
+      "cities": [
+        "Valencia",
+        "Puerto Cabello",
+        "Guacara",
+        "Mariara",
+        "San Joaquín",
+        "Morón",
+        "Tocuyito",
+        "Bejuma",
+        "Montalbán",
+        "Miranda",
+        "Güigüe",
+        "Naguanagua",
+        "San Diego",
+        "Los Guayos",
+        "Tinaquillo"
+      ]
+    },
+    {
+      "code": "VE-H",
+      "name": "Cojedes",
+      "cities": [
+        "San Carlos",
+        "Tinaquillo",
+        "Tinaco",
+        "El Baúl",
+        "Las Vegas",
+        "Macapo",
+        "El Pao",
+        "Apartaderos",
+        "Libertad de Cojedes",
+        "Manrique"
+      ]
+    },
+    {
+      "code": "VE-I",
+      "name": "Falcón",
+      "cities": [
+        "Coro",
+        "Punto Fijo",
+        "Punta Cardón",
+        "La Vela de Coro",
+        "Tucacas",
+        "Chichiriviche",
+        "Churuguara",
+        "Dabajuro",
+        "Mirimire",
+        "San Luis",
+        "Santa Ana de Coro",
+        "Pedregal",
+        "Capatárida",
+        "Yaracal"
+      ]
+    },
+    {
+      "code": "VE-J",
+      "name": "Guárico",
+      "cities": [
+        "San Juan de los Morros",
+        "Calabozo",
+        "Valle de la Pascua",
+        "Altagracia de Orituco",
+        "Zaraza",
+        "Tucupido",
+        "Las Mercedes del Llano",
+        "El Sombrero",
+        "Chaguaramas",
+        "Camaguán",
+        "Santa María de Ipire",
+        "Ortiz",
+        "Lezama"
+      ]
+    },
+    {
+      "code": "VE-K",
+      "name": "Lara",
+      "cities": [
+        "Barquisimeto",
+        "Cabudare",
+        "Carora",
+        "El Tocuyo",
+        "Quíbor",
+        "Sanare",
+        "Duaca",
+        "Siquisique",
+        "Aguada Grande",
+        "Sarare",
+        "Río Claro",
+        "Atarigua",
+        "Humocaro Alto",
+        "Humocaro Bajo"
+      ]
+    },
+    {
+      "code": "VE-L",
+      "name": "Mérida",
+      "cities": [
+        "Mérida",
+        "Ejido",
+        "El Vigía",
+        "Tovar",
+        "Bailadores",
+        "Santa Cruz de Mora",
+        "Mucuchíes",
+        "Lagunillas",
+        "Timotes",
+        "Mucuchachí",
+        "Tabay",
+        "Canaguá",
+        "La Azulita",
+        "Santo Domingo",
+        "Pueblo Llano"
+      ]
+    },
+    {
+      "code": "VE-M",
+      "name": "Miranda",
+      "cities": [
+        "Los Teques",
+        "Petare",
+        "Guarenas",
+        "Guatire",
+        "Charallave",
+        "Cúa",
+        "Ocumare del Tuy",
+        "Santa Teresa del Tuy",
+        "San Antonio de los Altos",
+        "Carrizal",
+        "Higuerote",
+        "Río Chico",
+        "Caucagua",
+        "Baruta",
+        "Chacao"
+      ]
+    },
+    {
+      "code": "VE-N",
+      "name": "Monagas",
+      "cities": [
+        "Maturín",
+        "Caripito",
+        "Punta de Mata",
+        "Temblador",
+        "Caicara de Maturín",
+        "Caripe",
+        "Quiriquire",
+        "Aguasay",
+        "San Antonio de Maturín",
+        "Uracoa",
+        "Barrancas del Orinoco",
+        "Aragua de Maturín",
+        "Santa Bárbara"
+      ]
+    },
+    {
+      "code": "VE-O",
+      "name": "Nueva Esparta",
+      "cities": [
+        "La Asunción",
+        "Porlamar",
+        "Pampatar",
+        "Juan Griego",
+        "Punta de Piedras",
+        "San Juan Bautista",
+        "El Valle del Espíritu Santo",
+        "Santa Ana",
+        "Villa Rosa",
+        "Boca de Río",
+        "San Pedro de Coche",
+        "Tacarigua"
+      ]
+    },
+    {
+      "code": "VE-P",
+      "name": "Portuguesa",
+      "cities": [
+        "Guanare",
+        "Acarigua",
+        "Araure",
+        "Villa Bruzual",
+        "Píritu",
+        "Ospino",
+        "Biscucuy",
+        "Chabasquén",
+        "Guanarito",
+        "Boconoíto",
+        "Agua Blanca",
+        "Turén",
+        "Papelón",
+        "La Aparición"
+      ]
+    },
+    {
+      "code": "VE-R",
+      "name": "Sucre",
+      "cities": [
+        "Cumaná",
+        "Carúpano",
+        "Güiria",
+        "Cariaco",
+        "Marigüitar",
+        "Río Caribe",
+        "Casanay",
+        "El Pilar",
+        "Yaguaraparo",
+        "San Antonio del Golfo",
+        "Cumanacoa",
+        "Araya",
+        "Irapa",
+        "Mariño"
+      ]
+    },
+    {
+      "code": "VE-S",
+      "name": "Táchira",
+      "cities": [
+        "San Cristóbal",
+        "Táriba",
+        "Rubio",
+        "La Grita",
+        "Colón",
+        "San Antonio del Táchira",
+        "Ureña",
+        "Capacho",
+        "Pregonero",
+        "Michelena",
+        "Lobatera",
+        "La Fría",
+        "Palmira",
+        "Queniquea",
+        "Santa Ana del Táchira"
+      ]
+    },
+    {
+      "code": "VE-T",
+      "name": "Trujillo",
+      "cities": [
+        "Trujillo",
+        "Valera",
+        "Boconó",
+        "Sabana de Mendoza",
+        "La Quebrada",
+        "Pampán",
+        "Pampanito",
+        "Carache",
+        "Escuque",
+        "Monay",
+        "Betijoque",
+        "Santa Apolonia",
+        "Mendoza Fría",
+        "Motatán",
+        "El Dividive"
+      ]
+    },
+    {
+      "code": "VE-U",
+      "name": "Yaracuy",
+      "cities": [
+        "San Felipe",
+        "Yaritagua",
+        "Chivacoa",
+        "Nirgua",
+        "Cocorote",
+        "Independencia",
+        "Aroa",
+        "Sabana de Parra",
+        "Guama",
+        "Urachiche",
+        "Boraure",
+        "Farriar",
+        "Albarico"
+      ]
+    },
+    {
+      "code": "VE-V",
+      "name": "Zulia",
+      "cities": [
+        "Maracaibo",
+        "Cabimas",
+        "Ciudad Ojeda",
+        "Santa Bárbara del Zulia",
+        "Machiques",
+        "La Concepción",
+        "San Carlos del Zulia",
+        "Bachaquero",
+        "Mene Grande",
+        "Lagunillas",
+        "Tía Juana",
+        "Los Puertos de Altagracia",
+        "El Mojón",
+        "San Francisco",
+        "Sinamaica"
+      ]
+    },
+    {
+      "code": "VE-X",
+      "name": "Vargas",
+      "cities": [
+        "La Guaira",
+        "Maiquetía",
+        "Catia La Mar",
+        "Macuto",
+        "Caraballeda",
+        "Naiguatá",
+        "Carayaca",
+        "El Junko",
+        "Tarmas",
+        "Chichiriviche de la Costa",
+        "Caruao",
+        "Osma"
+      ]
+    },
+    {
+      "code": "VE-Y",
+      "name": "Delta Amacuro",
+      "cities": [
+        "Tucupita",
+        "Pedernales",
+        "Curiapo",
+        "Sierra Imataca",
+        "San José de Amacuro",
+        "Piacoa",
+        "El Triunfo",
+        "Manoa",
+        "La Horqueta",
+        "Volcán"
+      ]
+    },
+    {
+      "code": "VE-Z",
+      "name": "Amazonas",
+      "cities": [
+        "Puerto Ayacucho",
+        "San Fernando de Atabapo",
+        "Maroa",
+        "San Carlos de Río Negro",
+        "La Esmeralda",
+        "Isla Ratón",
+        "Samariapo",
+        "San Juan de Manapiare",
+        "Solano",
+        "Yavita"
+      ]
+    },
+    {
+      "code": "VE-W",
+      "name": "Dependencias Federales",
+      "cities": [
+        "Gran Roque",
+        "La Orchila",
+        "La Tortuga",
+        "La Blanquilla",
+        "Los Hermanos",
+        "Los Frailes",
+        "Los Testigos",
+        "La Sola",
+        "Los Monjes",
+        "Isla de Aves",
+        "Isla La Sola",
+        "Cayo Sal"
+      ]
+    }
+  ]
+}

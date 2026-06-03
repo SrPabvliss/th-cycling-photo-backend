@@ -1,0 +1,248 @@
+{
+  "country_code": "PA",
+  "regions": [
+    {
+      "code": "PA-1",
+      "name": "Bocas del Toro",
+      "cities": [
+        "Bocas del Toro",
+        "Changuinola",
+        "Almirante",
+        "Chiriquí Grande",
+        "Guabito",
+        "Las Tablas",
+        "Punta Peña",
+        "Rambala",
+        "Miramar",
+        "El Empalme",
+        "Bastimentos",
+        "Valle del Risco"
+      ]
+    },
+    {
+      "code": "PA-2",
+      "name": "Coclé",
+      "cities": [
+        "Penonomé",
+        "Aguadulce",
+        "Antón",
+        "La Pintada",
+        "Natá",
+        "Olá",
+        "El Valle de Antón",
+        "Río Hato",
+        "Nueva Gorgona",
+        "Vista Hermosa",
+        "El Caño",
+        "Toza",
+        "Pocrí"
+      ]
+    },
+    {
+      "code": "PA-3",
+      "name": "Colón",
+      "cities": [
+        "Colón",
+        "Sabanitas",
+        "Nuevo Chagres",
+        "Portobelo",
+        "Palenque",
+        "Miguel de la Borda",
+        "Buena Vista",
+        "Cativá",
+        "Puerto Pilón",
+        "María Chiquita",
+        "Donoso",
+        "Salamanca",
+        "Escobal"
+      ]
+    },
+    {
+      "code": "PA-4",
+      "name": "Chiriquí",
+      "cities": [
+        "David",
+        "Boquete",
+        "Bugaba",
+        "Alanje",
+        "Barú",
+        "Boquerón",
+        "Dolega",
+        "Gualaca",
+        "Remedios",
+        "Renacimiento",
+        "San Félix",
+        "San Lorenzo",
+        "Tolé",
+        "Puerto Armuelles",
+        "Volcán"
+      ]
+    },
+    {
+      "code": "PA-5",
+      "name": "Darién",
+      "cities": [
+        "La Palma",
+        "Metetí",
+        "Yaviza",
+        "El Real de Santa María",
+        "Garachiné",
+        "Sambú",
+        "Chepigana",
+        "Pinogana",
+        "Jaqué",
+        "Boca de Cupe",
+        "Santa Fe",
+        "Cémaco"
+      ]
+    },
+    {
+      "code": "PA-6",
+      "name": "Herrera",
+      "cities": [
+        "Chitré",
+        "Parita",
+        "Pesé",
+        "Ocú",
+        "Las Minas",
+        "Los Pozos",
+        "Santa María",
+        "La Arena",
+        "Monagrillo",
+        "Llano Bonito",
+        "Pueblo Nuevo",
+        "El Rincón"
+      ]
+    },
+    {
+      "code": "PA-7",
+      "name": "Los Santos",
+      "cities": [
+        "Las Tablas",
+        "Guararé",
+        "Macaracas",
+        "Los Santos",
+        "Pedasí",
+        "Pocrí",
+        "Tonosí",
+        "La Villa de Los Santos",
+        "La Enea",
+        "Santo Domingo",
+        "El Cocal",
+        "Llano de Piedra"
+      ]
+    },
+    {
+      "code": "PA-8",
+      "name": "Panamá",
+      "cities": [
+        "Panamá",
+        "San Miguelito",
+        "Tocumen",
+        "Pacora",
+        "Chepo",
+        "Las Cumbres",
+        "Juan Díaz",
+        "Pedregal",
+        "Don Bosco",
+        "Parque Lefevre",
+        "Río Abajo",
+        "Bella Vista",
+        "Ancón",
+        "Chimán",
+        "Taboga"
+      ]
+    },
+    {
+      "code": "PA-9",
+      "name": "Veraguas",
+      "cities": [
+        "Santiago",
+        "Soná",
+        "Atalaya",
+        "Calobre",
+        "Cañazas",
+        "La Mesa",
+        "Las Palmas",
+        "Mariato",
+        "Montijo",
+        "Río de Jesús",
+        "San Francisco",
+        "Santa Fe",
+        "Puerto Mutis"
+      ]
+    },
+    {
+      "code": "PA-10",
+      "name": "Panamá Oeste",
+      "cities": [
+        "La Chorrera",
+        "Arraiján",
+        "Capira",
+        "Chame",
+        "San Carlos",
+        "Vista Alegre",
+        "Nuevo Emperador",
+        "Bejuco",
+        "Coronado",
+        "Gorgona",
+        "Punta Chame",
+        "Veracruz",
+        "Burunga"
+      ]
+    },
+    {
+      "code": "PA-EM",
+      "name": "Emberá-Wounaan",
+      "cities": [
+        "Unión Chocó",
+        "Lajas Blancas",
+        "Cémaco",
+        "Sambú",
+        "Manené",
+        "Cirilo Guainora",
+        "Río Sábalo",
+        "Jingurudó",
+        "Puerto Indio",
+        "Río Tupiza"
+      ]
+    },
+    {
+      "code": "PA-KY",
+      "name": "Guna Yala",
+      "cities": [
+        "El Porvenir",
+        "Cartí",
+        "Río Sidra",
+        "Nargana",
+        "Corazón de Jesús",
+        "Ailigandí",
+        "Achutupu",
+        "Mamitupu",
+        "Ustupu",
+        "Ogobsucum",
+        "Tubualá",
+        "Puerto Obaldía"
+      ]
+    },
+    {
+      "code": "PA-NB",
+      "name": "Ngöbe-Buglé",
+      "cities": [
+        "Buäbiti",
+        "Chichica",
+        "Kankintú",
+        "Kusapín",
+        "Müna",
+        "Nole Duima",
+        "Ñürüm",
+        "Besikó",
+        "Mironó",
+        "Santa Catalina",
+        "Hato Chamí",
+        "Llano Tugrí",
+        "Bisira"
+      ]
+    }
+  ]
+}

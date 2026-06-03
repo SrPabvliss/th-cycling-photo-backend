@@ -1,0 +1,277 @@
+{
+  "country_code": "CU",
+  "regions": [
+    {
+      "code": "CU-01",
+      "name": "Pinar del Río",
+      "cities": [
+        "Pinar del Río",
+        "Consolación del Sur",
+        "Guane",
+        "La Palma",
+        "Los Palacios",
+        "Mantua",
+        "Minas de Matahambre",
+        "San Juan y Martínez",
+        "San Luis",
+        "Sandino",
+        "Viñales"
+      ]
+    },
+    {
+      "code": "CU-03",
+      "name": "La Habana",
+      "cities": [
+        "La Habana Vieja",
+        "Centro Habana",
+        "Plaza de la Revolución",
+        "Cerro",
+        "Diez de Octubre",
+        "Marianao",
+        "Playa",
+        "Boyeros",
+        "Arroyo Naranjo",
+        "San Miguel del Padrón",
+        "Guanabacoa",
+        "Regla",
+        "Habana del Este",
+        "Cotorro",
+        "La Lisa"
+      ]
+    },
+    {
+      "code": "CU-04",
+      "name": "Matanzas",
+      "cities": [
+        "Matanzas",
+        "Cárdenas",
+        "Varadero",
+        "Colón",
+        "Jovellanos",
+        "Jagüey Grande",
+        "Perico",
+        "Los Arabos",
+        "Martí",
+        "Limonar",
+        "Unión de Reyes",
+        "Pedro Betancourt",
+        "Calimete",
+        "Ciénaga de Zapata"
+      ]
+    },
+    {
+      "code": "CU-05",
+      "name": "Villa Clara",
+      "cities": [
+        "Santa Clara",
+        "Sagua la Grande",
+        "Caibarién",
+        "Remedios",
+        "Camajuaní",
+        "Placetas",
+        "Manicaragua",
+        "Ranchuelo",
+        "Cifuentes",
+        "Encrucijada",
+        "Quemado de Güines",
+        "Corralillo",
+        "Santo Domingo"
+      ]
+    },
+    {
+      "code": "CU-06",
+      "name": "Cienfuegos",
+      "cities": [
+        "Cienfuegos",
+        "Cumanayagua",
+        "Cruces",
+        "Palmira",
+        "Aguada de Pasajeros",
+        "Rodas",
+        "Lajas",
+        "Abreus"
+      ]
+    },
+    {
+      "code": "CU-07",
+      "name": "Sancti Spíritus",
+      "cities": [
+        "Sancti Spíritus",
+        "Trinidad",
+        "Cabaiguán",
+        "Jatibonico",
+        "Yaguajay",
+        "Taguasco",
+        "Fomento",
+        "La Sierpe"
+      ]
+    },
+    {
+      "code": "CU-08",
+      "name": "Ciego de Ávila",
+      "cities": [
+        "Ciego de Ávila",
+        "Morón",
+        "Chambas",
+        "Ciro Redondo",
+        "Florencia",
+        "Majagua",
+        "Primero de Enero",
+        "Baraguá",
+        "Venezuela",
+        "Bolivia"
+      ]
+    },
+    {
+      "code": "CU-09",
+      "name": "Camagüey",
+      "cities": [
+        "Camagüey",
+        "Florida",
+        "Nuevitas",
+        "Santa Cruz del Sur",
+        "Vertientes",
+        "Sibanicú",
+        "Guáimaro",
+        "Najasa",
+        "Jimaguayú",
+        "Minas",
+        "Esmeralda",
+        "Carlos Manuel de Céspedes",
+        "Sierra de Cubitas"
+      ]
+    },
+    {
+      "code": "CU-10",
+      "name": "Las Tunas",
+      "cities": [
+        "Las Tunas",
+        "Puerto Padre",
+        "Amancio",
+        "Colombia",
+        "Jesús Menéndez",
+        "Jobabo",
+        "Majibacoa",
+        "Manatí"
+      ]
+    },
+    {
+      "code": "CU-11",
+      "name": "Holguín",
+      "cities": [
+        "Holguín",
+        "Banes",
+        "Antilla",
+        "Báguanos",
+        "Cacocum",
+        "Calixto García",
+        "Cueto",
+        "Frank País",
+        "Gibara",
+        "Mayarí",
+        "Moa",
+        "Rafael Freyre",
+        "Sagua de Tánamo",
+        "Urbano Noris"
+      ]
+    },
+    {
+      "code": "CU-12",
+      "name": "Granma",
+      "cities": [
+        "Bayamo",
+        "Manzanillo",
+        "Bartolomé Masó",
+        "Buey Arriba",
+        "Campechuela",
+        "Cauto Cristo",
+        "Guisa",
+        "Jiguaní",
+        "Media Luna",
+        "Niquero",
+        "Pilón",
+        "Río Cauto",
+        "Yara"
+      ]
+    },
+    {
+      "code": "CU-13",
+      "name": "Santiago de Cuba",
+      "cities": [
+        "Santiago de Cuba",
+        "Palma Soriano",
+        "Contramaestre",
+        "San Luis",
+        "Songo-La Maya",
+        "Mella",
+        "Segundo Frente",
+        "Tercer Frente",
+        "Guamá"
+      ]
+    },
+    {
+      "code": "CU-14",
+      "name": "Guantánamo",
+      "cities": [
+        "Guantánamo",
+        "Baracoa",
+        "Caimanera",
+        "El Salvador",
+        "Imías",
+        "Maisí",
+        "Manuel Tames",
+        "Niceto Pérez",
+        "San Antonio del Sur",
+        "Yateras"
+      ]
+    },
+    {
+      "code": "CU-15",
+      "name": "Artemisa",
+      "cities": [
+        "Artemisa",
+        "Alquízar",
+        "Bauta",
+        "Caimito",
+        "Guanajay",
+        "Güira de Melena",
+        "Mariel",
+        "San Antonio de los Baños",
+        "San Cristóbal",
+        "Bahía Honda",
+        "Candelaria"
+      ]
+    },
+    {
+      "code": "CU-16",
+      "name": "Mayabeque",
+      "cities": [
+        "San José de las Lajas",
+        "Batabanó",
+        "Bejucal",
+        "Güines",
+        "Jaruco",
+        "Madruga",
+        "Melena del Sur",
+        "Nueva Paz",
+        "Quivicán",
+        "San Nicolás",
+        "Santa Cruz del Norte"
+      ]
+    },
+    {
+      "code": "CU-99",
+      "name": "Isla de la Juventud",
+      "cities": [
+        "Nueva Gerona",
+        "La Fe",
+        "Santa Fe",
+        "Cocodrilo",
+        "Columbia",
+        "Demajagua",
+        "McKinley",
+        "Argelia Libre"
+      ]
+    }
+  ]
+}

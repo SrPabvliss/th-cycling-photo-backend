@@ -1,0 +1,529 @@
+{
+  "country_code": "PE",
+  "regions": [
+    {
+      "code": "PE-AMA",
+      "name": "Amazonas",
+      "cities": [
+        "Chachapoyas",
+        "Bagua Grande",
+        "Bagua",
+        "Jumbilla",
+        "Lámud",
+        "La Peca",
+        "Nieva",
+        "Pedro Ruiz Gallo",
+        "Rodríguez de Mendoza",
+        "San Nicolás",
+        "Luya",
+        "Mendoza",
+        "Imaza",
+        "Cajaruro"
+      ]
+    },
+    {
+      "code": "PE-ANC",
+      "name": "Áncash",
+      "cities": [
+        "Huaraz",
+        "Chimbote",
+        "Nuevo Chimbote",
+        "Casma",
+        "Huarmey",
+        "Caraz",
+        "Yungay",
+        "Carhuaz",
+        "Recuay",
+        "Huari",
+        "Pomabamba",
+        "Sihuas",
+        "Corongo",
+        "Aija",
+        "Chacas"
+      ]
+    },
+    {
+      "code": "PE-APU",
+      "name": "Apurímac",
+      "cities": [
+        "Abancay",
+        "Andahuaylas",
+        "Talavera",
+        "San Jerónimo",
+        "Chalhuanca",
+        "Chuquibambilla",
+        "Tambobamba",
+        "Antabamba",
+        "Cotabambas",
+        "Haquira",
+        "Curahuasi",
+        "Pacucha",
+        "Uripa",
+        "Huancarama"
+      ]
+    },
+    {
+      "code": "PE-ARE",
+      "name": "Arequipa",
+      "cities": [
+        "Arequipa",
+        "Cerro Colorado",
+        "Paucarpata",
+        "Cayma",
+        "Yanahuara",
+        "Miraflores",
+        "Mariano Melgar",
+        "Socabaya",
+        "José Luis Bustamante y Rivero",
+        "Camaná",
+        "Mollendo",
+        "Mejía",
+        "Aplao",
+        "Chivay",
+        "Chuquibamba",
+        "Cotahuasi"
+      ]
+    },
+    {
+      "code": "PE-AYA",
+      "name": "Ayacucho",
+      "cities": [
+        "Ayacucho",
+        "Huanta",
+        "San Miguel",
+        "Cangallo",
+        "Coracora",
+        "Puquio",
+        "Querobamba",
+        "Huancapi",
+        "Pausa",
+        "Sancos",
+        "Vilcas Huamán",
+        "Carmen Alto",
+        "San Juan Bautista",
+        "Tambo"
+      ]
+    },
+    {
+      "code": "PE-CAJ",
+      "name": "Cajamarca",
+      "cities": [
+        "Cajamarca",
+        "Jaén",
+        "Chota",
+        "Cutervo",
+        "Bambamarca",
+        "Celendín",
+        "Contumazá",
+        "San Marcos",
+        "San Miguel",
+        "San Pablo",
+        "Santa Cruz",
+        "Cajabamba",
+        "Tembladera",
+        "Pacasmayo",
+        "Chilete"
+      ]
+    },
+    {
+      "code": "PE-CAL",
+      "name": "Callao",
+      "cities": [
+        "Callao",
+        "Bellavista",
+        "Carmen de la Legua-Reynoso",
+        "La Perla",
+        "La Punta",
+        "Ventanilla",
+        "Mi Perú"
+      ]
+    },
+    {
+      "code": "PE-CUS",
+      "name": "Cusco",
+      "cities": [
+        "Cusco",
+        "Sicuani",
+        "Quillabamba",
+        "Espinar",
+        "Urcos",
+        "Urubamba",
+        "Calca",
+        "Anta",
+        "Paucartambo",
+        "Paruro",
+        "Acomayo",
+        "Yanaoca",
+        "Santo Tomás",
+        "Wanchaq",
+        "San Sebastián",
+        "San Jerónimo"
+      ]
+    },
+    {
+      "code": "PE-HUV",
+      "name": "Huancavelica",
+      "cities": [
+        "Huancavelica",
+        "Pampas",
+        "Lircay",
+        "Acobamba",
+        "Castrovirreyna",
+        "Churcampa",
+        "Huaytará",
+        "Tayacaja",
+        "Acoria",
+        "Ascensión",
+        "Yauli",
+        "Izcuchaca",
+        "Paucará"
+      ]
+    },
+    {
+      "code": "PE-HUC",
+      "name": "Huánuco",
+      "cities": [
+        "Huánuco",
+        "Tingo María",
+        "Aucayacu",
+        "La Unión",
+        "Llata",
+        "Ambo",
+        "Panao",
+        "Puerto Inca",
+        "Jesús",
+        "San Luis de Shuaro",
+        "Amarilis",
+        "Pillco Marca",
+        "Naranjillo",
+        "Chaglla"
+      ]
+    },
+    {
+      "code": "PE-ICA",
+      "name": "Ica",
+      "cities": [
+        "Ica",
+        "Chincha Alta",
+        "Pisco",
+        "Nasca",
+        "Palpa",
+        "Parcona",
+        "Subtanjalla",
+        "Salas",
+        "San Clemente",
+        "Túpac Amaru Inca",
+        "Marcona",
+        "Vista Alegre",
+        "Los Aquijes",
+        "Pueblo Nuevo"
+      ]
+    },
+    {
+      "code": "PE-JUN",
+      "name": "Junín",
+      "cities": [
+        "Huancayo",
+        "El Tambo",
+        "Chilca",
+        "La Oroya",
+        "Tarma",
+        "Jauja",
+        "Concepción",
+        "Satipo",
+        "Pichanaki",
+        "La Merced",
+        "San Ramón",
+        "Chanchamayo",
+        "Junín",
+        "Chupaca",
+        "Mazamari"
+      ]
+    },
+    {
+      "code": "PE-LAL",
+      "name": "La Libertad",
+      "cities": [
+        "Trujillo",
+        "El Porvenir",
+        "La Esperanza",
+        "Florencia de Mora",
+        "Huanchaco",
+        "Laredo",
+        "Moche",
+        "Salaverry",
+        "Víctor Larco Herrera",
+        "Chepén",
+        "Pacasmayo",
+        "Guadalupe",
+        "Virú",
+        "Chocope",
+        "Otuzco",
+        "Huamachuco",
+        "Santiago de Chuco"
+      ]
+    },
+    {
+      "code": "PE-LAM",
+      "name": "Lambayeque",
+      "cities": [
+        "Chiclayo",
+        "José Leonardo Ortiz",
+        "La Victoria",
+        "Lambayeque",
+        "Ferreñafe",
+        "Monsefú",
+        "Reque",
+        "Eten",
+        "Pimentel",
+        "Santa Rosa",
+        "Túcume",
+        "Mórrope",
+        "Olmos",
+        "Motupe",
+        "Jayanca",
+        "Mochumí"
+      ]
+    },
+    {
+      "code": "PE-LIM",
+      "name": "Lima",
+      "cities": [
+        "Huacho",
+        "Barranca",
+        "Cañete",
+        "Huaral",
+        "Matucana",
+        "Canta",
+        "Yauyos",
+        "Oyón",
+        "Cajatambo",
+        "Huarochirí",
+        "San Vicente de Cañete",
+        "Supe",
+        "Paramonga",
+        "Chancay",
+        "Sayán",
+        "Mala"
+      ]
+    },
+    {
+      "code": "PE-LMA",
+      "name": "Municipalidad Metropolitana de Lima",
+      "cities": [
+        "Lima",
+        "San Juan de Lurigancho",
+        "San Martín de Porres",
+        "Ate",
+        "Comas",
+        "Villa El Salvador",
+        "Villa María del Triunfo",
+        "San Juan de Miraflores",
+        "Los Olivos",
+        "Puente Piedra",
+        "Santiago de Surco",
+        "Chorrillos",
+        "Carabayllo",
+        "La Molina",
+        "Miraflores",
+        "San Miguel",
+        "San Borja",
+        "Surquillo",
+        "Independencia",
+        "El Agustino"
+      ]
+    },
+    {
+      "code": "PE-LOR",
+      "name": "Loreto",
+      "cities": [
+        "Iquitos",
+        "Punchana",
+        "Belén",
+        "San Juan Bautista",
+        "Yurimaguas",
+        "Nauta",
+        "Requena",
+        "Caballococha",
+        "Contamana",
+        "Lagunas",
+        "San Lorenzo",
+        "Indiana",
+        "Mazán",
+        "Tamshiyacu"
+      ]
+    },
+    {
+      "code": "PE-MDD",
+      "name": "Madre de Dios",
+      "cities": [
+        "Puerto Maldonado",
+        "Iberia",
+        "Iñapari",
+        "Mazuko",
+        "Salvación",
+        "Manu",
+        "Huepetuhe",
+        "Laberinto",
+        "Tambopata",
+        "Las Piedras"
+      ]
+    },
+    {
+      "code": "PE-MOQ",
+      "name": "Moquegua",
+      "cities": [
+        "Moquegua",
+        "Ilo",
+        "Omate",
+        "Ichuña",
+        "Carumas",
+        "Cuchumbaya",
+        "Samegua",
+        "Torata",
+        "Pacocha",
+        "El Algarrobal",
+        "Puquina"
+      ]
+    },
+    {
+      "code": "PE-PAS",
+      "name": "Pasco",
+      "cities": [
+        "Cerro de Pasco",
+        "Oxapampa",
+        "Yanahuanca",
+        "Villa Rica",
+        "Pozuzo",
+        "Chontabamba",
+        "Huayllay",
+        "Tinyahuarco",
+        "Simón Bolívar",
+        "Yanacancha",
+        "Paucartambo",
+        "Vicco"
+      ]
+    },
+    {
+      "code": "PE-PIU",
+      "name": "Piura",
+      "cities": [
+        "Piura",
+        "Castilla",
+        "Catacaos",
+        "Sullana",
+        "Talara",
+        "Paita",
+        "Sechura",
+        "Chulucanas",
+        "Ayabaca",
+        "Huancabamba",
+        "Morropón",
+        "La Unión",
+        "Las Lomas",
+        "Tambogrande",
+        "Querecotillo"
+      ]
+    },
+    {
+      "code": "PE-PUN",
+      "name": "Puno",
+      "cities": [
+        "Puno",
+        "Juliaca",
+        "Ilave",
+        "Ayaviri",
+        "Azángaro",
+        "Yunguyo",
+        "Huancané",
+        "Putina",
+        "Lampa",
+        "Macusani",
+        "Sandia",
+        "Juli",
+        "Desaguadero",
+        "Ácora",
+        "Chucuito"
+      ]
+    },
+    {
+      "code": "PE-SAM",
+      "name": "San Martín",
+      "cities": [
+        "Moyobamba",
+        "Tarapoto",
+        "Morales",
+        "La Banda de Shilcayo",
+        "Juanjuí",
+        "Rioja",
+        "Bellavista",
+        "Tocache",
+        "Saposoa",
+        "Lamas",
+        "Picota",
+        "San José de Sisa",
+        "Nueva Cajamarca",
+        "Soritor",
+        "Uchiza"
+      ]
+    },
+    {
+      "code": "PE-TAC",
+      "name": "Tacna",
+      "cities": [
+        "Tacna",
+        "Alto de la Alianza",
+        "Ciudad Nueva",
+        "Gregorio Albarracín Lanchipa",
+        "Pocollay",
+        "Calana",
+        "Pachía",
+        "Tarata",
+        "Candarave",
+        "Locumba",
+        "Ilabaya",
+        "Ite",
+        "Sama",
+        "Inclán"
+      ]
+    },
+    {
+      "code": "PE-TUM",
+      "name": "Tumbes",
+      "cities": [
+        "Tumbes",
+        "Zarumilla",
+        "Aguas Verdes",
+        "Zorritos",
+        "Corrales",
+        "La Cruz",
+        "San Jacinto",
+        "Pampas de Hospital",
+        "San Juan de la Virgen",
+        "Papayal",
+        "Casitas",
+        "Canoas de Punta Sal"
+      ]
+    },
+    {
+      "code": "PE-UCA",
+      "name": "Ucayali",
+      "cities": [
+        "Pucallpa",
+        "Yarinacocha",
+        "Manantay",
+        "Campo Verde",
+        "Aguaytía",
+        "Atalaya",
+        "Raymondi",
+        "Purús",
+        "Iparía",
+        "Masisea",
+        "Curimaná",
+        "Nueva Requena",
+        "Padre Abad",
+        "Irazola"
+      ]
+    }
+  ]
+}

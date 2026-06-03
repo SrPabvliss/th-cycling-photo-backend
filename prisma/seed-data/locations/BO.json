@@ -1,0 +1,194 @@
+{
+  "country_code": "BO",
+  "regions": [
+    {
+      "code": "BO-L",
+      "name": "La Paz",
+      "cities": [
+        "La Paz",
+        "El Alto",
+        "Viacha",
+        "Achocalla",
+        "Caranavi",
+        "Coroico",
+        "Copacabana",
+        "Patacamaya",
+        "Sorata",
+        "Achacachi",
+        "Palos Blancos",
+        "Apolo",
+        "Guanay",
+        "Tiwanaku",
+        "Mecapaca"
+      ]
+    },
+    {
+      "code": "BO-C",
+      "name": "Cochabamba",
+      "cities": [
+        "Cochabamba",
+        "Quillacollo",
+        "Sacaba",
+        "Tiquipaya",
+        "Colcapirhua",
+        "Vinto",
+        "Punata",
+        "Sipe Sipe",
+        "Cliza",
+        "Villa Tunari",
+        "Aiquile",
+        "Mizque",
+        "Capinota",
+        "Tarata",
+        "Independencia"
+      ]
+    },
+    {
+      "code": "BO-S",
+      "name": "Santa Cruz",
+      "cities": [
+        "Santa Cruz de la Sierra",
+        "Montero",
+        "Warnes",
+        "La Guardia",
+        "Cotoca",
+        "El Torno",
+        "Camiri",
+        "Puerto Quijarro",
+        "Puerto Suárez",
+        "San Ignacio de Velasco",
+        "San Julián",
+        "Yapacaní",
+        "Portachuelo",
+        "Mineros",
+        "Roboré"
+      ]
+    },
+    {
+      "code": "BO-O",
+      "name": "Oruro",
+      "cities": [
+        "Oruro",
+        "Challapata",
+        "Huanuni",
+        "Machacamarca",
+        "Poopó",
+        "Caracollo",
+        "Eucaliptus",
+        "Totora",
+        "Curahuara de Carangas",
+        "Sabaya",
+        "Corque",
+        "Pazña",
+        "Salinas de Garci Mendoza",
+        "Toledo",
+        "Turco"
+      ]
+    },
+    {
+      "code": "BO-P",
+      "name": "Potosí",
+      "cities": [
+        "Potosí",
+        "Llallagua",
+        "Uyuni",
+        "Villazón",
+        "Tupiza",
+        "Betanzos",
+        "Cotagaita",
+        "Atocha",
+        "Colquechaca",
+        "Punutuma",
+        "Pulacayo",
+        "Sacaca",
+        "Vitichi",
+        "Tinguipaya",
+        "Puna"
+      ]
+    },
+    {
+      "code": "BO-T",
+      "name": "Tarija",
+      "cities": [
+        "Tarija",
+        "Yacuiba",
+        "Villamontes",
+        "Bermejo",
+        "Entre Ríos",
+        "San Lorenzo",
+        "Padcaya",
+        "Uriondo",
+        "El Puente",
+        "Caraparí",
+        "Villa Montes",
+        "Iscayachi",
+        "Chaguaya",
+        "Tomatas",
+        "Yunchará"
+      ]
+    },
+    {
+      "code": "BO-H",
+      "name": "Chuquisaca",
+      "cities": [
+        "Sucre",
+        "Monteagudo",
+        "Camargo",
+        "Padilla",
+        "Villa Serrano",
+        "Tarabuco",
+        "Zudáñez",
+        "Villa Abecia",
+        "Culpina",
+        "Las Carreras",
+        "Yotala",
+        "Macharetí",
+        "Huacareta",
+        "Muyupampa",
+        "Incahuasi"
+      ]
+    },
+    {
+      "code": "BO-B",
+      "name": "El Beni",
+      "cities": [
+        "Trinidad",
+        "Riberalta",
+        "Guayaramerín",
+        "San Borja",
+        "Rurrenabaque",
+        "San Ignacio de Moxos",
+        "Santa Ana del Yacuma",
+        "Magdalena",
+        "Reyes",
+        "San Joaquín",
+        "San Ramón",
+        "Loreto",
+        "Puerto Siles",
+        "Baures",
+        "Exaltación"
+      ]
+    },
+    {
+      "code": "BO-N",
+      "name": "Pando",
+      "cities": [
+        "Cobija",
+        "Porvenir",
+        "Puerto Rico",
+        "Bella Flor",
+        "Filadelfia",
+        "Bolpebra",
+        "San Lorenzo",
+        "El Sena",
+        "Santa Rosa del Abuná",
+        "Ingavi",
+        "Nueva Esperanza",
+        "Villa Nueva",
+        "Santos Mercado",
+        "San Pedro",
+        "Puerto Gonzalo Moreno"
+      ]
+    }
+  ]
+}
