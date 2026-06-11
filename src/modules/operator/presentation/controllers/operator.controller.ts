@@ -32,12 +32,12 @@ import { GetOperatorReviewQueueQuery } from '../../application/queries/get-revie
 
 @ApiTags('Operator')
 @ApiBearerAuth()
-@Roles('operator')
 @Controller('operator')
 export class OperatorController {
   constructor(private readonly queryBus: QueryBus) {}
 
   @Get('dashboard/summary')
+  @Roles('operator')
   @SuccessMessage('success.FETCHED', { entity: 'entities.dashboard' })
   @ApiOperation({ summary: 'Get operator dashboard KPI summary' })
   @ApiEnvelopeResponse({
@@ -50,6 +50,7 @@ export class OperatorController {
   }
 
   @Get('dashboard/events/active')
+  @Roles('operator')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List operator active assigned events with progress' })
   @ApiEnvelopeResponse({
@@ -64,6 +65,7 @@ export class OperatorController {
   }
 
   @Get('dashboard/events/completed')
+  @Roles('operator')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List operator completed assigned events' })
   @ApiEnvelopeResponse({
@@ -78,6 +80,7 @@ export class OperatorController {
   }
 
   @Get('dashboard/recent-activity')
+  @Roles('operator')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Recent activity (review + retouch) of the operator' })
   @ApiEnvelopeResponse({
@@ -96,6 +99,7 @@ export class OperatorController {
   }
 
   @Get('dashboard/review-queue')
+  @Roles('admin', 'operator')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Cross-event review queue scoped to the operator' })
   @ApiEnvelopeResponse({
@@ -117,6 +121,7 @@ export class OperatorController {
   }
 
   @Get('retouch/orders/:orderId')
+  @Roles('admin', 'operator')
   @SuccessMessage('success.GET')
   @ApiOperation({ summary: 'Detalle de orden de retoque para el workspace' })
   @ApiParam({ name: 'orderId', description: 'Order UUID', format: 'uuid' })
@@ -137,11 +142,12 @@ export class OperatorController {
     @Query('scope') scope?: 'pending' | 'all',
   ) {
     return this.queryBus.execute(
-      new GetOperatorRetouchOrderDetailQuery(orderId, user.userId, scope ?? 'pending'),
+      new GetOperatorRetouchOrderDetailQuery(orderId, user.userId, scope ?? 'pending', user.role),
     )
   }
 
   @Get('retouch/orders')
+  @Roles('admin', 'operator')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Cross-event FIFO list of orders pending retouch for the operator' })
   @ApiEnvelopeResponse({
@@ -161,11 +167,13 @@ export class OperatorController {
         pagination,
         dto.scope ?? 'pending',
         dto.eventSlug ?? null,
+        user.role,
       ),
     )
   }
 
   @Get('events/:eventSlug/retouch-queue')
+  @Roles('admin', 'operator')
   @SuccessMessage('success.LIST')
   @ApiOperation({
     summary: 'Get retouch queue for an event (orders with pending retouched photos)',
@@ -184,7 +192,13 @@ export class OperatorController {
   ) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     return this.queryBus.execute(
-      new GetRetouchQueueQuery(eventSlug, user.userId, pagination, dto.scope ?? 'pending'),
+      new GetRetouchQueueQuery(
+        eventSlug,
+        user.userId,
+        pagination,
+        dto.scope ?? 'pending',
+        user.role,
+      ),
     )
   }
 }

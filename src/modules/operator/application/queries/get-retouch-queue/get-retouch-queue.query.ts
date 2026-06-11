@@ -7,5 +7,6 @@ export class GetRetouchQueueQuery {
     public readonly operatorId: string,
     public readonly pagination: Pagination,
     public readonly scope: RetouchOrderScope,
+    public readonly userRole: string,
   ) {}
 }
