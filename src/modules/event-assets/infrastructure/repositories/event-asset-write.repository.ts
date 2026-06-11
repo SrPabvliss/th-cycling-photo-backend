@@ -21,6 +21,7 @@ export class EventAssetWriteRepository implements IEventAssetWriteRepository {
       create: data,
       update: {
         storage_key: data.storage_key,
+        public_slug: data.public_slug,
         file_size: data.file_size,
         mime_type: data.mime_type,
         uploaded_at: data.uploaded_at,

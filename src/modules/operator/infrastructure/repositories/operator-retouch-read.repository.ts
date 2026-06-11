@@ -11,9 +11,9 @@ import type {
 const PENDING_PHOTO_FILTER = { retouched_at: null, requires_retouch: true } as const
 const RETOUCHED_PHOTO_FILTER = { retouched_at: { not: null } } as const
 
-function buildOrdersWhere(eventIds: string[], scope: RetouchOrderScope) {
+function buildOrdersWhere(eventIds: string[] | null, scope: RetouchOrderScope) {
   const base = {
-    event_id: { in: eventIds },
+    ...(eventIds === null ? {} : { event_id: { in: eventIds } }),
     status: 'paid' as const,
   }
   if (scope === 'pending') {
@@ -105,7 +105,7 @@ export class OperatorRetouchReadRepository implements IOperatorRetouchReadReposi
   }
 
   async findOperatorRetouchOrdersPage(
-    eventIds: string[],
+    eventIds: string[] | null,
     scope: RetouchOrderScope,
     skip: number,
     take: number,
@@ -116,7 +116,7 @@ export class OperatorRetouchReadRepository implements IOperatorRetouchReadReposi
 
     const orderScopeWhere = {
       order: {
-        event_id: { in: eventIds },
+        ...(eventIds === null ? {} : { event_id: { in: eventIds } }),
         status: 'paid' as const,
       },
     }
@@ -169,9 +169,11 @@ export class OperatorRetouchReadRepository implements IOperatorRetouchReadReposi
       }),
     ])
 
-    const totalByOrderId = new Map(totalCounts.map((e) => [e.order_id, e._count._all]))
-    const retouchedByOrderId = new Map(retouchedCounts.map((e) => [e.order_id, e._count._all]))
-    const pendingByOrderId = new Map(pendingCounts.map((e) => [e.order_id, e._count._all]))
+    const totalByOrderId = new Map(totalCounts.map((e) => [e.order_id, e._count?._all ?? 0]))
+    const retouchedByOrderId = new Map(
+      retouchedCounts.map((e) => [e.order_id, e._count?._all ?? 0]),
+    )
+    const pendingByOrderId = new Map(pendingCounts.map((e) => [e.order_id, e._count?._all ?? 0]))
 
     const items: OperatorRetouchOrderRow[] = orders.map((order) => ({
       orderId: order.id,
