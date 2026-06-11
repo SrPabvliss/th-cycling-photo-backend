@@ -52,7 +52,6 @@ export class Event {
     if (data.name !== undefined) {
       Event.validateName(data.name)
       this.name = data.name
-      this.slug = Event.generateSlug(data.name)
     }
 
     const nextStart = data.startDate ?? this.startDate
