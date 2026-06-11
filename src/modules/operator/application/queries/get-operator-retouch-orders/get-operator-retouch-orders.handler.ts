@@ -26,19 +26,28 @@ export class GetOperatorRetouchOrdersHandler
   async execute(
     query: GetOperatorRetouchOrdersQuery,
   ): Promise<PaginatedResult<OperatorRetouchOrderProjection>> {
-    const assignedIds = await this.eventRead.getAllAssignedEventIds(query.operatorId)
+    const isAdmin = query.userRole === 'admin'
 
-    if (assignedIds.length === 0) {
-      return new PaginatedResult([], 0, query.pagination)
-    }
-
-    let eventIdsForQuery = assignedIds
-    if (query.eventSlug) {
-      const event = await this.eventRead.existsActiveEventBySlug(query.eventSlug)
-      if (!event || !assignedIds.includes(event.id)) {
-        throw new ForbiddenException('operator.not_assigned_to_event')
+    let eventIdsForQuery: string[] | null = null
+    if (isAdmin) {
+      if (query.eventSlug) {
+        const event = await this.eventRead.existsActiveEventBySlug(query.eventSlug)
+        if (!event) throw new ForbiddenException('event.not_found')
+        eventIdsForQuery = [event.id]
       }
-      eventIdsForQuery = [event.id]
+    } else {
+      const assignedIds = await this.eventRead.getAllAssignedEventIds(query.operatorId)
+      if (assignedIds.length === 0) {
+        return new PaginatedResult([], 0, query.pagination)
+      }
+      eventIdsForQuery = assignedIds
+      if (query.eventSlug) {
+        const event = await this.eventRead.existsActiveEventBySlug(query.eventSlug)
+        if (!event || !assignedIds.includes(event.id)) {
+          throw new ForbiddenException('operator.not_assigned_to_event')
+        }
+        eventIdsForQuery = [event.id]
+      }
     }
 
     const { items, total } = await this.retouchRead.findOperatorRetouchOrdersPage(

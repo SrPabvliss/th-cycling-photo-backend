@@ -6,7 +6,9 @@ describe('OperatorController (roles metadata)', () => {
   const reflector = new Reflector()
 
   const getRoles = (methodName: keyof OperatorController): string[] | undefined => {
-    const handler = OperatorController.prototype[methodName] as unknown as (...args: unknown[]) => unknown
+    const handler = OperatorController.prototype[methodName] as unknown as (
+      ...args: unknown[]
+    ) => unknown
     return reflector.get<string[]>(ROLES_KEY, handler)
   }
 
