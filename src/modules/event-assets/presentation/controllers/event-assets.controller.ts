@@ -39,7 +39,7 @@ export class EventAssetsController {
     return this.queryBus.execute(new GetEventAssetsQuery(eventId))
   }
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Post(':assetType/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate presigned URL for asset upload' })
@@ -69,7 +69,7 @@ export class EventAssetsController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Post(':assetType/confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event_asset' })
   @ApiOperation({ summary: 'Confirm asset upload after presigned URL flow' })
@@ -101,7 +101,7 @@ export class EventAssetsController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Delete(':assetType')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an event asset' })

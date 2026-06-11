@@ -80,7 +80,7 @@ export class EventsController {
     return this.queryBus.execute(query)
   }
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Post()
   @SuccessMessage('success.CREATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Create a new event' })
@@ -103,7 +103,7 @@ export class EventsController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Patch(':id')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Update an existing event' })
@@ -185,7 +185,7 @@ export class EventsController {
 
   // ─── Event Operator Assignment ──────────────────────────────────────────────
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Get(':id/operators')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List operators assigned to an event' })
