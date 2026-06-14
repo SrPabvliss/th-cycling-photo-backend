@@ -7,6 +7,7 @@ import type {
 } from '@orders/application/projections'
 import type { Order } from '@orders/domain/entities'
 import type { IOrderReadRepository, OrderListFilters } from '@orders/domain/ports'
+import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import type { PendingRetouchOrderProjection } from '@photos/application/projections'
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
@@ -71,7 +72,9 @@ export class OrderReadRepository implements IOrderReadRepository {
     const where: Prisma.OrderWhereInput = {}
 
     if (filters.eventId) where.event_id = filters.eventId
+    // Default view ("Todos") hides cancelled orders; only the explicit filter surfaces them.
     if (filters.status) where.status = filters.status as Prisma.EnumOrderStatusFilter
+    else where.status = { not: OrderStatus.CANCELLED }
     if (filters.search) {
       const term = filters.search
       where.OR = [
