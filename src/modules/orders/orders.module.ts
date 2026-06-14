@@ -7,6 +7,7 @@ import { CancelOrderHandler } from '@orders/application/commands/cancel-order/ca
 import { ConfirmOrderPaymentHandler } from '@orders/application/commands/confirm-order-payment/confirm-order-payment.handler'
 import { CreateOrderFromGalleryHandler } from '@orders/application/commands/create-order-from-gallery/create-order-from-gallery.handler'
 import { CreateOrderFromPreviewHandler } from '@orders/application/commands/create-order-from-preview/create-order-from-preview.handler'
+import { GiftOrderHandler } from '@orders/application/commands/gift-order/gift-order.handler'
 import { NotifyPaymentInfoHandler } from '@orders/application/commands/notify-payment-info/notify-payment-info.handler'
 import { RegenerateDeliveryHandler } from '@orders/application/commands/regenerate-delivery/regenerate-delivery.handler'
 import { SendDeliveryHandler } from '@orders/application/commands/send-delivery/send-delivery.handler'
@@ -26,6 +27,7 @@ const CommandHandlers = [
   CreateOrderFromPreviewHandler,
   CreateOrderFromGalleryHandler,
   ConfirmOrderPaymentHandler,
+  GiftOrderHandler,
   NotifyPaymentInfoHandler,
   CancelOrderHandler,
   RegenerateDeliveryHandler,

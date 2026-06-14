@@ -17,8 +17,10 @@ import { SendDeliveryCommand } from './send-delivery.command'
 @CommandHandler(SendDeliveryCommand)
 export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand> {
   constructor(
-    @Inject(ORDER_WRITE_REPOSITORY) private readonly writeRepo: IOrderWriteRepository,
-    @Inject(ORDER_READ_REPOSITORY) private readonly readRepo: IOrderReadRepository,
+    @Inject(ORDER_WRITE_REPOSITORY)
+    private readonly writeRepo: IOrderWriteRepository,
+    @Inject(ORDER_READ_REPOSITORY)
+    private readonly readRepo: IOrderReadRepository,
     private readonly commandBus: CommandBus,
     private readonly notifications: NotificationsService,
   ) {}
@@ -28,9 +30,11 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
     const order = await this.readRepo.findById(command.orderId)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
 
-    // 2. Validate status is paid
-    if (order.status !== OrderStatus.PAID) {
-      throw AppException.businessRule('order.not_paid')
+    // 2. Validate: paid (sale) or gifted still awaiting its link
+    const isSale = order.status === OrderStatus.PAID
+    const isGiftPendingDelivery = order.status === OrderStatus.GIFTED && order.deliveredAt === null
+    if (!isSale && !isGiftPendingDelivery) {
+      throw AppException.businessRule('order.not_deliverable')
     }
 
     // 3. Generate delivery link
@@ -42,8 +46,12 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
     // 4. Set delivered_as on each order item based on retouched status
     await this.writeRepo.updateItemsDeliveredAs(order.id)
 
-    // 5. Mark as delivered (paid → delivered)
-    order.markDelivered()
+    // 5. Sale → delivered; gift → set deliveredAt, keep status gifted
+    if (isSale) {
+      order.markDelivered()
+    } else {
+      order.markGiftDelivered()
+    }
 
     // 6. Save order
     await this.writeRepo.save(order)

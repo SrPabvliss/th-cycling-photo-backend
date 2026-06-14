@@ -9,6 +9,8 @@ export class OrdersStatsProjection {
   paidCount: number
   /** Orders that have been delivered */
   deliveredCount: number
+  /** Orders given away as a gift (terminal, excluded from revenue) */
+  giftedCount: number
   /** Cancelled orders */
   cancelledCount: number
 }

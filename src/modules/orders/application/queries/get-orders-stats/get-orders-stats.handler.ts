@@ -6,7 +6,10 @@ import { GetOrdersStatsQuery } from './get-orders-stats.query'
 
 @QueryHandler(GetOrdersStatsQuery)
 export class GetOrdersStatsHandler implements IQueryHandler<GetOrdersStatsQuery> {
-  constructor(@Inject(ORDER_READ_REPOSITORY) private readonly readRepo: IOrderReadRepository) {}
+  constructor(
+    @Inject(ORDER_READ_REPOSITORY)
+    private readonly readRepo: IOrderReadRepository,
+  ) {}
 
   async execute(): Promise<OrdersStatsProjection> {
     const counts = await this.readRepo.countByStatus()
@@ -15,14 +18,16 @@ export class GetOrdersStatsHandler implements IQueryHandler<GetOrdersStatsQuery>
     const paymentInfoSent = counts.payment_info_sent ?? 0
     const paid = counts.paid ?? 0
     const delivered = counts.delivered ?? 0
+    const gifted = counts.gifted ?? 0
     const cancelled = counts.cancelled ?? 0
 
     return {
-      totalOrders: pending + paymentInfoSent + paid + delivered + cancelled,
+      totalOrders: pending + paymentInfoSent + paid + delivered + gifted + cancelled,
       pendingCount: pending,
       paymentInfoSentCount: paymentInfoSent,
       paidCount: paid + delivered,
       deliveredCount: delivered,
+      giftedCount: gifted,
       cancelledCount: cancelled,
     }
   }

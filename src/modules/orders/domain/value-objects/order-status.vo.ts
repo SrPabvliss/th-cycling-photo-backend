@@ -3,6 +3,7 @@ export const OrderStatus = {
   PAYMENT_INFO_SENT: 'payment_info_sent',
   PAID: 'paid',
   DELIVERED: 'delivered',
+  GIFTED: 'gifted',
   CANCELLED: 'cancelled',
 } as const
 

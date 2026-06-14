@@ -4,6 +4,7 @@ export { CreateOrderFromGalleryCommand } from './create-order-from-gallery/creat
 export { CreateOrderFromGalleryDto } from './create-order-from-gallery/create-order-from-gallery.dto'
 export { CreateOrderFromPreviewCommand } from './create-order-from-preview/create-order-from-preview.command'
 export { CreateOrderFromPreviewDto } from './create-order-from-preview/create-order-from-preview.dto'
+export { GiftOrderCommand } from './gift-order/gift-order.command'
 export { NotifyPaymentInfoCommand } from './notify-payment-info/notify-payment-info.command'
 export { RegenerateDeliveryCommand } from './regenerate-delivery/regenerate-delivery.command'
 export { SendDeliveryCommand } from './send-delivery/send-delivery.command'
