@@ -20,7 +20,7 @@ export interface IOrderReadRepository {
     filters: OrderListFilters,
   ): Promise<PaginatedResult<OrderListProjection>>
   getDetail(id: string): Promise<OrderDetailProjection | null>
-  countByStatus(): Promise<Record<string, number>>
+  countByStatus(eventId?: string): Promise<Record<string, number>>
   existsByPreviewLinkId(previewLinkId: string): Promise<boolean>
   getPreviewPhotoIds(previewLinkId: string): Promise<string[]>
   getPendingRetouch(): Promise<PendingRetouchOrderProjection[]>

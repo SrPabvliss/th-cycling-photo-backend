@@ -7,6 +7,7 @@ import type {
 } from '@orders/application/projections'
 import type { Order } from '@orders/domain/entities'
 import type { IOrderReadRepository, OrderListFilters } from '@orders/domain/ports'
+import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import type { PendingRetouchOrderProjection } from '@photos/application/projections'
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
@@ -71,7 +72,9 @@ export class OrderReadRepository implements IOrderReadRepository {
     const where: Prisma.OrderWhereInput = {}
 
     if (filters.eventId) where.event_id = filters.eventId
+    // Default view ("Todos") hides cancelled orders; only the explicit filter surfaces them.
     if (filters.status) where.status = filters.status as Prisma.EnumOrderStatusFilter
+    else where.status = { not: OrderStatus.CANCELLED }
     if (filters.search) {
       const term = filters.search
       where.OR = [
@@ -214,10 +217,11 @@ export class OrderReadRepository implements IOrderReadRepository {
     }
   }
 
-  /** Counts orders grouped by status. */
-  async countByStatus(): Promise<Record<string, number>> {
+  /** Counts orders grouped by status, optionally scoped to a single event. */
+  async countByStatus(eventId?: string): Promise<Record<string, number>> {
     const groups = await this.prisma.order.groupBy({
       by: ['status'],
+      where: eventId ? { event_id: eventId } : undefined,
       _count: { id: true },
     })
     return Object.fromEntries(groups.map((g) => [g.status, g._count.id]))
