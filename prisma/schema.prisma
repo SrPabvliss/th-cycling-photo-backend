@@ -89,6 +89,7 @@ enum OrderStatus {
   payment_info_sent
   paid
   delivered
+  gifted
   cancelled
 
   @@map("order_status")

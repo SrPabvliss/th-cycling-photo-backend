@@ -108,11 +108,79 @@ describe('Order.cancel (extended)', () => {
     expect(order.cancelledAt).toBeInstanceOf(Date)
   })
 
+  it('accepts paid → cancelled (recover from mis-marked payment)', () => {
+    const order = Order.create(baseInput)
+    order.confirmPayment('admin-1')
+
+    order.cancel()
+
+    expect(order.status).toBe(OrderStatus.CANCELLED)
+    expect(order.cancelledAt).toBeInstanceOf(Date)
+  })
+
+  it('accepts gifted → cancelled (recover from mis-marked gift)', () => {
+    const order = Order.create(baseInput)
+    order.markAsGift('admin-1')
+
+    order.cancel()
+
+    expect(order.status).toBe(OrderStatus.CANCELLED)
+    expect(order.cancelledAt).toBeInstanceOf(Date)
+  })
+
+  it('throws when called on delivered', () => {
+    const order = Order.create(baseInput)
+    order.confirmPayment('admin-1')
+    order.markDelivered()
+
+    expect(() => order.cancel()).toThrow(AppException)
+  })
+})
+
+describe('Order.markAsGift', () => {
+  it('accepts pending → gifted and records the actor', () => {
+    const order = Order.create(baseInput)
+
+    order.markAsGift('admin-1')
+
+    expect(order.status).toBe(OrderStatus.GIFTED)
+    expect(order.confirmedById).toBe('admin-1')
+    expect(order.paidAt).toBeNull()
+  })
+
+  it('accepts payment_info_sent → gifted', () => {
+    const order = Order.create(baseInput)
+    order.notifyPaymentInfo('admin-1')
+
+    order.markAsGift('admin-2')
+
+    expect(order.status).toBe(OrderStatus.GIFTED)
+  })
+
   it('throws when called on paid', () => {
     const order = Order.create(baseInput)
     order.confirmPayment('admin-1')
 
-    expect(() => order.cancel()).toThrow(AppException)
+    expect(() => order.markAsGift('admin-2')).toThrow(AppException)
+  })
+})
+
+describe('Order.markGiftDelivered', () => {
+  it('sets deliveredAt but keeps status = gifted (delivery is a separate axis)', () => {
+    const order = Order.create(baseInput)
+    order.markAsGift('admin-1')
+
+    order.markGiftDelivered()
+
+    expect(order.status).toBe(OrderStatus.GIFTED)
+    expect(order.deliveredAt).toBeInstanceOf(Date)
+  })
+
+  it('throws when the order is not gifted', () => {
+    const order = Order.create(baseInput)
+    order.confirmPayment('admin-1')
+
+    expect(() => order.markGiftDelivered()).toThrow(AppException)
   })
 })
 
