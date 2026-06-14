@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import {
   CancelOrderCommand,
   ConfirmOrderPaymentCommand,
@@ -57,14 +57,15 @@ export class OrdersController {
   @Roles('admin')
   @Get('stats')
   @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
-  @ApiOperation({ summary: 'Get order statistics' })
+  @ApiOperation({ summary: 'Get order statistics, optionally scoped to an event' })
+  @ApiQuery({ name: 'eventId', required: false, description: 'Scope stats to a single event' })
   @ApiEnvelopeResponse({
     status: 200,
     description: 'Order statistics retrieved',
     type: OrdersStatsProjection,
   })
-  async getStats() {
-    return this.queryBus.execute(new GetOrdersStatsQuery())
+  async getStats(@Query('eventId') eventId?: string) {
+    return this.queryBus.execute(new GetOrdersStatsQuery(eventId))
   }
 
   @Roles('admin')

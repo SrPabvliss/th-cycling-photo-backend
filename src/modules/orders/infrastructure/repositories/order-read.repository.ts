@@ -217,10 +217,11 @@ export class OrderReadRepository implements IOrderReadRepository {
     }
   }
 
-  /** Counts orders grouped by status. */
-  async countByStatus(): Promise<Record<string, number>> {
+  /** Counts orders grouped by status, optionally scoped to a single event. */
+  async countByStatus(eventId?: string): Promise<Record<string, number>> {
     const groups = await this.prisma.order.groupBy({
       by: ['status'],
+      where: eventId ? { event_id: eventId } : undefined,
       _count: { id: true },
     })
     return Object.fromEntries(groups.map((g) => [g.status, g._count.id]))

@@ -11,8 +11,8 @@ export class GetOrdersStatsHandler implements IQueryHandler<GetOrdersStatsQuery>
     private readonly readRepo: IOrderReadRepository,
   ) {}
 
-  async execute(): Promise<OrdersStatsProjection> {
-    const counts = await this.readRepo.countByStatus()
+  async execute(query: GetOrdersStatsQuery): Promise<OrdersStatsProjection> {
+    const counts = await this.readRepo.countByStatus(query.eventId)
 
     const pending = counts.pending ?? 0
     const paymentInfoSent = counts.payment_info_sent ?? 0
