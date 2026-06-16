@@ -30,9 +30,11 @@ export class GetRetouchQueueHandler implements IQueryHandler<GetRetouchQueueQuer
       throw AppException.notFound('Event', query.eventSlug)
     }
 
-    const isAssigned = await this.retouchRead.isOperatorAssigned(event.id, query.operatorId)
-    if (!isAssigned) {
-      throw AppException.forbidden('operator.not_assigned_to_event')
+    if (query.userRole !== 'admin') {
+      const isAssigned = await this.retouchRead.isOperatorAssigned(event.id, query.operatorId)
+      if (!isAssigned) {
+        throw AppException.forbidden('operator.not_assigned_to_event')
+      }
     }
 
     const { items, total } = await this.retouchRead.getRetouchQueuePage(

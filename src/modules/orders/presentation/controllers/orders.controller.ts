@@ -1,9 +1,10 @@
 import { Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import {
   CancelOrderCommand,
   ConfirmOrderPaymentCommand,
+  GiftOrderCommand,
   NotifyPaymentInfoCommand,
   RegenerateDeliveryCommand,
   SendDeliveryCommand,
@@ -56,14 +57,15 @@ export class OrdersController {
   @Roles('admin')
   @Get('stats')
   @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
-  @ApiOperation({ summary: 'Get order statistics' })
+  @ApiOperation({ summary: 'Get order statistics, optionally scoped to an event' })
+  @ApiQuery({ name: 'eventId', required: false, description: 'Scope stats to a single event' })
   @ApiEnvelopeResponse({
     status: 200,
     description: 'Order statistics retrieved',
     type: OrdersStatsProjection,
   })
-  async getStats() {
-    return this.queryBus.execute(new GetOrdersStatsQuery())
+  async getStats(@Query('eventId') eventId?: string) {
+    return this.queryBus.execute(new GetOrdersStatsQuery(eventId))
   }
 
   @Roles('admin')
@@ -118,9 +120,31 @@ export class OrdersController {
   }
 
   @Roles('admin')
+  @Patch(':id/gift')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
+  @ApiOperation({
+    summary:
+      'Mark order as a gift (pending | payment_info_sent → gifted). Terminal status, excluded from revenue.',
+  })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Order marked as gifted',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not pending' })
+  async gift(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new GiftOrderCommand(id, new AuditContext(user.userId)))
+  }
+
+  @Roles('admin')
   @Patch(':id/send-delivery')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
-  @ApiOperation({ summary: 'Generate delivery link and send photos (paid → delivered)' })
+  @ApiOperation({
+    summary:
+      'Generate delivery link and send photos. Sale: paid → delivered. Gift: sets deliveredAt, keeps status gifted.',
+  })
   @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
     status: 200,
@@ -152,7 +176,9 @@ export class OrdersController {
   @Roles('admin')
   @Patch(':id/cancel')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
-  @ApiOperation({ summary: 'Cancel a pending order' })
+  @ApiOperation({
+    summary: 'Cancel an order (pending | payment_info_sent | paid | gifted → cancelled)',
+  })
   @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
   @ApiEnvelopeResponse({
     status: 200,
@@ -160,7 +186,7 @@ export class OrdersController {
     type: EntityIdProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
-  @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not pending' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not cancellable' })
   async cancel(@Param('id') id: string) {
     return this.commandBus.execute(new CancelOrderCommand(id))
   }

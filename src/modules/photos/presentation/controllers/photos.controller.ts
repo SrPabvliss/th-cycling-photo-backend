@@ -78,7 +78,7 @@ export class PhotosController {
   }
 
   /** Returns a download manifest with presigned URLs for all event photos. */
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Get('events/:eventId/photos/download-manifest')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download manifest for all event photos' })
@@ -364,7 +364,7 @@ export class PhotosController {
   }
 
   /** Generates a presigned URL for direct upload to B2. */
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Post('events/:eventId/photos/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate a presigned URL for direct photo upload' })
@@ -385,7 +385,7 @@ export class PhotosController {
   }
 
   /** Confirms a batch of photos uploaded directly to B2. */
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Post('events/:eventId/photos/confirm-batch')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Confirm a batch of photos uploaded via presigned URLs' })
@@ -479,7 +479,7 @@ export class PhotosController {
     return this.queryBus.execute(query)
   }
 
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Patch('photos/bulk-category')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Bulk assign or remove category from multiple photos' })
@@ -493,9 +493,9 @@ export class PhotosController {
     return this.commandBus.execute(command)
   }
 
-  /** Sets the requires_retouch flag on a photo. Admin-only — used to flag a photo
+  /** Sets the requires_retouch flag on a photo. Used to flag a photo
    *  back into the retouch queue or dismiss a wrongly-flagged photo. */
-  @Roles('admin')
+  @Roles('admin', 'operator')
   @Patch('photos/:id/retouch-flag')
   @HttpCode(204)
   @ApiOperation({ summary: 'Marcar o desmarcar foto para retoque' })

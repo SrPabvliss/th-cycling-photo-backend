@@ -68,12 +68,13 @@ describe('Event Entity', () => {
   })
 
   describe('update', () => {
-    it('should update name and regenerate slug', () => {
+    it('should update name without regenerating slug', () => {
       const event = Event.create(validData)
+      const originalSlug = event.slug
       event.update({ name: 'New Name' })
 
       expect(event.name).toBe('New Name')
-      expect(event.slug).toBe('new-name')
+      expect(event.slug).toBe(originalSlug)
     })
 
     it('should update startDate and endDate when valid', () => {

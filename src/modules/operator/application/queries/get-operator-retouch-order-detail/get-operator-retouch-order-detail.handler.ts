@@ -28,9 +28,11 @@ export class GetOperatorRetouchOrderDetailHandler
       throw AppException.notFound('Order', query.orderId)
     }
 
-    const isAssigned = await this.retouchRead.isOperatorAssigned(row.eventId, query.operatorId)
-    if (!isAssigned) {
-      throw AppException.forbidden('operator.not_assigned_to_event')
+    if (query.userRole !== 'admin') {
+      const isAssigned = await this.retouchRead.isOperatorAssigned(row.eventId, query.operatorId)
+      if (!isAssigned) {
+        throw AppException.forbidden('operator.not_assigned_to_event')
+      }
     }
 
     return toOperatorRetouchOrderDetailProjection(row, this.cdn)

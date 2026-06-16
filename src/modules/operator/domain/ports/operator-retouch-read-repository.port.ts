@@ -45,7 +45,7 @@ export interface IOperatorRetouchReadRepository {
     take: number,
   ): Promise<{ items: OperatorRetouchQueueOrderRow[]; total: number }>
   findOperatorRetouchOrdersPage(
-    eventIds: string[],
+    eventIds: string[] | null,
     scope: RetouchOrderScope,
     skip: number,
     take: number,

@@ -20,7 +20,9 @@ export interface IOrderReadRepository {
     filters: OrderListFilters,
   ): Promise<PaginatedResult<OrderListProjection>>
   getDetail(id: string): Promise<OrderDetailProjection | null>
-  countByStatus(): Promise<Record<string, number>>
+  countByStatus(eventId?: string): Promise<Record<string, number>>
+  /** Sums subtotal of paid + delivered orders, optionally scoped to a single event. Returns a Decimal string ('0' when none). */
+  sumRevenue(eventId?: string): Promise<string>
   existsByPreviewLinkId(previewLinkId: string): Promise<boolean>
   getPreviewPhotoIds(previewLinkId: string): Promise<string[]>
   getPendingRetouch(): Promise<PendingRetouchOrderProjection[]>

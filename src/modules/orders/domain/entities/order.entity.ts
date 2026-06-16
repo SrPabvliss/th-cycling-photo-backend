@@ -136,10 +136,32 @@ export class Order {
     this.deliveredAt = new Date()
   }
 
-  /** Cancels the order: pending | payment_info_sent → cancelled. Sets cancelledAt. */
-  cancel(): void {
+  /** Marks as gift: pending | payment_info_sent → gifted (terminal). Records actor. */
+  markAsGift(actorId: string): void {
     if (this.status !== OrderStatus.PENDING && this.status !== OrderStatus.PAYMENT_INFO_SENT) {
       throw AppException.businessRule('order.not_pending')
+    }
+    this.status = OrderStatus.GIFTED
+    this.confirmedById = actorId
+  }
+
+  /** Delivers a gift: sets deliveredAt, keeps status = gifted. */
+  markGiftDelivered(): void {
+    if (this.status !== OrderStatus.GIFTED) {
+      throw AppException.businessRule('order.not_gifted')
+    }
+    this.deliveredAt = new Date()
+  }
+
+  /** Cancels: pending | payment_info_sent | paid | gifted → cancelled. */
+  cancel(): void {
+    if (
+      this.status !== OrderStatus.PENDING &&
+      this.status !== OrderStatus.PAYMENT_INFO_SENT &&
+      this.status !== OrderStatus.PAID &&
+      this.status !== OrderStatus.GIFTED
+    ) {
+      throw AppException.businessRule('order.not_cancellable')
     }
     this.status = OrderStatus.CANCELLED
     this.cancelledAt = new Date()
