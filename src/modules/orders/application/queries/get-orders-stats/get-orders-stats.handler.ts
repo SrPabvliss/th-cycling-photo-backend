@@ -12,7 +12,10 @@ export class GetOrdersStatsHandler implements IQueryHandler<GetOrdersStatsQuery>
   ) {}
 
   async execute(query: GetOrdersStatsQuery): Promise<OrdersStatsProjection> {
-    const counts = await this.readRepo.countByStatus(query.eventId)
+    const [counts, totalRevenue] = await Promise.all([
+      this.readRepo.countByStatus(query.eventId),
+      this.readRepo.sumRevenue(query.eventId),
+    ])
 
     const pending = counts.pending ?? 0
     const paymentInfoSent = counts.payment_info_sent ?? 0
@@ -32,6 +35,7 @@ export class GetOrdersStatsHandler implements IQueryHandler<GetOrdersStatsQuery>
       deliveredCount: delivered,
       giftedCount: gifted,
       cancelledCount: cancelled,
+      totalRevenue,
     }
   }
 }

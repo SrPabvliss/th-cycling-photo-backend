@@ -227,6 +227,18 @@ export class OrderReadRepository implements IOrderReadRepository {
     return Object.fromEntries(groups.map((g) => [g.status, g._count.id]))
   }
 
+  /** Sums subtotal of paid + delivered orders, optionally scoped to a single event. */
+  async sumRevenue(eventId?: string): Promise<string> {
+    const result = await this.prisma.order.aggregate({
+      _sum: { subtotal: true },
+      where: {
+        status: { in: [OrderStatus.PAID, OrderStatus.DELIVERED] },
+        ...(eventId ? { event_id: eventId } : {}),
+      },
+    })
+    return (result._sum.subtotal ?? 0).toString()
+  }
+
   /** Checks if an order already exists for a preview link. */
   async existsByPreviewLinkId(previewLinkId: string): Promise<boolean> {
     const count = await this.prisma.order.count({
