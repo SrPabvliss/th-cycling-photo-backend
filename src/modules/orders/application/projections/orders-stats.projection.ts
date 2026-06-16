@@ -15,4 +15,6 @@ export class OrdersStatsProjection {
   giftedCount: number
   /** Cancelled orders */
   cancelledCount: number
+  /** Sum of subtotal across paid + delivered orders, as a Decimal string (e.g. "1234.50"). USD assumed. */
+  totalRevenue: string
 }
