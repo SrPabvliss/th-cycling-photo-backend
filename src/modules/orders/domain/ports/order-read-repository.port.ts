@@ -24,6 +24,8 @@ export interface IOrderReadRepository {
   /** Sums subtotal of paid + delivered orders, optionally scoped to a single event. Returns a Decimal string ('0' when none). */
   sumRevenue(eventId?: string): Promise<string>
   existsByPreviewLinkId(previewLinkId: string): Promise<boolean>
+  /** True if any order line item references this photo (blocks hard-delete). */
+  existsByPhotoId(photoId: string): Promise<boolean>
   getPreviewPhotoIds(previewLinkId: string): Promise<string[]>
   getPendingRetouch(): Promise<PendingRetouchOrderProjection[]>
   findOrdersFullyRetouchedByPhoto(photoId: string): Promise<RetouchCompletedOrderProjection[]>

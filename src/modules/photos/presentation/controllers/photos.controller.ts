@@ -19,6 +19,7 @@ import {
   ConfirmRetouchedUploadDto,
   DeletePhotoBibCommand,
   DeletePhotoColorCommand,
+  DeletePhotoCommand,
   GeneratePresignedUrlCommand,
   GeneratePresignedUrlDto,
   GenerateRetouchedPresignedUrlCommand,
@@ -283,6 +284,19 @@ export class PhotosController {
     @CurrentUser() user: ICurrentUser,
   ) {
     return this.commandBus.execute(new DeletePhotoBibCommand(photoId, bibId, user.userId))
+  }
+
+  /** Hard-delete a photo (admin/operator). Removes the record, bucket objects and CDN slugs. Blocked if the photo was sold or is in a preview link. */
+  @Roles('admin', 'operator')
+  @Delete('photos/:id')
+  @HttpCode(200)
+  @SuccessMessage('success.DELETED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Delete a photo' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Photo is sold or in a preview link' })
+  async deletePhoto(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    await this.commandBus.execute(new DeletePhotoCommand(id, user.userId))
   }
 
   /** Add a manual reviewer-sourced color to a photo (admin/operator). */
