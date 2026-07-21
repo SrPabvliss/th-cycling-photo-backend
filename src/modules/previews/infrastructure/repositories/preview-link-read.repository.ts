@@ -21,6 +21,14 @@ export class PreviewLinkReadRepository implements IPreviewLinkReadRepository {
     return record ? PreviewLinkMapper.toEntity(record) : null
   }
 
+  /** Checks if any preview link includes this photo. */
+  async existsByPhotoId(photoId: string): Promise<boolean> {
+    const count = await this.prisma.previewLinkPhoto.count({
+      where: { photo_id: photoId },
+    })
+    return count > 0
+  }
+
   /** Retrieves a paginated list of preview links for an event. */
   async getListByEvent(
     eventId: string,

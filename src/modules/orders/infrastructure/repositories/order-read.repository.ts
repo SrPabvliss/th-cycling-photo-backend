@@ -86,7 +86,9 @@ export class OrderReadRepository implements IOrderReadRepository {
         { user: { email: { contains: term, mode: 'insensitive' } } },
         {
           user: {
-            phones: { some: { phone_number: { contains: term, mode: 'insensitive' } } },
+            phones: {
+              some: { phone_number: { contains: term, mode: 'insensitive' } },
+            },
           },
         },
       ]
@@ -170,7 +172,12 @@ export class OrderReadRepository implements IOrderReadRepository {
           },
         },
         delivery_link: {
-          select: { token: true, status: true, expires_at: true, download_count: true },
+          select: {
+            token: true,
+            status: true,
+            expires_at: true,
+            download_count: true,
+          },
         },
       },
     })
@@ -247,6 +254,14 @@ export class OrderReadRepository implements IOrderReadRepository {
     return count > 0
   }
 
+  /** Checks if any order line item references this photo. */
+  async existsByPhotoId(photoId: string): Promise<boolean> {
+    const count = await this.prisma.orderItem.count({
+      where: { photo_id: photoId },
+    })
+    return count > 0
+  }
+
   /** Gets photo IDs associated with a preview link. */
   async getPreviewPhotoIds(previewLinkId: string): Promise<string[]> {
     const photos = await this.prisma.previewLinkPhoto.findMany({
@@ -304,7 +319,11 @@ export class OrderReadRepository implements IOrderReadRepository {
     const orders = await this.prisma.order.findMany({
       where: {
         items: { some: { photo_id: photoId } },
-        NOT: { items: { some: { photo: { retouched_at: null, requires_retouch: true } } } },
+        NOT: {
+          items: {
+            some: { photo: { retouched_at: null, requires_retouch: true } },
+          },
+        },
       },
       select: {
         id: true,

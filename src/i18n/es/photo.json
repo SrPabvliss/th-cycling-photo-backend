@@ -4,5 +4,6 @@
   "invalid_file_size": "El tamaño del archivo de la foto debe ser mayor a cero",
   "plate_number_out_of_range": "El número de placa debe estar entre 1 y 999",
   "density_percentage_out_of_range": "El porcentaje de densidad debe estar entre 0 y 100",
-  "invalid_object_key_prefix": "La clave del objeto no coincide con el prefijo esperado del evento"
+  "invalid_object_key_prefix": "La clave del objeto no coincide con el prefijo esperado del evento",
+  "delete_blocked_referenced": "No se puede eliminar: la foto ya fue vendida o está en un enlace de preview"
 }

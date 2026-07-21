@@ -9,6 +9,7 @@ import { ApplyColorCorrectionHandler } from '@photos/application/commands/apply-
 import { BulkAssignCategoryHandler } from '@photos/application/commands/bulk-assign-category/bulk-assign-category.handler'
 import { ConfirmPhotoBatchHandler } from '@photos/application/commands/confirm-photo-batch/confirm-photo-batch.handler'
 import { ConfirmRetouchedUploadHandler } from '@photos/application/commands/confirm-retouched-upload/confirm-retouched-upload.handler'
+import { DeletePhotoHandler } from '@photos/application/commands/delete-photo/delete-photo.handler'
 import { DeletePhotoBibHandler } from '@photos/application/commands/delete-photo-bib/delete-photo-bib.handler'
 import { DeletePhotoColorHandler } from '@photos/application/commands/delete-photo-color/delete-photo-color.handler'
 import { GeneratePresignedUrlHandler } from '@photos/application/commands/generate-presigned-url/generate-presigned-url.handler'
@@ -41,6 +42,7 @@ import { PhotoColorWriteRepository } from '@photos/infrastructure/repositories/p
 import { PhotoReadRepository } from '@photos/infrastructure/repositories/photo-read.repository'
 import { PhotoWriteRepository } from '@photos/infrastructure/repositories/photo-write.repository'
 import { PhotosController } from '@photos/presentation/controllers/photos.controller'
+import { PreviewsModule } from '@previews/previews.module'
 import { ClassificationsModule } from '../classifications/classifications.module'
 import { EventsModule } from '../events/events.module'
 
@@ -52,6 +54,7 @@ const CommandHandlers = [
   BulkAssignCategoryHandler,
   ConfirmPhotoBatchHandler,
   ConfirmRetouchedUploadHandler,
+  DeletePhotoHandler,
   DeletePhotoBibHandler,
   DeletePhotoColorHandler,
   GeneratePresignedUrlHandler,
@@ -80,6 +83,7 @@ const QueryHandlers = [
     forwardRef(() => EventsModule),
     forwardRef(() => OrdersModule),
     forwardRef(() => ClassificationsModule),
+    forwardRef(() => PreviewsModule),
   ],
   controllers: [PhotosController],
   providers: [
