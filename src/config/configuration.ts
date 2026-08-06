@@ -26,6 +26,19 @@ export default () => {
 
   const { WATERMARK_BASE_URL, PREVIEW_BASE_URL, DELIVERY_BASE_URL } = process.env
 
+  const {
+    MAIL_HOST,
+    MAIL_PORT,
+    MAIL_USER,
+    MAIL_PASSWORD,
+    MAIL_FROM,
+    MAIL_FROM_NAME,
+    MAIL_REPLY_TO,
+    MAIL_REDIRECT_TO,
+    PASSWORD_RESET_HMAC_SECRET,
+    APP_WEB_BASE_URL,
+  } = process.env
+
   let databaseUrl = `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
   if (DB_SSL_MODE) {
     databaseUrl += `?sslmode=${DB_SSL_MODE}`
@@ -83,6 +96,23 @@ export default () => {
     },
     cors: {
       origin: CORS_ORIGIN,
+    },
+    mail: {
+      host: MAIL_HOST,
+      port: Number.parseInt(MAIL_PORT || '465', 10),
+      user: MAIL_USER,
+      password: MAIL_PASSWORD,
+      from: MAIL_FROM,
+      fromName: MAIL_FROM_NAME,
+      replyTo: MAIL_REPLY_TO,
+      redirectTo: MAIL_REDIRECT_TO || '',
+    },
+    passwordReset: {
+      hmacSecret: PASSWORD_RESET_HMAC_SECRET,
+      ttlMinutes: 30,
+    },
+    app: {
+      webBaseUrl: APP_WEB_BASE_URL,
     },
     aiPipeline: {
       baseUrl: AI_PIPELINE_BASE_URL || 'http://localhost:8001',

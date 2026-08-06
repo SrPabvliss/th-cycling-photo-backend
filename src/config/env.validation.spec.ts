@@ -15,6 +15,15 @@ const validEnv = {
   B2_BUCKET_NAME: 'test-bucket',
   B2_REGION: 'us-east-005',
   JWT_SECRET: 'test-jwt-secret',
+  MAIL_HOST: 'smtp.mx.cloudflare.net',
+  MAIL_PORT: 465,
+  MAIL_USER: 'api_token',
+  MAIL_PASSWORD: 'test-mail-password',
+  MAIL_FROM: 'no-reply@titantv.com.ec',
+  MAIL_FROM_NAME: 'TitanTV',
+  MAIL_REPLY_TO: 'info@titantv.com.ec',
+  PASSWORD_RESET_HMAC_SECRET: 'test-reset-secret',
+  APP_WEB_BASE_URL: 'http://localhost:5173',
 }
 
 describe('Environment Validation', () => {
@@ -52,5 +61,48 @@ describe('Environment Validation', () => {
   ])('should fail if %s is empty string', (key) => {
     const env = { ...validEnv, [key]: '' }
     expect(() => validate(env)).toThrow('Environment validation failed')
+  })
+})
+
+describe('MAIL_REDIRECT_TO production guard', () => {
+  const baseEnv = {
+    NODE_ENV: 'production',
+    PORT: 3000,
+    DB_HOST: 'localhost',
+    DB_PORT: 5432,
+    DB_USER: 'user',
+    DB_PASSWORD: 'pass',
+    DB_NAME: 'db',
+    B2_APPLICATION_KEY_ID: 'id',
+    B2_APPLICATION_KEY: 'key',
+    B2_BUCKET_ID: 'bucket-id',
+    B2_BUCKET_NAME: 'bucket',
+    B2_REGION: 'us-west',
+    JWT_SECRET: 'jwt-secret',
+    PASSWORD_RESET_HMAC_SECRET: 'reset-secret',
+    APP_WEB_BASE_URL: 'https://titantv.com.ec',
+    MAIL_HOST: 'smtp.mx.cloudflare.net',
+    MAIL_PORT: 465,
+    MAIL_USER: 'api_token',
+    MAIL_PASSWORD: 'token',
+    MAIL_FROM: 'no-reply@titantv.com.ec',
+    MAIL_FROM_NAME: 'TitanTV',
+    MAIL_REPLY_TO: 'info@titantv.com.ec',
+  }
+
+  it('should reject MAIL_REDIRECT_TO in production', () => {
+    expect(() => validate({ ...baseEnv, MAIL_REDIRECT_TO: 'dev@personal.com' })).toThrow(
+      'MAIL_REDIRECT_TO must be empty when NODE_ENV=production',
+    )
+  })
+
+  it('should allow MAIL_REDIRECT_TO outside production', () => {
+    expect(() =>
+      validate({ ...baseEnv, NODE_ENV: 'development', MAIL_REDIRECT_TO: 'dev@personal.com' }),
+    ).not.toThrow()
+  })
+
+  it('should allow production with no redirect', () => {
+    expect(() => validate({ ...baseEnv, MAIL_REDIRECT_TO: '' })).not.toThrow()
   })
 })

@@ -97,6 +97,45 @@ export class EnvironmentVariables {
   @IsString()
   CORS_ORIGIN?: string
 
+  @IsString()
+  @IsNotEmpty()
+  MAIL_HOST: string
+
+  @IsNumber()
+  MAIL_PORT: number
+
+  @IsString()
+  @IsNotEmpty()
+  MAIL_USER: string
+
+  @IsString()
+  @IsNotEmpty()
+  MAIL_PASSWORD: string
+
+  @IsString()
+  @IsNotEmpty()
+  MAIL_FROM: string
+
+  @IsString()
+  @IsNotEmpty()
+  MAIL_FROM_NAME: string
+
+  @IsString()
+  @IsNotEmpty()
+  MAIL_REPLY_TO: string
+
+  @IsOptional()
+  @IsString()
+  MAIL_REDIRECT_TO?: string
+
+  @IsString()
+  @IsNotEmpty()
+  PASSWORD_RESET_HMAC_SECRET: string
+
+  @IsString()
+  @IsNotEmpty()
+  APP_WEB_BASE_URL: string
+
   // Watermark / Preview
   @IsOptional()
   @IsString()
@@ -138,6 +177,11 @@ export function validate(config: Record<string, unknown>) {
   })
   if (errors.length > 0) {
     throw new Error(`Environment validation failed:\n${errors.toString()}`)
+  }
+  if (validatedConfig.NODE_ENV === 'production' && validatedConfig.MAIL_REDIRECT_TO) {
+    throw new Error(
+      'Environment validation failed:\nMAIL_REDIRECT_TO must be empty when NODE_ENV=production',
+    )
   }
   return validatedConfig
 }

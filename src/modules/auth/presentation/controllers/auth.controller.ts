@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
@@ -8,14 +8,24 @@ import { AppException } from '@shared/domain'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import type { CookieOptions, Request, Response } from 'express'
 import {
+  ConfirmPasswordResetCommand,
+  ConfirmPasswordResetDto,
   LoginCommand,
   LoginDto,
   LogoutCommand,
   RefreshCommand,
   RegisterCommand,
   RegisterDto,
+  RequestPasswordResetCommand,
+  RequestPasswordResetDto,
+  ValidatePasswordResetTokenCommand,
+  ValidatePasswordResetTokenDto,
 } from '../../application/commands'
-import { AuthTokensProjection, MeProjection } from '../../application/projections'
+import {
+  AuthTokensProjection,
+  MeProjection,
+  PasswordResetTokenValidityProjection,
+} from '../../application/projections'
 import { GetMeQuery } from '../../application/queries'
 
 const REFRESH_COOKIE_NAME = 'refresh_token'
@@ -150,6 +160,55 @@ export class AuthController {
     }
 
     res.clearCookie(REFRESH_COOKIE_NAME, this.cookieOptions)
+  }
+
+  @Throttle({ short: { limit: 3, ttl: 900000 } })
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(202)
+  @SuccessMessage('success.PASSWORD_RESET_REQUESTED')
+  @ApiOperation({ summary: 'Request a password reset email' })
+  @ApiResponse({
+    status: 202,
+    description: 'Always succeeds, whether or not the address is registered',
+  })
+  async forgotPassword(@Body() dto: RequestPasswordResetDto, @Req() req: Request) {
+    await this.commandBus.execute(
+      new RequestPasswordResetCommand(dto.email, req.ip ?? null, req.headers['user-agent'] ?? null),
+    )
+  }
+
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @Public()
+  @Post('reset-password/validate')
+  @SuccessMessage('success.PASSWORD_RESET_TOKEN_VALIDATED')
+  @ApiOperation({ summary: 'Check whether a reset token is still usable' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Returns { valid: boolean }',
+    type: PasswordResetTokenValidityProjection,
+  })
+  async validateResetToken(
+    @Body() dto: ValidatePasswordResetTokenDto,
+  ): Promise<PasswordResetTokenValidityProjection> {
+    return this.commandBus.execute(new ValidatePasswordResetTokenCommand(dto.token))
+  }
+
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @Public()
+  @Post('reset-password')
+  @SuccessMessage('success.PASSWORD_UPDATED')
+  @ApiOperation({ summary: 'Set a new password using a reset token' })
+  @ApiResponse({
+    status: 201,
+    description: 'Password updated successfully',
+  })
+  @ApiEnvelopeErrorResponse({
+    status: 422,
+    description: 'Token invalid, expired, already used, or account deactivated',
+  })
+  async resetPassword(@Body() dto: ConfirmPasswordResetDto) {
+    await this.commandBus.execute(new ConfirmPasswordResetCommand(dto.token, dto.password))
   }
 
   @Get('me')
