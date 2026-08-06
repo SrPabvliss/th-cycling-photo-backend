@@ -15,7 +15,6 @@ describe('SmtpMailerAdapter', () => {
     'mail.from': 'no-reply@titantv.com.ec',
     'mail.fromName': 'TitanTV',
     'mail.replyTo': 'info@titantv.com.ec',
-    'mail.redirectTo': '',
   }
 
   const buildAdapter = (overrides: Record<string, unknown> = {}) => {
@@ -38,7 +37,7 @@ describe('SmtpMailerAdapter', () => {
     text: 'hola',
   }
 
-  it('should send to the real recipient when no redirect is configured', async () => {
+  it('should send to the given recipient', async () => {
     await buildAdapter().send(message)
 
     expect(sendMail).toHaveBeenCalledTimes(1)
@@ -50,14 +49,10 @@ describe('SmtpMailerAdapter', () => {
     expect(sent.headers['X-Original-To']).toBeUndefined()
   })
 
-  it('should divert every recipient when a redirect is configured', async () => {
-    await buildAdapter({ 'mail.redirectTo': 'dev@personal.com' }).send(message)
+  it('should forward custom headers to nodemailer', async () => {
+    await buildAdapter().send({ ...message, headers: { 'X-Original-To': 'real@customer.com' } })
 
     const sent = sendMail.mock.calls[0][0]
-    expect(sent.to).toBe('dev@personal.com')
-    expect(sent.subject).toBe('[DEV -> real@customer.com] Restablecer tu contraseña')
     expect(sent.headers['X-Original-To']).toBe('real@customer.com')
-    expect(sent.html).toContain('real@customer.com')
-    expect(sent.text).toContain('real@customer.com')
   })
 })

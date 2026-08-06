@@ -10,7 +10,6 @@ export class SmtpMailerAdapter implements IMailer {
   private readonly transporter: Transporter
   private readonly from: string
   private readonly replyTo: string
-  private readonly redirectTo: string
 
   constructor(config: ConfigService) {
     this.transporter = createTransport({
@@ -27,33 +26,17 @@ export class SmtpMailerAdapter implements IMailer {
     const fromAddress = config.getOrThrow<string>('mail.from')
     this.from = `${fromName} <${fromAddress}>`
     this.replyTo = config.getOrThrow<string>('mail.replyTo')
-    this.redirectTo = config.get<string>('mail.redirectTo', '')
   }
 
   async send(message: MailMessage): Promise<void> {
-    if (!this.redirectTo) {
-      await this.sendMail({
-        from: this.from,
-        replyTo: this.replyTo,
-        to: message.to,
-        subject: message.subject,
-        html: message.html,
-        text: message.text,
-        headers: {},
-      })
-      return
-    }
-
-    const banner = `Envío desviado. Destinatario real: ${message.to}`
-
     await this.sendMail({
       from: this.from,
       replyTo: this.replyTo,
-      to: this.redirectTo,
-      subject: `[DEV -> ${message.to}] ${message.subject}`,
-      html: `<div style="background:#fff3cd;border:1px solid #f59e0b;padding:12px;font-family:sans-serif;font-size:13px;">${banner}</div>${message.html}`,
-      text: `${banner}\n\n${message.text}`,
-      headers: { 'X-Original-To': message.to },
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      headers: message.headers ?? {},
     })
   }
 
