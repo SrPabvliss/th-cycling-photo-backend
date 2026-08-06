@@ -4,6 +4,7 @@ import { PrismaService } from '@shared/infrastructure'
 import type {
   AuthUserProjection,
   MeProjection,
+  PasswordResetUserProjection,
   RegisteredUserProjection,
   UserSnapDataProjection,
 } from '../../application/projections'
@@ -147,5 +148,16 @@ export class AuthUserRepository implements IAuthUserRepository {
       provinceId: user.customer_profile?.province_id ?? null,
       cantonId: user.customer_profile?.canton_id ?? null,
     }
+  }
+
+  async findForPasswordReset(email: string): Promise<PasswordResetUserProjection | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { email },
+      select: { id: true, first_name: true, is_active: true },
+    })
+
+    if (!user) return null
+
+    return { id: user.id, firstName: user.first_name, isActive: user.is_active }
   }
 }

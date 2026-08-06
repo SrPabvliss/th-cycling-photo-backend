@@ -19,6 +19,7 @@ import { EventAssetsModule } from './modules/event-assets/event-assets.module'
 import { EventTypesModule } from './modules/event-types/event-types.module'
 import { EventsModule } from './modules/events/events.module'
 import { LocationsModule } from './modules/locations/locations.module'
+import { MailModule } from './modules/mail/mail.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
 import { OperatorModule } from './modules/operator/operator.module'
 import { OrdersModule } from './modules/orders/orders.module'
@@ -90,6 +91,7 @@ import { StorageModule } from './shared/storage/storage.module'
     EventTypesModule,
     EventsModule,
     LocationsModule,
+    MailModule,
     OperatorModule,
     OrdersModule,
     PricingModule,

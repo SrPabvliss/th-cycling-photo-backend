@@ -26,6 +26,7 @@
       "@photos/*": ["src/modules/photos/*"],
       "@classifications/*": ["src/modules/classifications/*"],
       "@locations/*": ["src/modules/locations/*"],
+      "@mail/*": ["src/modules/mail/*"],
       "@users/*": ["src/modules/users/*"],
       "@previews/*": ["src/modules/previews/*"],
       "@deliveries/*": ["src/modules/deliveries/*"],
