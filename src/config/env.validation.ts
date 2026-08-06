@@ -128,6 +128,10 @@ export class EnvironmentVariables {
   @IsString()
   MAIL_REDIRECT_TO?: string
 
+  @IsOptional()
+  @IsEnum(['api', 'smtp'])
+  MAIL_TRANSPORT?: string
+
   @IsString()
   @IsNotEmpty()
   PASSWORD_RESET_HMAC_SECRET: string
