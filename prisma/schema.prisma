@@ -219,10 +219,11 @@ model User {
   created_at         DateTime  @default(now()) @db.Timestamptz
   last_login_at      DateTime? @db.Timestamptz
 
-  user_roles       UserRole[]
-  refresh_tokens   RefreshToken[]
-  phones           UserPhone[]
-  customer_profile CustomerProfile?
+  user_roles            UserRole[]
+  refresh_tokens        RefreshToken[]
+  password_reset_tokens PasswordResetToken[]
+  phones                UserPhone[]
+  customer_profile      CustomerProfile?
 
   events_created         Event[]         @relation("EventCreatedBy")
   events_updated         Event[]         @relation("EventUpdatedBy")
@@ -286,6 +287,22 @@ model RefreshToken {
   @@index([user_id])
   @@index([expires_at])
   @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id         String    @id @db.Uuid
+  user_id    String    @db.Uuid
+  token_hash String    @unique @db.VarChar(64)
+  expires_at DateTime  @db.Timestamptz
+  used_at    DateTime? @db.Timestamptz
+  ip         String?   @db.VarChar(45)
+  user_agent String?   @db.VarChar(500)
+  created_at DateTime  @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("password_reset_tokens")
 }
 
 model Event {
@@ -727,15 +744,15 @@ model UserPhone {
 }
 
 model CustomerProfile {
-  id          String   @id @default(uuid()) @db.Uuid
-  user_id     String   @unique @db.Uuid
+  id          String    @id @default(uuid()) @db.Uuid
+  user_id     String    @unique @db.Uuid
   country_id  Int
   province_id Int?
   canton_id   Int?
   birth_date  DateTime? @db.Date
   gender      Gender?
-  created_at  DateTime @default(now()) @db.Timestamptz
-  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz
+  created_at  DateTime  @default(now()) @db.Timestamptz
+  updated_at  DateTime  @default(now()) @updatedAt @db.Timestamptz
 
   user     User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   country  Country   @relation(fields: [country_id], references: [id], onDelete: Restrict)

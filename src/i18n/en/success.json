@@ -3,5 +3,8 @@
   "UPDATED": "{entity} updated successfully",
   "DELETED": "{entity} deleted successfully",
   "FETCHED": "{entity} fetched successfully",
-  "LIST": "List fetched successfully"
+  "LIST": "List fetched successfully",
+  "PASSWORD_RESET_REQUESTED": "If the address is registered, we sent the instructions",
+  "PASSWORD_RESET_TOKEN_VALIDATED": "Link verified",
+  "PASSWORD_UPDATED": "Password updated successfully"
 }

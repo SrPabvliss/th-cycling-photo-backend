@@ -7,7 +7,14 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!!**/node_modules", "!!**/dist", "!!**/coverage", "!!**/.pnpm-store"]
+    "includes": [
+      "**",
+      "!!**/node_modules",
+      "!!**/dist",
+      "!!**/coverage",
+      "!!**/.pnpm-store",
+      "!!src/modules/mail/infrastructure/templates/*.html"
+    ]
   },
   "formatter": {
     "enabled": true,

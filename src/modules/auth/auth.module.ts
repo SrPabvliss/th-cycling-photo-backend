@@ -1,23 +1,43 @@
 import { LocationsModule } from '@locations/locations.module'
+import { MailModule } from '@mail/mail.module'
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { CqrsModule } from '@nestjs/cqrs'
 import { JwtModule } from '@nestjs/jwt'
 import { PassportModule } from '@nestjs/passport'
+import { ConfirmPasswordResetHandler } from './application/commands/confirm-password-reset/confirm-password-reset.handler'
 import { LoginHandler } from './application/commands/login/login.handler'
 import { LogoutHandler } from './application/commands/logout/logout.handler'
 import { RefreshHandler } from './application/commands/refresh/refresh.handler'
 import { RegisterHandler } from './application/commands/register/register.handler'
+import { RequestPasswordResetHandler } from './application/commands/request-password-reset/request-password-reset.handler'
+import { ValidatePasswordResetTokenHandler } from './application/commands/validate-password-reset-token/validate-password-reset-token.handler'
 import { GetMeHandler } from './application/queries/me/get-me.handler'
-import { AUTH_USER_REPOSITORY, REFRESH_TOKEN_REPOSITORY, TOKEN_HASH_SERVICE } from './domain/ports'
+import {
+  AUTH_USER_REPOSITORY,
+  PASSWORD_RESET_TOKEN_REPOSITORY,
+  PASSWORD_RESET_TOKEN_SERVICE,
+  REFRESH_TOKEN_REPOSITORY,
+  TOKEN_HASH_SERVICE,
+} from './domain/ports'
 import { JwtAuthGuard } from './infrastructure/guards/jwt-auth.guard'
 import { AuthUserRepository } from './infrastructure/repositories/auth-user.repository'
+import { PasswordResetTokenRepository } from './infrastructure/repositories/password-reset-token.repository'
 import { RefreshTokenRepository } from './infrastructure/repositories/refresh-token.repository'
+import { PasswordResetTokenService } from './infrastructure/services/password-reset-token.service'
 import { TokenHashService } from './infrastructure/services/token-hash.service'
 import { JwtStrategy } from './infrastructure/strategies/jwt.strategy'
 import { AuthController } from './presentation/controllers/auth.controller'
 
-const CommandHandlers = [LoginHandler, RefreshHandler, LogoutHandler, RegisterHandler]
+const CommandHandlers = [
+  LoginHandler,
+  RefreshHandler,
+  LogoutHandler,
+  RegisterHandler,
+  RequestPasswordResetHandler,
+  ConfirmPasswordResetHandler,
+  ValidatePasswordResetTokenHandler,
+]
 const QueryHandlers = [GetMeHandler]
 
 @Module({
@@ -25,6 +45,7 @@ const QueryHandlers = [GetMeHandler]
     CqrsModule,
     PassportModule,
     LocationsModule,
+    MailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -45,6 +66,8 @@ const QueryHandlers = [GetMeHandler]
     { provide: AUTH_USER_REPOSITORY, useClass: AuthUserRepository },
     { provide: REFRESH_TOKEN_REPOSITORY, useClass: RefreshTokenRepository },
     { provide: TOKEN_HASH_SERVICE, useClass: TokenHashService },
+    { provide: PASSWORD_RESET_TOKEN_REPOSITORY, useClass: PasswordResetTokenRepository },
+    { provide: PASSWORD_RESET_TOKEN_SERVICE, useClass: PasswordResetTokenService },
   ],
   exports: [JwtAuthGuard, JwtModule, AUTH_USER_REPOSITORY],
 })

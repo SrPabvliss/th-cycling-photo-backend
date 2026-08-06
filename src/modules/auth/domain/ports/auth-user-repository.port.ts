@@ -1,6 +1,7 @@
 import type {
   AuthUserProjection,
   MeProjection,
+  PasswordResetUserProjection,
   RegisteredUserProjection,
   UserSnapDataProjection,
 } from '../../application/projections'
@@ -13,6 +14,7 @@ export interface IAuthUserRepository {
   register(payload: RegisterUserPayload): Promise<RegisteredUserProjection>
   findByEmailExists(email: string): Promise<boolean>
   getUserSnapData(userId: string): Promise<UserSnapDataProjection | null>
+  findForPasswordReset(email: string): Promise<PasswordResetUserProjection | null>
 }
 
 export const AUTH_USER_REPOSITORY = Symbol('AUTH_USER_REPOSITORY')
