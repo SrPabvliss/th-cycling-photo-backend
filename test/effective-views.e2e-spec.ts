@@ -44,6 +44,11 @@ describe('photo_bib_effective view', () => {
     }).compile()
     prisma = moduleRef.get(PrismaService)
     await prisma.$connect()
+    if (!process.env.DB_NAME?.toLowerCase().includes('test')) {
+      throw new Error(
+        `Refusing to run: DB_NAME="${process.env.DB_NAME}" does not contain "test". This spec truncates users and events.`,
+      )
+    }
   })
 
   afterAll(async () => {
@@ -172,6 +177,11 @@ describe('photo_color_effective view', () => {
     }).compile()
     prisma = moduleRef.get(PrismaService)
     await prisma.$connect()
+    if (!process.env.DB_NAME?.toLowerCase().includes('test')) {
+      throw new Error(
+        `Refusing to run: DB_NAME="${process.env.DB_NAME}" does not contain "test". This spec truncates users and events.`,
+      )
+    }
   })
 
   afterAll(async () => {

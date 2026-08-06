@@ -34,6 +34,11 @@ describe('PhotoClassificationWriteRepository (integration)', () => {
     prisma = moduleRef.get(PrismaService)
     repo = moduleRef.get(PhotoClassificationWriteRepository)
     await prisma.$connect()
+    if (!process.env.DB_NAME?.toLowerCase().includes('test')) {
+      throw new Error(
+        `Refusing to run: DB_NAME="${process.env.DB_NAME}" does not contain "test". This spec truncates events and related tables.`,
+      )
+    }
   })
 
   beforeEach(async () => {

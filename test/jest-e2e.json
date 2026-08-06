@@ -2,6 +2,7 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
+  "globalSetup": "<rootDir>/guard-test-database.ts",
   "testRegex": ".e2e-spec.ts$",
   "testTimeout": 30000,
   "transform": {
@@ -16,6 +17,7 @@
     "^@photos/(.*)$": "<rootDir>/../src/modules/photos/$1",
     "^@classifications/(.*)$": "<rootDir>/../src/modules/classifications/$1",
     "^@locations/(.*)$": "<rootDir>/../src/modules/locations/$1",
+    "^@mail/(.*)$": "<rootDir>/../src/modules/mail/$1",
     "^@users/(.*)$": "<rootDir>/../src/modules/users/$1",
     "^@previews/(.*)$": "<rootDir>/../src/modules/previews/$1",
     "^@deliveries/(.*)$": "<rootDir>/../src/modules/deliveries/$1",
