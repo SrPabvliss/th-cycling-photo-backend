@@ -73,7 +73,7 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
 
     // 9. Build WhatsApp template (emojis as explicit \u escapes to avoid
     //    mojibake when tooling or storage transforms the source bytes).
-    const whatsappTemplate = `¡Hola ${customerFirstName}! \u{2705} Tu pago fue confirmado. Aquí tienes tus ${photoCount} fotos en alta calidad: ${deliveryResult.deliveryUrl}. El link estará disponible por 7 días. ¡Gracias por tu compra! \u{1F389}`
+    const whatsappTemplate = `¡Muchas gracias ${customerFirstName}! \u{2705} Tu pago fue confirmado. Aquí tienes tus ${photoCount} fotos en alta calidad: ${deliveryResult.deliveryUrl}. El link estará disponible por 7 días. ¡Gracias por tu compra! \u{1F389}`
 
     return {
       orderId: order.id,
