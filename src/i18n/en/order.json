@@ -3,6 +3,7 @@
   "not_paid": "Order is not in paid status",
   "not_gifted": "Order is not in gifted status",
   "not_deliverable": "Order cannot be delivered in its current status",
+  "not_correctable": "Order cannot be corrected in its current status",
   "not_cancellable": "Order cannot be cancelled in its current status",
   "preview_not_available": "Preview link is not available for ordering",
   "preview_expired": "Preview link has expired",
