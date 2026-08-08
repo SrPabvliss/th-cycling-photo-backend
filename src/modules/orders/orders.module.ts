@@ -5,6 +5,8 @@ import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { CancelOrderHandler } from '@orders/application/commands/cancel-order/cancel-order.handler'
 import { ConfirmOrderPaymentHandler } from '@orders/application/commands/confirm-order-payment/confirm-order-payment.handler'
+import { ConvertOrderToGiftHandler } from '@orders/application/commands/convert-order-to-gift/convert-order-to-gift.handler'
+import { ConvertOrderToSaleHandler } from '@orders/application/commands/convert-order-to-sale/convert-order-to-sale.handler'
 import { CreateOrderFromGalleryHandler } from '@orders/application/commands/create-order-from-gallery/create-order-from-gallery.handler'
 import { CreateOrderFromPreviewHandler } from '@orders/application/commands/create-order-from-preview/create-order-from-preview.handler'
 import { GiftOrderHandler } from '@orders/application/commands/gift-order/gift-order.handler'
@@ -27,6 +29,8 @@ const CommandHandlers = [
   CreateOrderFromPreviewHandler,
   CreateOrderFromGalleryHandler,
   ConfirmOrderPaymentHandler,
+  ConvertOrderToSaleHandler,
+  ConvertOrderToGiftHandler,
   GiftOrderHandler,
   NotifyPaymentInfoHandler,
   CancelOrderHandler,

@@ -4,6 +4,8 @@ import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestj
 import {
   CancelOrderCommand,
   ConfirmOrderPaymentCommand,
+  ConvertOrderToGiftCommand,
+  ConvertOrderToSaleCommand,
   GiftOrderCommand,
   NotifyPaymentInfoCommand,
   RegenerateDeliveryCommand,
@@ -136,6 +138,44 @@ export class OrdersController {
   @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not pending' })
   async gift(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
     return this.commandBus.execute(new GiftOrderCommand(id, new AuditContext(user.userId)))
+  }
+
+  @Roles('admin')
+  @Patch(':id/convert-to-sale')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
+  @ApiOperation({
+    summary:
+      'Convert a gifted order back to a sale (gifted → paid, or → delivered if it was already delivered). Its subtotal starts counting toward revenue.',
+  })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Order converted to a sale',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not gifted' })
+  async convertToSale(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new ConvertOrderToSaleCommand(id, new AuditContext(user.userId)))
+  }
+
+  @Roles('admin')
+  @Patch(':id/convert-to-gift')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
+  @ApiOperation({
+    summary:
+      'Convert a sale into a gift (paid | delivered → gifted, keeping deliveredAt). Its subtotal stops counting toward revenue.',
+  })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Order converted to a gift',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not paid or delivered' })
+  async convertToGift(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new ConvertOrderToGiftCommand(id, new AuditContext(user.userId)))
   }
 
   @Roles('admin')

@@ -135,6 +135,23 @@ describe('Order.cancel (extended)', () => {
 
     expect(() => order.cancel()).toThrow(AppException)
   })
+
+  it('throws when called on a delivered gift', () => {
+    const order = Order.create(baseInput)
+    order.markAsGift('admin-1')
+    order.markGiftDelivered()
+
+    expect(() => order.cancel()).toThrow(AppException)
+  })
+
+  it('throws when called on an order converted from delivered sale to gift', () => {
+    const order = Order.create(baseInput)
+    order.confirmPayment('admin-1')
+    order.markDelivered()
+    order.convertToGift('admin-2')
+
+    expect(() => order.cancel()).toThrow(AppException)
+  })
 })
 
 describe('Order.markAsGift', () => {
@@ -209,5 +226,109 @@ describe('Order.create (snapshot pricing)', () => {
     })
     expect(order.snapCurrency).toBeNull()
     expect(order.snapPricingConfig).toBeNull()
+  })
+})
+
+describe('Order.convertToSale', () => {
+  it('sends an undelivered gift to paid and stamps paidAt with the correction time', () => {
+    const order = Order.create(baseInput)
+    order.markAsGift('admin-1')
+    const before = Date.now()
+
+    order.convertToSale('admin-2')
+
+    expect(order.status).toBe(OrderStatus.PAID)
+    expect(order.paidAt).toBeInstanceOf(Date)
+    expect((order.paidAt as Date).getTime()).toBeGreaterThanOrEqual(before)
+    expect(order.deliveredAt).toBeNull()
+    expect(order.confirmedById).toBe('admin-2')
+  })
+
+  it('sends a delivered gift to delivered and copies deliveredAt into paidAt', () => {
+    const order = Order.create(baseInput)
+    order.markAsGift('admin-1')
+    order.markGiftDelivered()
+    const deliveredAt = order.deliveredAt
+
+    order.convertToSale('admin-2')
+
+    expect(order.status).toBe(OrderStatus.DELIVERED)
+    expect(order.paidAt).toBe(deliveredAt)
+    expect(order.deliveredAt).toBe(deliveredAt)
+  })
+
+  it('throws when the order is paid', () => {
+    const order = Order.create(baseInput)
+    order.confirmPayment('admin-1')
+
+    expect(() => order.convertToSale('admin-2')).toThrow(AppException)
+  })
+
+  it('throws when the order is delivered', () => {
+    const order = Order.create(baseInput)
+    order.confirmPayment('admin-1')
+    order.markDelivered()
+
+    expect(() => order.convertToSale('admin-2')).toThrow(AppException)
+  })
+
+  it('throws when the order is pending', () => {
+    const order = Order.create(baseInput)
+
+    expect(() => order.convertToSale('admin-1')).toThrow(AppException)
+  })
+
+  it('throws when the order is cancelled', () => {
+    const order = Order.create(baseInput)
+    order.cancel()
+
+    expect(() => order.convertToSale('admin-1')).toThrow(AppException)
+  })
+})
+
+describe('Order.convertToGift', () => {
+  it('sends a paid order to gifted and clears paidAt', () => {
+    const order = Order.create(baseInput)
+    order.confirmPayment('admin-1')
+
+    order.convertToGift('admin-2')
+
+    expect(order.status).toBe(OrderStatus.GIFTED)
+    expect(order.paidAt).toBeNull()
+    expect(order.deliveredAt).toBeNull()
+    expect(order.confirmedById).toBe('admin-2')
+  })
+
+  it('sends a delivered order to gifted keeping deliveredAt', () => {
+    const order = Order.create(baseInput)
+    order.confirmPayment('admin-1')
+    order.markDelivered()
+    const deliveredAt = order.deliveredAt
+
+    order.convertToGift('admin-2')
+
+    expect(order.status).toBe(OrderStatus.GIFTED)
+    expect(order.paidAt).toBeNull()
+    expect(order.deliveredAt).toBe(deliveredAt)
+  })
+
+  it('throws when the order is already gifted', () => {
+    const order = Order.create(baseInput)
+    order.markAsGift('admin-1')
+
+    expect(() => order.convertToGift('admin-2')).toThrow(AppException)
+  })
+
+  it('throws when the order is pending', () => {
+    const order = Order.create(baseInput)
+
+    expect(() => order.convertToGift('admin-1')).toThrow(AppException)
+  })
+
+  it('throws when the order is cancelled', () => {
+    const order = Order.create(baseInput)
+    order.cancel()
+
+    expect(() => order.convertToGift('admin-1')).toThrow(AppException)
   })
 })

@@ -153,7 +153,11 @@ export class Order {
     this.deliveredAt = new Date()
   }
 
-  /** Cancels: pending | payment_info_sent | paid | gifted → cancelled. */
+  /**
+   * Cancels: pending | payment_info_sent | paid | gifted → cancelled.
+   * An order that has already been delivered can never be cancelled,
+   * regardless of its current status.
+   */
   cancel(): void {
     if (
       this.status !== OrderStatus.PENDING &&
@@ -163,7 +167,28 @@ export class Order {
     ) {
       throw AppException.businessRule('order.not_cancellable')
     }
+    if (this.deliveredAt !== null) {
+      throw AppException.businessRule('order.not_cancellable')
+    }
     this.status = OrderStatus.CANCELLED
     this.cancelledAt = new Date()
+  }
+
+  convertToSale(actorId: string): void {
+    if (this.status !== OrderStatus.GIFTED) {
+      throw AppException.businessRule('order.not_correctable')
+    }
+    this.status = this.deliveredAt ? OrderStatus.DELIVERED : OrderStatus.PAID
+    this.paidAt = this.deliveredAt ?? new Date()
+    this.confirmedById = actorId
+  }
+
+  convertToGift(actorId: string): void {
+    if (this.status !== OrderStatus.PAID && this.status !== OrderStatus.DELIVERED) {
+      throw AppException.businessRule('order.not_correctable')
+    }
+    this.status = OrderStatus.GIFTED
+    this.paidAt = null
+    this.confirmedById = actorId
   }
 }
