@@ -28,8 +28,10 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
     const order = await this.orderReadRepo.findById(command.orderId)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
 
-    // 2. Validate status is delivered
-    if (order.status !== OrderStatus.DELIVERED) {
+    // 2. Validate the order has been delivered, either as a sale or a gift
+    const isDeliveredSale = order.status === OrderStatus.DELIVERED
+    const isDeliveredGift = order.status === OrderStatus.GIFTED && order.deliveredAt !== null
+    if (!isDeliveredSale && !isDeliveredGift) {
       throw AppException.businessRule('order.not_delivered')
     }
 
