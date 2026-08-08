@@ -62,40 +62,46 @@ describe('Order sale/gift conversion — revenue (integration)', () => {
     await prisma.$disconnect()
   })
 
+  async function loadOrder() {
+    const order = await readRepo.findById(orderId)
+    if (!order) throw new Error(`seeded order ${orderId} disappeared`)
+    return order
+  }
+
   it('drops the order out of revenue when converted to a gift, and back in when converted to a sale', async () => {
     expect(await readRepo.sumRevenue(eventId)).toBe('17.5')
 
-    const delivered = await readRepo.findById(orderId)
-    delivered!.convertToGift(userId)
-    await writeRepo.save(delivered!)
+    const delivered = await loadOrder()
+    delivered.convertToGift(userId)
+    await writeRepo.save(delivered)
 
     expect(await readRepo.sumRevenue(eventId)).toBe('0')
 
-    const gifted = await readRepo.findById(orderId)
-    gifted!.convertToSale(userId)
-    await writeRepo.save(gifted!)
+    const gifted = await loadOrder()
+    gifted.convertToSale(userId)
+    await writeRepo.save(gifted)
 
     expect(await readRepo.sumRevenue(eventId)).toBe('17.5')
   })
 
   it('keeps deliveredAt across a full round trip and lands back on delivered', async () => {
-    const original = await readRepo.findById(orderId)
-    const deliveredAt = original!.deliveredAt
+    const original = await loadOrder()
+    const deliveredAt = original.deliveredAt
 
-    original!.convertToGift(userId)
-    await writeRepo.save(original!)
+    original.convertToGift(userId)
+    await writeRepo.save(original)
 
-    const gifted = await readRepo.findById(orderId)
-    expect(gifted!.status).toBe('gifted')
-    expect(gifted!.paidAt).toBeNull()
-    expect(gifted!.deliveredAt?.getTime()).toBe(deliveredAt?.getTime())
+    const gifted = await loadOrder()
+    expect(gifted.status).toBe('gifted')
+    expect(gifted.paidAt).toBeNull()
+    expect(gifted.deliveredAt?.getTime()).toBe(deliveredAt?.getTime())
 
-    gifted!.convertToSale(userId)
-    await writeRepo.save(gifted!)
+    gifted.convertToSale(userId)
+    await writeRepo.save(gifted)
 
-    const backToSale = await readRepo.findById(orderId)
-    expect(backToSale!.status).toBe('delivered')
-    expect(backToSale!.deliveredAt?.getTime()).toBe(deliveredAt?.getTime())
-    expect(backToSale!.paidAt?.getTime()).toBe(deliveredAt?.getTime())
+    const backToSale = await loadOrder()
+    expect(backToSale.status).toBe('delivered')
+    expect(backToSale.deliveredAt?.getTime()).toBe(deliveredAt?.getTime())
+    expect(backToSale.paidAt?.getTime()).toBe(deliveredAt?.getTime())
   })
 })
