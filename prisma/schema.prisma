@@ -224,6 +224,7 @@ model User {
   password_reset_tokens PasswordResetToken[]
   phones                UserPhone[]
   customer_profile      CustomerProfile?
+  consents              UserConsent[]
 
   events_created         Event[]         @relation("EventCreatedBy")
   events_updated         Event[]         @relation("EventUpdatedBy")
@@ -741,6 +742,23 @@ model UserPhone {
   @@index([user_id])
   // Unique partial index (user_id) WHERE is_primary = true created via raw SQL
   @@map("user_phones")
+}
+
+model UserConsent {
+  id             String   @id @default(uuid()) @db.Uuid
+  user_id        String   @db.Uuid
+  type           String   @db.VarChar(40)
+  policy_version String   @db.VarChar(20)
+  accepted_at    DateTime @default(now()) @db.Timestamptz
+  ip             String?  @db.VarChar(45)
+  user_agent     String?  @db.VarChar(500)
+  created_at     DateTime @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, type, policy_version])
+  @@index([user_id])
+  @@map("user_consents")
 }
 
 model CustomerProfile {

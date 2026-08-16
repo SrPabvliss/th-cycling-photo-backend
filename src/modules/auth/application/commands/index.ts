@@ -3,6 +3,8 @@ export { ConfirmPasswordResetDto } from './confirm-password-reset/confirm-passwo
 export { LoginCommand } from './login/login.command'
 export { LoginDto } from './login/login.dto'
 export { LogoutCommand } from './logout/logout.command'
+export { RecordConsentsCommand } from './record-consents/record-consents.command'
+export { RecordConsentsDto } from './record-consents/record-consents.dto'
 export { RefreshCommand } from './refresh/refresh.command'
 export { RegisterCommand } from './register/register.command'
 export { RegisterDto } from './register/register.dto'

@@ -13,6 +13,8 @@ import {
   LoginCommand,
   LoginDto,
   LogoutCommand,
+  RecordConsentsCommand,
+  RecordConsentsDto,
   RefreshCommand,
   RegisterCommand,
   RegisterDto,
@@ -87,6 +89,8 @@ export class AuthController {
       dto.gender ?? null,
       req.ip ?? null,
       req.headers['user-agent'] ?? null,
+      dto.acceptedTerms ?? false,
+      dto.guardianConsent ?? false,
     )
     const result = await this.commandBus.execute(command)
 
@@ -223,5 +227,26 @@ export class AuthController {
   @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
   async me(@CurrentUser() user: ICurrentUser) {
     return this.queryBus.execute(new GetMeQuery(user.userId, user.email, user.role))
+  }
+
+  @Post('consents')
+  @HttpCode(204)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Record the current policy consents for the logged-in user' })
+  @ApiResponse({ status: 204, description: 'Consents recorded' })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
+  async recordConsents(
+    @Body() dto: RecordConsentsDto,
+    @CurrentUser() user: ICurrentUser,
+    @Req() req: Request,
+  ) {
+    await this.commandBus.execute(
+      new RecordConsentsCommand(
+        user.userId,
+        dto.types,
+        req.ip ?? null,
+        req.headers['user-agent'] ?? null,
+      ),
+    )
   }
 }

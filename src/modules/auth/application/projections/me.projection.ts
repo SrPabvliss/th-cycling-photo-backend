@@ -9,4 +9,6 @@ export class MeProjection {
   lastName: string | null
   /** User role */
   role: string
+  /** Consent types still pending for the current policy version */
+  pendingConsents?: string[]
 }
