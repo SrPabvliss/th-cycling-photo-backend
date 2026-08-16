@@ -1,13 +1,24 @@
-import { Inject } from '@nestjs/common'
+import { Inject, Logger } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import { AppException } from '@shared/domain'
-import { AUTH_USER_REPOSITORY, type IAuthUserRepository } from '../../../domain/ports'
+import { POLICY_VERSION, REQUIRED_CONSENT_TYPES } from '../../../domain/constants/consent.constants'
+import {
+  AUTH_USER_REPOSITORY,
+  CONSENT_REPOSITORY,
+  type IAuthUserRepository,
+  type IConsentRepository,
+} from '../../../domain/ports'
 import type { MeProjection } from '../../projections'
 import { GetMeQuery } from './get-me.query'
 
 @QueryHandler(GetMeQuery)
 export class GetMeHandler implements IQueryHandler<GetMeQuery> {
-  constructor(@Inject(AUTH_USER_REPOSITORY) private readonly authUserRepo: IAuthUserRepository) {}
+  private readonly logger = new Logger(GetMeHandler.name)
+
+  constructor(
+    @Inject(AUTH_USER_REPOSITORY) private readonly authUserRepo: IAuthUserRepository,
+    @Inject(CONSENT_REPOSITORY) private readonly consentRepo: IConsentRepository,
+  ) {}
 
   async execute(query: GetMeQuery): Promise<MeProjection> {
     const me = await this.authUserRepo.getMe(query.userId)
@@ -15,6 +26,19 @@ export class GetMeHandler implements IQueryHandler<GetMeQuery> {
 
     if (!me.role) me.role = query.role
 
+    me.pendingConsents = await this.findPendingConsents(query.userId)
+
     return me
+  }
+
+  private async findPendingConsents(userId: string): Promise<string[]> {
+    try {
+      const accepted = await this.consentRepo.findAcceptedTypes(userId, POLICY_VERSION)
+      return REQUIRED_CONSENT_TYPES.filter((type) => !accepted.includes(type))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Failed to read consents for user ${userId}: ${message}`)
+      return []
+    }
   }
 }

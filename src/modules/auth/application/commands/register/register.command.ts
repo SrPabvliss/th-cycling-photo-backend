@@ -14,5 +14,7 @@ export class RegisterCommand {
     public readonly gender: Gender | null,
     public readonly ipAddress: string | null,
     public readonly userAgent: string | null,
+    public readonly acceptedTerms: boolean = false,
+    public readonly guardianConsent: boolean = false,
   ) {}
 }

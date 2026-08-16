@@ -3,6 +3,10 @@ export {
   type IAuthUserRepository,
 } from './auth-user-repository.port'
 export {
+  CONSENT_REPOSITORY,
+  type IConsentRepository,
+} from './consent-repository.port'
+export {
   type GeneratedPasswordResetToken,
   type IPasswordResetTokenService,
   PASSWORD_RESET_TOKEN_SERVICE,

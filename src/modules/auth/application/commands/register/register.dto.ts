@@ -1,6 +1,8 @@
 import { Gender } from '@generated/prisma/client'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import {
+  Equals,
+  IsBoolean,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -70,4 +72,23 @@ export class RegisterDto {
   @IsOptional()
   @IsEnum(Gender)
   gender?: Gender
+
+  @ApiPropertyOptional({
+    description: 'Acceptance of the privacy policy and terms of service. Must be true when sent',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Equals(true)
+  acceptedTerms?: boolean
+
+  @ApiPropertyOptional({
+    description:
+      'Confirmation that a legal guardian is registering on behalf of a minor. Must be true when sent',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Equals(true)
+  guardianConsent?: boolean
 }
