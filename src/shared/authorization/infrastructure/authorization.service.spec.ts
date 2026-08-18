@@ -186,4 +186,46 @@ describe('AuthorizationService.resolveEventScope', () => {
     expect(scope.all).toBe(false)
     expect(scope.toPrisma()).toEqual({ OR: [{ tenant_id: { in: [] } }, { id: { in: [] } }] })
   })
+
+  it('returns all for a platform user holding event.read.all as a global grant', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    p.globalGrants.set('event.read.all', 'allow')
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    expect((await svc.resolveEventScope('u1')).toPrisma()).toEqual({})
+  })
+
+  // The cross-tenant leak the review caught: a non-platform (tenant) user
+  // can never reach `unrestricted()` via a global `event.read.all` grant,
+  // no matter what's in `globalGrants` — `can()`'s platformOnly check denies
+  // it before the grant is even consulted. This is the case that a mutant
+  // dropping the `isPlatform` guard (or re-deriving the flag by hand instead
+  // of delegating to `can()`) would silently let through.
+  it('does not grant unrestricted scope to a tenant user holding event.read.all as a global grant', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = false
+    p.tenantId = 't1'
+    p.globalGrants.set('event.read.all', 'allow')
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    const scope = await svc.resolveEventScope('u1')
+    expect(scope.all).toBe(false)
+    expect(scope.toPrisma()).toEqual({
+      OR: [{ tenant_id: { in: ['t1'] } }, { id: { in: [] } }],
+    })
+  })
+
+  // Semantic change from the pre-fix version: an explicit deny on
+  // event.read.all now overrides the template, matching can()'s documented
+  // precedence (grant beats template) instead of short-circuiting to
+  // unrestricted() just because the template holds the key.
+  it('lets an explicit deny on event.read.all override the template', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    p.templateKeys.add('event.read.all')
+    p.globalGrants.set('event.read.all', 'deny')
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    const scope = await svc.resolveEventScope('u1')
+    expect(scope.all).toBe(false)
+    expect(scope.toPrisma()).toEqual({ OR: [{ tenant_id: { in: [] } }, { id: { in: [] } }] })
+  })
 })

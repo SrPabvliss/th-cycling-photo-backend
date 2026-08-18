@@ -69,18 +69,23 @@ export class AuthorizationService implements IAuthorizationService {
 
   /**
    * Which Event rows this user may see. `all` is driven strictly by holding
-   * `event.read.all` (template or global grant) while platform — never by
-   * `isPlatform` alone. Platform membership only makes platform-only
-   * permissions eligible; it does not by itself grant sight of everything,
-   * or a restricted TitanTV staff member (e.g. a retoucher on a narrow
-   * template) would see every event on the platform.
+   * `event.read.all` — never by `isPlatform` alone. Platform membership only
+   * makes platform-only permissions eligible; it does not by itself grant
+   * sight of everything, or a restricted TitanTV staff member (e.g. a
+   * retoucher on a narrow template) would see every event on the platform.
+   *
+   * Delegates the flag to `can()` rather than re-deriving it, so the same
+   * precedence applies here as everywhere else: `platformOnly && !isPlatform`
+   * denies before any grant is even consulted (a tenant can never reach
+   * `unrestricted()` via this grant, no matter what's in `globalGrants`),
+   * and an explicit deny on `event.read.all` overrides the template — it
+   * does not fall through to `unrestricted()` just because the template
+   * holds the key.
    */
   async resolveEventScope(userId: string): Promise<EventScope> {
-    const p = await this.principal(userId)
+    if (await this.can(userId, 'event.read.all')) return EventScope.unrestricted()
 
-    if (p.isPlatform && p.templateKeys.has('event.read.all')) return EventScope.unrestricted()
-    const globalAll = p.globalGrants.get('event.read.all')
-    if (p.isPlatform && globalAll === 'allow') return EventScope.unrestricted()
+    const p = await this.principal(userId)
 
     const tenantIds = p.tenantId ? [p.tenantId] : []
 
