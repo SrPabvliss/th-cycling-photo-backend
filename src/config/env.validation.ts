@@ -1,3 +1,4 @@
+import { assertEnvironmentMatchesDeployment } from '@shared/payment-gateways'
 import { plainToInstance } from 'class-transformer'
 import {
   IsEnum,
@@ -170,6 +171,42 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsNumber()
   AI_PIPELINE_TIMEOUT_MS?: number
+
+  // Payphone
+  @IsEnum(['test', 'production'])
+  PAYPHONE_ENVIRONMENT: string
+
+  @IsString()
+  @IsNotEmpty()
+  PAYPHONE_TOKEN: string
+
+  @IsString()
+  @IsNotEmpty()
+  PAYPHONE_STORE_ID: string
+
+  @IsString()
+  @IsNotEmpty()
+  CREDENTIAL_ENCRYPTION_KEY: string
+
+  @IsOptional()
+  @IsString()
+  PAYPHONE_SPLIT_ENCRYPTION_PASSWORD?: string
+
+  @IsOptional()
+  @IsString()
+  PAYPHONE_API_TOKEN?: string
+
+  @IsOptional()
+  @IsString()
+  PAYPHONE_API_STORE_ID?: string
+
+  @IsOptional()
+  @IsNumber()
+  PAYMENT_EXPIRY_SWEEP_DELAY_MS?: number
+
+  @IsString()
+  @IsNotEmpty()
+  PAYMENT_SYSTEM_USER_ID: string
 }
 
 export function validate(config: Record<string, unknown>) {
@@ -187,5 +224,6 @@ export function validate(config: Record<string, unknown>) {
       'Environment validation failed:\nMAIL_REDIRECT_TO must be empty when NODE_ENV=production',
     )
   }
+  assertEnvironmentMatchesDeployment(validatedConfig.NODE_ENV, validatedConfig.PAYPHONE_ENVIRONMENT)
   return validatedConfig
 }

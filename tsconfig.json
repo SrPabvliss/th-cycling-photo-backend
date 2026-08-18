@@ -34,7 +34,8 @@
       "@notifications/*": ["src/modules/notifications/*"],
       "@auth/*": ["src/modules/auth/*"],
       "@cart/*": ["src/modules/cart/*"],
-      "@pricing/*": ["src/modules/pricing/*"]
+      "@pricing/*": ["src/modules/pricing/*"],
+      "@payments/*": ["src/modules/payments/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

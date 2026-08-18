@@ -24,5 +24,7 @@
   "photo_category": "Photo category",
   "cart": "Cart",
   "event_operator": "Event operator",
-  "dashboard": "Dashboard"
+  "dashboard": "Dashboard",
+  "payphone_account": "payment account",
+  "payment": "payment"
 }
