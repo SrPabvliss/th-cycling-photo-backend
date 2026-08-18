@@ -24,6 +24,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { OperatorModule } from './modules/operator/operator.module'
 import { OrdersModule } from './modules/orders/orders.module'
 import { ParticipantCategoriesModule } from './modules/participant-categories/participant-categories.module'
+import { PaymentsModule } from './modules/payments/payments.module'
 import { PhotoCategoriesModule } from './modules/photo-categories/photo-categories.module'
 import { PhotosModule } from './modules/photos/photos.module'
 import { PreviewsModule } from './modules/previews/previews.module'
@@ -32,9 +33,11 @@ import { UsersModule } from './modules/users/users.module'
 import { AiPipelineModule } from './shared/ai-pipeline/ai-pipeline.module'
 import { RolesGuard } from './shared/auth'
 import { CloudflareModule } from './shared/cloudflare/cloudflare.module'
+import { CryptoModule } from './shared/crypto'
 import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
+import { PaymentGatewaysModule } from './shared/payment-gateways'
 import { StorageModule } from './shared/storage/storage.module'
 
 @Module({
@@ -81,6 +84,8 @@ import { StorageModule } from './shared/storage/storage.module'
     PrismaModule,
     StorageModule,
     CloudflareModule,
+    CryptoModule,
+    PaymentGatewaysModule,
     NotificationsModule,
     EmbeddingsModule,
     AiPipelineModule,
@@ -94,6 +99,7 @@ import { StorageModule } from './shared/storage/storage.module'
     MailModule,
     OperatorModule,
     OrdersModule,
+    PaymentsModule,
     PricingModule,
     ParticipantCategoriesModule,
     PhotoCategoriesModule,
