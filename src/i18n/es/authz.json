@@ -1,5 +1,8 @@
 {
   "protected_account": "Esta cuenta está protegida y no puede modificarse",
   "last_grant_admin": "No se puede quitar al último administrador capaz de gestionar permisos",
-  "platform_only_permission": "Este permiso sólo puede asignarse a usuarios de TitanTV"
+  "platform_only_permission": "Este permiso sólo puede asignarse a usuarios de TitanTV",
+  "template_missing": "La plantilla de permisos requerida para esta cuenta no está configurada. Ejecuta la sincronización del catálogo de permisos.",
+  "platform_tenant_missing": "El tenant de la plataforma no está configurado. Ejecuta las migraciones de la base de datos.",
+  "unassignable_role": "Este rol no puede asociarse a una plantilla de permisos"
 }
