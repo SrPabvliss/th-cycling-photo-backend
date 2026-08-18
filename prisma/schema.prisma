@@ -224,6 +224,9 @@ model User {
   permissions_version Int      @default(0)
   tenant              Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
 
+  permission_template_id String?             @db.Uuid
+  permission_template    PermissionTemplate? @relation(fields: [permission_template_id], references: [id], onDelete: Restrict)
+
   user_roles            UserRole[]
   refresh_tokens        RefreshToken[]
   password_reset_tokens PasswordResetToken[]
@@ -877,5 +880,28 @@ model Permission {
   is_platform_only   Boolean @default(false)
   allows_event_scope Boolean @default(false)
 
+  template_memberships PermissionTemplatePermission[]
+
   @@map("permissions")
+}
+
+model PermissionTemplate {
+  id               String  @id @default(uuid()) @db.Uuid
+  key              String  @unique @db.VarChar(50)
+  name             String  @db.VarChar(100)
+  is_platform_only Boolean @default(false)
+
+  permissions PermissionTemplatePermission[]
+  users       User[]
+  @@map("permission_templates")
+}
+
+model PermissionTemplatePermission {
+  template_id   String @db.Uuid
+  permission_id String @db.Uuid
+
+  template   PermissionTemplate @relation(fields: [template_id],   references: [id], onDelete: Cascade)
+  permission Permission         @relation(fields: [permission_id], references: [id], onDelete: Restrict)
+  @@id([template_id, permission_id])
+  @@map("permission_template_permissions")
 }

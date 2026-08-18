@@ -6,6 +6,12 @@ import { hashSync } from 'bcryptjs'
 import { config } from 'dotenv'
 import { PrismaClient } from '../src/generated/prisma/client'
 import { PERMISSIONS } from '../src/shared/authorization/domain/permission-catalog'
+import {
+  TEMPLATE_IS_PLATFORM_ONLY,
+  TEMPLATE_KEYS,
+  TEMPLATE_PERMISSIONS,
+  type TemplateKey,
+} from '../src/shared/authorization/domain/permission-template.constants'
 
 const env = process.env.NODE_ENV || 'development'
 config({ path: `.env.${env}` })
@@ -53,6 +59,64 @@ async function seedPermissions() {
   // drift in the other direction: a key removed from the constant
   await prisma.permission.deleteMany({ where: { key: { notIn: Object.keys(PERMISSIONS) } } })
   console.log(`Seeded ${Object.keys(PERMISSIONS).length} permissions`)
+}
+
+const TEMPLATE_NAMES: Record<TemplateKey, string> = {
+  platform_admin: 'TitanTV Administrator',
+  platform_staff: 'TitanTV Staff',
+  tenant: 'Tenant',
+  customer: 'Customer',
+}
+
+async function seedPermissionTemplates() {
+  for (const key of Object.values(TEMPLATE_KEYS)) {
+    const tpl = await prisma.permissionTemplate.upsert({
+      where: { key },
+      update: { name: TEMPLATE_NAMES[key], is_platform_only: TEMPLATE_IS_PLATFORM_ONLY[key] },
+      create: { key, name: TEMPLATE_NAMES[key], is_platform_only: TEMPLATE_IS_PLATFORM_ONLY[key] },
+    })
+    await prisma.permissionTemplatePermission.deleteMany({ where: { template_id: tpl.id } })
+    const perms = await prisma.permission.findMany({
+      where: { key: { in: TEMPLATE_PERMISSIONS[key] } },
+      select: { id: true },
+    })
+    await prisma.permissionTemplatePermission.createMany({
+      data: perms.map((p) => ({ template_id: tpl.id, permission_id: p.id })),
+    })
+  }
+  console.log(`Seeded ${Object.values(TEMPLATE_KEYS).length} permission templates`)
+}
+
+/**
+ * Resolves the single platform tenant's id. Ruling 11: on a fresh
+ * environment (`migrate deploy` then `db seed` against an empty database)
+ * this must already exist — it is created by the TIT-38 tenant-backfill
+ * migration. Failing loudly here beats silently seeding a staff user with
+ * `tenant_id = NULL`, which would resolve to zero permissions.
+ */
+async function getPlatformTenantId(): Promise<string> {
+  const tenant = await prisma.tenant.findFirst({ where: { is_platform: true } })
+  if (!tenant) {
+    throw new Error(
+      'Platform tenant not found — the TIT-38 tenant migration must run before seeding staff users',
+    )
+  }
+  return tenant.id
+}
+
+/**
+ * Resolves a permission template's id by key. Ruling 11: must fail loudly
+ * (never silently leave `permission_template_id = NULL`) if
+ * seedPermissionTemplates() has not run yet.
+ */
+async function getPermissionTemplateId(key: TemplateKey): Promise<string> {
+  const template = await prisma.permissionTemplate.findUnique({ where: { key } })
+  if (!template) {
+    throw new Error(
+      `Permission template '${key}' not found — seedPermissionTemplates() must run before seeding users`,
+    )
+  }
+  return template.id
 }
 
 async function seedCountries() {
@@ -230,6 +294,12 @@ async function seedAdminUser() {
 
   const passwordHash = hashSync(password, 10)
 
+  // Ruling 11: an admin must land on the platform tenant with the
+  // platform_admin template, or it resolves to zero permissions the moment
+  // the new authorization engine is live.
+  const tenantId = await getPlatformTenantId()
+  const templateId = await getPermissionTemplateId(TEMPLATE_KEYS.PLATFORM_ADMIN)
+
   const user = await prisma.user.create({
     data: {
       email: adminEmail,
@@ -237,6 +307,8 @@ async function seedAdminUser() {
       first_name: 'Pablo',
       last_name: 'Villacres',
       is_active: true,
+      tenant_id: tenantId,
+      permission_template_id: templateId,
     },
   })
 
@@ -305,6 +377,14 @@ async function seedProtectedUser(
 
   const passwordHash = hashSync(password, 10)
 
+  // Ruling 11: operator joins the platform tenant with platform_staff;
+  // customer stays tenant-less (buyers are not tenant-scoped) but still
+  // gets the customer template, or it resolves to zero permissions.
+  const templateKey =
+    roleName === 'operator' ? TEMPLATE_KEYS.PLATFORM_STAFF : TEMPLATE_KEYS.CUSTOMER
+  const templateId = await getPermissionTemplateId(templateKey)
+  const tenantId = roleName === 'operator' ? await getPlatformTenantId() : null
+
   const user = await prisma.user.create({
     data: {
       email,
@@ -312,6 +392,8 @@ async function seedProtectedUser(
       first_name: defaults.firstName,
       last_name: defaults.lastName,
       is_active: true,
+      tenant_id: tenantId,
+      permission_template_id: templateId,
     },
   })
 
@@ -363,10 +445,46 @@ async function seedConsumerUser() {
   })
 }
 
+/**
+ * Ruling 11: marks the break-glass account `is_protected = true`, idempotently.
+ *
+ * The TIT-38 tenant migration already does this at migration time via a
+ * Postgres session variable, but only for users that exist when the
+ * migration runs. On a fresh environment (`migrate deploy` then `db seed`
+ * against an empty `users` table) that migration step is a deliberate no-op
+ * — there is nobody to protect yet — so this is what actually designates the
+ * break-glass account once the seed creates it.
+ *
+ * Target: `BREAK_GLASS_EMAIL`, falling back to `ADMIN_SEED_EMAIL` (the
+ * account seedAdminUser() creates) when unset.
+ */
+async function seedBreakGlassProtection() {
+  const targetEmail = process.env.BREAK_GLASS_EMAIL || process.env.ADMIN_SEED_EMAIL
+  if (!targetEmail) {
+    console.log(
+      'BREAK_GLASS_EMAIL and ADMIN_SEED_EMAIL both unset — skipping break-glass protection',
+    )
+    return
+  }
+
+  const result = await prisma.user.updateMany({
+    where: { email: targetEmail },
+    data: { is_protected: true },
+  })
+
+  if (result.count === 0) {
+    console.warn(`Break-glass email ${targetEmail} matched no user — protection not applied`)
+    return
+  }
+
+  console.log(`Marked ${targetEmail} as break-glass protected (is_protected = true)`)
+}
+
 async function main() {
   console.log('Seeding database...')
 
   await seedPermissions()
+  await seedPermissionTemplates()
   await seedCountries()
   await seedLocations()
   await seedEventTypes()
@@ -376,6 +494,7 @@ async function main() {
   await seedAdminUser()
   await seedOperatorUser()
   await seedConsumerUser()
+  await seedBreakGlassProtection()
 
   console.log('Seeding completed.')
 }
