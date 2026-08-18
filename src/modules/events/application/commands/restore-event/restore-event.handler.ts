@@ -24,7 +24,8 @@ export class RestoreEventHandler implements ICommandHandler<RestoreEventCommand>
 
   /** Restores an archived event back to active status. */
   async execute(command: RestoreEventCommand): Promise<EntityIdProjection> {
-    const event = await this.readRepo.findById(command.id, true)
+    const scope = await this.authz.resolveEventScope(command.userId)
+    const event = await this.readRepo.findByIdInScope(command.id, scope, true)
     if (!event) throw AppException.notFound('Event', command.id)
 
     await this.authz.assert(command.userId, 'event.restore', event.id)

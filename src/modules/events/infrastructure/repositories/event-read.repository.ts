@@ -30,6 +30,21 @@ export class EventReadRepository implements IEventReadRepository {
     return record ? EventMapper.toEntity(record) : null
   }
 
+  async findByIdInScope(
+    id: string,
+    scope: EventScope,
+    includeArchived = false,
+  ): Promise<Event | null> {
+    // An out-of-scope id must yield 404, not 403 — the caller must not be
+    // able to learn that an event exists by probing UUIDs. Folding scope
+    // into the where clause achieves that for free, same as getEventDetailBySlug.
+    const where = includeArchived
+      ? { id, ...scope.toPrisma() }
+      : { id, deleted_at: null, ...scope.toPrisma() }
+    const record = await this.prisma.event.findFirst({ where })
+    return record ? EventMapper.toEntity(record) : null
+  }
+
   async getEventsList(
     pagination: Pagination,
     includeArchived: boolean,
@@ -58,17 +73,6 @@ export class EventReadRepository implements IEventReadRepository {
       total,
       pagination,
     )
-  }
-
-  async getEventDetail(id: string): Promise<EventDetailProjection | null> {
-    const record = await this.prisma.event.findFirst({
-      where: { id },
-      select: EventMapper.eventDetailSelectConfig,
-    })
-
-    if (!record) return null
-
-    return EventMapper.toDetailProjection(record, this.cdn)
   }
 
   async getEventDetailBySlug(

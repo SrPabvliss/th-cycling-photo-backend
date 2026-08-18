@@ -24,7 +24,8 @@ export class ArchiveEventHandler implements ICommandHandler<ArchiveEventCommand>
 
   /** Archives an event by setting its status and soft-deleting it. */
   async execute(command: ArchiveEventCommand): Promise<EntityIdProjection> {
-    const event = await this.readRepo.findById(command.id)
+    const scope = await this.authz.resolveEventScope(command.userId)
+    const event = await this.readRepo.findByIdInScope(command.id, scope)
     if (!event) throw AppException.notFound('Event', command.id)
 
     await this.authz.assert(command.userId, 'event.archive', event.id)

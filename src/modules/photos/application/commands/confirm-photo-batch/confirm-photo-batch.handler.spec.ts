@@ -54,6 +54,7 @@ describe('ConfirmPhotoBatchHandler', () => {
 
     eventReadRepo = {
       findById: jest.fn(),
+      findByIdInScope: jest.fn(),
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
       getEventDetailBySlug: jest.fn(),

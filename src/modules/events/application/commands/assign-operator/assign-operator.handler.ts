@@ -21,7 +21,8 @@ export class AssignOperatorHandler implements ICommandHandler<AssignOperatorComm
   ) {}
 
   async execute(command: AssignOperatorCommand): Promise<void> {
-    const event = await this.eventReadRepo.findById(command.eventId)
+    const scope = await this.authz.resolveEventScope(command.assignedById)
+    const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)
 
     await this.authz.assert(command.assignedById, 'event.collaborator.assign', event.id)

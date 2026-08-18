@@ -22,9 +22,10 @@ export class DeleteEventHandler implements ICommandHandler<DeleteEventCommand> {
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
-  /** Verifies the event exists and archives it (soft-delete). */
+  /** Verifies the event exists in the caller's scope and archives it (soft-delete). */
   async execute(command: DeleteEventCommand): Promise<EntityIdProjection> {
-    const event = await this.readRepo.findById(command.id)
+    const scope = await this.authz.resolveEventScope(command.userId)
+    const event = await this.readRepo.findByIdInScope(command.id, scope)
     if (!event) throw AppException.notFound('Event', command.id)
 
     await this.authz.assert(command.userId, 'event.delete', event.id)

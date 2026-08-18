@@ -24,14 +24,15 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
     private readonly locationValidator: LocationValidator,
   ) {}
 
-  /** Loads an event, applies updates, and persists it. */
+  /** Loads an event scoped to the caller's tenant, applies updates, and persists it. */
   async execute(command: UpdateEventCommand): Promise<EntityIdProjection> {
-    const event = await this.readRepo.findById(command.id)
-    if (!event) throw AppException.notFound('Event', command.id)
-
     if (!command.audit) {
       throw AppException.internal('UpdateEventCommand requires an audit context')
     }
+
+    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const event = await this.readRepo.findByIdInScope(command.id, scope)
+    if (!event) throw AppException.notFound('Event', command.id)
     await this.authz.assert(command.audit.userId, 'event.update', event.id)
 
     const provinceId = command.provinceId !== undefined ? command.provinceId : event.provinceId
