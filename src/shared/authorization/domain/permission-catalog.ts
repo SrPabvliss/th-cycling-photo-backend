@@ -97,5 +97,5 @@ export type PermissionKey = keyof typeof PERMISSIONS
 export const ALL_PERMISSION_KEYS = Object.keys(PERMISSIONS) as PermissionKey[]
 
 export function isPermissionKey(value: string): value is PermissionKey {
-  return value in PERMISSIONS
+  return Object.hasOwn(PERMISSIONS, value)
 }

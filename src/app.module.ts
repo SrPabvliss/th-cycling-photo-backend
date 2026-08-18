@@ -31,6 +31,8 @@ import { PricingModule } from './modules/pricing/pricing.module'
 import { UsersModule } from './modules/users/users.module'
 import { AiPipelineModule } from './shared/ai-pipeline/ai-pipeline.module'
 import { RolesGuard } from './shared/auth'
+import { AuthorizationModule } from './shared/authorization/authorization.module'
+import { PermissionGuard } from './shared/authorization/infrastructure/guards/permission.guard'
 import { CloudflareModule } from './shared/cloudflare/cloudflare.module'
 import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
@@ -79,6 +81,7 @@ import { StorageModule } from './shared/storage/storage.module'
     ]),
     EventEmitterModule.forRoot(),
     PrismaModule,
+    AuthorizationModule,
     StorageModule,
     CloudflareModule,
     NotificationsModule,
@@ -107,6 +110,7 @@ import { StorageModule } from './shared/storage/storage.module'
     AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PermissionGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
