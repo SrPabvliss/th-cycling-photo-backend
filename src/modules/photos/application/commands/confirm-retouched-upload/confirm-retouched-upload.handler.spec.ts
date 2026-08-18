@@ -1,6 +1,8 @@
 import type { IOrderReadRepository } from '@orders/domain/ports'
 import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository, IPhotoWriteRepository } from '@photos/domain/ports'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import type { IKvStorageAdapter } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
@@ -15,6 +17,8 @@ describe('ConfirmRetouchedUploadHandler', () => {
   let orderReadRepo: jest.Mocked<Pick<IOrderReadRepository, 'findOrdersFullyRetouchedByPhoto'>>
   let kvStorage: jest.Mocked<IKvStorageAdapter>
   let eventEmitter: { emit: jest.Mock }
+  let authz: jest.Mocked<IAuthorizationService>
+  const scope = EventScope.unrestricted()
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -43,6 +47,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
   beforeEach(() => {
     photoReadRepo = {
       findById: jest.fn(),
+      findByIdInScope: jest.fn(),
       existsByEventAndFilename: jest.fn(),
       getPhotosList: jest.fn(),
       getPhotoDetail: jest.fn(),
@@ -55,6 +60,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
       getClassifiedCountsByEventIds: jest.fn(),
       getAllPhotoKeysForEvent: jest.fn(),
       getResumePoint: jest.fn(),
+      getDistinctEventIdsForPhotoIds: jest.fn(),
       countAll: jest.fn(),
       sumAllFileSize: jest.fn(),
       countByIds: jest.fn(),
@@ -91,6 +97,12 @@ describe('ConfirmRetouchedUploadHandler', () => {
     } as jest.Mocked<IKvStorageAdapter>
     eventEmitter = { emit: jest.fn() }
 
+    authz = {
+      can: jest.fn(),
+      assert: jest.fn().mockResolvedValue(undefined),
+      resolveEventScope: jest.fn().mockResolvedValue(scope),
+    } as jest.Mocked<IAuthorizationService>
+
     handler = new ConfirmRetouchedUploadHandler(
       photoReadRepo,
       photoWriteRepo,
@@ -98,11 +110,12 @@ describe('ConfirmRetouchedUploadHandler', () => {
       kvStorage,
       orderReadRepo as unknown as jest.Mocked<IOrderReadRepository>,
       eventEmitter as any,
+      authz,
     )
   })
 
-  it('should throw NOT_FOUND when photo does not exist', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(null)
+  it('should throw NOT_FOUND when photo does not exist (including out-of-scope)', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(null)
 
     const command = new ConfirmRetouchedUploadCommand(
       'non-existent',
@@ -114,10 +127,26 @@ describe('ConfirmRetouchedUploadHandler', () => {
     const error = await handler.execute(command).catch((e) => e)
     expect(error).toBeInstanceOf(AppException)
     expect(error.code).toBe('NOT_FOUND')
+    expect(authz.assert).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the caller lacks photo.retouch.upload for this event', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(createPhoto())
+    authz.assert.mockRejectedValueOnce(new Error('Insufficient permissions'))
+
+    const command = new ConfirmRetouchedUploadCommand(
+      'photo-001',
+      `events/${eventId}/retouched/uuid-file.jpg`,
+      5000,
+      'operator-001',
+    )
+
+    await expect(handler.execute(command)).rejects.toThrow('Insufficient permissions')
+    expect(photoWriteRepo.save).not.toHaveBeenCalled()
   })
 
   it('should throw BUSINESS_RULE when object key prefix is invalid', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(createPhoto())
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(createPhoto())
 
     const command = new ConfirmRetouchedUploadCommand(
       'photo-001',
@@ -133,7 +162,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
 
   it('should confirm first retouched upload without deleting old file', async () => {
     const photo = createPhoto()
-    photoReadRepo.findById.mockResolvedValueOnce(photo)
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(photo)
     photoWriteRepo.save.mockResolvedValueOnce(photo)
 
     const objectKey = `events/${eventId}/retouched/uuid-retouched.jpg`
@@ -141,6 +170,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
 
     const result = await handler.execute(command)
 
+    expect(authz.assert).toHaveBeenCalledWith('operator-001', 'photo.retouch.upload', eventId)
     expect(result).toEqual({ confirmed: true })
     expect(storageAdapter.delete).not.toHaveBeenCalled()
     expect(photoWriteRepo.save).toHaveBeenCalledWith(
@@ -154,7 +184,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
   it('should delete old retouched file when replacing', async () => {
     const oldKey = `events/${eventId}/retouched/old-uuid-retouched.jpg`
     const photo = createPhoto(oldKey)
-    photoReadRepo.findById.mockResolvedValueOnce(photo)
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(photo)
     photoWriteRepo.save.mockResolvedValueOnce(photo)
 
     const newKey = `events/${eventId}/retouched/new-uuid-retouched.jpg`
@@ -175,7 +205,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
   it('should still confirm even if old file deletion fails', async () => {
     const oldKey = `events/${eventId}/retouched/old-uuid.jpg`
     const photo = createPhoto(oldKey)
-    photoReadRepo.findById.mockResolvedValueOnce(photo)
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(photo)
     photoWriteRepo.save.mockResolvedValueOnce(photo)
     storageAdapter.delete.mockRejectedValueOnce(new Error('S3 delete failed'))
 

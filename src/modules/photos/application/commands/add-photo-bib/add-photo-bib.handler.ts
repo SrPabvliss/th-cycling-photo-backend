@@ -7,6 +7,10 @@ import {
   PHOTO_BIB_WRITE_REPOSITORY,
   PHOTO_READ_REPOSITORY,
 } from '@photos/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { AddPhotoBibCommand } from './add-photo-bib.command'
 
@@ -17,11 +21,14 @@ export class AddPhotoBibHandler implements ICommandHandler<AddPhotoBibCommand> {
   constructor(
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(PHOTO_BIB_WRITE_REPOSITORY) private readonly bibRepo: IPhotoBibWriteRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(cmd: AddPhotoBibCommand): Promise<{ bibId: string; photoId: string }> {
-    const photo = await this.photoReadRepo.findById(cmd.photoId)
+    const scope = await this.authz.resolveEventScope(cmd.reviewerId)
+    const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', cmd.photoId)
+    await this.authz.assert(cmd.reviewerId, 'photo.bib.create', photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')
     }

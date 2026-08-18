@@ -19,17 +19,18 @@ export class GetEventsStatsHandler implements IQueryHandler<GetEventsStatsQuery>
 
   /**
    * Returns aggregates across events in the caller's scope (including
-   * archived). `totalPhotos`/`totalStorageBytes` remain platform-wide for
-   * now — scoping the photo aggregates is Task 11's job once Photo gains
-   * its own scope threading.
+   * archived). All three aggregates — `totalEvents`, `totalPhotos`, and
+   * `totalStorageBytes` — are scoped to the same `EventScope`, closing the
+   * cross-tenant leak where a tenant's own event count was shown beside
+   * every tenant's photo count and total storage (Ruling 20).
    */
   async execute(query: GetEventsStatsQuery): Promise<EventsStatsProjection> {
     const scope = await this.authz.resolveEventScope(query.userId)
 
     const [totalEvents, totalPhotos, totalStorageBytes] = await Promise.all([
       this.eventReadRepo.countAll(scope),
-      this.photoReadRepo.countAll(),
-      this.photoReadRepo.sumAllFileSize(),
+      this.photoReadRepo.countAll(scope),
+      this.photoReadRepo.sumAllFileSize(scope),
     ])
 
     return { totalEvents, totalPhotos, totalStorageBytes }

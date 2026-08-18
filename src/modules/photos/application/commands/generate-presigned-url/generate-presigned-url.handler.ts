@@ -3,6 +3,10 @@ import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { PresignedUrlProjection } from '@photos/application/projections'
 import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
 import { GeneratePresignedUrlCommand } from './generate-presigned-url.command'
@@ -15,12 +19,27 @@ export class GeneratePresignedUrlHandler implements ICommandHandler<GeneratePres
     @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
-  /** Validates event existence, checks for duplicates, and generates a presigned upload URL. */
+  /**
+   * Validates event existence, checks for duplicates, and generates a
+   * presigned upload URL.
+   *
+   * `IEventReadRepository.findById` is unscoped (events module territory,
+   * out of this task's boundary), so the tenant-boundary check is done
+   * in-memory against the already-loaded entity via
+   * `EventScope.includesEvent()` rather than by adding a scoped query
+   * method to a port this module does not own. An out-of-scope event 404s
+   * exactly like an unknown one.
+   */
   async execute(command: GeneratePresignedUrlCommand): Promise<PresignedUrlProjection> {
+    const scope = await this.authz.resolveEventScope(command.userId)
     const event = await this.eventReadRepo.findById(command.eventId)
-    if (!event) throw AppException.notFound('Event', command.eventId)
+    if (!event || !scope.includesEvent(event)) {
+      throw AppException.notFound('Event', command.eventId)
+    }
+    await this.authz.assert(command.userId, 'photo.upload', event.id)
 
     const exists = await this.photoReadRepo.existsByEventAndFilename(
       command.eventId,

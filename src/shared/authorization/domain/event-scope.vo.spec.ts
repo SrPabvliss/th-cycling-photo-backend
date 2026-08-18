@@ -20,4 +20,29 @@ describe('EventScope', () => {
     expect(EventScope.unrestricted().isEmpty).toBe(false)
     expect(new EventScope(false, [], ['e1']).isEmpty).toBe(false)
   })
+
+  describe('includesEvent', () => {
+    it('unrestricted() includes any event', () => {
+      expect(EventScope.unrestricted().includesEvent({ id: 'e-x', tenantId: 't-x' })).toBe(true)
+    })
+
+    it('empty() excludes every event', () => {
+      expect(EventScope.empty().includesEvent({ id: 'e-1', tenantId: 't-1' })).toBe(false)
+    })
+
+    it('includes an event whose tenant matches the scope', () => {
+      const scope = new EventScope(false, ['t1'], [])
+      expect(scope.includesEvent({ id: 'e-other', tenantId: 't1' })).toBe(true)
+    })
+
+    it('includes an event granted directly by id, regardless of tenant', () => {
+      const scope = new EventScope(false, [], ['e9'])
+      expect(scope.includesEvent({ id: 'e9', tenantId: 't-other' })).toBe(true)
+    })
+
+    it('excludes an event matching neither the tenant nor the id list', () => {
+      const scope = new EventScope(false, ['t1'], ['e9'])
+      expect(scope.includesEvent({ id: 'e-other', tenantId: 't-other' })).toBe(false)
+    })
+  })
 })

@@ -6,6 +6,10 @@ import {
   PHOTO_READ_REPOSITORY,
   PHOTO_WRITE_REPOSITORY,
 } from '@photos/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { SetPhotoRetouchFlagCommand } from './set-photo-retouch-flag.command'
 
@@ -16,13 +20,16 @@ export class SetPhotoRetouchFlagHandler implements ICommandHandler<SetPhotoRetou
     private readonly photoRead: IPhotoReadRepository,
     @Inject(PHOTO_WRITE_REPOSITORY)
     private readonly photoWrite: IPhotoWriteRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(command: SetPhotoRetouchFlagCommand): Promise<void> {
-    const photo = await this.photoRead.findById(command.photoId)
+    const scope = await this.authz.resolveEventScope(command.userId)
+    const photo = await this.photoRead.findByIdInScope(command.photoId, scope)
     if (!photo) {
       throw AppException.notFound('Photo', command.photoId)
     }
+    await this.authz.assert(command.userId, 'photo.retouch.flag', photo.eventId)
 
     await this.photoWrite.setRequiresRetouch(command.photoId, command.value)
   }

@@ -34,4 +34,17 @@ export class EventScope {
     if (this.all) return {}
     return { OR: [{ tenant_id: { in: this.tenantIds } }, { id: { in: this.eventIds } }] }
   }
+
+  /**
+   * True when `event` falls inside this scope, without a database round
+   * trip. Mirrors `toPrisma()`'s tenant-or-id OR for an entity a handler
+   * has already loaded by its own id (e.g. an Event fetched via its
+   * unscoped `findById` before asserting a permission against it) — the
+   * in-memory equivalent of nesting `event: scope.toPrisma()` into a
+   * query's `where`, for callers that cannot cheaply re-query.
+   */
+  includesEvent(event: { id: string; tenantId: string }): boolean {
+    if (this.all) return true
+    return this.tenantIds.includes(event.tenantId) || this.eventIds.includes(event.id)
+  }
 }

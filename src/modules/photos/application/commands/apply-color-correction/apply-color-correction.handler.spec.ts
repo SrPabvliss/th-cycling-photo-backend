@@ -1,5 +1,6 @@
 import { CorrectionTargetType } from '@generated/prisma/client'
 import { Photo } from '@photos/domain/entities'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { AppException } from '@shared/domain'
 import { ApplyColorCorrectionCommand } from './apply-color-correction.command'
 import { ApplyColorCorrectionHandler } from './apply-color-correction.handler'
@@ -32,28 +33,47 @@ describe('ApplyColorCorrectionHandler', () => {
   let colorRepo: any
   let correctionRepo: any
 
+  let authz: any
+  const scope = EventScope.unrestricted()
+
   beforeEach(() => {
-    photoReadRepo = { findById: jest.fn() }
+    photoReadRepo = { findById: jest.fn(), findByIdInScope: jest.fn() }
     colorRepo = { findById: jest.fn(), save: jest.fn() }
     correctionRepo = {
       appendCorrection: jest.fn(),
       findLatestForTarget: jest.fn(),
       findLatestByTargets: jest.fn(),
     }
-    handler = new ApplyColorCorrectionHandler(photoReadRepo, colorRepo, correctionRepo)
+    authz = {
+      resolveEventScope: jest.fn().mockResolvedValue(scope),
+      assert: jest.fn().mockResolvedValue(undefined),
+    }
+    handler = new ApplyColorCorrectionHandler(photoReadRepo, colorRepo, correctionRepo, authz)
   })
 
-  it('throws when photo missing', async () => {
-    photoReadRepo.findById.mockResolvedValue(null)
+  it('throws when photo missing (including out-of-scope)', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValue(null)
     await expect(
       handler.execute(
         new ApplyColorCorrectionCommand('p-x', 'c-1', 'primary_color', 'rojo', 'r-1'),
       ),
     ).rejects.toBeInstanceOf(AppException)
+    expect(authz.assert).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the caller lacks photo.color.correct for this event', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValue(buildPhoto())
+    authz.assert.mockRejectedValueOnce(new Error('Insufficient permissions'))
+    await expect(
+      handler.execute(
+        new ApplyColorCorrectionCommand('p-1', 'c-1', 'primary_color', 'rojo', 'r-1'),
+      ),
+    ).rejects.toThrow('Insufficient permissions')
+    expect(colorRepo.save).not.toHaveBeenCalled()
   })
 
   it('throws when status=processing', async () => {
-    photoReadRepo.findById.mockResolvedValue(buildPhoto('processing'))
+    photoReadRepo.findByIdInScope.mockResolvedValue(buildPhoto('processing'))
     await expect(
       handler.execute(
         new ApplyColorCorrectionCommand('p-1', 'c-1', 'primary_color', 'rojo', 'r-1'),
@@ -62,7 +82,7 @@ describe('ApplyColorCorrectionHandler', () => {
   })
 
   it('throws when color does not belong to photo', async () => {
-    photoReadRepo.findById.mockResolvedValue(buildPhoto())
+    photoReadRepo.findByIdInScope.mockResolvedValue(buildPhoto())
     colorRepo.findById.mockResolvedValue({
       id: 'c-1',
       photoId: 'OTHER',
@@ -78,7 +98,7 @@ describe('ApplyColorCorrectionHandler', () => {
 
   it('applies primary_color correction when value differs', async () => {
     const photo = buildPhoto()
-    photoReadRepo.findById.mockResolvedValue(photo)
+    photoReadRepo.findByIdInScope.mockResolvedValue(photo)
     colorRepo.findById.mockResolvedValue({
       id: 'c-1',
       photoId: 'p-1',
@@ -105,7 +125,7 @@ describe('ApplyColorCorrectionHandler', () => {
 
   it('applies secondary_color correction with null (removal)', async () => {
     const photo = buildPhoto()
-    photoReadRepo.findById.mockResolvedValue(photo)
+    photoReadRepo.findByIdInScope.mockResolvedValue(photo)
     colorRepo.findById.mockResolvedValue({
       id: 'c-1',
       photoId: 'p-1',
@@ -130,7 +150,7 @@ describe('ApplyColorCorrectionHandler', () => {
 
   it('no-op when secondary_color already null and newValue null', async () => {
     const photo = buildPhoto()
-    photoReadRepo.findById.mockResolvedValue(photo)
+    photoReadRepo.findByIdInScope.mockResolvedValue(photo)
     colorRepo.findById.mockResolvedValue({
       id: 'c-1',
       photoId: 'p-1',
@@ -149,7 +169,7 @@ describe('ApplyColorCorrectionHandler', () => {
   })
 
   it('uses latest correction newValue as effective when present', async () => {
-    photoReadRepo.findById.mockResolvedValue(buildPhoto())
+    photoReadRepo.findByIdInScope.mockResolvedValue(buildPhoto())
     colorRepo.findById.mockResolvedValue({
       id: 'c-1',
       photoId: 'p-1',

@@ -16,5 +16,6 @@ export class SearchPhotosQuery {
   constructor(
     public readonly filters: SearchPhotosFilters,
     public readonly pagination: Pagination,
+    public readonly userId: string,
   ) {}
 }

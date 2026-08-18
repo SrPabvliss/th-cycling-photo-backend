@@ -3,6 +3,10 @@ import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import type { ReviewQueueItemProjection } from '@photos/application/projections'
 import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain/ports'
 import { PaginatedResult } from '@shared/application'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { GetReviewQueueQuery } from './get-review-queue.query'
 
@@ -11,14 +15,17 @@ export class GetReviewQueueHandler implements IQueryHandler<GetReviewQueueQuery>
   constructor(
     @Inject(PHOTO_READ_REPOSITORY) private readonly readRepo: IPhotoReadRepository,
     private readonly cdn: CdnUrlBuilder,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(query: GetReviewQueueQuery): Promise<PaginatedResult<ReviewQueueItemProjection>> {
+    const scope = await this.authz.resolveEventScope(query.userId)
     const { items, total } = await this.readRepo.getReviewQueue({
       eventSlug: query.eventSlug,
       status: query.status,
       limit: query.pagination.take,
       offset: query.pagination.skip,
+      scope,
     })
 
     const mapped = items.map((item) => ({
