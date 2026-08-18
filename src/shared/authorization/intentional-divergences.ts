@@ -4,6 +4,11 @@
  * `${METHOD} ${path}` exactly as the route census emits it.
  *
  * 18 routes (Appendix B of docs/superpowers/plans/2026-08-17-tit-38-authorization-engine.md).
+ * This set skips ALL FOUR legacy roles for a listed route — use it only when
+ * every role's behaviour genuinely changes. For a divergence that affects a
+ * single role, use `ROLE_INTENTIONAL_DIVERGENCES` below instead; adding a
+ * single-role change here would silently discard the other three roles'
+ * valid assertions.
  *
  * `POST /preview/:token/orders` is deliberately NOT in this list — Ruling 19
  * corrected it from `@Public()` to `@Authenticated()`, which reproduces the
@@ -34,4 +39,25 @@ export const INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   'GET /photos/view/:slug',
   // Group C — correction
   'GET /event-types', // was open to any authenticated user; now staff-only
+])
+
+/**
+ * Role-qualified divergences: a route where only ONE of the four legacy
+ * roles diverges from `RolesGuard`, not all four. Each entry is
+ * `${role} ${METHOD} ${path}`, matching the whole-route id format above with
+ * a role prefix, so the legacy-equivalence matrix skips exactly that one
+ * role/route assertion and still asserts the other three roles on the same
+ * route.
+ *
+ * Owner decision, 2026-08-18 (Appendix B): TitanTV admins CAN buy photos.
+ * `cart.checkout` and `order.create` were removed from `ADMIN_EXCLUDED`
+ * (src/shared/authorization/domain/permission-template.constants.ts), so
+ * `platform_admin` now holds both. That makes `admin` diverge from legacy on
+ * exactly these two routes — operator, customer and anonymous are unaffected
+ * on both, so a whole-route entry in `INTENTIONAL_DIVERGENCES` would discard
+ * six still-valid assertions for no reason. See Appendix B.
+ */
+export const ROLE_INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
+  'admin POST /cart/checkout',
+  'admin POST /public/events/:eventId/orders',
 ])

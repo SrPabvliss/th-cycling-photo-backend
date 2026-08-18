@@ -1,14 +1,17 @@
 import { PERMISSIONS, type PermissionKey } from './domain/permission-catalog'
 import { TEMPLATE_KEYS, TEMPLATE_PERMISSIONS } from './domain/permission-template.constants'
-import { INTENTIONAL_DIVERGENCES } from './intentional-divergences'
+import { INTENTIONAL_DIVERGENCES, ROLE_INTENTIONAL_DIVERGENCES } from './intentional-divergences'
 import { ROUTE_CENSUS } from './route-census'
 
 /**
  * The compensating control for cutting TIT-38 over without a production
  * shadow-mode period (design spec §10, D9). It proves the new permission
  * engine reaches the same allow/deny verdict as the legacy `RolesGuard` on
- * every route in `ROUTE_CENSUS`, for every legacy role, except the 18 routes
- * in `INTENTIONAL_DIVERGENCES` whose behaviour changes on purpose.
+ * every route in `ROUTE_CENSUS`, for every legacy role, except:
+ *  - the 18 routes in `INTENTIONAL_DIVERGENCES` (all four roles skipped), and
+ *  - the 2 single-role entries in `ROLE_INTENTIONAL_DIVERGENCES` (only that
+ *    role skipped; the other three roles on the same route still assert),
+ * whose behaviour changes on purpose.
  *
  * `RolesGuard` itself is deliberately NOT imported — Task 15 deletes it, and
  * this matrix must keep passing afterwards. `legacyAllows` below is a literal
@@ -55,7 +58,7 @@ describe('legacy equivalence', () => {
     const id = `${route.method} ${route.path}`
     for (const role of roles) {
       const testName = `${role} on ${id}`
-      if (INTENTIONAL_DIVERGENCES.has(id)) {
+      if (INTENTIONAL_DIVERGENCES.has(id) || ROLE_INTENTIONAL_DIVERGENCES.has(`${role} ${id}`)) {
         it.skip(`${testName} (intentional divergence)`, () => {})
         continue
       }

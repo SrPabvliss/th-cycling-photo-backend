@@ -90,24 +90,26 @@ const CUSTOMER: PermissionKey[] = ['cart.checkout', 'order.create']
  * Ruling 25 (TIT-38 Task 14 legacy-equivalence matrix): `platform_admin`
  * holds every *administrative* capability, not literally every key in the
  * catalog. `[...ALL_PERMISSION_KEYS]` was a convenient shorthand, not a
- * deliberate decision, and it over-granted these three:
+ * deliberate decision, and it over-granted three keys the legacy `admin`
+ * role never held (confirmed against the pre-TIT-38 `@Roles(...)`
+ * decorators, git history).
  *
- * - `cart.checkout` / `order.create` are end-customer purchase actions —
- *   they belong to whoever is buying photos, not to platform staff.
- * - `dashboard.operator.read` is an operator's view of *their own*
- *   assigned events. An admin holding it would see their own (empty)
- *   assignment list — functionally useless, not a real capability.
+ * Owner decision, 2026-08-18 (Appendix B): TitanTV admins CAN buy photos.
+ * `cart.checkout` and `order.create` are therefore no longer excluded — this
+ * is a deliberate, owner-approved divergence from legacy `admin` behaviour on
+ * `POST /cart/checkout` and `POST /public/events/:eventId/orders`, recorded
+ * as a role-qualified entry in `ROLE_INTENTIONAL_DIVERGENCES`
+ * (src/shared/authorization/intentional-divergences.ts) rather than left to
+ * fail the legacy-equivalence matrix.
  *
- * Confirmed against the pre-TIT-38 `@Roles(...)` decorators (git history):
- * legacy `admin` never held any of the three. The review-queue route
- * (`dashboard.review_queue.read`) is deliberately NOT excluded — it was
- * `@Roles('admin','operator')`, a genuine cross-operator admin capability.
+ * `dashboard.operator.read` stays excluded — it is an operator's view of
+ * *their own* assigned events. An admin holding it would see their own
+ * (empty) assignment list — noise, not a real capability, and nobody asked
+ * for it. The review-queue route (`dashboard.review_queue.read`) is
+ * deliberately NOT excluded — it was `@Roles('admin','operator')`, a genuine
+ * cross-operator admin capability.
  */
-export const ADMIN_EXCLUDED: PermissionKey[] = [
-  'dashboard.operator.read',
-  'cart.checkout',
-  'order.create',
-]
+export const ADMIN_EXCLUDED: PermissionKey[] = ['dashboard.operator.read']
 
 export const TEMPLATE_PERMISSIONS: Record<TemplateKey, PermissionKey[]> = {
   [TEMPLATE_KEYS.PLATFORM_ADMIN]: ALL_PERMISSION_KEYS.filter((k) => !ADMIN_EXCLUDED.includes(k)),

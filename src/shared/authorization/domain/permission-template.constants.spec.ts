@@ -20,22 +20,23 @@ describe('permission templates', () => {
     expect(leaked).toEqual([])
   })
 
-  it('gives platform_admin every administrative permission — the catalog minus the three end-user/operator-own-scope exclusions', () => {
+  it('gives platform_admin every administrative permission — the catalog minus the operator-own-scope exclusion', () => {
     // Ruling 25 (TIT-38 Task 14): platform_admin is deliberately NOT literally
-    // every catalog key. `dashboard.operator.read`, `cart.checkout` and
-    // `order.create` are excluded because legacy `admin` never held them and
-    // they aren't administrative capabilities (see ADMIN_EXCLUDED's doc
-    // comment). This must stay an exact equality, not a subset check, or a
+    // every catalog key. `dashboard.operator.read` is excluded because it is
+    // an operator's view of their own assigned events, not an administrative
+    // capability (see ADMIN_EXCLUDED's doc comment). `cart.checkout` and
+    // `order.create` were excluded too until the owner decided (2026-08-18,
+    // Appendix B) that TitanTV admins CAN buy photos; that divergence from
+    // legacy `admin` is now recorded in `ROLE_INTENTIONAL_DIVERGENCES`
+    // instead. This must stay an exact equality, not a subset check, or a
     // future narrowing that drops an administrative permission by accident
     // would pass silently.
     const expected = ALL_PERMISSION_KEYS.filter((k) => !ADMIN_EXCLUDED.includes(k))
     expect([...TEMPLATE_PERMISSIONS[TEMPLATE_KEYS.PLATFORM_ADMIN]].sort()).toEqual(expected.sort())
   })
 
-  it('excludes exactly the three deliberate keys from platform_admin, no more and no fewer', () => {
-    expect([...ADMIN_EXCLUDED].sort()).toEqual(
-      ['cart.checkout', 'dashboard.operator.read', 'order.create'].sort(),
-    )
+  it('excludes exactly the one deliberate key from platform_admin, no more and no fewer', () => {
+    expect([...ADMIN_EXCLUDED].sort()).toEqual(['dashboard.operator.read'])
   })
 
   it('holds every OTHER platform-only permission despite the narrowing', () => {
