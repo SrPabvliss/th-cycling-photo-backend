@@ -2,6 +2,15 @@ import { Prisma } from '@generated/prisma/client'
 import type { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 
 /**
+ * Either the top-level client or an interactive transaction's client — both
+ * expose `$queryRaw` with the same signature. Typed explicitly (rather than
+ * accepting only `PrismaService`) so `ApplyTemplateHandler` can call this
+ * from inside a `$transaction` callback using the transaction's own `tx`
+ * client, which is not assignable to `PrismaService`.
+ */
+export type QueryablePrisma = PrismaService | Prisma.TransactionClient
+
+/**
  * Counts active platform-tenant users whose *effective* `permission.grant`
  * resolves to `allow` — the population that could still manage
  * permissions if the account in question were removed from it.
@@ -26,9 +35,18 @@ import type { PrismaService } from '@shared/infrastructure/prisma/prisma.service
  * drops it to 0. `RevokePermissionHandler` calls this without
  * `excludeUserId` and applies its own `<= 1` threshold instead, per its
  * spec (see that handler's doc comment).
+ *
+ * `ApplyTemplateHandler` uses a third calling convention: it runs the
+ * template `update` and this count *inside the same `$transaction`*, with
+ * no `excludeUserId` at all. The target's row has already been rewritten
+ * to the new template by the time this query runs, so "total holders"
+ * *is* the exact post-swap count — including correctly leaving the target
+ * counted when they also hold `permission.grant` via a direct grant a
+ * template swap can never touch. If the result is 0 the handler throws,
+ * which aborts the transaction and rolls the `update` back automatically.
  */
 export async function countActivePermissionGrantHolders(
-  prisma: PrismaService,
+  prisma: QueryablePrisma,
   excludeUserId?: string,
 ): Promise<number> {
   const excludeFilter = excludeUserId

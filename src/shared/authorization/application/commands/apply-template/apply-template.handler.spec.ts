@@ -5,19 +5,39 @@ import { ApplyTemplateHandler } from './apply-template.handler'
 describe('ApplyTemplateHandler', () => {
   const cache = { get: jest.fn(), set: jest.fn(), invalidate: jest.fn() }
 
-  const prismaWith = (isPlatform: boolean, templatePlatformOnly: boolean, isProtected = false) => ({
-    permissionTemplate: {
-      findUniqueOrThrow: jest
-        .fn()
-        .mockResolvedValue({ id: 't1', is_platform_only: templatePlatformOnly }),
-    },
-    user: {
-      findUniqueOrThrow: jest
-        .fn()
-        .mockResolvedValue({ is_protected: isProtected, tenant: { is_platform: isPlatform } }),
-      update: jest.fn(),
-    },
-  })
+  // TIT-38 Task 13 fix report: the brief's original fixture (no
+  // `$transaction`/`$queryRaw`) can't accommodate the last-holder guard
+  // added below, so it was extended rather than left as given — a real
+  // invariant outranks a literal transcription of the brief's test body.
+  // `$transaction` invokes its callback with the mock itself as `tx`, so
+  // `tx.user.update`/`tx.$queryRaw` inside the handler are the exact same
+  // jest mocks asserted on below. `holders` defaults to 2 (i.e. "safe,
+  // not the last one") so tests that don't care about the guard aren't
+  // coupled to it.
+  const prismaWith = (
+    isPlatform: boolean,
+    templatePlatformOnly: boolean,
+    isProtected = false,
+    holders = 2,
+  ) => {
+    // biome-ignore lint/suspicious/noExplicitAny: self-referential mock, see comment above
+    const self: any = {
+      permissionTemplate: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ id: 't1', is_platform_only: templatePlatformOnly }),
+      },
+      user: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ is_protected: isProtected, tenant: { is_platform: isPlatform } }),
+        update: jest.fn(),
+      },
+      $queryRaw: jest.fn().mockResolvedValue([{ count: BigInt(holders) }]),
+    }
+    self.$transaction = jest.fn((cb: (tx: typeof self) => unknown) => cb(self))
+    return self
+  }
 
   it('refuses to apply a platform-only template to a tenant user', async () => {
     const handler = new ApplyTemplateHandler(prismaWith(false, true) as never, cache as never)
@@ -53,5 +73,36 @@ describe('ApplyTemplateHandler', () => {
     const handler = new ApplyTemplateHandler(prisma as never, cache as never)
     await handler.execute(new ApplyTemplateCommand('u1', 'platform_admin', 'admin1'))
     expect(cache.invalidate).toHaveBeenCalledWith('u1')
+  })
+
+  // TIT-38 Task 13 fix report: a template swap is a third route to the
+  // same lockout revoke/deactivate already guard against.
+  describe('last-holder guard (fix report item 1)', () => {
+    it('refuses a swap that would leave zero active holders of permission.grant', async () => {
+      const prisma = prismaWith(true, false, false, 0)
+      const handler = new ApplyTemplateHandler(prisma as never, cache as never)
+      const invalidateCallsBefore = cache.invalidate.mock.calls.length
+
+      await expect(
+        handler.execute(new ApplyTemplateCommand('u1', 'tenant', 'admin1')),
+      ).rejects.toBeInstanceOf(AppException)
+
+      // The update ran inside the transaction — it has to, for the count
+      // that follows it to reflect the real post-swap state — but the
+      // handler must never reach `cache.invalidate` for a change that
+      // was then rolled back. `cache` is a module-level mock shared
+      // across this file's tests, so the assertion compares against the
+      // call count captured just above rather than `.not.toHaveBeenCalled()`.
+      expect(prisma.user.update).toHaveBeenCalled()
+      expect(cache.invalidate.mock.calls.length).toBe(invalidateCallsBefore)
+    })
+
+    it('allows a swap when at least one other active holder remains', async () => {
+      const prisma = prismaWith(true, false, false, 1)
+      const handler = new ApplyTemplateHandler(prisma as never, cache as never)
+      await handler.execute(new ApplyTemplateCommand('u1', 'tenant', 'admin1'))
+      expect(prisma.user.update).toHaveBeenCalled()
+      expect(cache.invalidate).toHaveBeenCalledWith('u1')
+    })
   })
 })

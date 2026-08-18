@@ -6,6 +6,7 @@ import {
   AUTHORIZATION_CACHE,
   type IAuthorizationCache,
 } from '../../../domain/ports/authorization-cache.port'
+import { countActivePermissionGrantHolders } from '../../../infrastructure/queries/count-active-permission-grant-holders'
 import { ApplyTemplateCommand } from './apply-template.command'
 
 @CommandHandler(ApplyTemplateCommand)
@@ -32,10 +33,31 @@ export class ApplyTemplateHandler implements ICommandHandler<ApplyTemplateComman
       throw AppException.businessRule('authz.platform_only_permission')
     }
 
-    await this.prisma.user.update({
-      where: { id: cmd.userId },
-      data: { permission_template_id: template.id, permissions_version: { increment: 1 } },
+    // TIT-38 Task 13 fix report: a template swap is a third route to the
+    // same lockout Revoke/DeactivateUserHandler already guard against —
+    // moving the last platform_admin onto a template without
+    // `permission.grant` removes their effective grant just as surely as
+    // revoking it directly. The update and the check both run inside one
+    // transaction rather than replicating AuthorizationService's
+    // grant-beats-template precedence by hand: this way the check runs
+    // against the real post-swap state, including the case where the
+    // target also holds `permission.grant` through a direct UBAC grant —
+    // which a template swap never touches, so it poses no risk at all —
+    // without this handler needing to know that. If the count comes back
+    // 0, throwing here aborts the transaction and the `update` never
+    // persists.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: cmd.userId },
+        data: { permission_template_id: template.id, permissions_version: { increment: 1 } },
+      })
+
+      const remainingHolders = await countActivePermissionGrantHolders(tx)
+      if (remainingHolders === 0) {
+        throw AppException.businessRule('authz.last_grant_admin')
+      }
     })
+
     await this.cache.invalidate(cmd.userId)
   }
 }

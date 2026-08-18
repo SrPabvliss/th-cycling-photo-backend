@@ -44,7 +44,7 @@ export const PERMISSIONS = {
   'photo.color.delete': E(false, true, 'photos'),
   'photo.color.correct': E(false, true, 'photos'),
   'photo.category.assign': E(false, true, 'photos'),
-  'photo.retouch.read': E(false, true, 'photos'),
+  'photo.retouch.read': E(true, true, 'photos'), // Ruling 22 (TIT-38 Task 13 fix report): retouch queries carry no EventScope filtering
   'photo.retouch.upload': E(false, true, 'photos'),
   'photo.retouch.flag': E(false, true, 'photos'),
   // photo categories
@@ -69,8 +69,8 @@ export const PERMISSIONS = {
   'preview_link.read': E(false, true, 'previews'),
   'preview_link.create': E(false, true, 'previews'),
   // operator dashboard
-  'dashboard.operator.read': E(false, false, 'dashboard'),
-  'dashboard.review_queue.read': E(false, true, 'dashboard'),
+  'dashboard.operator.read': E(true, false, 'dashboard'), // Ruling 22 (TIT-38 Task 13 fix report): operator dashboard queries carry no EventScope filtering
+  'dashboard.review_queue.read': E(true, true, 'dashboard'), // Ruling 22 (TIT-38 Task 13 fix report): review queue queries carry no EventScope filtering
   // notifications
   'notification.read': E(false, false, 'notifications'),
   'notification.mark_read': E(false, false, 'notifications'),

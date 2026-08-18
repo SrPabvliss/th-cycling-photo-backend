@@ -944,13 +944,26 @@ model UserPermissionGrant {
   @@index([user_id])
   @@index([event_id])
   // Declared for Prisma Client's compound `WhereUniqueInput` only, so
-  // GrantPermissionHandler can `upsert` idempotently — the physical index
-  // was already created with `NULLS NOT DISTINCT` by the
-  // 20260818143434_tit38_grants migration's raw SQL (Prisma's schema DSL
-  // cannot express that clause). Do not `migrate dev`/`db push` from this
-  // declaration: it would try to replace the existing index with a
-  // NULLS-DISTINCT one. `prisma generate` only reads this file, so it is
-  // safe.
+  // GrantPermissionHandler can `upsert` idempotently. THE PHYSICAL INDEX
+  // IS NOT WHAT THIS LINE WOULD CREATE: it already exists, built by the
+  // 20260818143434_tit38_grants migration's raw SQL, WITH `NULLS NOT
+  // DISTINCT` — the clause that makes two global grants (event_id IS
+  // NULL) collide as duplicates instead of Postgres's default of treating
+  // every NULL as distinct. Prisma's schema DSL cannot express `NULLS NOT
+  // DISTINCT` in an `@@unique`, so this declaration is deliberately
+  // incomplete: it exists for the generated TypeScript types only.
+  //
+  // THE MIGRATION FILE IS THE SOURCE OF TRUTH for what's actually on the
+  // database — this line is not. Never run `prisma migrate dev` or
+  // `prisma db push` from this schema: Prisma will see this `@@unique` as
+  // plain (NULLS-DISTINCT) drift from the real index and offer to "fix"
+  // it by recreating `user_permission_grants_unique` WITHOUT `NULLS NOT
+  // DISTINCT` — which reopens the duplicate-global-grant hole Task 4
+  // closed and proved shut against a live database (see
+  // count-active-permission-grant-holders.integration.spec.ts and
+  // grant-uniqueness.integration.spec.ts, which fail immediately if that
+  // ever happens). `prisma generate` only reads this file and never
+  // touches the database, so it remains safe.
   @@unique([user_id, permission_id, scope_type, event_id], map: "user_permission_grants_unique")
   @@map("user_permission_grants")
 }
