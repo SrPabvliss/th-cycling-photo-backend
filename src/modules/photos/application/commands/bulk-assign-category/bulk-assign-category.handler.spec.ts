@@ -1,12 +1,14 @@
+import type { IPhotoReadRepository, IPhotoWriteRepository } from '@photos/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { BulkAssignCategoryCommand } from './bulk-assign-category.command'
 import { BulkAssignCategoryHandler } from './bulk-assign-category.handler'
 
 describe('BulkAssignCategoryHandler', () => {
   let handler: BulkAssignCategoryHandler
-  let readRepo: any
-  let writeRepo: any
-  let authz: any
+  let readRepo: jest.Mocked<Pick<IPhotoReadRepository, 'getDistinctEventIdsForPhotoIds'>>
+  let writeRepo: jest.Mocked<Pick<IPhotoWriteRepository, 'bulkUpdateCategory'>>
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'assert'>>
   const scope = EventScope.unrestricted()
 
   beforeEach(() => {
@@ -16,7 +18,7 @@ describe('BulkAssignCategoryHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    handler = new BulkAssignCategoryHandler(readRepo, writeRepo, authz)
+    handler = new BulkAssignCategoryHandler(readRepo as never, writeRepo as never, authz as never)
   })
 
   it('resolves the caller scope, asserts per affected event, then updates within scope', async () => {

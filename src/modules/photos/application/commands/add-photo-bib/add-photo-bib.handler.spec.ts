@@ -1,6 +1,7 @@
 import { BibReadingStatus } from '@generated/prisma/client'
 import { Photo } from '@photos/domain/entities'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { AddPhotoBibCommand } from './add-photo-bib.command'
 import { AddPhotoBibHandler } from './add-photo-bib.handler'
@@ -32,7 +33,7 @@ describe('AddPhotoBibHandler', () => {
   let photoReadRepo: any
   let bibRepo: any
 
-  let authz: any
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'assert'>>
   const scope = EventScope.unrestricted()
 
   beforeEach(() => {
@@ -42,7 +43,7 @@ describe('AddPhotoBibHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    handler = new AddPhotoBibHandler(photoReadRepo, bibRepo, authz)
+    handler = new AddPhotoBibHandler(photoReadRepo, bibRepo, authz as never)
   })
 
   it('throws when photo missing (including out-of-scope)', async () => {

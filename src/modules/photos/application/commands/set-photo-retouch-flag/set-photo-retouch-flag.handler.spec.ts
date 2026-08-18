@@ -1,5 +1,7 @@
 import { Photo } from '@photos/domain/entities'
+import type { IPhotoReadRepository, IPhotoWriteRepository } from '@photos/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { SetPhotoRetouchFlagCommand } from './set-photo-retouch-flag.command'
 import { SetPhotoRetouchFlagHandler } from './set-photo-retouch-flag.handler'
@@ -28,9 +30,9 @@ const buildPhoto = () =>
 
 describe('SetPhotoRetouchFlagHandler', () => {
   let handler: SetPhotoRetouchFlagHandler
-  let photoRead: any
-  let photoWrite: any
-  let authz: any
+  let photoRead: jest.Mocked<Pick<IPhotoReadRepository, 'findById' | 'findByIdInScope'>>
+  let photoWrite: jest.Mocked<Pick<IPhotoWriteRepository, 'setRequiresRetouch'>>
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'assert'>>
   const scope = EventScope.unrestricted()
 
   beforeEach(() => {
@@ -40,7 +42,11 @@ describe('SetPhotoRetouchFlagHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    handler = new SetPhotoRetouchFlagHandler(photoRead, photoWrite, authz)
+    handler = new SetPhotoRetouchFlagHandler(
+      photoRead as never,
+      photoWrite as never,
+      authz as never,
+    )
   })
 
   it('throws NOT_FOUND when photo missing (including out-of-scope)', async () => {

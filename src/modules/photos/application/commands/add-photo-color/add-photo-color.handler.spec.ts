@@ -1,6 +1,7 @@
 import { ColorRegion } from '@generated/prisma/client'
 import { Photo } from '@photos/domain/entities'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { AddPhotoColorCommand } from './add-photo-color.command'
 import { AddPhotoColorHandler } from './add-photo-color.handler'
@@ -32,7 +33,7 @@ describe('AddPhotoColorHandler', () => {
   let photoReadRepo: any
   let colorRepo: any
 
-  let authz: any
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'assert'>>
   const scope = EventScope.unrestricted()
 
   beforeEach(() => {
@@ -42,7 +43,7 @@ describe('AddPhotoColorHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    handler = new AddPhotoColorHandler(photoReadRepo, colorRepo, authz)
+    handler = new AddPhotoColorHandler(photoReadRepo, colorRepo, authz as never)
   })
 
   it('throws when photo missing (including out-of-scope)', async () => {

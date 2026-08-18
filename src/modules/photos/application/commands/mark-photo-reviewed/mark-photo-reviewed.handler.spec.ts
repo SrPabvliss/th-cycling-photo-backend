@@ -1,5 +1,6 @@
 import { Photo } from '@photos/domain/entities'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { MarkPhotoReviewedCommand } from './mark-photo-reviewed.command'
 import { MarkPhotoReviewedHandler } from './mark-photo-reviewed.handler'
@@ -31,7 +32,7 @@ describe('MarkPhotoReviewedHandler', () => {
   let photoReadRepo: any
   let photoWriteRepo: any
 
-  let authz: any
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'assert'>>
   const scope = EventScope.unrestricted()
 
   beforeEach(() => {
@@ -41,7 +42,7 @@ describe('MarkPhotoReviewedHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    handler = new MarkPhotoReviewedHandler(photoReadRepo, photoWriteRepo, authz)
+    handler = new MarkPhotoReviewedHandler(photoReadRepo, photoWriteRepo, authz as never)
   })
 
   it('throws when photo missing (including out-of-scope)', async () => {

@@ -1,5 +1,6 @@
 import { Photo } from '@photos/domain/entities'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { DeletePhotoColorCommand } from './delete-photo-color.command'
 import { DeletePhotoColorHandler } from './delete-photo-color.handler'
@@ -41,7 +42,7 @@ describe('DeletePhotoColorHandler', () => {
   let colorRepo: any
   let loggerSpy: jest.SpyInstance
 
-  let authz: any
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'assert'>>
   const scope = EventScope.unrestricted()
 
   beforeEach(() => {
@@ -51,7 +52,7 @@ describe('DeletePhotoColorHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    handler = new DeletePhotoColorHandler(photoReadRepo, colorRepo, authz)
+    handler = new DeletePhotoColorHandler(photoReadRepo, colorRepo, authz as never)
     loggerSpy = jest.spyOn((handler as any).logger, 'log').mockImplementation(() => undefined)
   })
 

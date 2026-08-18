@@ -1,6 +1,7 @@
 import { CorrectionTargetType } from '@generated/prisma/client'
 import { Photo } from '@photos/domain/entities'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { ApplyBibCorrectionCommand } from './apply-bib-correction.command'
 import { ApplyBibCorrectionHandler } from './apply-bib-correction.handler'
@@ -32,7 +33,7 @@ describe('ApplyBibCorrectionHandler', () => {
   let photoReadRepo: any
   let bibRepo: any
   let correctionRepo: any
-  let authz: any
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'assert'>>
   const scope = EventScope.unrestricted()
 
   beforeEach(() => {
@@ -47,7 +48,7 @@ describe('ApplyBibCorrectionHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    handler = new ApplyBibCorrectionHandler(photoReadRepo, bibRepo, correctionRepo, authz)
+    handler = new ApplyBibCorrectionHandler(photoReadRepo, bibRepo, correctionRepo, authz as never)
   })
 
   it('throws when photo missing (including out-of-scope)', async () => {
