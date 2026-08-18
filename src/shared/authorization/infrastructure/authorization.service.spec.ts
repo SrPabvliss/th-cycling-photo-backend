@@ -28,6 +28,22 @@ describe('AuthorizationService', () => {
     await expect(svc.can('u1', 'buyer.read')).resolves.toBe(true)
   })
 
+  it('denies a platform-only permission to a non-platform user even with an explicit global allow grant', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = false
+    p.globalGrants.set('buyer.read', 'allow')
+    const svc = new AuthorizationService(repoReturning(p), noCache)
+    await expect(svc.can('u1', 'buyer.read')).resolves.toBe(false)
+  })
+
+  it('denies a platform-only permission to a non-platform user even with an explicit event allow grant', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = false
+    p.eventGrants.set('e1', new Map([['order.gift', 'allow']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache)
+    await expect(svc.can('u1', 'order.gift', 'e1')).resolves.toBe(false)
+  })
+
   it('allows from the template when no grant exists', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.templateKeys.add('event.update')
