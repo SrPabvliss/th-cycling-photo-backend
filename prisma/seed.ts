@@ -407,9 +407,20 @@ async function seedConsumerUser() {
  *
  * Target: `BREAK_GLASS_EMAIL`, falling back to `ADMIN_SEED_EMAIL` (the
  * account seedAdminUser() creates) when unset.
+ *
+ * Fails loudly rather than warning when `BREAK_GLASS_EMAIL` is explicitly set
+ * but matches nothing, and when the designated account cannot actually
+ * resolve `permission.grant`. This is not tidiness: the protected account is
+ * the stated reason the known TOCTOU race in the last-holder check was
+ * accepted instead of fixed, and that argument only holds if the account
+ * exists *and* holds the permission it is supposed to be able to recover
+ * with. A defence whose absence is announced only by a log line cannot carry
+ * it — designating, say, a `platform_staff` account would leave the race with
+ * no compensating control at all and nothing would say so.
  */
 async function seedBreakGlassProtection() {
-  const targetEmail = process.env.BREAK_GLASS_EMAIL || process.env.ADMIN_SEED_EMAIL
+  const explicitEmail = process.env.BREAK_GLASS_EMAIL
+  const targetEmail = explicitEmail || process.env.ADMIN_SEED_EMAIL
   if (!targetEmail) {
     console.log(
       'BREAK_GLASS_EMAIL and ADMIN_SEED_EMAIL both unset — skipping break-glass protection',
@@ -423,11 +434,79 @@ async function seedBreakGlassProtection() {
   })
 
   if (result.count === 0) {
-    console.warn(`Break-glass email ${targetEmail} matched no user — protection not applied`)
+    if (explicitEmail) {
+      // Explicitly designated and unmatched: almost always a typo, and it
+      // leaves zero protected accounts.
+      throw new Error(
+        `BREAK_GLASS_EMAIL is set to '${explicitEmail}' but no user has that email. ` +
+          'No account would be protected — refusing to finish the seed.',
+      )
+    }
+    // Fallback path: ADMIN_SEED_EMAIL may legitimately not have been created
+    // yet (seedAdminUser skips when ADMIN_SEED_EMAIL is unset on this run).
+    console.warn(
+      `No BREAK_GLASS_EMAIL set and the ADMIN_SEED_EMAIL fallback (${targetEmail}) matched ` +
+        'no user — no break-glass account is protected.',
+    )
     return
   }
 
+  await assertBreakGlassCanGrantPermissions(targetEmail)
+
   console.log(`Marked ${targetEmail} as break-glass protected (is_protected = true)`)
+}
+
+/**
+ * Confirms the designated break-glass account actually resolves
+ * `permission.grant` to `allow`, reproducing `AuthorizationService.can()`'s
+ * precedence for this key exactly:
+ *
+ *   1. `permission.grant` is `platformOnly`, so a non-platform principal is
+ *      denied before any grant or template is consulted.
+ *   2. it has `eventScope: false`, so per-event grants never apply — a global
+ *      grant (allow *or* deny) decides on its own.
+ *   3. only with no grant at all does template membership decide.
+ */
+async function assertBreakGlassCanGrantPermissions(email: string): Promise<void> {
+  const user = await prisma.user.findFirst({
+    where: { email },
+    select: {
+      is_active: true,
+      tenant: { select: { is_platform: true } },
+      permission_template: {
+        select: { key: true, permissions: { select: { permission: { select: { key: true } } } } },
+      },
+      permission_grants: {
+        where: { scope_type: 'global', permission: { key: 'permission.grant' } },
+        select: { effect: true },
+      },
+    },
+  })
+
+  const fail = (reason: string): never => {
+    throw new Error(
+      `Break-glass account ${email} cannot recover the platform: ${reason}. The last-holder ` +
+        'TOCTOU race has no compensating control without it — refusing to finish the seed.',
+    )
+  }
+
+  if (!user) fail('the account no longer exists')
+  if (!user?.is_active) fail('the account is deactivated')
+  if (!user?.tenant?.is_platform) {
+    fail('it is not on the platform tenant, and permission.grant is platform-only')
+  }
+
+  const grantEffect = user?.permission_grants[0]?.effect
+  if (grantEffect === 'deny') fail('an explicit global deny grant overrides its template')
+  if (grantEffect === 'allow') return
+
+  const templateKeys = (user?.permission_template?.permissions ?? []).map((p) => p.permission.key)
+  if (!templateKeys.includes('permission.grant')) {
+    fail(
+      `its permission template ('${user?.permission_template?.key ?? 'none'}') does not include ` +
+        'permission.grant',
+    )
+  }
 }
 
 async function main() {
