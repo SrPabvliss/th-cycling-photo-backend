@@ -5,6 +5,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { hashSync } from 'bcryptjs'
 import { config } from 'dotenv'
 import { PrismaClient } from '../src/generated/prisma/client'
+import { PERMISSIONS } from '../src/shared/authorization/domain/permission-catalog'
 
 const env = process.env.NODE_ENV || 'development'
 config({ path: `.env.${env}` })
@@ -30,6 +31,28 @@ type LocationFile = {
     name: string
     cities: string[]
   }>
+}
+
+async function seedPermissions() {
+  for (const [key, meta] of Object.entries(PERMISSIONS)) {
+    await prisma.permission.upsert({
+      where: { key },
+      update: {
+        category: meta.category,
+        is_platform_only: meta.platformOnly,
+        allows_event_scope: meta.eventScope,
+      },
+      create: {
+        key,
+        category: meta.category,
+        is_platform_only: meta.platformOnly,
+        allows_event_scope: meta.eventScope,
+      },
+    })
+  }
+  // drift in the other direction: a key removed from the constant
+  await prisma.permission.deleteMany({ where: { key: { notIn: Object.keys(PERMISSIONS) } } })
+  console.log(`Seeded ${Object.keys(PERMISSIONS).length} permissions`)
 }
 
 async function seedCountries() {
@@ -343,6 +366,7 @@ async function seedConsumerUser() {
 async function main() {
   console.log('Seeding database...')
 
+  await seedPermissions()
   await seedCountries()
   await seedLocations()
   await seedEventTypes()

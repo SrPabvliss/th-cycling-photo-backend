@@ -869,3 +869,13 @@ model Tenant {
 
   @@map("tenants")
 }
+
+model Permission {
+  id                 String  @id @default(uuid()) @db.Uuid
+  key                String  @unique @db.VarChar(100)
+  category           String  @db.VarChar(50)
+  is_platform_only   Boolean @default(false)
+  allows_event_scope Boolean @default(false)
+
+  @@map("permissions")
+}
