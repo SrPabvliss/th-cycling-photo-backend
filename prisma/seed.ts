@@ -396,36 +396,36 @@ async function seedConsumerUser() {
 }
 
 /**
- * Ruling 11: marks the break-glass account `is_protected = true`, idempotently.
+ * Ruling 11 (owner decision, 2026-08-18): `ADMIN_SEED_EMAIL` IS the
+ * break-glass account. Marks it `is_protected = true`, idempotently.
  *
- * The TIT-38 tenant migration already does this at migration time via a
- * Postgres session variable, but only for users that exist when the
- * migration runs. On a fresh environment (`migrate deploy` then `db seed`
- * against an empty `users` table) that migration step is a deliberate no-op
- * — there is nobody to protect yet — so this is what actually designates the
- * break-glass account once the seed creates it.
+ * The TIT-38 tenant migration already does this at migration time via the
+ * `tit38.break_glass_email` Postgres session variable, but only for users
+ * that exist when the migration runs. On a fresh environment (`migrate
+ * deploy` then `db seed` against an empty `users` table) that migration step
+ * is a deliberate no-op — there is nobody to protect yet — so this is what
+ * actually designates the break-glass account once the seed creates it.
  *
- * Target: `BREAK_GLASS_EMAIL`, falling back to `ADMIN_SEED_EMAIL` (the
- * account seedAdminUser() creates) when unset.
+ * There used to be a separate `BREAK_GLASS_EMAIL` variable with
+ * `ADMIN_SEED_EMAIL` as its fallback. It was dropped: `ADMIN_SEED_EMAIL` is
+ * already required for seeding an admin at all, so a second variable only
+ * added a silent-absence risk with no legitimate unset case to justify it.
  *
- * Fails loudly rather than warning when `BREAK_GLASS_EMAIL` is explicitly set
- * but matches nothing, and when the designated account cannot actually
- * resolve `permission.grant`. This is not tidiness: the protected account is
- * the stated reason the known TOCTOU race in the last-holder check was
- * accepted instead of fixed, and that argument only holds if the account
- * exists *and* holds the permission it is supposed to be able to recover
- * with. A defence whose absence is announced only by a log line cannot carry
- * it — designating, say, a `platform_staff` account would leave the race with
- * no compensating control at all and nothing would say so.
+ * Fails loudly — never warns — when `ADMIN_SEED_EMAIL` is unset, or set but
+ * matches no user. This is not tidiness: the protected account is the stated
+ * reason the known TOCTOU race in the last-holder check was accepted instead
+ * of fixed, and that argument only holds if the account exists *and* holds
+ * the permission it is supposed to be able to recover with. A defence whose
+ * absence is announced only by a log line cannot carry it.
  */
 async function seedBreakGlassProtection() {
-  const explicitEmail = process.env.BREAK_GLASS_EMAIL
-  const targetEmail = explicitEmail || process.env.ADMIN_SEED_EMAIL
+  const targetEmail = process.env.ADMIN_SEED_EMAIL
   if (!targetEmail) {
-    console.log(
-      'BREAK_GLASS_EMAIL and ADMIN_SEED_EMAIL both unset — skipping break-glass protection',
+    throw new Error(
+      'ADMIN_SEED_EMAIL is not set — there is no account to designate as break-glass. ' +
+        'The last-holder TOCTOU race has no compensating control without one — refusing to ' +
+        'finish the seed.',
     )
-    return
   }
 
   const result = await prisma.user.updateMany({
@@ -434,21 +434,10 @@ async function seedBreakGlassProtection() {
   })
 
   if (result.count === 0) {
-    if (explicitEmail) {
-      // Explicitly designated and unmatched: almost always a typo, and it
-      // leaves zero protected accounts.
-      throw new Error(
-        `BREAK_GLASS_EMAIL is set to '${explicitEmail}' but no user has that email. ` +
-          'No account would be protected — refusing to finish the seed.',
-      )
-    }
-    // Fallback path: ADMIN_SEED_EMAIL may legitimately not have been created
-    // yet (seedAdminUser skips when ADMIN_SEED_EMAIL is unset on this run).
-    console.warn(
-      `No BREAK_GLASS_EMAIL set and the ADMIN_SEED_EMAIL fallback (${targetEmail}) matched ` +
-        'no user — no break-glass account is protected.',
+    throw new Error(
+      `ADMIN_SEED_EMAIL is set to '${targetEmail}' but no user has that email. ` +
+        'No account would be protected — refusing to finish the seed.',
     )
-    return
   }
 
   await assertBreakGlassCanGrantPermissions(targetEmail)

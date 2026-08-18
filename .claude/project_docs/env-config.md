@@ -62,7 +62,7 @@ DATABASE_URL is constructed: `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:
 ### Seed Data
 | Variable | Type | Description |
 |----------|------|-------------|
-| `ADMIN_SEED_EMAIL` | string | Email for initial admin user created by seed |
+| `ADMIN_SEED_EMAIL` | string | Email for initial admin user created by seed. Also the break-glass account — `prisma/seed.ts` marks it `is_protected` and fails the seed if it can't resolve `permission.grant`. |
 | `ADMIN_SEED_PASSWORD` | string | Password for initial admin user |
 
 ## Sprint 6 Additions (anticipated)
