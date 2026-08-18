@@ -43,6 +43,104 @@ jobs:
     name: Test
     needs: lint
     runs-on: ubuntu-latest
+    # Four specs under src/ need a real database: tenant-backfill and
+    # catalog-drift (integration specs from earlier TIT-38 tasks), the
+    # PermissionRepository integration spec, and the route-classification
+    # spec (boots the full AppModule, which opens Prisma + BullMQ/Redis
+    # connections). Service containers below mirror docker-compose.yml's
+    # postgres/redis images and port mapping so local and CI behave the
+    # same way. (docker-compose's `--appendonly yes` redis flag is an AOF
+    # persistence setting for local dev durability across restarts — moot
+    # for an ephemeral, single-job CI container, so it's omitted here.)
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cycling_photo_dev
+        ports:
+          - 5498:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cycling_photo_dev"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6394:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      # Matches the service containers' port mapping above.
+      DB_HOST: localhost
+      DB_PORT: 5498
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: cycling_photo_dev
+      REDIS_HOST: localhost
+      REDIS_PORT: 6394
+      # Required by env.validation.ts but never dialed by these specs —
+      # AppModule's shared modules (storage/mail/etc.) build their clients
+      # lazily, so placeholder values satisfy validation without any live
+      # network call at boot. B2_APPLICATION_KEY_ID must stay exactly
+      # 'test-key-id': backblaze-b2.adapter.integration.spec.ts reads it
+      # directly to decide whether real B2 credentials are configured, and
+      # skips itself (via describe.skip) only when it sees this sentinel —
+      # any other value makes it try a real call against the B2 API.
+      B2_APPLICATION_KEY_ID: test-key-id
+      B2_APPLICATION_KEY: ci-placeholder
+      B2_BUCKET_ID: ci-placeholder
+      B2_BUCKET_NAME: ci-placeholder
+      B2_REGION: ci-placeholder
+      JWT_SECRET: ci-test-jwt-secret-not-for-production
+      MAIL_HOST: smtp.mx.cloudflare.net
+      MAIL_PORT: 465
+      MAIL_USER: ci-placeholder
+      MAIL_PASSWORD: ci-placeholder
+      MAIL_FROM: no-reply@example.com
+      MAIL_FROM_NAME: CI
+      MAIL_REPLY_TO: no-reply@example.com
+      PASSWORD_RESET_HMAC_SECRET: ci-placeholder-hmac-secret
+      APP_WEB_BASE_URL: http://localhost:5173
+      # These four are `@IsOptional()` in env.validation.ts, but several
+      # providers call `config.getOrThrow(...)` on them in their own
+      # constructors (CloudflareKvAdapter, CdnUrlBuilder,
+      # CloudflareApiMailerAdapter — the mailer NestJS wires by default
+      # since MAIL_TRANSPORT defaults to 'api'). Every provider AppModule
+      # can reach is instantiated eagerly at boot, so route-classification
+      # (the one spec that boots the full AppModule) throws here unless
+      # all four are set, even though nothing in the test suite actually
+      # calls out to Cloudflare. Confirmed by booting AppModule locally
+      # with only the vars env.validation.ts marks required — it throws
+      # `Configuration key "cloudflare.accountId" does not exist` from
+      # CloudflareApiMailerAdapter's constructor.
+      CLOUDFLARE_ACCOUNT_ID: ci-placeholder
+      CLOUDFLARE_KV_NAMESPACE_ID: ci-placeholder
+      CLOUDFLARE_API_TOKEN: ci-placeholder
+      CLOUDFLARE_HMAC_SECRET: ci-placeholder
+      # Also getOrThrow'd eagerly (CdnUrlBuilder, WatermarkUrlService,
+      # CreatePreviewLinkHandler, CreateDeliveryLinkHandler) despite being
+      # optional in env.validation.ts.
+      CLOUDFLARE_CDN_URL: http://localhost:9999
+      WATERMARK_BASE_URL: http://localhost:9999/watermarked
+      PREVIEW_BASE_URL: http://localhost:5173/preview
+      DELIVERY_BASE_URL: http://localhost:5173/delivery
+      # permission.repository.integration.spec.ts looks up seeded
+      # platform_admin and customer users by permission_template key;
+      # prisma/seed.ts only creates them when these are set.
+      ADMIN_SEED_EMAIL: admin@ci.local
+      ADMIN_SEED_PASSWORD: test123
+      OPERATOR_SEED_EMAIL: operator@ci.local
+      OPERATOR_SEED_PASSWORD: test123
+      CONSUMER_SEED_EMAIL: consumer@ci.local
+      CONSUMER_SEED_PASSWORD: test123
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -52,4 +150,11 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: npx prisma generate
+      # Applies committed migrations to a fresh schema — never `migrate
+      # reset` (that would drop/recreate rather than just apply).
+      - run: npx prisma migrate deploy
+      # catalog-drift.integration.spec.ts and permission.repository's
+      # platform_admin/customer lookups depend on seeded data, not just
+      # the migrated schema.
+      - run: npx prisma db seed
       - run: pnpm test
