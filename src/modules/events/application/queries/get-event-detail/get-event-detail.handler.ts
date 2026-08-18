@@ -3,6 +3,10 @@ import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain
 import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { GetEventDetailQuery } from './get-event-detail.query'
 
@@ -11,10 +15,16 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
   constructor(
     @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(query: GetEventDetailQuery): Promise<EventDetailProjection> {
-    const event = await this.readRepo.getEventDetailBySlug(query.slug)
+    const scope = await this.authz.resolveEventScope(query.userId)
+
+    // An out-of-scope slug resolves to no record here, so it 404s like any
+    // other unknown slug — the caller must not be able to learn that an
+    // event exists by probing slugs. Do not turn this into a 403.
+    const event = await this.readRepo.getEventDetailBySlug(query.slug, scope)
     if (!event) throw AppException.notFound('Event', query.slug)
 
     const [totalFileSize, classifiedCount] = await Promise.all([

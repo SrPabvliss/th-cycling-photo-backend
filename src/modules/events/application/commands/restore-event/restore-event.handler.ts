@@ -7,6 +7,10 @@ import {
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { RestoreEventCommand } from './restore-event.command'
 
@@ -15,12 +19,15 @@ export class RestoreEventHandler implements ICommandHandler<RestoreEventCommand>
   constructor(
     @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
     @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   /** Restores an archived event back to active status. */
   async execute(command: RestoreEventCommand): Promise<EntityIdProjection> {
     const event = await this.readRepo.findById(command.id, true)
     if (!event) throw AppException.notFound('Event', command.id)
+
+    await this.authz.assert(command.userId, 'event.restore', event.id)
 
     event.restore()
     await this.writeRepo.save(event)

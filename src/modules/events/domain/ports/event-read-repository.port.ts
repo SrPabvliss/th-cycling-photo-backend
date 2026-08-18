@@ -8,6 +8,7 @@ import type {
   PublicPhotoProjection,
 } from '@events/application/projections'
 import type { PaginatedResult, Pagination } from '@shared/application'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { Event } from '../entities'
 
 export type AssignedEventStatus = 'active' | 'completed'
@@ -16,11 +17,12 @@ export interface IEventReadRepository {
   findById(id: string, includeArchived?: boolean): Promise<Event | null>
   getEventsList(
     pagination: Pagination,
-    includeArchived?: boolean,
-    search?: string,
+    includeArchived: boolean,
+    search: string | undefined,
+    scope: EventScope,
   ): Promise<PaginatedResult<EventListProjection>>
   getEventDetail(id: string): Promise<EventDetailProjection | null>
-  getEventDetailBySlug(slug: string): Promise<EventDetailProjection | null>
+  getEventDetailBySlug(slug: string, scope: EventScope): Promise<EventDetailProjection | null>
   getAssignedEventsByStatus(
     operatorId: string,
     status: AssignedEventStatus,
@@ -30,7 +32,7 @@ export interface IEventReadRepository {
   getAssignedEventIdsByStatus(operatorId: string, status: AssignedEventStatus): Promise<string[]>
   getAllAssignedEventIds(operatorId: string): Promise<string[]>
   getEventBriefsByIds(ids: string[]): Promise<EventBriefProjection[]>
-  countAll(): Promise<number>
+  countAll(scope: EventScope): Promise<number>
   getPublicEventsList(pagination: Pagination): Promise<PaginatedResult<PublicEventListProjection>>
   getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null>
   getPublicPhotos(

@@ -4,6 +4,10 @@ import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain/ports'
 import type { PaginatedResult } from '@shared/application'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { GetEventsListQuery } from './get-events-list.query'
 
 @QueryHandler(GetEventsListQuery)
@@ -11,13 +15,17 @@ export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
   constructor(
     @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(query: GetEventsListQuery): Promise<PaginatedResult<EventListProjection>> {
+    const scope = await this.authz.resolveEventScope(query.userId)
+
     const result = await this.readRepo.getEventsList(
       query.pagination,
       query.includeArchived,
       query.search,
+      scope,
     )
     if (result.items.length === 0) return result
 

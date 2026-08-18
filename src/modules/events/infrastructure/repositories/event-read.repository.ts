@@ -1,6 +1,7 @@
 import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { PaginatedResult, type Pagination } from '@shared/application'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 import type {
@@ -31,12 +32,14 @@ export class EventReadRepository implements IEventReadRepository {
 
   async getEventsList(
     pagination: Pagination,
-    includeArchived = false,
-    search?: string,
+    includeArchived: boolean,
+    search: string | undefined,
+    scope: EventScope,
   ): Promise<PaginatedResult<EventListProjection>> {
-    const where: Record<string, unknown> = includeArchived ? {} : { deleted_at: null }
-    if (search) {
-      where.name = { contains: search, mode: 'insensitive' }
+    const where: Prisma.EventWhereInput = {
+      ...scope.toPrisma(),
+      ...(includeArchived ? {} : { deleted_at: null }),
+      ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
     }
 
     const [events, total] = await Promise.all([
@@ -68,9 +71,15 @@ export class EventReadRepository implements IEventReadRepository {
     return EventMapper.toDetailProjection(record, this.cdn)
   }
 
-  async getEventDetailBySlug(slug: string): Promise<EventDetailProjection | null> {
+  async getEventDetailBySlug(
+    slug: string,
+    scope: EventScope,
+  ): Promise<EventDetailProjection | null> {
+    // An out-of-scope slug must yield 404, not 403 — the caller must not be
+    // able to learn that an event exists by probing slugs. Folding scope
+    // into the where clause achieves that for free.
     const record = await this.prisma.event.findFirst({
-      where: { slug },
+      where: { slug, ...scope.toPrisma() },
       select: EventMapper.eventDetailSelectConfig,
     })
 
@@ -79,8 +88,8 @@ export class EventReadRepository implements IEventReadRepository {
     return EventMapper.toDetailProjection(record, this.cdn)
   }
 
-  async countAll(): Promise<number> {
-    return this.prisma.event.count()
+  async countAll(scope: EventScope): Promise<number> {
+    return this.prisma.event.count({ where: scope.toPrisma() })
   }
 
   async getAssignedEventsByStatus(
