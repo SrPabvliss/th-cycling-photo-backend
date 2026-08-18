@@ -1,4 +1,4 @@
-import { PERMISSIONS, type PermissionKey } from './permission-catalog'
+import { PERMISSIONS } from './permission-catalog'
 
 describe('permission catalog', () => {
   it('uses resource.action key format throughout', () => {
