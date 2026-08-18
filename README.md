@@ -84,11 +84,31 @@ Before getting started, make sure you have the following installed:
    pnpm prisma:migrate
    ```
 
-7. **Seed the database** (optional, creates test data)
+7. **Seed the database** (**required** — not optional test data)
 
    ```bash
    pnpm prisma:seed
    ```
+
+   The seed does two different jobs, and only the second one is test data:
+
+   - It **synchronises the permission catalog and the four permission
+     templates** (`syncPermissionCatalog`). The migrations create an empty
+     `permissions` table and four *empty* templates, then assign every user
+     one of them. Until this runs, every template resolves to zero
+     permissions and the fail-closed permission guard denies every
+     permissioned route in the product — for admins, staff and customers
+     alike. Skipping it does not give you a database without test data, it
+     gives you a database nobody can use.
+   - It then creates reference data (countries, event types, categories) and
+     the seed user accounts from `ADMIN_SEED_EMAIL` / `OPERATOR_SEED_EMAIL` /
+     `CONSUMER_SEED_EMAIL`. That part *is* development convenience.
+
+   **Production never runs this seed.** `scripts/docker-entrypoint.sh` runs
+   `prisma migrate deploy` and then the catalog synchronisation alone, via
+   `node dist/src/shared/authorization/infrastructure/sync-permission-catalog.cli.js`
+   — the same implementation, without the user-creating half. Both paths are
+   idempotent and safe to re-run.
 
 ---
 

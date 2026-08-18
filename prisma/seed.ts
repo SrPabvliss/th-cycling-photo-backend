@@ -5,13 +5,11 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { hashSync } from 'bcryptjs'
 import { config } from 'dotenv'
 import { PrismaClient } from '../src/generated/prisma/client'
-import { PERMISSIONS } from '../src/shared/authorization/domain/permission-catalog'
 import {
-  TEMPLATE_IS_PLATFORM_ONLY,
   TEMPLATE_KEYS,
-  TEMPLATE_PERMISSIONS,
   type TemplateKey,
 } from '../src/shared/authorization/domain/permission-template.constants'
+import { syncPermissionCatalog } from '../src/shared/authorization/infrastructure/sync-permission-catalog'
 
 const env = process.env.NODE_ENV || 'development'
 config({ path: `.env.${env}` })
@@ -39,54 +37,6 @@ type LocationFile = {
   }>
 }
 
-async function seedPermissions() {
-  for (const [key, meta] of Object.entries(PERMISSIONS)) {
-    await prisma.permission.upsert({
-      where: { key },
-      update: {
-        category: meta.category,
-        is_platform_only: meta.platformOnly,
-        allows_event_scope: meta.eventScope,
-      },
-      create: {
-        key,
-        category: meta.category,
-        is_platform_only: meta.platformOnly,
-        allows_event_scope: meta.eventScope,
-      },
-    })
-  }
-  // drift in the other direction: a key removed from the constant
-  await prisma.permission.deleteMany({ where: { key: { notIn: Object.keys(PERMISSIONS) } } })
-  console.log(`Seeded ${Object.keys(PERMISSIONS).length} permissions`)
-}
-
-const TEMPLATE_NAMES: Record<TemplateKey, string> = {
-  platform_admin: 'TitanTV Administrator',
-  platform_staff: 'TitanTV Staff',
-  tenant: 'Tenant',
-  customer: 'Customer',
-}
-
-async function seedPermissionTemplates() {
-  for (const key of Object.values(TEMPLATE_KEYS)) {
-    const tpl = await prisma.permissionTemplate.upsert({
-      where: { key },
-      update: { name: TEMPLATE_NAMES[key], is_platform_only: TEMPLATE_IS_PLATFORM_ONLY[key] },
-      create: { key, name: TEMPLATE_NAMES[key], is_platform_only: TEMPLATE_IS_PLATFORM_ONLY[key] },
-    })
-    await prisma.permissionTemplatePermission.deleteMany({ where: { template_id: tpl.id } })
-    const perms = await prisma.permission.findMany({
-      where: { key: { in: TEMPLATE_PERMISSIONS[key] } },
-      select: { id: true },
-    })
-    await prisma.permissionTemplatePermission.createMany({
-      data: perms.map((p) => ({ template_id: tpl.id, permission_id: p.id })),
-    })
-  }
-  console.log(`Seeded ${Object.values(TEMPLATE_KEYS).length} permission templates`)
-}
-
 /**
  * Resolves the single platform tenant's id. Ruling 11: on a fresh
  * environment (`migrate deploy` then `db seed` against an empty database)
@@ -107,13 +57,13 @@ async function getPlatformTenantId(): Promise<string> {
 /**
  * Resolves a permission template's id by key. Ruling 11: must fail loudly
  * (never silently leave `permission_template_id = NULL`) if
- * seedPermissionTemplates() has not run yet.
+ * syncPermissionCatalog() has not run yet.
  */
 async function getPermissionTemplateId(key: TemplateKey): Promise<string> {
   const template = await prisma.permissionTemplate.findUnique({ where: { key } })
   if (!template) {
     throw new Error(
-      `Permission template '${key}' not found — seedPermissionTemplates() must run before seeding users`,
+      `Permission template '${key}' not found — syncPermissionCatalog() must run before seeding users`,
     )
   }
   return template.id
@@ -483,8 +433,12 @@ async function seedBreakGlassProtection() {
 async function main() {
   console.log('Seeding database...')
 
-  await seedPermissions()
-  await seedPermissionTemplates()
+  // Shared with the production deploy path — `scripts/docker-entrypoint.sh`
+  // runs the very same implementation through
+  // `sync-permission-catalog.cli.ts` right after `migrate deploy`, so the
+  // catalog the seed writes and the catalog production writes can never
+  // drift apart.
+  await syncPermissionCatalog(prisma)
   await seedCountries()
   await seedLocations()
   await seedEventTypes()
