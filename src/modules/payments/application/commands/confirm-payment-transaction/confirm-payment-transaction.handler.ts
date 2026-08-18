@@ -1,3 +1,4 @@
+import { SettleCartCommand } from '@cart/application/commands'
 import { Inject, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
@@ -56,22 +57,33 @@ export class ConfirmPaymentTransactionHandler
   }
 
   async execute(command: ConfirmPaymentTransactionCommand): Promise<PaymentResultProjection> {
-    let sellerUserId: string | undefined
+    let sellerUserId: string | null | undefined
 
     const runConfirmation = () =>
       this.transactionRepo.runLocked(command.clientTransactionId, async (transaction) => {
-        const context = await this.contextRepo.findByOrderId(transaction.orderId)
-        if (!context) throw AppException.businessRule('payment.order_context_missing')
-        if (context.buyerUserId !== command.buyerUserId) {
+        const contexts = await this.contextRepo.findByOrderIds(transaction.orderIds)
+        if (contexts.length === 0) throw AppException.businessRule('payment.order_context_missing')
+        if (contexts.length !== transaction.orderIds.length) {
+          const foundOrderIds = new Set(contexts.map((context) => context.orderId))
+          const unresolvedOrderIds = transaction.orderIds.filter(
+            (orderId) => !foundOrderIds.has(orderId),
+          )
+          this.logger.error(
+            `Approved payment is confirming with an incomplete order group: some order ids did not resolve to a context. clientTransactionId=${transaction.clientTransactionId} unresolvedOrderIds=${unresolvedOrderIds.join(',')}`,
+          )
+        }
+        if (contexts.some((context) => context.buyerUserId !== command.buyerUserId)) {
           throw AppException.forbidden('payment.order_not_yours')
         }
 
-        sellerUserId = context.sellerUserId
+        sellerUserId = contexts[0].sellerUserId
 
-        if (transaction.isSettled) {
+        const wasExpired = transaction.status === PaymentTransactionStatus.EXPIRED
+
+        if (transaction.isSettled && !wasExpired) {
           return {
             approved: transaction.status === PaymentTransactionStatus.APPROVED,
-            orderId: transaction.orderId,
+            orderIds: transaction.orderIds,
             message: transaction.failureMessage,
           }
         }
@@ -88,19 +100,25 @@ export class ConfirmPaymentTransactionHandler
 
         if (!result.approved) {
           transaction.markDeclined(result)
-          return { approved: false, orderId: transaction.orderId, message: result.message }
+          return { approved: false, orderIds: transaction.orderIds, message: result.message }
         }
 
         if (result.amountCents !== transaction.amountCents) {
           this.logger.error(
-            `The gateway charged an amount that does not match the order. clientTransactionId=${transaction.clientTransactionId} orderId=${transaction.orderId} expectedAmountCents=${transaction.amountCents} chargedAmountCents=${result.amountCents}`,
+            `The gateway charged an amount that does not match the order. clientTransactionId=${transaction.clientTransactionId} orderIds=${transaction.orderIds.join(',')} expectedAmountCents=${transaction.amountCents} chargedAmountCents=${result.amountCents}`,
           )
           transaction.markDeclined(result)
-          return { approved: false, orderId: transaction.orderId, message: result.message }
+          return { approved: false, orderIds: transaction.orderIds, message: result.message }
+        }
+
+        if (wasExpired) {
+          this.logger.error(
+            `A gateway-approved payment revived a transaction we had marked expired. clientTransactionId=${transaction.clientTransactionId} orderIds=${transaction.orderIds.join(',')}`,
+          )
         }
 
         transaction.markApproved(result)
-        return { approved: true, orderId: transaction.orderId, message: null }
+        return { approved: true, orderIds: transaction.orderIds, message: null }
       })
 
     let outcome: PaymentResultProjection
@@ -112,52 +130,81 @@ export class ConfirmPaymentTransactionHandler
     }
 
     if (outcome.approved) {
-      await this.settleOrder(command.clientTransactionId, outcome.orderId)
+      await this.settleOrders(command.clientTransactionId, outcome.orderIds, command.buyerUserId)
     }
 
     return outcome
   }
 
-  private async settleOrder(clientTransactionId: string, orderId: string): Promise<void> {
-    const shouldSettle = await this.transactionRepo.runLocked(clientTransactionId, async () => {
-      const context = await this.contextRepo.findByOrderId(orderId)
+  private async settleOrders(
+    clientTransactionId: string,
+    orderIds: string[],
+    buyerUserId: string,
+  ): Promise<void> {
+    const settleable = await this.transactionRepo.runLocked(clientTransactionId, async () => {
+      const contexts = await this.contextRepo.findByOrderIds(orderIds)
+      const foundOrderIds = new Set(contexts.map((context) => context.orderId))
 
-      if (!context) {
+      const unresolvedOrderIds = orderIds.filter((orderId) => !foundOrderIds.has(orderId))
+      unresolvedOrderIds.forEach((orderId) => {
         this.logger.error(
           `Approved payment cannot settle its order: no order context found. clientTransactionId=${clientTransactionId} orderId=${orderId}`,
         )
-        return false
-      }
+      })
 
-      const decision = decideOrderSettlement(context.status as OrderStatusType)
+      const decisions = contexts.map((context) => ({
+        context,
+        decision: decideOrderSettlement(context.status as OrderStatusType),
+      }))
 
-      if (decision === OrderSettlementDecision.SETTLE) {
-        return true
-      }
-
-      if (decision === OrderSettlementDecision.ALREADY_SETTLED) {
-        this.logger.error(
-          `Approved payment landed on an order that is already settled. clientTransactionId=${clientTransactionId} orderId=${orderId} orderStatus=${context.status}`,
-        )
-        return false
-      }
-
-      this.logger.error(
-        `Approved payment cannot settle its order: order status does not allow settlement. clientTransactionId=${clientTransactionId} orderId=${orderId} orderStatus=${context.status}`,
+      const hasUnsettleableOrder = decisions.some(
+        ({ decision }) => decision === OrderSettlementDecision.NOT_SETTLEABLE,
       )
-      return false
+
+      decisions
+        .filter(({ decision }) => decision !== OrderSettlementDecision.SETTLE)
+        .forEach(({ context, decision }) => {
+          const logMethod = decision === OrderSettlementDecision.ALREADY_SETTLED ? 'log' : 'error'
+          this.logger[logMethod](
+            `Approved payment did not settle one of its orders. clientTransactionId=${clientTransactionId} orderId=${context.orderId} orderStatus=${context.status} decision=${decision}`,
+          )
+        })
+
+      const settleableOrderIds = decisions
+        .filter(({ decision }) => decision === OrderSettlementDecision.SETTLE)
+        .map(({ context }) => context.orderId)
+
+      const isGenuinelyStranded = unresolvedOrderIds.length > 0 || hasUnsettleableOrder
+
+      if (orderIds.length > 0 && settleableOrderIds.length === 0 && isGenuinelyStranded) {
+        this.logger.error(
+          `Approved payment settled none of its orders. clientTransactionId=${clientTransactionId} orderIds=${orderIds.join(',')}`,
+        )
+      }
+
+      return settleableOrderIds
     })
 
-    if (!shouldSettle) return
+    const settledResults = await Promise.all(
+      settleable.map(async (orderId) => {
+        try {
+          await this.commandBus.execute(
+            new ConfirmOrderPaymentCommand(orderId, new AuditContext(this.systemUserId)),
+          )
+          return orderId
+        } catch (error) {
+          this.logger.error(
+            `Approved payment could not settle its order. clientTransactionId=${clientTransactionId} orderId=${orderId} reason=${error instanceof Error ? error.message : String(error)}`,
+          )
+          return null
+        }
+      }),
+    )
 
-    try {
-      await this.commandBus.execute(
-        new ConfirmOrderPaymentCommand(orderId, new AuditContext(this.systemUserId)),
-      )
-    } catch (error) {
-      this.logger.error(
-        `Approved payment could not settle its order. clientTransactionId=${clientTransactionId} orderId=${orderId} reason=${error instanceof Error ? error.message : String(error)}`,
-      )
+    const settledOrderIds = settledResults.filter((orderId): orderId is string => orderId !== null)
+
+    if (settledOrderIds.length > 0) {
+      await this.commandBus.execute(new SettleCartCommand(buyerUserId, settledOrderIds))
     }
   }
 
@@ -169,10 +216,13 @@ export class ConfirmPaymentTransactionHandler
       return { ...gateway.platformCredentials(), storeId: transaction.storeIdSnapshot }
     }
 
-    const context = await this.contextRepo.findByOrderId(transaction.orderId)
-    if (!context) throw AppException.businessRule('payment.order_context_missing')
+    const contexts = await this.contextRepo.findByOrderIds(transaction.orderIds)
+    if (contexts.length === 0) throw AppException.businessRule('payment.order_context_missing')
 
-    const account = await this.accountRepo.findByUserId(context.sellerUserId)
+    const sellerUserId = contexts[0].sellerUserId
+    if (!sellerUserId) throw AppException.businessRule('payment.account_not_found')
+
+    const account = await this.accountRepo.findByUserId(sellerUserId)
     if (!account?.credentialsEncrypted) {
       throw AppException.businessRule('payment.invalid_credentials')
     }

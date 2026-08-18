@@ -9,7 +9,6 @@ export function toPersistence(
 ): Prisma.PaymentTransactionUncheckedCreateInput {
   return {
     id: entity.id,
-    order_id: entity.orderId,
     client_transaction_id: entity.clientTransactionId,
     provider: entity.provider as Prisma.PaymentTransactionUncheckedCreateInput['provider'],
     gateway_transaction_id: entity.gatewayTransactionId,
@@ -36,10 +35,12 @@ export function toPersistence(
   }
 }
 
-export function toEntity(record: PrismaPaymentTransaction): PaymentTransaction {
+export function toEntity(
+  record: PrismaPaymentTransaction & { orders: { order_id: string }[] },
+): PaymentTransaction {
   return PaymentTransaction.fromPersistence({
     id: record.id,
-    orderId: record.order_id,
+    orderIds: record.orders.map((link) => link.order_id),
     clientTransactionId: record.client_transaction_id,
     provider: record.provider,
     gatewayTransactionId: record.gateway_transaction_id,

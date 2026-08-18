@@ -6,9 +6,9 @@ import { PrismaService } from '@shared/infrastructure'
 export class OrderPaymentContextRepository implements IOrderPaymentContextRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByOrderId(orderId: string): Promise<OrderPaymentContext | null> {
-    const record = await this.prisma.order.findUnique({
-      where: { id: orderId },
+  async findByOrderIds(orderIds: string[]): Promise<OrderPaymentContext[]> {
+    const records = await this.prisma.order.findMany({
+      where: { id: { in: orderIds } },
       select: {
         id: true,
         status: true,
@@ -18,14 +18,12 @@ export class OrderPaymentContextRepository implements IOrderPaymentContextReposi
       },
     })
 
-    if (!record?.event.created_by_id) return null
-
-    return {
+    return records.map((record) => ({
       orderId: record.id,
       status: record.status,
       subtotalDollars: record.subtotal === null ? null : Number(record.subtotal),
       sellerUserId: record.event.created_by_id,
       buyerUserId: record.user_id,
-    }
+    }))
   }
 }

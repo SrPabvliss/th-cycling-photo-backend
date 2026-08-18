@@ -136,6 +136,7 @@ export class CartController {
         bibNumber: i.bibNumber ?? null,
         snapCategoryName: i.snapCategoryName ?? null,
       })),
+      dto.method,
     )
     return this.commandBus.execute(command)
   }

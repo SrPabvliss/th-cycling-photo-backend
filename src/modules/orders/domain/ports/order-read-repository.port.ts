@@ -29,6 +29,7 @@ export interface IOrderReadRepository {
   getPreviewPhotoIds(previewLinkId: string): Promise<string[]>
   getPendingRetouch(): Promise<PendingRetouchOrderProjection[]>
   findOrdersFullyRetouchedByPhoto(photoId: string): Promise<RetouchCompletedOrderProjection[]>
+  getPhotoIdsByOrderIds(orderIds: string[]): Promise<string[]>
 }
 
 export const ORDER_READ_REPOSITORY = Symbol('ORDER_READ_REPOSITORY')

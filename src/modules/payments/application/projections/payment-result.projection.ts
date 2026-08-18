@@ -4,8 +4,8 @@ export class PaymentResultProjection {
   @ApiProperty()
   approved: boolean
 
-  @ApiProperty()
-  orderId: string
+  @ApiProperty({ type: [String] })
+  orderIds: string[]
 
   @ApiPropertyOptional({ nullable: true })
   message: string | null

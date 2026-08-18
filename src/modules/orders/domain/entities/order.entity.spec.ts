@@ -1,5 +1,6 @@
 import { AppException } from '@shared/domain'
 import { OrderStatus } from '../value-objects/order-status.vo'
+import { PaymentMethod } from '../value-objects/payment-method.vo'
 import { Order } from './order.entity'
 
 const baseInput = {
@@ -7,6 +8,14 @@ const baseInput = {
   eventId: 'event-1',
   userId: 'user-1',
   notes: null,
+}
+
+function buildDraftOrder(): Order {
+  return Order.createDraft(baseInput)
+}
+
+function buildPendingOrder(): Order {
+  return Order.create(baseInput)
 }
 
 describe('Order.notifyPaymentInfo', () => {
@@ -330,5 +339,92 @@ describe('Order.convertToGift', () => {
     order.cancel()
 
     expect(() => order.convertToGift('admin-1')).toThrow(AppException)
+  })
+})
+
+describe('Order.choosePaymentMethod', () => {
+  it('records the payment method the buyer picked', () => {
+    const order = Order.create(baseInput)
+
+    order.choosePaymentMethod(PaymentMethod.CARD)
+
+    expect(order.paymentMethod).toBe(PaymentMethod.CARD)
+  })
+
+  it('lets the buyer switch method after a failed attempt', () => {
+    const order = Order.create(baseInput)
+
+    order.choosePaymentMethod(PaymentMethod.CARD)
+    order.choosePaymentMethod(PaymentMethod.TRANSFER)
+
+    expect(order.paymentMethod).toBe(PaymentMethod.TRANSFER)
+  })
+
+  it('refuses to change the method once the order is settled', () => {
+    const order = Order.create(baseInput)
+    order.confirmPayment('operator-1')
+
+    expect(() => order.choosePaymentMethod(PaymentMethod.TRANSFER)).toThrow(AppException)
+  })
+})
+
+describe('Order.createDraft / draft transitions', () => {
+  it('starts a draft outside the operator flow', () => {
+    const order = buildDraftOrder()
+
+    expect(order.status).toBe(OrderStatus.DRAFT)
+    expect(order.isDraft).toBe(true)
+  })
+
+  it('promotes a draft to pending when the buyer switches to transfer', () => {
+    const order = buildDraftOrder()
+
+    order.confirmDraftAsPending()
+
+    expect(order.status).toBe(OrderStatus.PENDING)
+  })
+
+  it('settles a draft straight to paid when the card is approved', () => {
+    const order = buildDraftOrder()
+
+    order.confirmPayment('system-user')
+
+    expect(order.status).toBe(OrderStatus.PAID)
+    expect(order.paidAt).not.toBeNull()
+  })
+
+  it('refuses to send payment info for a draft, since the operator never sees it', () => {
+    const order = buildDraftOrder()
+
+    expect(() => order.notifyPaymentInfo('operator-1')).toThrow(AppException)
+  })
+
+  it('refuses to gift a draft', () => {
+    const order = buildDraftOrder()
+
+    expect(() => order.markAsGift('operator-1')).toThrow(AppException)
+  })
+
+  it('cancels a draft', () => {
+    const order = buildDraftOrder()
+
+    order.cancel()
+
+    expect(order.status).toBe(OrderStatus.CANCELLED)
+  })
+
+  it('refuses to promote an order that is no longer a draft', () => {
+    const order = buildPendingOrder()
+
+    expect(() => order.confirmDraftAsPending()).toThrow(AppException)
+  })
+
+  it('records a payment method on a draft without promoting it', () => {
+    const order = buildDraftOrder()
+
+    order.choosePaymentMethod(PaymentMethod.CARD)
+
+    expect(order.paymentMethod).toBe(PaymentMethod.CARD)
+    expect(order.status).toBe(OrderStatus.DRAFT)
   })
 })

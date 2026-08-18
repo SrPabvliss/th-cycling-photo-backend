@@ -46,6 +46,7 @@ export class OrderListProjection {
   snapCurrency: string | null
   /** Whether a delivery link exists for this order */
   hasDeliveryLink: boolean
+  paymentMethod: string | null
   /** First few photos in the order for thumbnail preview (max 3) */
   previewPhotos: OrderListPreviewPhotoProjection[]
 }

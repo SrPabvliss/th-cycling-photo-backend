@@ -1,3 +1,4 @@
+import { AppException } from '@shared/domain'
 import type { AuthorizationResult, PaymentAmounts } from '@shared/payment-gateways'
 import type { PaymentModeType } from '../value-objects/payment-mode.vo'
 import {
@@ -8,7 +9,7 @@ import {
 export class PaymentTransaction {
   constructor(
     public readonly id: string,
-    public readonly orderId: string,
+    public readonly orderIds: string[],
     public readonly provider: string,
     public readonly clientTransactionId: string,
     public gatewayTransactionId: string | null,
@@ -32,7 +33,7 @@ export class PaymentTransaction {
   ) {}
 
   static start(input: {
-    orderId: string
+    orderIds: string[]
     provider: string
     clientTransactionId: string
     amounts: PaymentAmounts
@@ -42,9 +43,13 @@ export class PaymentTransaction {
     storeId: string | null
     transferToCents: number | null
   }): PaymentTransaction {
+    if (input.orderIds.length === 0) {
+      throw AppException.businessRule('payment.order_context_missing')
+    }
+
     return new PaymentTransaction(
       crypto.randomUUID(),
-      input.orderId,
+      input.orderIds,
       input.provider,
       input.clientTransactionId,
       null,
@@ -70,7 +75,7 @@ export class PaymentTransaction {
 
   static fromPersistence(data: {
     id: string
-    orderId: string
+    orderIds: string[]
     provider: string
     clientTransactionId: string
     gatewayTransactionId: string | null
@@ -94,7 +99,7 @@ export class PaymentTransaction {
   }): PaymentTransaction {
     return new PaymentTransaction(
       data.id,
-      data.orderId,
+      data.orderIds,
       data.provider,
       data.clientTransactionId,
       data.gatewayTransactionId,
@@ -131,7 +136,7 @@ export class PaymentTransaction {
   }
 
   markApproved(result: AuthorizationResult): void {
-    if (this.isSettled) return
+    if (this.isSettled && this.status !== PaymentTransactionStatus.EXPIRED) return
     this.status = PaymentTransactionStatus.APPROVED
     this.gatewayTransactionId = result.gatewayTransactionId
     this.authorizationCode = result.authorizationCode
@@ -142,7 +147,7 @@ export class PaymentTransaction {
   }
 
   markDeclined(result: AuthorizationResult): void {
-    if (this.isSettled) return
+    if (this.isSettled && this.status !== PaymentTransactionStatus.EXPIRED) return
     this.status = PaymentTransactionStatus.DECLINED
     this.gatewayTransactionId = result.gatewayTransactionId
     this.failureMessage = result.message

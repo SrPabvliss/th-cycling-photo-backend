@@ -14,5 +14,6 @@
   "card_daily_limit": "You already made a purchase today with this card. Try another card or come back tomorrow.",
   "split_not_enabled": "Split payments are not enabled",
   "order_not_yours": "This order does not belong to you",
-  "receiver_verification_unavailable": "Cannot verify the number with Payphone: API application credentials are missing"
+  "receiver_verification_unavailable": "Cannot verify the number with Payphone: API application credentials are missing",
+  "mixed_sellers": "Orders from different photographers cannot be charged together"
 }

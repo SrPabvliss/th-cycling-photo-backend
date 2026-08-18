@@ -5,4 +5,5 @@ export { ConfirmPaymentTransactionCommand } from './confirm-payment-transaction/
 export { ConfirmPaymentTransactionDto } from './confirm-payment-transaction/confirm-payment-transaction.dto'
 export { ConfirmPaymentTransactionHandler } from './confirm-payment-transaction/confirm-payment-transaction.handler'
 export { CreatePaymentIntentCommand } from './create-payment-intent/create-payment-intent.command'
+export { CreatePaymentIntentDto } from './create-payment-intent/create-payment-intent.dto'
 export { CreatePaymentIntentHandler } from './create-payment-intent/create-payment-intent.handler'

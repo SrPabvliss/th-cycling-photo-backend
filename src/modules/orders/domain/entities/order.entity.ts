@@ -1,6 +1,7 @@
 import { type PricingTierSnapshot } from '@pricing/domain/value-objects'
 import { AppException } from '@shared/domain'
 import { OrderStatus, type OrderStatusType } from '../value-objects/order-status.vo'
+import type { PaymentMethodType } from '../value-objects/payment-method.vo'
 
 export class Order {
   constructor(
@@ -21,6 +22,7 @@ export class Order {
     public cancelledAt: Date | null,
     public notifiedById: string | null,
     public confirmedById: string | null,
+    public paymentMethod: PaymentMethodType | null,
   ) {}
 
   /**
@@ -36,6 +38,7 @@ export class Order {
     subtotal?: number | null
     snapCurrency?: string | null
     snapPricingConfig?: PricingTierSnapshot[] | null
+    paymentMethod?: PaymentMethodType | null
   }): Order {
     return new Order(
       crypto.randomUUID(),
@@ -55,7 +58,52 @@ export class Order {
       null,
       null,
       null,
+      data.paymentMethod ?? null,
     )
+  }
+
+  static createDraft(data: {
+    previewLinkId: string | null
+    eventId: string
+    userId: string
+    notes: string | null
+    bibNumber?: string | null
+    subtotal?: number | null
+    snapCurrency?: string | null
+    snapPricingConfig?: PricingTierSnapshot[] | null
+    paymentMethod?: PaymentMethodType | null
+  }): Order {
+    return new Order(
+      crypto.randomUUID(),
+      data.previewLinkId,
+      data.eventId,
+      data.userId,
+      OrderStatus.DRAFT,
+      data.notes,
+      data.bibNumber ?? null,
+      data.subtotal ?? null,
+      data.snapCurrency ?? null,
+      data.snapPricingConfig ?? null,
+      new Date(),
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      data.paymentMethod ?? null,
+    )
+  }
+
+  get isDraft(): boolean {
+    return this.status === OrderStatus.DRAFT
+  }
+
+  confirmDraftAsPending(): void {
+    if (this.status !== OrderStatus.DRAFT) {
+      throw AppException.businessRule('order.not_draft')
+    }
+    this.status = OrderStatus.PENDING
   }
 
   /**
@@ -80,6 +128,7 @@ export class Order {
     cancelledAt: Date | null
     notifiedById: string | null
     confirmedById: string | null
+    paymentMethod: PaymentMethodType | null
   }): Order {
     return new Order(
       data.id,
@@ -99,6 +148,7 @@ export class Order {
       data.cancelledAt,
       data.notifiedById,
       data.confirmedById,
+      data.paymentMethod,
     )
   }
 
@@ -119,12 +169,27 @@ export class Order {
 
   /** Confirms payment: pending | payment_info_sent → paid. Sets paidAt and confirmedById. */
   confirmPayment(confirmedById: string): void {
-    if (this.status !== OrderStatus.PENDING && this.status !== OrderStatus.PAYMENT_INFO_SENT) {
+    if (
+      this.status !== OrderStatus.DRAFT &&
+      this.status !== OrderStatus.PENDING &&
+      this.status !== OrderStatus.PAYMENT_INFO_SENT
+    ) {
       throw AppException.businessRule('order.not_pending')
     }
     this.status = OrderStatus.PAID
     this.paidAt = new Date()
     this.confirmedById = confirmedById
+  }
+
+  choosePaymentMethod(method: PaymentMethodType): void {
+    if (
+      this.status !== OrderStatus.DRAFT &&
+      this.status !== OrderStatus.PENDING &&
+      this.status !== OrderStatus.PAYMENT_INFO_SENT
+    ) {
+      throw AppException.businessRule('order.method_not_selectable')
+    }
+    this.paymentMethod = method
   }
 
   /** Marks as delivered: paid → delivered. Sets deliveredAt. */
@@ -160,6 +225,7 @@ export class Order {
    */
   cancel(): void {
     if (
+      this.status !== OrderStatus.DRAFT &&
       this.status !== OrderStatus.PENDING &&
       this.status !== OrderStatus.PAYMENT_INFO_SENT &&
       this.status !== OrderStatus.PAID &&
