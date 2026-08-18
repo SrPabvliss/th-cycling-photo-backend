@@ -6,7 +6,8 @@ import {
   CreateOrderFromPreviewDto,
 } from '@orders/application/commands'
 import { EntityIdProjection } from '@shared/application'
-import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Orders (Public)')
@@ -15,7 +16,7 @@ import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@
 export class OrderPublicController {
   constructor(private readonly commandBus: CommandBus) {}
 
-  @Public()
+  @Authenticated()
   @Post()
   @SuccessMessage('success.CREATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Create an order from a preview link (requires authentication)' })
