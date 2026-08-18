@@ -64,11 +64,22 @@ WHERE EXISTS (
 -- never leave the platform with no path to recovery.
 -- Raw SQL: fails loudly (rather than silently leaving no recovery path) if
 -- the operator running this migration didn't set the session variable, or
--- if it doesn't resolve to exactly one platform user.
+-- if it doesn't resolve to exactly one platform user. Skips (rather than
+-- fails) against an empty users table, because `prisma migrate dev` always
+-- replays the full migration history against a fresh, user-less shadow
+-- database — an empty table means there is nothing to protect yet, not a
+-- misconfiguration.
 DO $$
 DECLARE target_email TEXT := current_setting('tit38.break_glass_email', true);
         affected INT;
 BEGIN
+  -- Shadow/fresh database (migrate dev replay): no users exist yet, so
+  -- there is no break-glass account to designate. Skip rather than fail.
+  IF NOT EXISTS (SELECT 1 FROM "users") THEN
+    RAISE NOTICE 'no users present — skipping break-glass assignment';
+    RETURN;
+  END IF;
+
   IF target_email IS NULL OR target_email = '' THEN
     RAISE EXCEPTION 'tit38.break_glass_email must be set before running this migration';
   END IF;
