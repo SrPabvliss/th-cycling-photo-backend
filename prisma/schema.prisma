@@ -219,10 +219,10 @@ model User {
   created_at         DateTime  @default(now()) @db.Timestamptz
   last_login_at      DateTime? @db.Timestamptz
 
-  tenant_id           String?  @db.Uuid
-  is_protected        Boolean  @default(false)
-  permissions_version Int      @default(0)
-  tenant              Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  tenant_id           String? @db.Uuid
+  is_protected        Boolean @default(false)
+  permissions_version Int     @default(0)
+  tenant              Tenant? @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
 
   permission_template_id String?             @db.Uuid
   permission_template    PermissionTemplate? @relation(fields: [permission_template_id], references: [id], onDelete: Restrict)
@@ -234,24 +234,26 @@ model User {
   customer_profile      CustomerProfile?
   consents              UserConsent[]
 
-  events_created         Event[]         @relation("EventCreatedBy")
-  events_updated         Event[]         @relation("EventUpdatedBy")
-  photos_created         Photo[]         @relation("PhotoCreatedBy")
-  photos_updated         Photo[]         @relation("PhotoUpdatedBy")
-  photos_retouched       Photo[]         @relation("PhotoRetouchedBy")
-  created_bibs           PhotoBib[]      @relation("UserCreatedBibs")
-  created_colors         PhotoColor[]    @relation("UserCreatedColors")
-  deleted_bibs           PhotoBib[]      @relation("UserDeletedBibs")
-  deleted_colors         PhotoColor[]    @relation("UserDeletedColors")
-  corrections            Correction[]    @relation("UserCorrections")
-  preview_links_created  PreviewLink[]   @relation("PreviewLinkCreatedBy")
-  orders_confirmed       Order[]         @relation("OrderConfirmedBy")
-  orders_notified        Order[]         @relation("OrderNotifiedBy")
-  orders_placed          Order[]         @relation("OrderUser")
+  events_created         Event[]               @relation("EventCreatedBy")
+  events_updated         Event[]               @relation("EventUpdatedBy")
+  photos_created         Photo[]               @relation("PhotoCreatedBy")
+  photos_updated         Photo[]               @relation("PhotoUpdatedBy")
+  photos_retouched       Photo[]               @relation("PhotoRetouchedBy")
+  created_bibs           PhotoBib[]            @relation("UserCreatedBibs")
+  created_colors         PhotoColor[]          @relation("UserCreatedColors")
+  deleted_bibs           PhotoBib[]            @relation("UserDeletedBibs")
+  deleted_colors         PhotoColor[]          @relation("UserDeletedColors")
+  corrections            Correction[]          @relation("UserCorrections")
+  preview_links_created  PreviewLink[]         @relation("PreviewLinkCreatedBy")
+  orders_confirmed       Order[]               @relation("OrderConfirmedBy")
+  orders_notified        Order[]               @relation("OrderNotifiedBy")
+  orders_placed          Order[]               @relation("OrderUser")
   carts                  Cart[]
   notifications          Notification[]
-  assigned_events        EventOperator[] @relation("EventOperatorUser")
-  event_assignments_made EventOperator[] @relation("EventOperatorAssignedBy")
+  assigned_events        EventOperator[]       @relation("EventOperatorUser")
+  event_assignments_made EventOperator[]       @relation("EventOperatorAssignedBy")
+  permission_grants      UserPermissionGrant[] @relation("GrantHolder")
+  permissions_issued     UserPermissionGrant[] @relation("GrantIssuer")
 
   @@index([tenant_id])
   @@map("users")
@@ -335,19 +337,20 @@ model Event {
 
   tenant_id String @db.Uuid
 
-  event_type       EventType            @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
-  province         Province?            @relation(fields: [province_id], references: [id])
-  canton           Canton?              @relation(fields: [canton_id], references: [id])
-  created_by       User?                @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
-  updated_by       User?                @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
-  tenant           Tenant               @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
-  photos           Photo[]
-  preview_links    PreviewLink[]
-  orders           Order[]
-  assets           EventAsset[]
-  photo_categories EventPhotoCategory[]
-  cart_items       CartItem[]
-  operators        EventOperator[]
+  event_type        EventType             @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
+  province          Province?             @relation(fields: [province_id], references: [id])
+  canton            Canton?               @relation(fields: [canton_id], references: [id])
+  created_by        User?                 @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  updated_by        User?                 @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  tenant            Tenant                @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  photos            Photo[]
+  preview_links     PreviewLink[]
+  orders            Order[]
+  assets            EventAsset[]
+  photo_categories  EventPhotoCategory[]
+  cart_items        CartItem[]
+  operators         EventOperator[]
+  permission_grants UserPermissionGrant[]
 
   @@index([status])
   @@index([event_type_id])
@@ -881,6 +884,7 @@ model Permission {
   allows_event_scope Boolean @default(false)
 
   template_memberships PermissionTemplatePermission[]
+  grants               UserPermissionGrant[]
 
   @@map("permissions")
 }
@@ -893,6 +897,7 @@ model PermissionTemplate {
 
   permissions PermissionTemplatePermission[]
   users       User[]
+
   @@map("permission_templates")
 }
 
@@ -900,8 +905,43 @@ model PermissionTemplatePermission {
   template_id   String @db.Uuid
   permission_id String @db.Uuid
 
-  template   PermissionTemplate @relation(fields: [template_id],   references: [id], onDelete: Cascade)
+  template   PermissionTemplate @relation(fields: [template_id], references: [id], onDelete: Cascade)
   permission Permission         @relation(fields: [permission_id], references: [id], onDelete: Restrict)
+
   @@id([template_id, permission_id])
   @@map("permission_template_permissions")
+}
+
+enum GrantScopeType {
+  global
+  event
+
+  @@map("grant_scope_type")
+}
+
+enum GrantEffect {
+  allow
+  deny
+
+  @@map("grant_effect")
+}
+
+model UserPermissionGrant {
+  id            String         @id @default(uuid()) @db.Uuid
+  user_id       String         @db.Uuid
+  permission_id String         @db.Uuid
+  scope_type    GrantScopeType
+  event_id      String?        @db.Uuid
+  effect        GrantEffect
+  granted_by_id String         @db.Uuid
+  granted_at    DateTime       @default(now()) @db.Timestamptz
+
+  user       User       @relation("GrantHolder", fields: [user_id], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permission_id], references: [id], onDelete: Restrict)
+  event      Event?     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  granted_by User       @relation("GrantIssuer", fields: [granted_by_id], references: [id], onDelete: Restrict)
+
+  @@index([user_id])
+  @@index([event_id])
+  @@map("user_permission_grants")
 }
