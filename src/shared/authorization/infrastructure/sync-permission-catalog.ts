@@ -19,11 +19,21 @@ import {
  * parameter structurally (rather than as the full `PrismaClient`) lets the
  * seed, the CLI, and `PrismaService` all pass their own client without any
  * of them having to be the same nominal instance.
+ *
+ * `syncPermissions`, `syncPermissionTemplates` and `assertCatalogComplete`
+ * all keep taking exactly this narrower type — Prisma's interactive
+ * transaction client (`tx` below) satisfies it structurally without itself
+ * exposing `$transaction`, so those three steps cannot open a nested
+ * transaction even by accident.
  */
 export type PermissionCatalogClient = Pick<
   PrismaClient,
   'permission' | 'permissionTemplate' | 'permissionTemplatePermission'
 >
+
+/** What `syncPermissionCatalog` itself needs: the above, plus `$transaction`. */
+export type TransactionalPermissionCatalogClient = PermissionCatalogClient &
+  Pick<PrismaClient, '$transaction'>
 
 export const TEMPLATE_NAMES: Record<TemplateKey, string> = {
   platform_admin: 'TitanTV Administrator',
@@ -78,6 +88,12 @@ async function syncPermissionTemplates(prisma: PermissionCatalogClient): Promise
     })
     await prisma.permissionTemplatePermission.createMany({
       data: perms.map((p) => ({ template_id: tpl.id, permission_id: p.id })),
+      // permission_template_permissions has a composite primary key
+      // (template_id, permission_id): two containers running this sync at
+      // the same time on a fresh deploy would otherwise have one insert
+      // collide on the other's row and crash-loop. Low odds on a
+      // single-VPS deploy, but skipping the duplicate costs nothing.
+      skipDuplicates: true,
     })
   }
   console.log(`Synced ${Object.values(TEMPLATE_KEYS).length} permission templates`)
@@ -113,11 +129,27 @@ async function assertCatalogComplete(prisma: PermissionCatalogClient): Promise<v
  * has to run on every deploy, right after `prisma migrate deploy` — see
  * `scripts/docker-entrypoint.sh`.
  *
+ * Wrapped in a single `$transaction`. This now runs on every container
+ * start, not once from a manual seed, and `syncPermissionTemplates` rewrites
+ * each template's membership as `deleteMany` then `createMany` with no
+ * transaction of its own. The authorization cache is request-scoped, so a
+ * request landing inside that window would have resolved an empty template
+ * and 403'd a real caller. Under a zero-downtime deploy — the old container
+ * still serving while the new one runs the entrypoint — that window is real
+ * on every deploy, not a one-off migration risk. Wrapping the whole sync
+ * (permissions, all four templates, and the completeness assertion) in one
+ * transaction makes the window disappear: readers either see the fully
+ * pre-sync or fully post-sync catalog, never a mid-rewrite one.
+ *
  * Idempotent: upserts, prunes removed keys, and rewrites template membership,
  * so re-running it converges rather than duplicating.
  */
-export async function syncPermissionCatalog(prisma: PermissionCatalogClient): Promise<void> {
-  await syncPermissions(prisma)
-  await syncPermissionTemplates(prisma)
-  await assertCatalogComplete(prisma)
+export async function syncPermissionCatalog(
+  prisma: TransactionalPermissionCatalogClient,
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    await syncPermissions(tx)
+    await syncPermissionTemplates(tx)
+    await assertCatalogComplete(tx)
+  })
 }
