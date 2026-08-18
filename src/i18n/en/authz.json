@@ -1,0 +1,5 @@
+{
+  "protected_account": "This account is protected and cannot be modified",
+  "last_grant_admin": "Cannot remove the last administrator able to manage permissions",
+  "platform_only_permission": "This permission can only be assigned to TitanTV users"
+}

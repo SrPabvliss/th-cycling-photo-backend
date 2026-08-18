@@ -943,5 +943,14 @@ model UserPermissionGrant {
 
   @@index([user_id])
   @@index([event_id])
+  // Declared for Prisma Client's compound `WhereUniqueInput` only, so
+  // GrantPermissionHandler can `upsert` idempotently — the physical index
+  // was already created with `NULLS NOT DISTINCT` by the
+  // 20260818143434_tit38_grants migration's raw SQL (Prisma's schema DSL
+  // cannot express that clause). Do not `migrate dev`/`db push` from this
+  // declaration: it would try to replace the existing index with a
+  // NULLS-DISTINCT one. `prisma generate` only reads this file, so it is
+  // safe.
+  @@unique([user_id, permission_id, scope_type, event_id], map: "user_permission_grants_unique")
   @@map("user_permission_grants")
 }

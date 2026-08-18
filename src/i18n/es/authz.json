@@ -1,0 +1,5 @@
+{
+  "protected_account": "Esta cuenta está protegida y no puede modificarse",
+  "last_grant_admin": "No se puede quitar al último administrador capaz de gestionar permisos",
+  "platform_only_permission": "Este permiso sólo puede asignarse a usuarios de TitanTV"
+}
