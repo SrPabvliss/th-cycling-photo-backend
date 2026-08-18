@@ -86,8 +86,31 @@ const TENANT: PermissionKey[] = [
 
 const CUSTOMER: PermissionKey[] = ['cart.checkout', 'order.create']
 
+/**
+ * Ruling 25 (TIT-38 Task 14 legacy-equivalence matrix): `platform_admin`
+ * holds every *administrative* capability, not literally every key in the
+ * catalog. `[...ALL_PERMISSION_KEYS]` was a convenient shorthand, not a
+ * deliberate decision, and it over-granted these three:
+ *
+ * - `cart.checkout` / `order.create` are end-customer purchase actions —
+ *   they belong to whoever is buying photos, not to platform staff.
+ * - `dashboard.operator.read` is an operator's view of *their own*
+ *   assigned events. An admin holding it would see their own (empty)
+ *   assignment list — functionally useless, not a real capability.
+ *
+ * Confirmed against the pre-TIT-38 `@Roles(...)` decorators (git history):
+ * legacy `admin` never held any of the three. The review-queue route
+ * (`dashboard.review_queue.read`) is deliberately NOT excluded — it was
+ * `@Roles('admin','operator')`, a genuine cross-operator admin capability.
+ */
+export const ADMIN_EXCLUDED: PermissionKey[] = [
+  'dashboard.operator.read',
+  'cart.checkout',
+  'order.create',
+]
+
 export const TEMPLATE_PERMISSIONS: Record<TemplateKey, PermissionKey[]> = {
-  [TEMPLATE_KEYS.PLATFORM_ADMIN]: [...ALL_PERMISSION_KEYS],
+  [TEMPLATE_KEYS.PLATFORM_ADMIN]: ALL_PERMISSION_KEYS.filter((k) => !ADMIN_EXCLUDED.includes(k)),
   [TEMPLATE_KEYS.PLATFORM_STAFF]: STAFF,
   [TEMPLATE_KEYS.TENANT]: TENANT,
   [TEMPLATE_KEYS.CUSTOMER]: CUSTOMER,

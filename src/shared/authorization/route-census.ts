@@ -1,0 +1,502 @@
+import type { PermissionKey } from './domain/permission-catalog'
+
+export interface RouteCensusEntry {
+  method: string
+  path: string
+  /** Legacy `RolesGuard` marker: 'PUBLIC' | 'NONE' | 'admin' | 'admin,operator' | 'customer' | 'operator' */
+  legacyMarker: string
+  /** What TIT-38 assigns */
+  permission: PermissionKey | 'PUBLIC' | 'AUTHENTICATED'
+}
+
+/**
+ * One entry per route, transcribed from Appendix A of
+ * docs/superpowers/plans/2026-08-17-tit-38-authorization-engine.md.
+ *
+ * Appendix A lists 116 module routes (everything under each module's
+ * presentation/controllers directory, i.e. `src/modules/<module>/presentation/controllers`)
+ * plus the handful of top-level feature controllers it covers.
+ * `route-classification.spec.ts` counts 117
+ * total routes app-wide; the extra one is `AppController`'s `GET /`
+ * (src/app.controller.ts), which sits outside Appendix A's glob because it
+ * isn't part of any feature module — it's the bare health/hello endpoint
+ * mounted directly on the root `AppModule`. It carries a class-level
+ * `@Public()` today and always has (see git history), so it is included
+ * here as the 117th entry with legacyMarker 'PUBLIC' — there is no legacy
+ * vs. TIT-38 behaviour question for it, but leaving it out would make this
+ * census silently narrower than the classification gate it complements.
+ */
+export const ROUTE_CENSUS: RouteCensusEntry[] = [
+  { method: 'POST', path: '/auth/register', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'POST', path: '/auth/login', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'POST', path: '/auth/refresh', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'POST', path: '/auth/logout', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'POST', path: '/auth/forgot-password', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  {
+    method: 'POST',
+    path: '/auth/reset-password/validate',
+    legacyMarker: 'PUBLIC',
+    permission: 'PUBLIC',
+  },
+  { method: 'POST', path: '/auth/reset-password', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'GET', path: '/auth/me', legacyMarker: 'NONE', permission: 'AUTHENTICATED' },
+  { method: 'POST', path: '/auth/consents', legacyMarker: 'NONE', permission: 'AUTHENTICATED' },
+  { method: 'GET', path: '/cart', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'POST', path: '/cart/items', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'DELETE', path: '/cart/items/:photoId', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'POST', path: '/cart/merge', legacyMarker: 'NONE', permission: 'AUTHENTICATED' },
+  { method: 'POST', path: '/cart/checkout', legacyMarker: 'customer', permission: 'cart.checkout' },
+  { method: 'GET', path: '/delivery/:token', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'GET', path: '/events/:eventId/assets', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  {
+    method: 'POST',
+    path: '/events/:eventId/assets/:assetType/presigned-url',
+    legacyMarker: 'admin,operator',
+    permission: 'event_asset.presign',
+  },
+  {
+    method: 'POST',
+    path: '/events/:eventId/assets/:assetType/confirm',
+    legacyMarker: 'admin,operator',
+    permission: 'event_asset.confirm',
+  },
+  {
+    method: 'DELETE',
+    path: '/events/:eventId/assets/:assetType',
+    legacyMarker: 'admin,operator',
+    permission: 'event_asset.delete',
+  },
+  { method: 'GET', path: '/event-types', legacyMarker: 'NONE', permission: 'event_type.read' },
+  { method: 'GET', path: '/events', legacyMarker: 'NONE', permission: 'event.read' },
+  { method: 'GET', path: '/events/stats', legacyMarker: 'NONE', permission: 'event.stats.read' },
+  { method: 'GET', path: '/events/:slug', legacyMarker: 'NONE', permission: 'event.read' },
+  { method: 'POST', path: '/events', legacyMarker: 'admin,operator', permission: 'event.create' },
+  {
+    method: 'PATCH',
+    path: '/events/:id',
+    legacyMarker: 'admin,operator',
+    permission: 'event.update',
+  },
+  {
+    method: 'PATCH',
+    path: '/events/:id/archive',
+    legacyMarker: 'admin',
+    permission: 'event.archive',
+  },
+  {
+    method: 'PATCH',
+    path: '/events/:id/restore',
+    legacyMarker: 'admin',
+    permission: 'event.restore',
+  },
+  { method: 'DELETE', path: '/events/:id', legacyMarker: 'admin', permission: 'event.delete' },
+  {
+    method: 'GET',
+    path: '/events/:id/operators',
+    legacyMarker: 'admin,operator',
+    permission: 'event.collaborator.read',
+  },
+  {
+    method: 'POST',
+    path: '/events/:id/operators',
+    legacyMarker: 'admin',
+    permission: 'event.collaborator.assign',
+  },
+  {
+    method: 'DELETE',
+    path: '/events/:id/operators/:userId',
+    legacyMarker: 'admin',
+    permission: 'event.collaborator.unassign',
+  },
+  { method: 'GET', path: '/public/events', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'GET', path: '/public/events/:slug', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  {
+    method: 'GET',
+    path: '/public/events/:slug/photos',
+    legacyMarker: 'PUBLIC',
+    permission: 'PUBLIC',
+  },
+  { method: 'GET', path: '/countries', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  {
+    method: 'GET',
+    path: '/countries/:countryId/provinces',
+    legacyMarker: 'PUBLIC',
+    permission: 'PUBLIC',
+  },
+  { method: 'GET', path: '/locations/provinces', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  {
+    method: 'GET',
+    path: '/locations/provinces/:provinceId/cantons',
+    legacyMarker: 'PUBLIC',
+    permission: 'PUBLIC',
+  },
+  {
+    method: 'GET',
+    path: '/notifications',
+    legacyMarker: 'admin,operator',
+    permission: 'notification.read',
+  },
+  {
+    method: 'GET',
+    path: '/notifications/unread-count',
+    legacyMarker: 'admin,operator',
+    permission: 'notification.read',
+  },
+  {
+    method: 'PATCH',
+    path: '/notifications/read-all',
+    legacyMarker: 'admin,operator',
+    permission: 'notification.mark_read',
+  },
+  {
+    method: 'PATCH',
+    path: '/notifications/:id/read',
+    legacyMarker: 'admin,operator',
+    permission: 'notification.mark_read',
+  },
+  {
+    method: 'GET',
+    path: '/operator/dashboard/summary',
+    legacyMarker: 'operator',
+    permission: 'dashboard.operator.read',
+  },
+  {
+    method: 'GET',
+    path: '/operator/dashboard/events/active',
+    legacyMarker: 'operator',
+    permission: 'dashboard.operator.read',
+  },
+  {
+    method: 'GET',
+    path: '/operator/dashboard/events/completed',
+    legacyMarker: 'operator',
+    permission: 'dashboard.operator.read',
+  },
+  {
+    method: 'GET',
+    path: '/operator/dashboard/recent-activity',
+    legacyMarker: 'operator',
+    permission: 'dashboard.operator.read',
+  },
+  {
+    method: 'GET',
+    path: '/operator/dashboard/review-queue',
+    legacyMarker: 'admin,operator',
+    permission: 'dashboard.review_queue.read',
+  },
+  {
+    method: 'GET',
+    path: '/operator/retouch/orders/:orderId',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.retouch.read',
+  },
+  {
+    method: 'GET',
+    path: '/operator/retouch/orders',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.retouch.read',
+  },
+  {
+    method: 'GET',
+    path: '/operator/events/:eventSlug/retouch-queue',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.retouch.read',
+  },
+  {
+    method: 'POST',
+    path: '/public/events/:eventId/orders',
+    legacyMarker: 'customer',
+    permission: 'order.create',
+  },
+  {
+    method: 'POST',
+    path: '/preview/:token/orders',
+    legacyMarker: 'NONE',
+    permission: 'AUTHENTICATED',
+  },
+  { method: 'GET', path: '/orders', legacyMarker: 'admin', permission: 'order.read' },
+  { method: 'GET', path: '/orders/stats', legacyMarker: 'admin', permission: 'order.stats.read' },
+  { method: 'GET', path: '/orders/:id', legacyMarker: 'admin', permission: 'order.read' },
+  {
+    method: 'PATCH',
+    path: '/orders/:id/notify-payment-info',
+    legacyMarker: 'admin',
+    permission: 'order.notify_payment',
+  },
+  {
+    method: 'PATCH',
+    path: '/orders/:id/confirm-payment',
+    legacyMarker: 'admin',
+    permission: 'order.confirm_payment',
+  },
+  { method: 'PATCH', path: '/orders/:id/gift', legacyMarker: 'admin', permission: 'order.gift' },
+  {
+    method: 'PATCH',
+    path: '/orders/:id/convert-to-sale',
+    legacyMarker: 'admin',
+    permission: 'order.convert_to_sale',
+  },
+  {
+    method: 'PATCH',
+    path: '/orders/:id/convert-to-gift',
+    legacyMarker: 'admin',
+    permission: 'order.convert_to_gift',
+  },
+  {
+    method: 'PATCH',
+    path: '/orders/:id/send-delivery',
+    legacyMarker: 'admin',
+    permission: 'order.deliver',
+  },
+  {
+    method: 'POST',
+    path: '/orders/:id/regenerate-delivery',
+    legacyMarker: 'admin',
+    permission: 'order.delivery.regenerate',
+  },
+  {
+    method: 'PATCH',
+    path: '/orders/:id/cancel',
+    legacyMarker: 'admin',
+    permission: 'order.cancel',
+  },
+  { method: 'GET', path: '/participant-categories', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'GET', path: '/photo-categories', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  {
+    method: 'POST',
+    path: '/photo-categories',
+    legacyMarker: 'admin,operator',
+    permission: 'photo_category.create',
+  },
+  {
+    method: 'GET',
+    path: '/events/:eventId/photo-categories',
+    legacyMarker: 'PUBLIC',
+    permission: 'PUBLIC',
+  },
+  {
+    method: 'POST',
+    path: '/events/:eventId/photo-categories',
+    legacyMarker: 'admin,operator',
+    permission: 'photo_category.event.assign',
+  },
+  {
+    method: 'DELETE',
+    path: '/events/:eventId/photo-categories/:photoCategoryId',
+    legacyMarker: 'admin,operator',
+    permission: 'photo_category.event.remove',
+  },
+  {
+    method: 'GET',
+    path: '/events/:eventId/photos/resume-point',
+    legacyMarker: 'NONE',
+    permission: 'photo.read',
+  },
+  {
+    method: 'GET',
+    path: '/events/:eventId/photos/download-manifest',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.download',
+  },
+  {
+    method: 'GET',
+    path: '/events/:eventId/photos',
+    legacyMarker: 'NONE',
+    permission: 'photo.read',
+  },
+  { method: 'GET', path: '/photos/search', legacyMarker: 'NONE', permission: 'photo.search' },
+  {
+    method: 'GET',
+    path: '/photos/pending-retouch',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.retouch.read',
+  },
+  { method: 'GET', path: '/photos/:id/similar', legacyMarker: 'NONE', permission: 'photo.read' },
+  { method: 'GET', path: '/photos/view/:slug', legacyMarker: 'NONE', permission: 'photo.read' },
+  {
+    method: 'GET',
+    path: '/photos/detail/:slug',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.read',
+  },
+  {
+    method: 'POST',
+    path: '/photos/:photoId/bibs/:bibId/corrections',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.bib.correct',
+  },
+  {
+    method: 'POST',
+    path: '/photos/:photoId/colors/:colorId/corrections',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.color.correct',
+  },
+  {
+    method: 'POST',
+    path: '/photos/:photoId/reviewed',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.review',
+  },
+  {
+    method: 'POST',
+    path: '/photos/:photoId/bibs',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.bib.create',
+  },
+  {
+    method: 'DELETE',
+    path: '/photos/:photoId/bibs/:bibId',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.bib.delete',
+  },
+  {
+    method: 'DELETE',
+    path: '/photos/:id',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.delete',
+  },
+  {
+    method: 'POST',
+    path: '/photos/:photoId/colors',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.color.create',
+  },
+  {
+    method: 'DELETE',
+    path: '/photos/:photoId/colors/:colorId',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.color.delete',
+  },
+  {
+    method: 'GET',
+    path: '/events/:eventSlug/review-queue',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.review',
+  },
+  { method: 'GET', path: '/photos/:id', legacyMarker: 'NONE', permission: 'photo.read' },
+  {
+    method: 'POST',
+    path: '/events/:eventId/photos/presigned-url',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.upload',
+  },
+  {
+    method: 'POST',
+    path: '/events/:eventId/photos/confirm-batch',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.upload',
+  },
+  {
+    method: 'POST',
+    path: '/photos/:id/retouched/presigned-url',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.retouch.upload',
+  },
+  {
+    method: 'POST',
+    path: '/photos/:id/retouched/confirm',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.retouch.upload',
+  },
+  {
+    method: 'GET',
+    path: '/photos/:id/download',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.download',
+  },
+  {
+    method: 'PATCH',
+    path: '/photos/bulk-category',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.category.assign',
+  },
+  {
+    method: 'PATCH',
+    path: '/photos/:id/retouch-flag',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.retouch.flag',
+  },
+  {
+    method: 'POST',
+    path: '/events/:eventId/preview-links',
+    legacyMarker: 'admin',
+    permission: 'preview_link.create',
+  },
+  {
+    method: 'GET',
+    path: '/events/:eventId/preview-links',
+    legacyMarker: 'admin',
+    permission: 'preview_link.read',
+  },
+  { method: 'GET', path: '/preview/:token', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  {
+    method: 'PUT',
+    path: '/admin/events/:eventId/pricing-config',
+    legacyMarker: 'admin',
+    permission: 'pricing.config.set',
+  },
+  {
+    method: 'DELETE',
+    path: '/admin/events/:eventId/pricing-config',
+    legacyMarker: 'admin',
+    permission: 'pricing.config.clear',
+  },
+  { method: 'GET', path: '/pricing/preview', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'GET', path: '/pricing/tiers', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'GET', path: '/buyers', legacyMarker: 'admin', permission: 'buyer.read' },
+  { method: 'GET', path: '/users/me/phones', legacyMarker: 'NONE', permission: 'AUTHENTICATED' },
+  { method: 'POST', path: '/users/me/phones', legacyMarker: 'NONE', permission: 'AUTHENTICATED' },
+  {
+    method: 'PATCH',
+    path: '/users/me/phones/:phoneId',
+    legacyMarker: 'NONE',
+    permission: 'AUTHENTICATED',
+  },
+  {
+    method: 'DELETE',
+    path: '/users/me/phones/:phoneId',
+    legacyMarker: 'NONE',
+    permission: 'AUTHENTICATED',
+  },
+  {
+    method: 'PATCH',
+    path: '/users/me/phones/:phoneId/primary',
+    legacyMarker: 'NONE',
+    permission: 'AUTHENTICATED',
+  },
+  { method: 'GET', path: '/users', legacyMarker: 'admin', permission: 'user.read' },
+  { method: 'GET', path: '/users/:id', legacyMarker: 'admin', permission: 'user.read' },
+  { method: 'POST', path: '/users', legacyMarker: 'admin', permission: 'user.create' },
+  { method: 'PATCH', path: '/users/:id', legacyMarker: 'admin', permission: 'user.update' },
+  {
+    method: 'PATCH',
+    path: '/users/:id/deactivate',
+    legacyMarker: 'admin',
+    permission: 'user.deactivate',
+  },
+  {
+    method: 'PATCH',
+    path: '/users/:id/reactivate',
+    legacyMarker: 'admin',
+    permission: 'user.reactivate',
+  },
+  {
+    method: 'POST',
+    path: '/users/:id/reset-password',
+    legacyMarker: 'admin',
+    permission: 'user.reset_password',
+  },
+  {
+    method: 'POST',
+    path: '/users/:id/avatar/presigned-url',
+    legacyMarker: 'admin',
+    permission: 'user.avatar.manage',
+  },
+  {
+    method: 'POST',
+    path: '/users/:id/avatar/confirm',
+    legacyMarker: 'admin',
+    permission: 'user.avatar.manage',
+  },
+  { method: 'GET', path: '/', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+]
