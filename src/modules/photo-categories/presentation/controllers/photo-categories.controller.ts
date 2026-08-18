@@ -13,7 +13,7 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
 import { EntityIdProjection } from '@shared/application'
-import { Public } from '@shared/auth'
+import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import {
@@ -87,8 +87,14 @@ export class PhotoCategoriesController {
   @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({ status: 201, description: 'Category assigned', type: EntityIdProjection })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event or category not found' })
-  async assignToEvent(@Param('eventId') eventId: string, @Body() dto: AssignCategoryToEventDto) {
-    return this.commandBus.execute(new AssignCategoryToEventCommand(eventId, dto.photoCategoryId))
+  async assignToEvent(
+    @Param('eventId') eventId: string,
+    @Body() dto: AssignCategoryToEventDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new AssignCategoryToEventCommand(eventId, dto.photoCategoryId, user.userId),
+    )
   }
 
   @RequirePermission('photo_category.event.remove')
@@ -100,7 +106,10 @@ export class PhotoCategoriesController {
   async unassignFromEvent(
     @Param('eventId') eventId: string,
     @Param('photoCategoryId', ParseIntPipe) photoCategoryId: number,
+    @CurrentUser() user: ICurrentUser,
   ) {
-    await this.commandBus.execute(new UnassignCategoryFromEventCommand(eventId, photoCategoryId))
+    await this.commandBus.execute(
+      new UnassignCategoryFromEventCommand(eventId, photoCategoryId, user.userId),
+    )
   }
 }

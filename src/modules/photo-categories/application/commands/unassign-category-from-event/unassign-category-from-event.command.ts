@@ -2,5 +2,6 @@ export class UnassignCategoryFromEventCommand {
   constructor(
     public readonly eventId: string,
     public readonly photoCategoryId: number,
+    public readonly unassignedById: string,
   ) {}
 }
