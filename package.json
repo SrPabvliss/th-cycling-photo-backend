@@ -31,7 +31,7 @@
     "start:debug": "NODE_ENV=development nest start --debug --watch",
     "start:test": "NODE_ENV=test nest start",
     "start:prod": "node -r tsconfig-paths/register dist/src/main",
-    "test": "jest",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",

@@ -219,6 +219,11 @@ model User {
   created_at         DateTime  @default(now()) @db.Timestamptz
   last_login_at      DateTime? @db.Timestamptz
 
+  tenant_id           String?  @db.Uuid
+  is_protected        Boolean  @default(false)
+  permissions_version Int      @default(0)
+  tenant              Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+
   user_roles            UserRole[]
   refresh_tokens        RefreshToken[]
   password_reset_tokens PasswordResetToken[]
@@ -245,6 +250,7 @@ model User {
   assigned_events        EventOperator[] @relation("EventOperatorUser")
   event_assignments_made EventOperator[] @relation("EventOperatorAssignedBy")
 
+  @@index([tenant_id])
   @@map("users")
 }
 
@@ -324,11 +330,14 @@ model Event {
   created_by_id String? @db.Uuid
   updated_by_id String? @db.Uuid
 
+  tenant_id String @db.Uuid
+
   event_type       EventType            @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
   province         Province?            @relation(fields: [province_id], references: [id])
   canton           Canton?              @relation(fields: [canton_id], references: [id])
   created_by       User?                @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
   updated_by       User?                @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  tenant           Tenant               @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
   photos           Photo[]
   preview_links    PreviewLink[]
   orders           Order[]
@@ -346,6 +355,7 @@ model Event {
   @@index([canton_id])
   @@index([created_by_id])
   @@index([updated_by_id])
+  @@index([tenant_id])
   @@map("events")
 }
 
@@ -844,4 +854,18 @@ model Notification {
 
   @@index([user_id, is_read, created_at(sort: Desc)])
   @@map("notifications")
+}
+
+// ─── Authorization ──────────────────────────────────────────────────────────
+
+model Tenant {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(200)
+  is_platform Boolean  @default(false)
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  users  User[]
+  events Event[]
+
+  @@map("tenants")
 }
