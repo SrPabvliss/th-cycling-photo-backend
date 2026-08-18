@@ -1,5 +1,5 @@
 import { ForbiddenException } from '@nestjs/common'
-import type { IAuthorizationService } from '../domain/ports/authorization.service.port'
+import { TEMPLATE_PERMISSIONS } from '../domain/permission-template.constants'
 import { EMPTY_PRINCIPAL_PERMISSIONS, type PrincipalPermissions } from '../domain/principal'
 import { AuthorizationService } from './authorization.service'
 
@@ -10,15 +10,6 @@ const cacheReturning = (p: PrincipalPermissions | null) => ({
   invalidate: jest.fn().mockResolvedValue(undefined),
 })
 const noCache = () => cacheReturning(null)
-
-// Compile-time check only: catches signature drift in `can`/`assert` before
-// Task 7 adds the real `implements IAuthorizationService` clause (the port
-// currently omits `resolveEventScope`, so the class can't declare
-// `implements` yet — see Ruling 3).
-const _conforms: IAuthorizationService = new AuthorizationService(
-  repoReturning(EMPTY_PRINCIPAL_PERMISSIONS()),
-  noCache(),
-)
 
 describe('AuthorizationService', () => {
   it('throws on an unknown permission key rather than denying', async () => {
@@ -137,5 +128,62 @@ describe('AuthorizationService', () => {
     const svc = new AuthorizationService(repo, cache)
     await svc.can('u1', 'event.update')
     expect(cache.set).toHaveBeenCalledWith('u1', p)
+  })
+})
+
+describe('AuthorizationService.resolveEventScope', () => {
+  it('returns all for a holder of event.read.all', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    p.templateKeys.add('event.read.all')
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    expect((await svc.resolveEventScope('u1')).toPrisma()).toEqual({})
+  })
+
+  it('scopes a tenant user to their own tenant', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.tenantId = 't1'
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    expect((await svc.resolveEventScope('u1')).toPrisma()).toEqual({
+      OR: [{ tenant_id: { in: ['t1'] } }, { id: { in: [] } }],
+    })
+  })
+
+  it('includes per-event grants and EventOperator rows', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.eventGrants.set('e1', new Map([['event.read', 'allow']]))
+    p.collaboratorEventIds = ['e2']
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    const w = (await svc.resolveEventScope('u1')).toPrisma() as {
+      OR: [unknown, { id: { in: string[] } }]
+    }
+    expect(w.OR[1].id.in.sort()).toEqual(['e1', 'e2'])
+  })
+
+  it('excludes an event whose grant is a deny', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.eventGrants.set('e1', new Map([['event.read', 'deny']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    const w = (await svc.resolveEventScope('u1')).toPrisma() as {
+      OR: [unknown, { id: { in: string[] } }]
+    }
+    expect(w.OR[1].id.in).toEqual([])
+  })
+
+  // Guards against a mutation that grants `all` from `isPlatform` alone,
+  // skipping the `event.read.all` check. None of the four tests above catch
+  // that: the `isPlatform` fixtures they use either hold `event.read.all` (so
+  // both the correct check and the mutant agree) or leave `isPlatform` false
+  // (so the mutant never even fires). A restricted TitanTV staff member —
+  // `platform_staff` never includes `event.read.all` — must not see every
+  // event on the platform just for being platform staff.
+  it('does not grant unrestricted scope to a platform_staff-shaped principal', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    for (const key of TEMPLATE_PERMISSIONS.platform_staff) p.templateKeys.add(key)
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    const scope = await svc.resolveEventScope('u1')
+    expect(scope.all).toBe(false)
+    expect(scope.toPrisma()).toEqual({ OR: [{ tenant_id: { in: [] } }, { id: { in: [] } }] })
   })
 })

@@ -1,5 +1,7 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common'
+import { EventScope } from '../domain/event-scope.vo'
 import { PERMISSIONS, type PermissionKey } from '../domain/permission-catalog'
+import type { IAuthorizationService } from '../domain/ports/authorization.service.port'
 import {
   AUTHORIZATION_CACHE,
   type IAuthorizationCache,
@@ -12,16 +14,13 @@ import type { PrincipalPermissions } from '../domain/principal'
 
 /**
  * The authorization decision point. Every access check in the product routes
- * through `can`/`assert`.
+ * through `can`/`assert`. `resolveEventScope` answers a structurally
+ * different question — which rows are in reach — and both must pass for a
+ * request to succeed.
  *
- * Deliberately does NOT `implements IAuthorizationService` yet: the port
- * currently declares only `can`/`assert` (Task 5), but Task 7 widens it with
- * `resolveEventScope` and appends that method to this same class. Declaring
- * the interface here early would force a premature, incomplete implements
- * clause.
- *
- * Resolution order (most specific wins, no conflicts possible within a level
- * because of the unique `(user, permission, scope, event)` index):
+ * Resolution order for `can` (most specific wins, no conflicts possible
+ * within a level because of the unique `(user, permission, scope, event)`
+ * index):
  *   0. unknown key            -> throw (programmer error, not a 403)
  *   1. platformOnly & !isPlatform -> deny, before any grant or template
  *   2. grant on this event    -> its effect
@@ -30,7 +29,7 @@ import type { PrincipalPermissions } from '../domain/principal'
  *   5. otherwise              -> deny
  */
 @Injectable()
-export class AuthorizationService {
+export class AuthorizationService implements IAuthorizationService {
   constructor(
     @Inject(PERMISSION_REPOSITORY) private readonly repo: IPermissionRepository,
     @Inject(AUTHORIZATION_CACHE) private readonly cache: IAuthorizationCache,
@@ -66,6 +65,35 @@ export class AuthorizationService {
     if (!(await this.can(userId, key, eventId))) {
       throw new ForbiddenException('Insufficient permissions')
     }
+  }
+
+  /**
+   * Which Event rows this user may see. `all` is driven strictly by holding
+   * `event.read.all` (template or global grant) while platform — never by
+   * `isPlatform` alone. Platform membership only makes platform-only
+   * permissions eligible; it does not by itself grant sight of everything,
+   * or a restricted TitanTV staff member (e.g. a retoucher on a narrow
+   * template) would see every event on the platform.
+   */
+  async resolveEventScope(userId: string): Promise<EventScope> {
+    const p = await this.principal(userId)
+
+    if (p.isPlatform && p.templateKeys.has('event.read.all')) return EventScope.unrestricted()
+    const globalAll = p.globalGrants.get('event.read.all')
+    if (p.isPlatform && globalAll === 'allow') return EventScope.unrestricted()
+
+    const tenantIds = p.tenantId ? [p.tenantId] : []
+
+    const granted = [...p.eventGrants.entries()]
+      .filter(([, keys]) => [...keys.values()].some((e) => e === 'allow'))
+      .map(([eventId]) => eventId)
+
+    // TRANSITIONAL — EventOperator rows (via collaboratorEventIds) stand in
+    // for per-event grants until TIT-40 converts them into real grants.
+    // Delete this union and the collaboratorEventIds field then.
+    const eventIds = [...new Set([...granted, ...p.collaboratorEventIds])]
+
+    return new EventScope(false, tenantIds, eventIds)
   }
 
   protected async principal(userId: string): Promise<PrincipalPermissions> {
