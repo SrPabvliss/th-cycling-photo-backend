@@ -6,7 +6,8 @@ import {
   CreateOrderFromGalleryDto,
 } from '@orders/application/commands'
 import { EntityIdProjection } from '@shared/application'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Orders (Gallery)')
@@ -16,7 +17,7 @@ export class OrderGalleryController {
   constructor(private readonly commandBus: CommandBus) {}
 
   @Post()
-  @Roles('customer')
+  @RequirePermission('order.create')
   @SuccessMessage('success.CREATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Create an order from the public gallery (requires authentication)' })
   @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })

@@ -4,6 +4,7 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
+import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
 import { AppException } from '@shared/domain'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import type { CookieOptions, Request, Response } from 'express'
@@ -215,6 +216,7 @@ export class AuthController {
     await this.commandBus.execute(new ConfirmPasswordResetCommand(dto.token, dto.password))
   }
 
+  @Authenticated()
   @Get('me')
   @ApiBearerAuth()
   @SuccessMessage('success.FETCHED', { entity: 'entities.user' })
@@ -229,6 +231,7 @@ export class AuthController {
     return this.queryBus.execute(new GetMeQuery(user.userId, user.email, user.role))
   }
 
+  @Authenticated()
   @Post('consents')
   @HttpCode(204)
   @ApiBearerAuth()

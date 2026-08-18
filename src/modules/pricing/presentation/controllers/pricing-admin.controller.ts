@@ -4,7 +4,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { ClearEventPricingConfigCommand } from '@pricing/application/commands/clear-event-pricing-config/clear-event-pricing-config.command'
 import { SetEventPricingConfigCommand } from '@pricing/application/commands/set-event-pricing-config/set-event-pricing-config.command'
 import { SetEventPricingConfigDto } from '@pricing/application/commands/set-event-pricing-config/set-event-pricing-config.dto'
-import { Roles } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 
 /**
  * Admin endpoints for managing per-event pricing config (`Event.pricing_config`).
@@ -22,7 +22,7 @@ import { Roles } from '@shared/auth'
 export class PricingAdminController {
   constructor(private readonly commandBus: CommandBus) {}
 
-  @Roles('admin')
+  @RequirePermission('pricing.config.set')
   @Put(':eventId/pricing-config')
   set(@Param('eventId', ParseUUIDPipe) eventId: string, @Body() dto: SetEventPricingConfigDto) {
     return this.commandBus.execute(
@@ -30,7 +30,7 @@ export class PricingAdminController {
     )
   }
 
-  @Roles('admin')
+  @RequirePermission('pricing.config.clear')
   @Delete(':eventId/pricing-config')
   clear(@Param('eventId', ParseUUIDPipe) eventId: string) {
     return this.commandBus.execute(new ClearEventPricingConfigCommand(eventId))
