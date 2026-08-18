@@ -9,6 +9,8 @@ describe('RequestScopedAuthorizationCache', () => {
 
   it('returns null outside a request scope instead of throwing', async () => {
     await expect(cache.get('u1')).resolves.toBeNull()
+    await expect(cache.set('u1', EMPTY_PRINCIPAL_PERMISSIONS())).resolves.toBeUndefined()
+    await expect(cache.invalidate('u1')).resolves.toBeUndefined()
   })
 
   it('memoises within one request scope', async () => {
