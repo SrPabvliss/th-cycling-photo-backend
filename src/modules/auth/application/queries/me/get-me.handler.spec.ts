@@ -117,4 +117,47 @@ describe('GetMeHandler — permissions', () => {
 
     expect(result.permissions).toEqual(['event.read'])
   })
+
+  it('strips a platform-only permission granted directly, not just template-sourced ones', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.globalGrants.set('buyer.read', 'allow') // platform-only, arrives via grant rather than template
+    p.isPlatform = false
+
+    const authUserRepo = {
+      getMe: jest.fn().mockResolvedValue({ id: 'u1', email: 'a@b.c', role: 'customer' }),
+    }
+    const consentRepo = { findAcceptedTypes: jest.fn().mockResolvedValue([]) }
+    const permissionRepo = { load: jest.fn().mockResolvedValue(p) }
+
+    const handler = new GetMeHandler(
+      authUserRepo as never,
+      consentRepo as never,
+      permissionRepo as never,
+    )
+    const result = await handler.execute(new GetMeQuery('u1', 'a@b.c', 'customer'))
+
+    expect(result.permissions).toEqual([])
+  })
+
+  it('excludes event-scoped grants from the global permission list', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.templateKeys.add('event.read')
+    p.eventGrants.set('event-1', new Map([['photo.review', 'allow']]))
+
+    const authUserRepo = {
+      getMe: jest.fn().mockResolvedValue({ id: 'u1', email: 'a@b.c', role: 'customer' }),
+    }
+    const consentRepo = { findAcceptedTypes: jest.fn().mockResolvedValue([]) }
+    const permissionRepo = { load: jest.fn().mockResolvedValue(p) }
+
+    const handler = new GetMeHandler(
+      authUserRepo as never,
+      consentRepo as never,
+      permissionRepo as never,
+    )
+    const result = await handler.execute(new GetMeQuery('u1', 'a@b.c', 'customer'))
+
+    expect(result.permissions).toEqual(['event.read'])
+    expect(result.permissions).not.toContain('photo.review')
+  })
 })
