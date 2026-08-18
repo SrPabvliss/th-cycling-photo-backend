@@ -1,22 +1,42 @@
 import { ForbiddenException } from '@nestjs/common'
+import type { IAuthorizationService } from '../domain/ports/authorization.service.port'
 import { EMPTY_PRINCIPAL_PERMISSIONS, type PrincipalPermissions } from '../domain/principal'
 import { AuthorizationService } from './authorization.service'
 
 const repoReturning = (p: PrincipalPermissions) => ({ load: jest.fn().mockResolvedValue(p) })
-const noCache = { get: jest.fn().mockResolvedValue(null), set: jest.fn(), invalidate: jest.fn() }
+const cacheReturning = (p: PrincipalPermissions | null) => ({
+  get: jest.fn().mockResolvedValue(p),
+  set: jest.fn().mockResolvedValue(undefined),
+  invalidate: jest.fn().mockResolvedValue(undefined),
+})
+const noCache = () => cacheReturning(null)
+
+// Compile-time check only: catches signature drift in `can`/`assert` before
+// Task 7 adds the real `implements IAuthorizationService` clause (the port
+// currently omits `resolveEventScope`, so the class can't declare
+// `implements` yet — see Ruling 3).
+const _conforms: IAuthorizationService = new AuthorizationService(
+  repoReturning(EMPTY_PRINCIPAL_PERMISSIONS()),
+  noCache(),
+)
 
 describe('AuthorizationService', () => {
   it('throws on an unknown permission key rather than denying', async () => {
-    const svc = new AuthorizationService(repoReturning(EMPTY_PRINCIPAL_PERMISSIONS()), noCache)
+    const svc = new AuthorizationService(repoReturning(EMPTY_PRINCIPAL_PERMISSIONS()), noCache())
     // biome-ignore lint/suspicious/noExplicitAny: deliberately invalid key
     await expect(svc.can('u1', 'event.updte' as any)).rejects.toThrow(/unknown permission/i)
+  })
+
+  it('throws for a key colliding with an inherited Object.prototype property', async () => {
+    const svc = new AuthorizationService(repoReturning(EMPTY_PRINCIPAL_PERMISSIONS()), noCache())
+    await expect(svc.can('u1', 'constructor' as never)).rejects.toThrow(/unknown permission/i)
   })
 
   it('denies a platform-only permission to a non-platform user holding it in template', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.templateKeys.add('buyer.read')
     p.isPlatform = false
-    const svc = new AuthorizationService(repoReturning(p), noCache)
+    const svc = new AuthorizationService(repoReturning(p), noCache())
     await expect(svc.can('u1', 'buyer.read')).resolves.toBe(false)
   })
 
@@ -24,7 +44,7 @@ describe('AuthorizationService', () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.templateKeys.add('buyer.read')
     p.isPlatform = true
-    const svc = new AuthorizationService(repoReturning(p), noCache)
+    const svc = new AuthorizationService(repoReturning(p), noCache())
     await expect(svc.can('u1', 'buyer.read')).resolves.toBe(true)
   })
 
@@ -32,7 +52,7 @@ describe('AuthorizationService', () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.isPlatform = false
     p.globalGrants.set('buyer.read', 'allow')
-    const svc = new AuthorizationService(repoReturning(p), noCache)
+    const svc = new AuthorizationService(repoReturning(p), noCache())
     await expect(svc.can('u1', 'buyer.read')).resolves.toBe(false)
   })
 
@@ -40,14 +60,21 @@ describe('AuthorizationService', () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.isPlatform = false
     p.eventGrants.set('e1', new Map([['order.gift', 'allow']]))
-    const svc = new AuthorizationService(repoReturning(p), noCache)
+    const svc = new AuthorizationService(repoReturning(p), noCache())
     await expect(svc.can('u1', 'order.gift', 'e1')).resolves.toBe(false)
   })
 
   it('allows from the template when no grant exists', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.templateKeys.add('event.update')
-    const svc = new AuthorizationService(repoReturning(p), noCache)
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    await expect(svc.can('u1', 'event.update')).resolves.toBe(true)
+  })
+
+  it('allows from a global allow grant when the template is empty', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.globalGrants.set('event.update', 'allow')
+    const svc = new AuthorizationService(repoReturning(p), noCache())
     await expect(svc.can('u1', 'event.update')).resolves.toBe(true)
   })
 
@@ -55,32 +82,60 @@ describe('AuthorizationService', () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.templateKeys.add('event.update')
     p.globalGrants.set('event.update', 'deny')
-    const svc = new AuthorizationService(repoReturning(p), noCache)
+    const svc = new AuthorizationService(repoReturning(p), noCache())
     await expect(svc.can('u1', 'event.update')).resolves.toBe(false)
+  })
+
+  it('lets an event deny grant override the template', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.templateKeys.add('event.update')
+    p.eventGrants.set('e1', new Map([['event.update', 'deny']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    await expect(svc.can('u1', 'event.update', 'e1')).resolves.toBe(false)
   })
 
   it('lets an event allow grant override a global deny', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.globalGrants.set('event.update', 'deny')
     p.eventGrants.set('e1', new Map([['event.update', 'allow']]))
-    const svc = new AuthorizationService(repoReturning(p), noCache)
+    const svc = new AuthorizationService(repoReturning(p), noCache())
     await expect(svc.can('u1', 'event.update', 'e1')).resolves.toBe(true)
   })
 
   it('does not leak an event grant to a different event', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.eventGrants.set('e1', new Map([['event.update', 'allow']]))
-    const svc = new AuthorizationService(repoReturning(p), noCache)
+    const svc = new AuthorizationService(repoReturning(p), noCache())
     await expect(svc.can('u1', 'event.update', 'e2')).resolves.toBe(false)
   })
 
   it('denies by default', async () => {
-    const svc = new AuthorizationService(repoReturning(EMPTY_PRINCIPAL_PERMISSIONS()), noCache)
+    const svc = new AuthorizationService(repoReturning(EMPTY_PRINCIPAL_PERMISSIONS()), noCache())
     await expect(svc.can('u1', 'event.update')).resolves.toBe(false)
   })
 
   it('assert throws ForbiddenException when denied', async () => {
-    const svc = new AuthorizationService(repoReturning(EMPTY_PRINCIPAL_PERMISSIONS()), noCache)
+    const svc = new AuthorizationService(repoReturning(EMPTY_PRINCIPAL_PERMISSIONS()), noCache())
     await expect(svc.assert('u1', 'event.update')).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it('uses a cached principal instead of loading from the repository', async () => {
+    const cachedPrincipal = EMPTY_PRINCIPAL_PERMISSIONS()
+    cachedPrincipal.templateKeys.add('event.update')
+    // The repo, if consulted, would deny — proving the answer came from the cache.
+    const repo = repoReturning(EMPTY_PRINCIPAL_PERMISSIONS())
+    const cache = cacheReturning(cachedPrincipal)
+    const svc = new AuthorizationService(repo, cache)
+    await expect(svc.can('u1', 'event.update')).resolves.toBe(true)
+    expect(repo.load).not.toHaveBeenCalled()
+  })
+
+  it('populates the cache with the loaded principal after a cache miss', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    const repo = repoReturning(p)
+    const cache = noCache()
+    const svc = new AuthorizationService(repo, cache)
+    await svc.can('u1', 'event.update')
+    expect(cache.set).toHaveBeenCalledWith('u1', p)
   })
 })

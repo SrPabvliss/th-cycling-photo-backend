@@ -37,8 +37,8 @@ export class AuthorizationService {
   ) {}
 
   async can(userId: string, key: PermissionKey, eventId?: string): Promise<boolean> {
+    if (!Object.hasOwn(PERMISSIONS, key)) throw new Error(`Unknown permission key: ${String(key)}`)
     const meta = PERMISSIONS[key]
-    if (!meta) throw new Error(`Unknown permission key: ${String(key)}`)
 
     const p = await this.principal(userId)
 
