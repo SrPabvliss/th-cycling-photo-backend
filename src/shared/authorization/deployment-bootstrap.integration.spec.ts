@@ -171,14 +171,12 @@ describe('deployment bootstrap', () => {
     authUserRepo = module.get(AuthUserRepository)
     userWriteRepo = module.get(USER_WRITE_REPOSITORY)
 
-    // 4. Reference rows the catalog sync deliberately does NOT own: the
-    //    legacy `roles` table and a country for the buyer's customer profile.
-    //    Registration and staff creation both fail without them, and neither
-    //    is part of the permission catalog, so they are set up here rather
-    //    than being smuggled into the sync step.
-    await prisma.role.createMany({
-      data: [{ name: 'admin' }, { name: 'operator' }, { name: 'customer' }],
-    })
+    // 4. A country for the buyer's customer profile — reference data outside
+    //    the permission catalog and not part of any migration, so it is set
+    //    up here. The legacy `roles` table used to need the same treatment,
+    //    but migration `20260818232527_tit38_seed_legacy_roles` now inserts
+    //    those rows idempotently, so `migrate deploy` above already provides
+    //    them — proving that path for real is the point of this test.
     const country = await prisma.country.create({ data: { name: 'Ecuador', iso_code: 'EC' } })
     countryId = country.id
   }, 600_000)

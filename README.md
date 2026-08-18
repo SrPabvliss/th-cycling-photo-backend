@@ -110,6 +110,15 @@ Before getting started, make sure you have the following installed:
    — the same implementation, without the user-creating half. Both paths are
    idempotent and safe to re-run.
 
+   That combination — `migrate deploy` + catalog sync — leaves you with a
+   working permission system and the legacy `roles` rows registration still
+   depends on (a dedicated data migration inserts those idempotently). It
+   does **not** create any user accounts: a genuinely fresh database has
+   nobody who can log in. The first admin/operator/customer accounts come
+   from running this seed (dev) or another provisioning step (production,
+   where the database has historically always been pre-populated rather than
+   started empty).
+
 ---
 
 ## 📜 Available Scripts
