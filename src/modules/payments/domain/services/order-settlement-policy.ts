@@ -10,7 +10,11 @@ export type OrderSettlementDecisionType =
   (typeof OrderSettlementDecision)[keyof typeof OrderSettlementDecision]
 
 export function decideOrderSettlement(status: OrderStatusType): OrderSettlementDecisionType {
-  if (status === OrderStatus.PENDING || status === OrderStatus.PAYMENT_INFO_SENT) {
+  if (
+    status === OrderStatus.DRAFT ||
+    status === OrderStatus.PENDING ||
+    status === OrderStatus.PAYMENT_INFO_SENT
+  ) {
     return OrderSettlementDecision.SETTLE
   }
 

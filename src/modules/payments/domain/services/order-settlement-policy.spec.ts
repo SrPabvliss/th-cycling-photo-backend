@@ -2,6 +2,10 @@ import { OrderStatus, type OrderStatusType } from '@orders/domain/value-objects/
 import { decideOrderSettlement, OrderSettlementDecision } from './order-settlement-policy'
 
 describe('decideOrderSettlement', () => {
+  it('settles a draft order, since a card payment is exactly what a draft is for', () => {
+    expect(decideOrderSettlement(OrderStatus.DRAFT)).toBe(OrderSettlementDecision.SETTLE)
+  })
+
   it('settles a pending order', () => {
     expect(decideOrderSettlement(OrderStatus.PENDING)).toBe(OrderSettlementDecision.SETTLE)
   })
@@ -37,6 +41,7 @@ describe('decideOrderSettlement', () => {
     const decisions = statuses.map((status) => decideOrderSettlement(status))
 
     expect(decisions).toEqual([
+      OrderSettlementDecision.SETTLE,
       OrderSettlementDecision.SETTLE,
       OrderSettlementDecision.SETTLE,
       OrderSettlementDecision.ALREADY_SETTLED,

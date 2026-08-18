@@ -40,6 +40,15 @@ export class CartWriteRepository implements ICartWriteRepository {
     return this.getSummary(cartId)
   }
 
+  async removeItems(cartId: string, photoIds: string[]): Promise<void> {
+    if (photoIds.length === 0) return
+
+    await this.prisma.cartItem.updateMany({
+      where: { cart_id: cartId, photo_id: { in: photoIds }, removed_at: null },
+      data: { removed_at: new Date() },
+    })
+  }
+
   async mergeAnonymousToUser(sessionCartId: string, userCartId: string): Promise<number> {
     return this.prisma.$transaction(async (tx) => {
       const sessionItems = await tx.cartItem.findMany({

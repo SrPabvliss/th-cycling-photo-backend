@@ -7,7 +7,10 @@ import {
   ConfirmPaymentTransactionHandler,
   CreatePaymentIntentHandler,
 } from '@payments/application/commands'
-import { GetPaymentAccountHandler } from '@payments/application/queries'
+import {
+  GetPaymentAccountHandler,
+  GetPaymentTransactionHandler,
+} from '@payments/application/queries'
 import { PaymentConfirmationScheduler } from '@payments/application/services/payment-confirmation-scheduler.service'
 import { SellerAccountSuspension } from '@payments/application/services/seller-account-suspension.service'
 import {
@@ -38,6 +41,7 @@ import { PaymentsController } from '@payments/presentation/controllers/payments.
     PaymentAmountCalculator,
     ConfigurePaymentAccountHandler,
     GetPaymentAccountHandler,
+    GetPaymentTransactionHandler,
     CreatePaymentIntentHandler,
     ConfirmPaymentTransactionHandler,
     PaymentConfirmationScheduler,
@@ -55,6 +59,6 @@ import { PaymentsController } from '@payments/presentation/controllers/payments.
     { provide: PAYMENT_TRANSACTION_WRITE_REPOSITORY, useClass: PaymentTransactionWriteRepository },
     { provide: ORDER_PAYMENT_CONTEXT_REPOSITORY, useClass: OrderPaymentContextRepository },
   ],
-  exports: [SELLER_PAYMENT_ACCOUNT_READ_REPOSITORY],
+  exports: [SELLER_PAYMENT_ACCOUNT_READ_REPOSITORY, PAYMENT_TRANSACTION_WRITE_REPOSITORY],
 })
 export class PaymentsModule {}

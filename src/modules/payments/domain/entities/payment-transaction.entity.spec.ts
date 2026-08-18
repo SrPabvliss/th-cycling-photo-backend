@@ -12,7 +12,7 @@ const AMOUNTS = {
 
 function buildTransaction(): PaymentTransaction {
   return PaymentTransaction.start({
-    orderId: 'order-1',
+    orderIds: ['order-1'],
     provider: 'payphone',
     clientTransactionId: 'tx-1',
     amounts: AMOUNTS,
@@ -125,5 +125,79 @@ describe('PaymentTransaction.markExpired', () => {
     transaction.markExpired()
 
     expect(transaction.status).toBe(PaymentTransactionStatus.APPROVED)
+  })
+})
+
+describe('reviving an expired transaction', () => {
+  it('lets markApproved move an expired transaction to approved', () => {
+    const transaction = buildTransaction()
+    transaction.markExpired()
+
+    transaction.markApproved(APPROVED)
+
+    expect(transaction.status).toBe(PaymentTransactionStatus.APPROVED)
+    expect(transaction.gatewayTransactionId).toBe('99')
+  })
+
+  it('lets markDeclined move an expired transaction to declined', () => {
+    const transaction = buildTransaction()
+    transaction.markExpired()
+
+    transaction.markDeclined({ ...APPROVED, approved: false, message: 'Fondos Insuficientes' })
+
+    expect(transaction.status).toBe(PaymentTransactionStatus.DECLINED)
+    expect(transaction.failureMessage).toBe('Fondos Insuficientes')
+  })
+
+  it('still refuses to move an approved transaction to declined', () => {
+    const transaction = buildTransaction()
+    transaction.markApproved(APPROVED)
+
+    transaction.markDeclined({ ...APPROVED, approved: false, message: 'late' })
+
+    expect(transaction.status).toBe(PaymentTransactionStatus.APPROVED)
+  })
+
+  it('still refuses to move a declined transaction to approved', () => {
+    const transaction = buildTransaction()
+    transaction.markDeclined({ ...APPROVED, approved: false, message: 'Fondos Insuficientes' })
+
+    transaction.markApproved(APPROVED)
+
+    expect(transaction.status).toBe(PaymentTransactionStatus.DECLINED)
+  })
+})
+
+const MULTI_AMOUNTS = {
+  amountCents: 3000,
+  amountWithoutTaxCents: 3000,
+  amountWithTaxCents: 0,
+  taxCents: 0,
+}
+
+function startTransaction(orderIds: string[]) {
+  return PaymentTransaction.start({
+    orderIds,
+    provider: 'payphone',
+    clientTransactionId: 'tt-multi',
+    amounts: MULTI_AMOUNTS,
+    commissionCents: 173,
+    mode: PaymentMode.OWN_MERCHANT,
+    receiver: 'store-1',
+    storeId: 'store-1',
+    transferToCents: null,
+  })
+}
+
+describe('PaymentTransaction', () => {
+  it('starts covering every order it was given', () => {
+    const transaction = startTransaction(['order-1', 'order-2'])
+
+    expect(transaction.orderIds).toEqual(['order-1', 'order-2'])
+    expect(transaction.status).toBe(PaymentTransactionStatus.INITIATED)
+  })
+
+  it('rejects an empty order set, since a payment with nothing to settle is meaningless', () => {
+    expect(() => startTransaction([])).toThrow()
   })
 })

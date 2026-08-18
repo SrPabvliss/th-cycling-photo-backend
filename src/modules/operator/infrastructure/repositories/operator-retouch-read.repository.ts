@@ -201,7 +201,7 @@ export class OperatorRetouchReadRepository implements IOperatorRetouchReadReposi
   ): Promise<OperatorRetouchOrderDetailRow | null> {
     const itemsWhere = onlyPending ? { photo: PENDING_PHOTO_FILTER } : undefined
     const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
+      where: { id: orderId, status: 'paid' },
       select: {
         id: true,
         event_id: true,

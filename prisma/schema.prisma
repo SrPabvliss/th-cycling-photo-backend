@@ -85,6 +85,7 @@ enum PreviewLinkStatus {
 }
 
 enum OrderStatus {
+  draft
   pending
   payment_info_sent
   paid
@@ -148,6 +149,13 @@ enum PaymentProvider {
   payphone
 
   @@map("payment_provider")
+}
+
+enum PaymentMethod {
+  card
+  transfer
+
+  @@map("payment_method")
 }
 
 enum PaymentAccountStatus {
@@ -258,24 +266,24 @@ model User {
   customer_profile      CustomerProfile?
   consents              UserConsent[]
 
-  events_created         Event[]          @relation("EventCreatedBy")
-  events_updated         Event[]          @relation("EventUpdatedBy")
-  photos_created         Photo[]          @relation("PhotoCreatedBy")
-  photos_updated         Photo[]          @relation("PhotoUpdatedBy")
-  photos_retouched       Photo[]          @relation("PhotoRetouchedBy")
-  created_bibs           PhotoBib[]       @relation("UserCreatedBibs")
-  created_colors         PhotoColor[]     @relation("UserCreatedColors")
-  deleted_bibs           PhotoBib[]       @relation("UserDeletedBibs")
-  deleted_colors         PhotoColor[]     @relation("UserDeletedColors")
-  corrections            Correction[]     @relation("UserCorrections")
-  preview_links_created  PreviewLink[]    @relation("PreviewLinkCreatedBy")
-  orders_confirmed       Order[]          @relation("OrderConfirmedBy")
-  orders_notified        Order[]          @relation("OrderNotifiedBy")
-  orders_placed          Order[]          @relation("OrderUser")
+  events_created         Event[]               @relation("EventCreatedBy")
+  events_updated         Event[]               @relation("EventUpdatedBy")
+  photos_created         Photo[]               @relation("PhotoCreatedBy")
+  photos_updated         Photo[]               @relation("PhotoUpdatedBy")
+  photos_retouched       Photo[]               @relation("PhotoRetouchedBy")
+  created_bibs           PhotoBib[]            @relation("UserCreatedBibs")
+  created_colors         PhotoColor[]          @relation("UserCreatedColors")
+  deleted_bibs           PhotoBib[]            @relation("UserDeletedBibs")
+  deleted_colors         PhotoColor[]          @relation("UserDeletedColors")
+  corrections            Correction[]          @relation("UserCorrections")
+  preview_links_created  PreviewLink[]         @relation("PreviewLinkCreatedBy")
+  orders_confirmed       Order[]               @relation("OrderConfirmedBy")
+  orders_notified        Order[]               @relation("OrderNotifiedBy")
+  orders_placed          Order[]               @relation("OrderUser")
   carts                  Cart[]
   notifications          Notification[]
-  assigned_events        EventOperator[]  @relation("EventOperatorUser")
-  event_assignments_made EventOperator[]  @relation("EventOperatorAssignedBy")
+  assigned_events        EventOperator[]       @relation("EventOperatorUser")
+  event_assignments_made EventOperator[]       @relation("EventOperatorAssignedBy")
   seller_payment_account SellerPaymentAccount? @relation("SellerPaymentAccountUser")
 
   @@map("users")
@@ -635,40 +643,41 @@ model PreviewLinkPhoto {
 }
 
 model Order {
-  id                  String      @id @default(uuid()) @db.Uuid
-  preview_link_id     String?     @db.Uuid
-  event_id            String      @db.Uuid
-  user_id             String      @db.Uuid
-  status              OrderStatus @default(pending)
-  bib_number          String?     @db.VarChar(20)
-  subtotal            Decimal?    @db.Decimal(10, 2)
-  snap_currency       String?     @db.VarChar(3)
+  id                  String         @id @default(uuid()) @db.Uuid
+  preview_link_id     String?        @db.Uuid
+  event_id            String         @db.Uuid
+  user_id             String         @db.Uuid
+  status              OrderStatus    @default(pending)
+  payment_method      PaymentMethod? @map("payment_method")
+  bib_number          String?        @db.VarChar(20)
+  subtotal            Decimal?       @db.Decimal(10, 2)
+  snap_currency       String?        @db.VarChar(3)
   snap_pricing_config Json?
-  notes               String?     @db.Text
-  snap_first_name     String?     @db.VarChar(100)
-  snap_last_name      String?     @db.VarChar(100)
-  snap_email          String?     @db.VarChar(255)
-  snap_phone          String?     @db.VarChar(20)
+  notes               String?        @db.Text
+  snap_first_name     String?        @db.VarChar(100)
+  snap_last_name      String?        @db.VarChar(100)
+  snap_email          String?        @db.VarChar(255)
+  snap_phone          String?        @db.VarChar(20)
   snap_country_id     Int?
   snap_province_id    Int?
   snap_canton_id      Int?
-  snap_category_name  String?     @db.VarChar(100)
-  created_at          DateTime    @default(now()) @db.Timestamptz
-  notified_at         DateTime?   @db.Timestamptz
-  paid_at             DateTime?   @db.Timestamptz
-  delivered_at        DateTime?   @db.Timestamptz
-  cancelled_at        DateTime?   @db.Timestamptz
-  notified_by_id      String?     @db.Uuid
-  confirmed_by_id     String?     @db.Uuid
+  snap_category_name  String?        @db.VarChar(100)
+  created_at          DateTime       @default(now()) @db.Timestamptz
+  notified_at         DateTime?      @db.Timestamptz
+  paid_at             DateTime?      @db.Timestamptz
+  delivered_at        DateTime?      @db.Timestamptz
+  cancelled_at        DateTime?      @db.Timestamptz
+  notified_by_id      String?        @db.Uuid
+  confirmed_by_id     String?        @db.Uuid
 
-  preview_link         PreviewLink?         @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
-  event                Event                @relation(fields: [event_id], references: [id], onDelete: Restrict)
-  user                 User                 @relation("OrderUser", fields: [user_id], references: [id], onDelete: Restrict)
-  notified_by          User?                @relation("OrderNotifiedBy", fields: [notified_by_id], references: [id], onDelete: Restrict)
-  confirmed_by         User?                @relation("OrderConfirmedBy", fields: [confirmed_by_id], references: [id], onDelete: Restrict)
-  items                OrderItem[]
-  delivery_link        DeliveryLink?
-  payment_transactions PaymentTransaction[]
+  preview_link               PreviewLink?              @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
+  event                      Event                     @relation(fields: [event_id], references: [id], onDelete: Restrict)
+  user                       User                      @relation("OrderUser", fields: [user_id], references: [id], onDelete: Restrict)
+  notified_by                User?                     @relation("OrderNotifiedBy", fields: [notified_by_id], references: [id], onDelete: Restrict)
+  confirmed_by               User?                     @relation("OrderConfirmedBy", fields: [confirmed_by_id], references: [id], onDelete: Restrict)
+  items                      OrderItem[]
+  delivery_link              DeliveryLink?
+  payment_transaction_orders PaymentTransactionOrder[]
 
   @@index([preview_link_id])
   @@index([event_id])
@@ -903,11 +912,10 @@ model SellerPaymentAccount {
 }
 
 model PaymentTransaction {
-  id                      String          @id @default(uuid()) @db.Uuid
-  order_id                String          @db.Uuid
-  client_transaction_id   String          @unique @db.VarChar(50)
-  provider                PaymentProvider
-  gateway_transaction_id  String?         @db.VarChar(100)
+  id                     String          @id @default(uuid()) @db.Uuid
+  client_transaction_id  String          @unique @db.VarChar(50)
+  provider               PaymentProvider
+  gateway_transaction_id String?         @db.VarChar(100)
 
   status PaymentTransactionStatus @default(initiated)
 
@@ -932,9 +940,20 @@ model PaymentTransaction {
   created_at   DateTime  @default(now()) @db.Timestamptz
   updated_at   DateTime  @default(now()) @updatedAt @db.Timestamptz
 
-  order Order @relation(fields: [order_id], references: [id], onDelete: Restrict)
+  orders PaymentTransactionOrder[]
 
-  @@index([order_id])
   @@index([status])
   @@map("payment_transactions")
+}
+
+model PaymentTransactionOrder {
+  payment_transaction_id String @db.Uuid
+  order_id               String @db.Uuid
+
+  payment_transaction PaymentTransaction @relation(fields: [payment_transaction_id], references: [id], onDelete: Restrict)
+  order               Order              @relation(fields: [order_id], references: [id], onDelete: Restrict)
+
+  @@id([payment_transaction_id, order_id])
+  @@index([order_id])
+  @@map("payment_transaction_orders")
 }

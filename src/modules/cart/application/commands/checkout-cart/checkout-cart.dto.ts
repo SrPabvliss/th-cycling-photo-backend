@@ -1,8 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import {
+  PaymentMethod,
+  type PaymentMethodType,
+} from '@orders/domain/value-objects/payment-method.vo'
 import { Type } from 'class-transformer'
 import {
   ArrayMinSize,
   IsArray,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -35,4 +40,8 @@ export class CheckoutCartDto {
   @ValidateNested({ each: true })
   @Type(() => CheckoutCartItemDto)
   items: CheckoutCartItemDto[]
+
+  @ApiProperty({ enum: Object.values(PaymentMethod) })
+  @IsIn(Object.values(PaymentMethod))
+  method: PaymentMethodType
 }

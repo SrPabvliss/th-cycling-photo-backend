@@ -1,4 +1,5 @@
 export const OrderStatus = {
+  DRAFT: 'draft',
   PENDING: 'pending',
   PAYMENT_INFO_SENT: 'payment_info_sent',
   PAID: 'paid',

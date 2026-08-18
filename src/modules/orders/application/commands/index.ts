@@ -1,4 +1,6 @@
 export { CancelOrderCommand } from './cancel-order/cancel-order.command'
+export { ChoosePaymentMethodCommand } from './choose-payment-method/choose-payment-method.command'
+export { ChoosePaymentMethodDto } from './choose-payment-method/choose-payment-method.dto'
 export { ConfirmOrderPaymentCommand } from './confirm-order-payment/confirm-order-payment.command'
 export { ConvertOrderToGiftCommand } from './convert-order-to-gift/convert-order-to-gift.command'
 export { ConvertOrderToSaleCommand } from './convert-order-to-sale/convert-order-to-sale.command'

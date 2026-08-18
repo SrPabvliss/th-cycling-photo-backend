@@ -1,12 +1,18 @@
-import { Body, Controller, Param, Post } from '@nestjs/common'
-import { CommandBus } from '@nestjs/cqrs'
+import { Body, Controller, Get, Param, Post } from '@nestjs/common'
+import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import {
   ConfirmPaymentTransactionCommand,
   ConfirmPaymentTransactionDto,
   CreatePaymentIntentCommand,
+  CreatePaymentIntentDto,
 } from '@payments/application/commands'
-import { PaymentIntentProjection, PaymentResultProjection } from '@payments/application/projections'
+import {
+  PaymentIntentProjection,
+  PaymentResultProjection,
+  PaymentTransactionProjection,
+} from '@payments/application/projections'
+import { GetPaymentTransactionQuery } from '@payments/application/queries'
 import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
@@ -14,22 +20,24 @@ import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@
 @ApiBearerAuth()
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
 
   @Roles('customer')
-  @Post('orders/:orderId/intent')
+  @Post('intent')
   @SuccessMessage('success.CREATED', { entity: 'entities.payment' })
-  @ApiOperation({ summary: 'Prepare a payment box session for an order' })
-  @ApiParam({ name: 'orderId', description: 'Order UUID', format: 'uuid' })
+  @ApiOperation({ summary: 'Prepare one payment box session covering a group of orders' })
   @ApiEnvelopeResponse({
     status: 201,
     description: 'Payment box parameters',
     type: PaymentIntentProjection,
   })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
-  @ApiEnvelopeErrorResponse({ status: 422, description: 'Order or seller cannot take payments' })
-  async createIntent(@Param('orderId') orderId: string, @CurrentUser() user: ICurrentUser) {
-    return this.commandBus.execute(new CreatePaymentIntentCommand(orderId, user.userId))
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'One of the orders was not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Orders or seller cannot take payments' })
+  async createIntent(@Body() dto: CreatePaymentIntentDto, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new CreatePaymentIntentCommand(dto.orderIds, user.userId))
   }
 
   @Roles('customer')
@@ -49,5 +57,23 @@ export class PaymentsController {
     return this.commandBus.execute(
       new ConfirmPaymentTransactionCommand(dto.clientTransactionId, String(dto.id), user.userId),
     )
+  }
+
+  @Roles('customer')
+  @Get('transactions/:clientTransactionId')
+  @ApiOperation({ summary: 'Read a payment attempt the buyer started' })
+  @ApiParam({ name: 'clientTransactionId', description: 'Identifier this platform generated' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Payment attempt',
+    type: PaymentTransactionProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 403, description: 'The transaction belongs to someone else' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Transaction not found' })
+  async getTransaction(
+    @Param('clientTransactionId') clientTransactionId: string,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.queryBus.execute(new GetPaymentTransactionQuery(clientTransactionId, user.userId))
   }
 }

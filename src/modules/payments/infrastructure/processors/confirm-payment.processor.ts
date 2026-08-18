@@ -20,7 +20,11 @@ export interface ConfirmPaymentJobData {
 
 const CONFIRM_CONCURRENCY = Number.parseInt(process.env.PAYMENT_CONFIRM_CONCURRENCY ?? '5', 10)
 
-const SETTLEABLE_ORDER_STATUSES: string[] = [OrderStatus.PENDING, OrderStatus.PAYMENT_INFO_SENT]
+const SETTLEABLE_ORDER_STATUSES: string[] = [
+  OrderStatus.DRAFT,
+  OrderStatus.PENDING,
+  OrderStatus.PAYMENT_INFO_SENT,
+]
 
 @Processor('payment-confirmation', { concurrency: CONFIRM_CONCURRENCY })
 export class ConfirmPaymentProcessor extends WorkerHost {
@@ -54,21 +58,24 @@ export class ConfirmPaymentProcessor extends WorkerHost {
         return
       }
 
-      const context = await this.contextRepo.findByOrderId(current.orderId)
-      if (!context) {
+      const contexts = await this.contextRepo.findByOrderIds(current.orderIds)
+      if (contexts.length === 0) {
         this.logger.warn(
           `Approved payment ${clientTransactionId} has no order context, skipping healing dispatch`,
         )
         return
       }
 
-      if (!SETTLEABLE_ORDER_STATUSES.includes(context.status)) return
+      const pending = contexts.filter((context) =>
+        SETTLEABLE_ORDER_STATUSES.includes(context.status),
+      )
+      if (pending.length === 0) return
 
       await this.commandBus.execute(
         new ConfirmPaymentTransactionCommand(
           clientTransactionId,
           current.gatewayTransactionId,
-          context.buyerUserId,
+          contexts[0].buyerUserId,
         ),
       )
       return
@@ -78,7 +85,7 @@ export class ConfirmPaymentProcessor extends WorkerHost {
       if (transaction.isSettled) return
       transaction.markExpired()
       this.logger.error(
-        `Payment was never confirmed and the vendor will have reversed it. clientTransactionId=${clientTransactionId} orderId=${transaction.orderId}`,
+        `Payment was never confirmed and the vendor will have reversed it. clientTransactionId=${clientTransactionId} orderIds=${transaction.orderIds.join(',')}`,
       )
     })
   }

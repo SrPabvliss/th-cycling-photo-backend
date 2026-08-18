@@ -20,7 +20,7 @@ export class SellerAccountSuspension {
 
   async disableOnInvalidCredentials(
     error: unknown,
-    sellerUserId: string | undefined,
+    sellerUserId: string | null | undefined,
   ): Promise<void> {
     if (!(error instanceof AppException)) return
     if (error.messageKey !== 'payment.invalid_credentials') return

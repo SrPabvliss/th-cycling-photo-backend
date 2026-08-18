@@ -26,6 +26,7 @@ const ORDER_LIST_SELECT = {
   snap_phone: true,
   subtotal: true,
   snap_currency: true,
+  payment_method: true,
   user: {
     select: {
       id: true,
@@ -72,9 +73,14 @@ export class OrderReadRepository implements IOrderReadRepository {
     const where: Prisma.OrderWhereInput = {}
 
     if (filters.eventId) where.event_id = filters.eventId
-    // Default view ("Todos") hides cancelled orders; only the explicit filter surfaces them.
-    if (filters.status) where.status = filters.status as Prisma.EnumOrderStatusFilter
-    else where.status = { not: OrderStatus.CANCELLED }
+    if (filters.status) {
+      where.status =
+        filters.status === OrderStatus.DRAFT
+          ? { in: [] }
+          : (filters.status as Prisma.EnumOrderStatusFilter)
+    } else {
+      where.status = { notIn: [OrderStatus.CANCELLED, OrderStatus.DRAFT] }
+    }
     if (filters.search) {
       const term = filters.search
       where.OR = [
@@ -125,6 +131,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         subtotal: o.subtotal !== null ? o.subtotal.toString() : null,
         snapCurrency: o.snap_currency,
         hasDeliveryLink: o.delivery_link !== null,
+        paymentMethod: o.payment_method,
         previewPhotos: o.items.map((it) => ({
           photoId: it.photo.id,
           publicSlug: it.photo.public_slug,
@@ -140,7 +147,7 @@ export class OrderReadRepository implements IOrderReadRepository {
   /** Retrieves order detail with user, photos, and delivery link. */
   async getDetail(id: string): Promise<OrderDetailProjection | null> {
     const record = await this.prisma.order.findFirst({
-      where: { id },
+      where: { id, status: { not: OrderStatus.DRAFT } },
       select: {
         id: true,
         status: true,
@@ -156,6 +163,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         snap_email: true,
         subtotal: true,
         snap_currency: true,
+        payment_method: true,
         user: { select: { first_name: true, last_name: true } },
         event: { select: { name: true } },
         preview_link: { select: { token: true } },
@@ -201,6 +209,7 @@ export class OrderReadRepository implements IOrderReadRepository {
       eventName: record.event.name,
       subtotal: record.subtotal !== null ? record.subtotal.toString() : null,
       snapCurrency: record.snap_currency,
+      paymentMethod: record.payment_method,
       previewLinkToken: record.preview_link?.token ?? null,
       retouchProgress: {
         total: record.items.length,
@@ -228,7 +237,10 @@ export class OrderReadRepository implements IOrderReadRepository {
   async countByStatus(eventId?: string): Promise<Record<string, number>> {
     const groups = await this.prisma.order.groupBy({
       by: ['status'],
-      where: eventId ? { event_id: eventId } : undefined,
+      where: {
+        status: { not: OrderStatus.DRAFT },
+        ...(eventId ? { event_id: eventId } : {}),
+      },
       _count: { id: true },
     })
     return Object.fromEntries(groups.map((g) => [g.status, g._count.id]))
@@ -257,7 +269,7 @@ export class OrderReadRepository implements IOrderReadRepository {
   /** Checks if any order line item references this photo. */
   async existsByPhotoId(photoId: string): Promise<boolean> {
     const count = await this.prisma.orderItem.count({
-      where: { photo_id: photoId },
+      where: { photo_id: photoId, order: { status: { not: OrderStatus.DRAFT } } },
     })
     return count > 0
   }
@@ -319,11 +331,10 @@ export class OrderReadRepository implements IOrderReadRepository {
     const orders = await this.prisma.order.findMany({
       where: {
         items: { some: { photo_id: photoId } },
-        NOT: {
-          items: {
-            some: { photo: { retouched_at: null, requires_retouch: true } },
-          },
-        },
+        NOT: [
+          { items: { some: { photo: { retouched_at: null, requires_retouch: true } } } },
+          { status: OrderStatus.DRAFT },
+        ],
       },
       select: {
         id: true,
@@ -336,5 +347,18 @@ export class OrderReadRepository implements IOrderReadRepository {
     })
 
     return orders.map(OrderMapper.toRetouchCompletedProjection)
+  }
+
+  /** Distinct photo IDs across the given orders' line items. */
+  async getPhotoIdsByOrderIds(orderIds: string[]): Promise<string[]> {
+    if (orderIds.length === 0) return []
+
+    const items = await this.prisma.orderItem.findMany({
+      where: { order_id: { in: orderIds } },
+      select: { photo_id: true },
+      distinct: ['photo_id'],
+    })
+
+    return items.map((i) => i.photo_id)
   }
 }
