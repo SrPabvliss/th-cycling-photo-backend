@@ -18,6 +18,7 @@ import { PrismaService } from '../src/shared/infrastructure'
 import { STORAGE_ADAPTER } from '../src/shared/storage/domain/ports/storage-adapter.port'
 import { createAuthenticatedUser, type TestAuthUser } from './fixtures/factories/auth.factory'
 import { createPhotoFixture } from './fixtures/factories/photo.factory'
+import { getPlatformTenantId } from './fixtures/factories/tenant.factory'
 
 describe('Photos Module (e2e)', () => {
   let app: INestApplication<App>
@@ -81,6 +82,7 @@ describe('Photos Module (e2e)', () => {
       update: {},
       create: { name: 'road_race' },
     })
+    const tenantId = await getPlatformTenantId(prisma)
 
     const event = await prisma.event.create({
       data: {
@@ -89,6 +91,7 @@ describe('Photos Module (e2e)', () => {
         start_date: futureDate,
         end_date: futureDate,
         event_type_id: eventType.id,
+        tenant_id: tenantId,
       },
     })
     testEventId = event.id
@@ -204,6 +207,7 @@ describe('Photos Module (e2e)', () => {
       futureDate.setFullYear(futureDate.getFullYear() + 1)
 
       const eventType = await prisma.eventType.findFirst({ where: { name: 'road_race' } })
+      const tenantId = await getPlatformTenantId(prisma)
       const emptyEvent = await prisma.event.create({
         data: {
           name: 'Empty Event',
@@ -211,6 +215,7 @@ describe('Photos Module (e2e)', () => {
           start_date: futureDate,
           end_date: futureDate,
           event_type_id: eventType!.id,
+          tenant_id: tenantId,
         },
       })
 

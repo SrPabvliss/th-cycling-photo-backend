@@ -22,6 +22,7 @@ describe('ConfirmPhotoBatchHandler', () => {
   const existingEvent = Event.fromPersistence({
     slug: 'test-event',
     id: eventId,
+    tenantId: '11111111-1111-4111-8111-111111111111',
     name: 'Test Event',
     startDate: futureDate,
     endDate: futureDate,

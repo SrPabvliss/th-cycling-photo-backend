@@ -107,6 +107,7 @@ export type PublicEventDetailSelect = Prisma.EventGetPayload<{
 export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
   return {
     id: entity.id,
+    tenant_id: entity.tenantId,
     name: entity.name,
     slug: entity.slug,
     start_date: entity.startDate,
@@ -127,6 +128,7 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
 export function toEntity(record: PrismaEvent): Event {
   return Event.fromPersistence({
     id: record.id,
+    tenantId: record.tenant_id,
     name: record.name,
     slug: record.slug,
     startDate: record.start_date,

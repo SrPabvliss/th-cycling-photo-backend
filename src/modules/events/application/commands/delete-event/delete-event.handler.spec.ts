@@ -42,6 +42,7 @@ describe('DeleteEventHandler', () => {
     const existingEvent = Event.fromPersistence({
       slug: 'test-event',
       id: '550e8400-e29b-41d4-a716-446655440000',
+      tenantId: '11111111-1111-4111-8111-111111111111',
       name: 'Vuelta Ciclística',
       startDate: futureDate,
       endDate: futureDate,

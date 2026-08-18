@@ -9,6 +9,8 @@ import type { User } from '../entities'
 export interface IUserReadRepository {
   findById(id: string): Promise<User | null>
   findByEmail(email: string): Promise<User | null>
+  /** Returns the tenant a user belongs to, or null if they are not tenant-scoped (e.g. buyers). */
+  findTenantId(userId: string): Promise<string | null>
   getUsersList(
     pagination: Pagination,
     includeInactive?: boolean,
