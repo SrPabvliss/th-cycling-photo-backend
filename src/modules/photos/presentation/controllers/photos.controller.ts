@@ -141,16 +141,10 @@ export class PhotosController {
   }
 
   /**
-   * Returns paid orders with photos pending retouching, ordered FIFO.
-   *
-   * Not scoped to the caller's tenant: `GetPendingRetouchQuery` reads
-   * through `IOrderReadRepository`, which belongs to the orders module —
-   * out of this task's boundary (Task 12 owns Orders). `photo.retouch.read`
-   * is staff-only in the tenant template (see
-   * `permission-template.constants.ts`), so this does not reproduce the
-   * `/events/stats` leak today, but a tenant explicitly granted this
-   * permission would see pending-retouch orders across every tenant.
-   * Flagged for Task 12.
+   * Returns paid orders with photos pending retouching, ordered FIFO,
+   * scoped to the caller's tenant (Task 12 closed the gap Task 11 left
+   * open here — `GetPendingRetouchQuery` reads through
+   * `IOrderReadRepository`, which belongs to the orders module).
    */
   @RequirePermission('photo.retouch.read')
   @Get('photos/pending-retouch')
@@ -162,8 +156,8 @@ export class PhotosController {
     type: PendingRetouchOrderProjection,
     isArray: true,
   })
-  async getPendingRetouch() {
-    return this.queryBus.execute(new GetPendingRetouchQuery())
+  async getPendingRetouch(@CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetPendingRetouchQuery(user.userId))
   }
 
   /** Finds visually similar photos within the same event using vector embeddings. */

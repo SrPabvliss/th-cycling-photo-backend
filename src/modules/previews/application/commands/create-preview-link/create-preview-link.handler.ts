@@ -9,6 +9,10 @@ import {
   type IPreviewLinkWriteRepository,
   PREVIEW_LINK_WRITE_REPOSITORY,
 } from '@previews/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { CreatePreviewLinkCommand } from './create-preview-link.command'
 
@@ -20,15 +24,20 @@ export class CreatePreviewLinkHandler implements ICommandHandler<CreatePreviewLi
     @Inject(PREVIEW_LINK_WRITE_REPOSITORY) private readonly writeRepo: IPreviewLinkWriteRepository,
     @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     config: ConfigService,
   ) {
     this.previewBaseUrl = config.getOrThrow<string>('preview.baseUrl')
   }
 
   async execute(command: CreatePreviewLinkCommand): Promise<PreviewLinkCreatedProjection> {
-    // Validate event exists
-    const event = await this.eventReadRepo.findById(command.eventId)
+    // Scoped load, then assert — see Ruling 21. The scoped load is what
+    // enforces the tenant boundary; `assert` alone never compares the
+    // event's tenant to the caller's.
+    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('entities.event', command.eventId)
+    await this.authz.assert(command.audit.userId, 'preview_link.create', event.id)
 
     // Validate photos belong to this event
     const photoCount = await this.photoReadRepo.countByIds(command.photoIds)

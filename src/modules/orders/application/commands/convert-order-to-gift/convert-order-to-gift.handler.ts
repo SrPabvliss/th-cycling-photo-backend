@@ -7,6 +7,10 @@ import {
   ORDER_WRITE_REPOSITORY,
 } from '@orders/domain/ports'
 import type { EntityIdProjection } from '@shared/application'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { ConvertOrderToGiftCommand } from './convert-order-to-gift.command'
 
@@ -17,11 +21,15 @@ export class ConvertOrderToGiftHandler implements ICommandHandler<ConvertOrderTo
     private readonly writeRepo: IOrderWriteRepository,
     @Inject(ORDER_READ_REPOSITORY)
     private readonly readRepo: IOrderReadRepository,
+    @Inject(AUTHORIZATION_SERVICE)
+    private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(command: ConvertOrderToGiftCommand): Promise<EntityIdProjection> {
-    const order = await this.readRepo.findById(command.orderId)
+    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const order = await this.readRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
+    await this.authz.assert(command.audit.userId, 'order.convert_to_gift', order.eventId)
 
     order.convertToGift(command.audit.userId)
     await this.writeRepo.save(order)

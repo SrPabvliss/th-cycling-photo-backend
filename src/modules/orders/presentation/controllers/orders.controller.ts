@@ -24,7 +24,8 @@ import {
   GetOrdersStatsQuery,
 } from '@orders/application/queries'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Orders')
@@ -36,7 +37,7 @@ export class OrdersController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Roles('admin')
+  @RequirePermission('order.read')
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List orders with filters' })
@@ -46,17 +47,21 @@ export class OrdersController {
     type: OrderListProjection,
     isArray: true,
   })
-  async findAll(@Query() dto: GetOrdersListDto) {
+  async findAll(@Query() dto: GetOrdersListDto, @CurrentUser() user: ICurrentUser) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetOrdersListQuery(pagination, {
-      eventId: dto.eventId,
-      status: dto.status,
-      search: dto.search,
-    })
+    const query = new GetOrdersListQuery(
+      pagination,
+      {
+        eventId: dto.eventId,
+        status: dto.status,
+        search: dto.search,
+      },
+      user.userId,
+    )
     return this.queryBus.execute(query)
   }
 
-  @Roles('admin')
+  @RequirePermission('order.stats.read')
   @Get('stats')
   @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Get order statistics, optionally scoped to an event' })
@@ -66,11 +71,11 @@ export class OrdersController {
     description: 'Order statistics retrieved',
     type: OrdersStatsProjection,
   })
-  async getStats(@Query('eventId') eventId?: string) {
-    return this.queryBus.execute(new GetOrdersStatsQuery(eventId))
+  async getStats(@Query('eventId') eventId: string | undefined, @CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetOrdersStatsQuery(eventId, user.userId))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.read')
   @Get(':id')
   @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Get order detail' })
@@ -81,11 +86,11 @@ export class OrdersController {
     type: OrderDetailProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
-  async findOne(@Param('id') id: string) {
-    return this.queryBus.execute(new GetOrderDetailQuery(id))
+  async findOne(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetOrderDetailQuery(id, user.userId))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.notify_payment')
   @Patch(':id/notify-payment-info')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -104,7 +109,7 @@ export class OrdersController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @RequirePermission('order.confirm_payment')
   @Patch(':id/confirm-payment')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Confirm payment (pending → paid)' })
@@ -121,7 +126,7 @@ export class OrdersController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @RequirePermission('order.gift')
   @Patch(':id/gift')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -140,7 +145,7 @@ export class OrdersController {
     return this.commandBus.execute(new GiftOrderCommand(id, new AuditContext(user.userId)))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.convert_to_sale')
   @Patch(':id/convert-to-sale')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -159,7 +164,7 @@ export class OrdersController {
     return this.commandBus.execute(new ConvertOrderToSaleCommand(id, new AuditContext(user.userId)))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.convert_to_gift')
   @Patch(':id/convert-to-gift')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -178,7 +183,7 @@ export class OrdersController {
     return this.commandBus.execute(new ConvertOrderToGiftCommand(id, new AuditContext(user.userId)))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.deliver')
   @Patch(':id/send-delivery')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -197,7 +202,7 @@ export class OrdersController {
     return this.commandBus.execute(new SendDeliveryCommand(id, new AuditContext(user.userId)))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.delivery.regenerate')
   @Post(':id/regenerate-delivery')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Regenerate expired delivery link' })
@@ -213,7 +218,7 @@ export class OrdersController {
     return this.commandBus.execute(new RegenerateDeliveryCommand(id, new AuditContext(user.userId)))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.cancel')
   @Patch(':id/cancel')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -227,7 +232,7 @@ export class OrdersController {
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
   @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not cancellable' })
-  async cancel(@Param('id') id: string) {
-    return this.commandBus.execute(new CancelOrderCommand(id))
+  async cancel(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new CancelOrderCommand(id, user.userId))
   }
 }

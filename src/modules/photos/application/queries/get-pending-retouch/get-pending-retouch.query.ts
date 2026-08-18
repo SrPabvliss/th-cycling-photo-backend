@@ -1,1 +1,3 @@
-export class GetPendingRetouchQuery {}
+export class GetPendingRetouchQuery {
+  constructor(public readonly userId: string) {}
+}

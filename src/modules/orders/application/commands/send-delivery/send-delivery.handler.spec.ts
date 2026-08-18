@@ -1,12 +1,13 @@
+import type { NotificationsService } from '@notifications/application/services/notifications.service'
 import { AuditContext } from '@shared/application'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { Order } from '../../../domain/entities'
-import { ConvertOrderToGiftCommand } from './convert-order-to-gift.command'
-import { ConvertOrderToGiftHandler } from './convert-order-to-gift.handler'
+import { SendDeliveryCommand } from './send-delivery.command'
+import { SendDeliveryHandler } from './send-delivery.handler'
 
-describe('ConvertOrderToGiftHandler', () => {
+describe('SendDeliveryHandler', () => {
   const audit = new AuditContext('admin-1')
   const unrestrictedScope = EventScope.unrestricted()
 
@@ -22,22 +23,40 @@ describe('ConvertOrderToGiftHandler', () => {
   }
 
   function buildHandler() {
-    const readRepo = { findByIdInScope: jest.fn() }
-    const writeRepo = { save: jest.fn() }
+    const readRepo = {
+      findByIdInScope: jest.fn(),
+      getDetail: jest.fn().mockResolvedValue(null),
+    }
+    const writeRepo = {
+      save: jest.fn(),
+      updateItemsDeliveredAs: jest.fn().mockResolvedValue(undefined),
+    }
     const authz = {
       can: jest.fn(),
       assert: jest.fn().mockResolvedValue(undefined),
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as unknown as jest.Mocked<IAuthorizationService>
-    const handler = new ConvertOrderToGiftHandler(writeRepo as never, readRepo as never, authz)
-    return { readRepo, writeRepo, authz, handler }
+    const commandBus = {
+      execute: jest.fn().mockResolvedValue({ deliveryUrl: 'https://example.com/d/token' }),
+    }
+    const notifications = { emitOrderDelivered: jest.fn() } as unknown as jest.Mocked<
+      Pick<NotificationsService, 'emitOrderDelivered'>
+    >
+    const handler = new SendDeliveryHandler(
+      writeRepo as never,
+      readRepo as never,
+      authz,
+      commandBus as never,
+      notifications as never,
+    )
+    return { readRepo, writeRepo, authz, commandBus, notifications, handler }
   }
 
   it('throws when the order does not exist', async () => {
     const { readRepo, writeRepo, authz, handler } = buildHandler()
     readRepo.findByIdInScope.mockResolvedValue(null)
 
-    await expect(handler.execute(new ConvertOrderToGiftCommand('missing', audit))).rejects.toThrow(
+    await expect(handler.execute(new SendDeliveryCommand('missing', audit))).rejects.toThrow(
       AppException,
     )
     expect(writeRepo.save).not.toHaveBeenCalled()
@@ -51,7 +70,7 @@ describe('ConvertOrderToGiftHandler', () => {
     readRepo.findByIdInScope.mockResolvedValue(null)
 
     const error = await handler
-      .execute(new ConvertOrderToGiftCommand('other-tenant-order', audit))
+      .execute(new SendDeliveryCommand('other-tenant-order', audit))
       .catch((e) => e)
 
     expect(error).toBeInstanceOf(AppException)
@@ -61,18 +80,18 @@ describe('ConvertOrderToGiftHandler', () => {
     expect(writeRepo.save).not.toHaveBeenCalled()
   })
 
-  it('converts the order and saves it', async () => {
+  it('delivers a paid order and re-fetches detail with the same scope', async () => {
     const { readRepo, writeRepo, authz, handler } = buildHandler()
     const order = buildPaidOrder()
     readRepo.findByIdInScope.mockResolvedValue(order)
     writeRepo.save.mockResolvedValue(order)
 
-    const result = await handler.execute(new ConvertOrderToGiftCommand(order.id, audit))
+    const result = await handler.execute(new SendDeliveryCommand(order.id, audit))
 
-    expect(authz.assert).toHaveBeenCalledWith('admin-1', 'order.convert_to_gift', 'event-1')
-    expect(order.status).toBe('gifted')
-    expect(order.paidAt).toBeNull()
+    expect(authz.assert).toHaveBeenCalledWith('admin-1', 'order.deliver', 'event-1')
+    expect(order.status).toBe('delivered')
     expect(writeRepo.save).toHaveBeenCalledWith(order)
-    expect(result).toEqual({ id: order.id })
+    expect(readRepo.getDetail).toHaveBeenCalledWith(order.id, unrestrictedScope)
+    expect(result.orderId).toBe(order.id)
   })
 })
