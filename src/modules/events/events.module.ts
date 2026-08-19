@@ -47,8 +47,10 @@ const QueryHandlers = [
   GetPublicEventPhotosHandler,
 ]
 
+import { TenantsModule } from '../tenants/tenants.module'
+
 @Module({
-  imports: [CqrsModule, LocationsModule, UsersModule, forwardRef(() => PhotosModule)],
+  imports: [CqrsModule, LocationsModule, UsersModule, TenantsModule, forwardRef(() => PhotosModule)],
   controllers: [EventsController, PublicEventsController],
   providers: [
     ...CommandHandlers,

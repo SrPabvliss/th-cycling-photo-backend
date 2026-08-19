@@ -92,6 +92,5 @@ describe('PermissionRepository.load (grant shaping)', () => {
     // a different event's grant lands under its own key, not merged in
     expect(p.eventGrants.get('event-2')?.get('order.cancel')).toBe('deny')
     expect(p.eventGrants.size).toBe(2)
-
   })
 })

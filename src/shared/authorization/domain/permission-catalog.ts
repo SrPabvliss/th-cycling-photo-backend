@@ -94,6 +94,7 @@ export const PERMISSIONS = {
   'user.reset_password': E(true, false, 'users'),
   'user.avatar.manage': E(true, false, 'users'),
   // tenants and administration
+  'tenant.read': E(true, false, 'tenants'),
   'tenant.create': E(true, false, 'tenants'),
   'tenant.quota.set': E(true, false, 'tenants'),
   'permission.grant': E(true, false, 'admin'),

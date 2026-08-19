@@ -3,8 +3,8 @@ import type {
   IEventOperatorRepository,
 } from '@events/domain/ports/event-operator-repository.port'
 import { Injectable } from '@nestjs/common'
-import { PrismaService } from '@shared/infrastructure'
 import type { PermissionKey } from '@shared/authorization/domain/permission-catalog'
+import { PrismaService } from '@shared/infrastructure'
 
 const OPERATOR_PERMISSIONS: PermissionKey[] = [
   'photo.retouch.read',
@@ -44,12 +44,12 @@ export class EventOperatorRepository implements IEventOperatorRepository {
       where: { key: { in: OPERATOR_PERMISSIONS as string[] } },
       select: { id: true },
     })
-    
+
     await this.prisma.userPermissionGrant.deleteMany({
       where: {
         event_id: eventId,
         user_id: userId,
-        permission_id: { in: permissions.map(p => p.id) },
+        permission_id: { in: permissions.map((p) => p.id) },
       },
     })
   }
@@ -94,7 +94,7 @@ export class EventOperatorRepository implements IEventOperatorRepository {
     const user = await this.prisma.user.findFirst({
       where: {
         is_active: true,
-        permission_template: { key: 'platform_staff' }
+        permission_template: { key: 'platform_staff' },
       },
       select: { id: true },
       orderBy: { created_at: 'asc' },

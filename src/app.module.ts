@@ -30,6 +30,7 @@ import { PhotosModule } from './modules/photos/photos.module'
 import { PreviewsModule } from './modules/previews/previews.module'
 import { PricingModule } from './modules/pricing/pricing.module'
 import { UsersModule } from './modules/users/users.module'
+import { TenantsModule } from './modules/tenants/tenants.module'
 import { AiPipelineModule } from './shared/ai-pipeline/ai-pipeline.module'
 import { AuthorizationModule } from './shared/authorization/authorization.module'
 import { PermissionGuard } from './shared/authorization/infrastructure/guards/permission.guard'
@@ -107,6 +108,7 @@ import { StorageModule } from './shared/storage/storage.module'
     PhotoCategoriesModule,
     PhotosModule,
     PreviewsModule,
+    TenantsModule,
     UsersModule,
     AuthModule,
   ],
