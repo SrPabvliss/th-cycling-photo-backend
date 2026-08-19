@@ -1,11 +1,79 @@
-import { type INestApplication, RequestMethod } from '@nestjs/common'
-import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants'
-import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core'
-import { Test } from '@nestjs/testing'
+import { RequestMethod } from '@nestjs/common'
+import { METHOD_METADATA, MODULE_METADATA, PATH_METADATA } from '@nestjs/common/constants'
+import { MetadataScanner, Reflector } from '@nestjs/core'
 import { AppModule } from '../../app.module'
 import { IS_PUBLIC_KEY } from '../auth'
 import { IS_AUTHENTICATED_KEY } from './presentation/decorators/authenticated.decorator'
 import { PERMISSION_KEY } from './presentation/decorators/require-permission.decorator'
+
+// biome-ignore lint/suspicious/noExplicitAny: module classes are heterogeneous constructor functions
+type ModuleClass = new (...args: any[]) => unknown
+type ForwardReference = { forwardRef: () => unknown }
+type DynamicModuleLike = { module: ModuleClass; imports?: unknown[]; controllers?: ModuleClass[] }
+
+const isForwardReference = (x: unknown): x is ForwardReference =>
+  typeof x === 'object' && x !== null && typeof (x as ForwardReference).forwardRef === 'function'
+
+const isDynamicModule = (x: unknown): x is DynamicModuleLike =>
+  typeof x === 'object' && x !== null && 'module' in x
+
+/**
+ * Statically walks the module graph reachable from `AppModule` — the exact
+ * traversal Nest's own bootstrap performs to register routes — collecting
+ * every controller class along the way. It reads each module's `@Module()`
+ * decorator metadata directly via `Reflect.getMetadata` (the same technique
+ * `app.module.spec.ts` uses for `AppModule` itself) instead of compiling a
+ * `TestingModule` and calling `app.init()`.
+ *
+ * No provider is ever instantiated — `imports: [BullModule.forRootAsync(...)]`
+ * and friends are only ever read as inert `DynamicModule` descriptor objects,
+ * never resolved through Nest's DI container — so this needs no Postgres, no
+ * Redis, and no `AppModule` boot at all. `forwardRef(() => X)` entries (used
+ * throughout the module graph to break circular imports, e.g.
+ * `PhotosModule` <-> `EventsModule`) are unwrapped the same way Nest itself
+ * unwraps them.
+ */
+function collectControllers(): Set<ModuleClass> {
+  const controllers = new Set<ModuleClass>()
+  const visited = new Set<ModuleClass>()
+  const queue: unknown[] = [AppModule]
+
+  while (queue.length > 0) {
+    let entry = queue.shift()
+    if (isForwardReference(entry)) entry = entry.forwardRef()
+
+    let moduleClass: ModuleClass
+    let inlineImports: unknown[] = []
+    let inlineControllers: ModuleClass[] = []
+
+    if (typeof entry === 'function') {
+      moduleClass = entry as ModuleClass
+    } else if (isDynamicModule(entry)) {
+      moduleClass = entry.module
+      inlineImports = entry.imports ?? []
+      inlineControllers = entry.controllers ?? []
+    } else {
+      // Not a module reference (e.g. a provider token) — nothing reachable
+      // from AppModule's own import graph takes this shape, but skip rather
+      // than throw so an unexpected shape doesn't crash the whole census.
+      continue
+    }
+
+    if (visited.has(moduleClass)) continue
+    visited.add(moduleClass)
+
+    const staticImports: unknown[] = Reflect.getMetadata(MODULE_METADATA.IMPORTS, moduleClass) ?? []
+    const staticControllers: ModuleClass[] =
+      Reflect.getMetadata(MODULE_METADATA.CONTROLLERS, moduleClass) ?? []
+
+    for (const controller of [...staticControllers, ...inlineControllers]) {
+      controllers.add(controller)
+    }
+    queue.push(...staticImports, ...inlineImports)
+  }
+
+  return controllers
+}
 
 /**
  * Every route in the application must carry exactly one authorization
@@ -20,16 +88,17 @@ import { PERMISSION_KEY } from './presentation/decorators/require-permission.dec
  * Do not weaken this assertion to make it green early — the failing list
  * is the worklist.
  *
- * Discovery approach: `DiscoveryService` + `MetadataScanner` rather than
- * walking Express's router stack. The Express handler Nest registers per
- * route only carries metadata set directly on the controller *method* — a
- * marker applied at the *class* level (e.g. `AppController`'s `@Public()`)
- * never reaches it, which produces a false "unclassified" positive for an
- * already-correctly-classified route. `PermissionGuard` itself resolves
- * markers via `reflector.getAllAndOverride(key, [handler, class])`
- * (checking both), so this test mirrors that exactly by reading metadata
- * off the controller class and its prototype method directly, which is
- * accurate for both placements.
+ * Discovery approach: a static module-graph walk (see `collectControllers`
+ * above) rather than walking Express's router stack. The Express handler
+ * Nest registers per route only carries metadata set directly on the
+ * controller *method* — a marker applied at the *class* level (e.g.
+ * `AppController`'s `@Public()`) never reaches it, which produces a false
+ * "unclassified" positive for an already-correctly-classified route.
+ * `PermissionGuard` itself resolves markers via
+ * `reflector.getAllAndOverride(key, [handler, class])` (checking both), so
+ * this test mirrors that exactly by reading metadata off the controller
+ * class and its prototype method directly, which is accurate for both
+ * placements.
  *
  * Do not mix marker types across class and method level on the same
  * controller. `PermissionGuard` resolves by *type* first — it checks
@@ -49,34 +118,21 @@ import { PERMISSION_KEY } from './presentation/decorators/require-permission.dec
  * === undefined` check below, `unclassified` stays empty, and this test
  * would pass while checking nothing — permanently and silently, for the one
  * gate protecting the entire authorization model. The floor (117 routes
- * today) makes that failure mode loud instead of invisible.
+ * today) makes that failure mode loud instead of invisible. The same logic
+ * applies to `MODULE_METADATA` in `collectControllers`: if it silently
+ * resolved to `undefined`, every module's imports/controllers would read as
+ * empty, `collectControllers` would return nothing, `totalRoutes` would stay
+ * at 0, and this floor would still catch it.
  */
 describe('route classification', () => {
-  let app: INestApplication
-  let reflector: Reflector
-  let discovery: DiscoveryService
-  let scanner: MetadataScanner
-
-  beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
-    app = moduleRef.createNestApplication()
-    await app.init()
-    reflector = app.get(Reflector)
-    discovery = app.get(DiscoveryService)
-    scanner = app.get(MetadataScanner)
-  })
-
-  afterAll(() => app?.close())
-
   it('every route carries exactly one authorization marker', () => {
+    const reflector = new Reflector()
+    const scanner = new MetadataScanner()
     const unclassified: string[] = []
     let totalRoutes = 0
 
-    for (const wrapper of discovery.getControllers()) {
-      const { instance, metatype } = wrapper
-      if (!instance || !metatype) continue
-
-      const prototype = Object.getPrototypeOf(instance)
+    for (const controller of collectControllers()) {
+      const prototype = controller.prototype
 
       for (const methodName of scanner.getAllMethodNames(prototype)) {
         // biome-ignore lint/suspicious/noExplicitAny: reading a controller's own prototype method by name
@@ -86,7 +142,7 @@ describe('route classification', () => {
         if (httpMethod === undefined) continue // not an HTTP route handler
         totalRoutes++
 
-        const targets = [handler, metatype]
+        const targets = [handler, controller]
         const markers = [PERMISSION_KEY, IS_AUTHENTICATED_KEY, IS_PUBLIC_KEY].filter(
           (k) => reflector.getAllAndOverride(k, targets) !== undefined,
         )
@@ -95,7 +151,7 @@ describe('route classification', () => {
           const subPath: string = Reflect.getMetadata(PATH_METADATA, handler) ?? ''
           const verb = RequestMethod[httpMethod] ?? httpMethod
           unclassified.push(
-            `${metatype.name}.${methodName} [${verb} ${subPath}] (${markers.length} markers)`,
+            `${controller.name}.${methodName} [${verb} ${subPath}] (${markers.length} markers)`,
           )
         }
       }
