@@ -47,4 +47,13 @@ export const ROLE_INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   'admin POST /payments/intent',
   'admin POST /payments/confirm',
   'admin GET /payments/transactions/:clientTransactionId',
+
+  // TIT-40: operator role loses global retouching capabilities in favor of per-event grants.
+  'operator GET /operator/retouch/orders/:orderId',
+  'operator GET /operator/retouch/orders',
+  'operator GET /operator/events/:eventSlug/retouch-queue',
+  'operator GET /photos/pending-retouch',
+  'operator POST /photos/:id/retouched/presigned-url',
+  'operator POST /photos/:id/retouched/confirm',
+  'operator PATCH /photos/:id/retouch-flag',
 ])

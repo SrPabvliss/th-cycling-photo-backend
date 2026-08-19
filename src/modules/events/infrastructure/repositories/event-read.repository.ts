@@ -141,7 +141,7 @@ export class EventReadRepository implements IEventReadRepository {
       where: {
         status,
         deleted_at: null,
-        operators: { some: { user_id: operatorId } },
+        permission_grants: { some: { user_id: operatorId, permission: { key: 'photo.retouch.read' } } },
       },
       select: { id: true },
     })
@@ -152,7 +152,7 @@ export class EventReadRepository implements IEventReadRepository {
     const rows = await this.prisma.event.findMany({
       where: {
         deleted_at: null,
-        operators: { some: { user_id: operatorId } },
+        permission_grants: { some: { user_id: operatorId, permission: { key: 'photo.retouch.read' } } },
       },
       select: { id: true },
     })

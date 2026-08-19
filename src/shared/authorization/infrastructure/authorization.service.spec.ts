@@ -149,10 +149,10 @@ describe('AuthorizationService.resolveEventScope', () => {
     })
   })
 
-  it('includes per-event grants and EventOperator rows', async () => {
+  it('includes per-event grants', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.eventGrants.set('e1', new Map([['event.read', 'allow']]))
-    p.collaboratorEventIds = ['e2']
+    p.eventGrants.set('e2', new Map([['photo.read', 'allow']]))
     const svc = new AuthorizationService(repoReturning(p), noCache())
     const w = (await svc.resolveEventScope('u1')).toPrisma() as {
       OR: [unknown, { id: { in: string[] } }]

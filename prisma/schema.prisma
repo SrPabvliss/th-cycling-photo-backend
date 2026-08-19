@@ -290,8 +290,6 @@ model User {
   orders_placed          Order[]               @relation("OrderUser")
   carts                  Cart[]
   notifications          Notification[]
-  assigned_events        EventOperator[]       @relation("EventOperatorUser")
-  event_assignments_made EventOperator[]       @relation("EventOperatorAssignedBy")
   permission_grants      UserPermissionGrant[] @relation("GrantHolder")
   permissions_issued     UserPermissionGrant[] @relation("GrantIssuer")
   seller_payment_account SellerPaymentAccount? @relation("SellerPaymentAccountUser")
@@ -390,7 +388,6 @@ model Event {
   assets            EventAsset[]
   photo_categories  EventPhotoCategory[]
   cart_items        CartItem[]
-  operators         EventOperator[]
   permission_grants UserPermissionGrant[]
 
   @@index([status])
@@ -406,23 +403,7 @@ model Event {
   @@map("events")
 }
 
-model EventOperator {
-  id             String   @id @default(uuid()) @db.Uuid
-  event_id       String   @db.Uuid
-  user_id        String   @db.Uuid
-  assigned_at    DateTime @default(now()) @db.Timestamptz
-  assigned_by_id String   @db.Uuid
 
-  event       Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  user        User  @relation("EventOperatorUser", fields: [user_id], references: [id], onDelete: Cascade)
-  assigned_by User  @relation("EventOperatorAssignedBy", fields: [assigned_by_id], references: [id], onDelete: Restrict)
-
-  @@unique([event_id, user_id])
-  @@index([event_id])
-  @@index([user_id])
-  @@index([assigned_by_id])
-  @@map("event_operators")
-}
 
 model Photo {
   id       String @id @default(uuid()) @db.Uuid

@@ -36,7 +36,6 @@ export class PermissionRepository implements IPermissionRepository {
             permission: { select: { key: true } },
           },
         },
-        assigned_events: { select: { event_id: true } },
       },
     })
 
@@ -45,7 +44,6 @@ export class PermissionRepository implements IPermissionRepository {
     const result = EMPTY_PRINCIPAL_PERMISSIONS()
     result.tenantId = user.tenant_id
     result.isPlatform = user.tenant?.is_platform ?? false
-    result.collaboratorEventIds = user.assigned_events.map((a) => a.event_id)
 
     for (const tp of user.permission_template?.permissions ?? []) {
       if (isPermissionKey(tp.permission.key)) result.templateKeys.add(tp.permission.key)
