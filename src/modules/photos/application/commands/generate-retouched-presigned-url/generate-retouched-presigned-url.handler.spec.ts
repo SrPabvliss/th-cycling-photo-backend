@@ -1,5 +1,7 @@
 import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
 import { GenerateRetouchedPresignedUrlCommand } from './generate-retouched-presigned-url.command'
@@ -9,6 +11,8 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
   let handler: GenerateRetouchedPresignedUrlHandler
   let photoReadRepo: jest.Mocked<IPhotoReadRepository>
   let storageAdapter: jest.Mocked<IStorageAdapter>
+  let authz: jest.Mocked<IAuthorizationService>
+  const scope = EventScope.unrestricted()
 
   const existingPhoto = Photo.create({
     eventId: '550e8400-e29b-41d4-a716-446655440000',
@@ -21,6 +25,7 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
   beforeEach(() => {
     photoReadRepo = {
       findById: jest.fn(),
+      findByIdInScope: jest.fn(),
       existsByEventAndFilename: jest.fn(),
       getPhotosList: jest.fn(),
       getPhotoDetail: jest.fn(),
@@ -33,6 +38,7 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
       getClassifiedCountsByEventIds: jest.fn(),
       getAllPhotoKeysForEvent: jest.fn(),
       getResumePoint: jest.fn(),
+      getDistinctEventIdsForPhotoIds: jest.fn(),
       countAll: jest.fn(),
       sumAllFileSize: jest.fn(),
       countByIds: jest.fn(),
@@ -50,25 +56,48 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
       delete: jest.fn(),
     } as jest.Mocked<IStorageAdapter>
 
-    handler = new GenerateRetouchedPresignedUrlHandler(photoReadRepo, storageAdapter)
+    authz = {
+      can: jest.fn(),
+      assert: jest.fn().mockResolvedValue(undefined),
+      resolveEventScope: jest.fn().mockResolvedValue(scope),
+    } as jest.Mocked<IAuthorizationService>
+
+    handler = new GenerateRetouchedPresignedUrlHandler(photoReadRepo, storageAdapter, authz)
   })
 
-  it('should throw NOT_FOUND when photo does not exist', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(null)
+  it('should throw NOT_FOUND when photo does not exist (including out-of-scope)', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(null)
 
     const command = new GenerateRetouchedPresignedUrlCommand(
       'non-existent-id',
       'retouched.jpg',
       'image/jpeg',
+      'u1',
     )
 
     const error = await handler.execute(command).catch((e) => e)
     expect(error).toBeInstanceOf(AppException)
     expect(error.code).toBe('NOT_FOUND')
+    expect(authz.assert).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the caller lacks photo.retouch.upload for this event', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(existingPhoto)
+    authz.assert.mockRejectedValueOnce(new Error('Insufficient permissions'))
+
+    const command = new GenerateRetouchedPresignedUrlCommand(
+      existingPhoto.id,
+      'retouched.jpg',
+      'image/jpeg',
+      'u1',
+    )
+
+    await expect(handler.execute(command)).rejects.toThrow('Insufficient permissions')
+    expect(storageAdapter.getPresignedUrl).not.toHaveBeenCalled()
   })
 
   it('should generate presigned URL with retouched path prefix', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(existingPhoto)
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(existingPhoto)
     storageAdapter.getPresignedUrl.mockResolvedValueOnce({
       url: 'https://s3.us-east-005.backblazeb2.com/signed-url',
       objectKey: 'events/550e8400/retouched/uuid-retouched.jpg',
@@ -79,10 +108,12 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
       existingPhoto.id,
       'retouched.jpg',
       'image/jpeg',
+      'u1',
     )
 
     const result = await handler.execute(command)
 
+    expect(authz.assert).toHaveBeenCalledWith('u1', 'photo.retouch.upload', existingPhoto.eventId)
     expect(result.isDuplicate).toBe(false)
     expect(result.url).toBe('https://s3.us-east-005.backblazeb2.com/signed-url')
     expect(result.expiresIn).toBe(300)
@@ -94,7 +125,7 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
   })
 
   it('should sanitize file name in object key', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(existingPhoto)
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(existingPhoto)
     storageAdapter.getPresignedUrl.mockResolvedValueOnce({
       url: 'https://signed-url',
       objectKey: 'key',
@@ -105,6 +136,7 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
       existingPhoto.id,
       'file with spaces!@#.jpg',
       'image/jpeg',
+      'u1',
     )
 
     await handler.execute(command)

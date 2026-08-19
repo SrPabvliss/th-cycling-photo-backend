@@ -26,6 +26,7 @@ describe('ResetPasswordHandler', () => {
     readRepo = {
       findById: jest.fn(),
       findByEmail: jest.fn(),
+      findTenantId: jest.fn(),
       getUsersList: jest.fn(),
       getUserDetail: jest.fn(),
       findActiveAdminIds: jest.fn(),

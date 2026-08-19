@@ -26,7 +26,8 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } fr
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Events')
@@ -38,6 +39,7 @@ export class EventsController {
     private readonly queryBus: QueryBus,
   ) {}
 
+  @RequirePermission('event.read')
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List events with pagination' })
@@ -47,12 +49,18 @@ export class EventsController {
     type: EventListProjection,
     isArray: true,
   })
-  async findAll(@Query() dto: GetEventsListDto) {
+  async findAll(@Query() dto: GetEventsListDto, @CurrentUser() user: ICurrentUser) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetEventsListQuery(pagination, dto.includeArchived ?? false, dto.search)
+    const query = new GetEventsListQuery(
+      pagination,
+      dto.includeArchived ?? false,
+      dto.search,
+      user.userId,
+    )
     return this.queryBus.execute(query)
   }
 
+  @RequirePermission('event.stats.read')
   @Get('stats')
   @SuccessMessage('success.FETCHED', { entity: 'entities.stats' })
   @ApiOperation({ summary: 'Get global event and photo statistics' })
@@ -61,10 +69,11 @@ export class EventsController {
     description: 'Global statistics retrieved',
     type: EventsStatsProjection,
   })
-  async getStats() {
-    return this.queryBus.execute(new GetEventsStatsQuery())
+  async getStats(@CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetEventsStatsQuery(user.userId))
   }
 
+  @RequirePermission('event.read')
   @Get(':slug')
   @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Get event details by slug' })
@@ -75,12 +84,12 @@ export class EventsController {
     type: EventDetailProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async findOne(@Param('slug') slug: string) {
-    const query = new GetEventDetailQuery(slug)
+  async findOne(@Param('slug') slug: string, @CurrentUser() user: ICurrentUser) {
+    const query = new GetEventDetailQuery(slug, user.userId)
     return this.queryBus.execute(query)
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('event.create')
   @Post()
   @SuccessMessage('success.CREATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Create a new event' })
@@ -103,7 +112,7 @@ export class EventsController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('event.update')
   @Patch(':id')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Update an existing event' })
@@ -133,7 +142,7 @@ export class EventsController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @RequirePermission('event.archive')
   @Patch(':id/archive')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Archive an event' })
@@ -145,12 +154,12 @@ export class EventsController {
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
   @ApiEnvelopeErrorResponse({ status: 422, description: 'Event is already archived' })
-  async archive(@Param('id') id: string) {
-    const command = new ArchiveEventCommand(id)
+  async archive(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    const command = new ArchiveEventCommand(id, user.userId)
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @RequirePermission('event.restore')
   @Patch(':id/restore')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Restore an archived event' })
@@ -162,12 +171,12 @@ export class EventsController {
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
   @ApiEnvelopeErrorResponse({ status: 422, description: 'Event is not archived' })
-  async restore(@Param('id') id: string) {
-    const command = new RestoreEventCommand(id)
+  async restore(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    const command = new RestoreEventCommand(id, user.userId)
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @RequirePermission('event.delete')
   @Delete(':id')
   @SuccessMessage('success.DELETED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Delete an event' })
@@ -178,23 +187,23 @@ export class EventsController {
     type: EntityIdProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
-  async remove(@Param('id') id: string) {
-    const command = new DeleteEventCommand(id)
+  async remove(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    const command = new DeleteEventCommand(id, user.userId)
     return this.commandBus.execute(command)
   }
 
   // ─── Event Operator Assignment ──────────────────────────────────────────────
 
-  @Roles('admin', 'operator')
+  @RequirePermission('event.collaborator.read')
   @Get(':id/operators')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List operators assigned to an event' })
   @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
-  async getOperators(@Param('id') id: string) {
-    return this.queryBus.execute(new GetEventOperatorsQuery(id))
+  async getOperators(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetEventOperatorsQuery(id, user.userId))
   }
 
-  @Roles('admin')
+  @RequirePermission('event.collaborator.assign')
   @Post(':id/operators')
   @SuccessMessage('success.CREATED', { entity: 'entities.event_operator' })
   @ApiOperation({ summary: 'Assign an operator to an event' })
@@ -208,15 +217,19 @@ export class EventsController {
     await this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @RequirePermission('event.collaborator.unassign')
   @Delete(':id/operators/:userId')
   @HttpCode(200)
   @SuccessMessage('success.DELETED', { entity: 'entities.event_operator' })
   @ApiOperation({ summary: 'Unassign an operator from an event' })
   @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
   @ApiParam({ name: 'userId', description: 'Operator user UUID', format: 'uuid' })
-  async unassignOperator(@Param('id') id: string, @Param('userId') userId: string) {
-    const command = new UnassignOperatorCommand(id, userId)
+  async unassignOperator(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    const command = new UnassignOperatorCommand(id, userId, user.userId)
     await this.commandBus.execute(command)
   }
 }

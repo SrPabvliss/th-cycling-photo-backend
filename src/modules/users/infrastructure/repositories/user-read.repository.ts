@@ -31,6 +31,14 @@ export class UserReadRepository implements IUserReadRepository {
     return record ? UserMapper.toEntity(record) : null
   }
 
+  async findTenantId(userId: string): Promise<string | null> {
+    const record = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { tenant_id: true },
+    })
+    return record?.tenant_id ?? null
+  }
+
   async getUsersList(
     pagination: Pagination,
     includeInactive = false,

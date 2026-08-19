@@ -1,5 +1,10 @@
+import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
@@ -16,13 +21,23 @@ export class DeleteEventAssetHandler implements ICommandHandler<DeleteEventAsset
   private readonly logger = new Logger(DeleteEventAssetHandler.name)
 
   constructor(
+    @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
     @Inject(EVENT_ASSET_READ_REPOSITORY) private readonly readRepo: IEventAssetReadRepository,
     @Inject(EVENT_ASSET_WRITE_REPOSITORY) private readonly writeRepo: IEventAssetWriteRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
     @Inject(KV_STORAGE_ADAPTER) private readonly kvStorage: IKvStorageAdapter,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(command: DeleteEventAssetCommand): Promise<void> {
+    // Scoped load, then assert — see Ruling 21. `EventAsset` itself
+    // carries no tenant of its own; its parent Event does, so the
+    // tenant-boundary check happens against the scoped Event load.
+    const scope = await this.authz.resolveEventScope(command.userId)
+    const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
+    if (!event) throw AppException.notFound('Event', command.eventId)
+    await this.authz.assert(command.userId, 'event_asset.delete', event.id)
+
     const asset = await this.readRepo.findByEventAndType(command.eventId, command.assetType)
     if (!asset) throw AppException.notFound('EventAsset', command.assetType)
 

@@ -12,6 +12,10 @@ import {
   PHOTO_READ_REPOSITORY,
   PHOTO_WRITE_REPOSITORY,
 } from '@photos/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
@@ -31,11 +35,14 @@ export class ConfirmRetouchedUploadHandler
     @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
     @Inject(ORDER_READ_REPOSITORY) private readonly orderReadRepo: IOrderReadRepository,
     private readonly eventEmitter: EventEmitter2,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(command: ConfirmRetouchedUploadCommand): Promise<{ confirmed: boolean }> {
-    const photo = await this.photoReadRepo.findById(command.photoId)
+    const scope = await this.authz.resolveEventScope(command.retouchedById)
+    const photo = await this.photoReadRepo.findByIdInScope(command.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', command.photoId)
+    await this.authz.assert(command.retouchedById, 'photo.retouch.upload', photo.eventId)
 
     const expectedPrefix = `events/${photo.eventId}/retouched/`
     if (!command.objectKey.startsWith(expectedPrefix)) {

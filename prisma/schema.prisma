@@ -259,6 +259,14 @@ model User {
   created_at         DateTime  @default(now()) @db.Timestamptz
   last_login_at      DateTime? @db.Timestamptz
 
+  tenant_id           String? @db.Uuid
+  is_protected        Boolean @default(false)
+  permissions_version Int     @default(0)
+  tenant              Tenant? @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+
+  permission_template_id String?             @db.Uuid
+  permission_template    PermissionTemplate? @relation(fields: [permission_template_id], references: [id], onDelete: Restrict)
+
   user_roles            UserRole[]
   refresh_tokens        RefreshToken[]
   password_reset_tokens PasswordResetToken[]
@@ -284,8 +292,11 @@ model User {
   notifications          Notification[]
   assigned_events        EventOperator[]       @relation("EventOperatorUser")
   event_assignments_made EventOperator[]       @relation("EventOperatorAssignedBy")
+  permission_grants      UserPermissionGrant[] @relation("GrantHolder")
+  permissions_issued     UserPermissionGrant[] @relation("GrantIssuer")
   seller_payment_account SellerPaymentAccount? @relation("SellerPaymentAccountUser")
 
+  @@index([tenant_id])
   @@map("users")
 }
 
@@ -365,18 +376,22 @@ model Event {
   created_by_id String? @db.Uuid
   updated_by_id String? @db.Uuid
 
-  event_type       EventType            @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
-  province         Province?            @relation(fields: [province_id], references: [id])
-  canton           Canton?              @relation(fields: [canton_id], references: [id])
-  created_by       User?                @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
-  updated_by       User?                @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
-  photos           Photo[]
-  preview_links    PreviewLink[]
-  orders           Order[]
-  assets           EventAsset[]
-  photo_categories EventPhotoCategory[]
-  cart_items       CartItem[]
-  operators        EventOperator[]
+  tenant_id String @db.Uuid
+
+  event_type        EventType             @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
+  province          Province?             @relation(fields: [province_id], references: [id])
+  canton            Canton?               @relation(fields: [canton_id], references: [id])
+  created_by        User?                 @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  updated_by        User?                 @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  tenant            Tenant                @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  photos            Photo[]
+  preview_links     PreviewLink[]
+  orders            Order[]
+  assets            EventAsset[]
+  photo_categories  EventPhotoCategory[]
+  cart_items        CartItem[]
+  operators         EventOperator[]
+  permission_grants UserPermissionGrant[]
 
   @@index([status])
   @@index([event_type_id])
@@ -387,6 +402,7 @@ model Event {
   @@index([canton_id])
   @@index([created_by_id])
   @@index([updated_by_id])
+  @@index([tenant_id])
   @@map("events")
 }
 
@@ -887,6 +903,112 @@ model Notification {
 
   @@index([user_id, is_read, created_at(sort: Desc)])
   @@map("notifications")
+}
+
+// ─── Authorization ──────────────────────────────────────────────────────────
+
+model Tenant {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(200)
+  is_platform Boolean  @default(false)
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  users  User[]
+  events Event[]
+
+  @@map("tenants")
+}
+
+model Permission {
+  id                 String  @id @default(uuid()) @db.Uuid
+  key                String  @unique @db.VarChar(100)
+  category           String  @db.VarChar(50)
+  is_platform_only   Boolean @default(false)
+  allows_event_scope Boolean @default(false)
+
+  template_memberships PermissionTemplatePermission[]
+  grants               UserPermissionGrant[]
+
+  @@map("permissions")
+}
+
+model PermissionTemplate {
+  id               String  @id @default(uuid()) @db.Uuid
+  key              String  @unique @db.VarChar(50)
+  name             String  @db.VarChar(100)
+  is_platform_only Boolean @default(false)
+
+  permissions PermissionTemplatePermission[]
+  users       User[]
+
+  @@map("permission_templates")
+}
+
+model PermissionTemplatePermission {
+  template_id   String @db.Uuid
+  permission_id String @db.Uuid
+
+  template   PermissionTemplate @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  permission Permission         @relation(fields: [permission_id], references: [id], onDelete: Restrict)
+
+  @@id([template_id, permission_id])
+  @@map("permission_template_permissions")
+}
+
+enum GrantScopeType {
+  global
+  event
+
+  @@map("grant_scope_type")
+}
+
+enum GrantEffect {
+  allow
+  deny
+
+  @@map("grant_effect")
+}
+
+model UserPermissionGrant {
+  id            String         @id @default(uuid()) @db.Uuid
+  user_id       String         @db.Uuid
+  permission_id String         @db.Uuid
+  scope_type    GrantScopeType
+  event_id      String?        @db.Uuid
+  effect        GrantEffect
+  granted_by_id String         @db.Uuid
+  granted_at    DateTime       @default(now()) @db.Timestamptz
+
+  user       User       @relation("GrantHolder", fields: [user_id], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permission_id], references: [id], onDelete: Restrict)
+  event      Event?     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  granted_by User       @relation("GrantIssuer", fields: [granted_by_id], references: [id], onDelete: Restrict)
+
+  @@index([user_id])
+  @@index([event_id])
+  // Declared for Prisma Client's compound `WhereUniqueInput` only, so
+  // GrantPermissionHandler can `upsert` idempotently. THE PHYSICAL INDEX
+  // IS NOT WHAT THIS LINE WOULD CREATE: it already exists, built by the
+  // 20260818143434_tit38_grants migration's raw SQL, WITH `NULLS NOT
+  // DISTINCT` — the clause that makes two global grants (event_id IS
+  // NULL) collide as duplicates instead of Postgres's default of treating
+  // every NULL as distinct. Prisma's schema DSL cannot express `NULLS NOT
+  // DISTINCT` in an `@@unique`, so this declaration is deliberately
+  // incomplete: it exists for the generated TypeScript types only.
+  //
+  // THE MIGRATION FILE IS THE SOURCE OF TRUTH for what's actually on the
+  // database — this line is not. Never run `prisma migrate dev` or
+  // `prisma db push` from this schema: Prisma will see this `@@unique` as
+  // plain (NULLS-DISTINCT) drift from the real index and offer to "fix"
+  // it by recreating `user_permission_grants_unique` WITHOUT `NULLS NOT
+  // DISTINCT` — which reopens the duplicate-global-grant hole Task 4
+  // closed and proved shut against a live database (see
+  // count-active-permission-grant-holders.integration.spec.ts and
+  // grant-uniqueness.integration.spec.ts, which fail immediately if that
+  // ever happens). `prisma generate` only reads this file and never
+  // touches the database, so it remains safe.
+  @@unique([user_id, permission_id, scope_type, event_id], map: "user_permission_grants_unique")
+  @@map("user_permission_grants")
 }
 
 // ─── Payments ───────────────────────────────────────────────────────────────

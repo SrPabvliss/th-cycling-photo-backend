@@ -5,6 +5,10 @@ import {
 } from '@events/domain/ports/event-operator-repository.port'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { AssignOperatorCommand } from './assign-operator.command'
 
@@ -13,11 +17,15 @@ export class AssignOperatorHandler implements ICommandHandler<AssignOperatorComm
   constructor(
     @Inject(EVENT_OPERATOR_REPOSITORY) private readonly operatorRepo: IEventOperatorRepository,
     @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(command: AssignOperatorCommand): Promise<void> {
-    const event = await this.eventReadRepo.findById(command.eventId)
+    const scope = await this.authz.resolveEventScope(command.assignedById)
+    const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)
+
+    await this.authz.assert(command.assignedById, 'event.collaborator.assign', event.id)
 
     const alreadyAssigned = await this.operatorRepo.isAssigned(command.eventId, command.userId)
     if (alreadyAssigned) {

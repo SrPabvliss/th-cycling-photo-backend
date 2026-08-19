@@ -40,9 +40,12 @@ jobs:
       - run: pnpm build
 
   test:
-    name: Test
+    name: Unit Tests
     needs: lint
     runs-on: ubuntu-latest
+    # Unit project only. Needs no database, no Redis and no env vars:
+    # test/setup-unit-env.ts supplies placeholders. Integration specs
+    # (`*.integration.spec.ts`) run locally via `pnpm test:integration`.
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -51,5 +54,7 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      # Several unit specs import files that reference the generated (gitignored)
+      # Prisma client. `prisma generate` reads the schema only — no database.
       - run: npx prisma generate
       - run: pnpm test

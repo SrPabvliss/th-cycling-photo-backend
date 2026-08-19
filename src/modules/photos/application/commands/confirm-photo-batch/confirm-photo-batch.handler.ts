@@ -4,6 +4,10 @@ import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { Photo } from '@photos/domain/entities'
 import { type IPhotoWriteRepository, PHOTO_WRITE_REPOSITORY } from '@photos/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import type { Queue } from 'bullmq'
@@ -20,12 +24,23 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     @Inject(KV_STORAGE_ADAPTER) private readonly kvStorage: IKvStorageAdapter,
     @InjectQueue('embedding-generation') private readonly embeddingQueue: Queue,
     @InjectQueue('photo-classification') private readonly classificationQueue: Queue,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
-  /** Validates event, checks objectKey prefixes, and batch-inserts photo metadata. */
+  /**
+   * Validates event, checks objectKey prefixes, and batch-inserts photo metadata. See
+   * `GeneratePresignedUrlHandler` for why the boundary check uses `scope.includesEvent()`.
+   */
   async execute(command: ConfirmPhotoBatchCommand): Promise<ConfirmBatchProjection> {
+    if (!command.audit) {
+      throw AppException.internal('confirm_photo_batch.missing_audit_context')
+    }
+    const scope = await this.authz.resolveEventScope(command.audit.userId)
     const event = await this.eventReadRepo.findById(command.eventId)
-    if (!event) throw AppException.notFound('Event', command.eventId)
+    if (!event || !scope.includesEvent(event)) {
+      throw AppException.notFound('Event', command.eventId)
+    }
+    await this.authz.assert(command.audit.userId, 'photo.upload', event.id)
 
     const expectedPrefix = `events/${command.eventId}/`
     for (const item of command.photos) {

@@ -9,6 +9,10 @@ import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { OrderPaymentConfirmedProjection } from '@orders/application/projections'
 import { type IOrderReadRepository, ORDER_READ_REPOSITORY } from '@orders/domain/ports'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { RegenerateDeliveryCommand } from './regenerate-delivery.command'
 
@@ -20,13 +24,16 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
     @Inject(ORDER_READ_REPOSITORY) private readonly orderReadRepo: IOrderReadRepository,
     @Inject(DELIVERY_LINK_WRITE_REPOSITORY)
     private readonly deliveryWriteRepo: IDeliveryLinkWriteRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly commandBus: CommandBus,
   ) {}
 
   async execute(command: RegenerateDeliveryCommand): Promise<OrderPaymentConfirmedProjection> {
-    // 1. Find order
-    const order = await this.orderReadRepo.findById(command.orderId)
+    // 1. Scoped load, then assert — see Ruling 21.
+    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const order = await this.orderReadRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
+    await this.authz.assert(command.audit.userId, 'order.delivery.regenerate', order.eventId)
 
     // 2. Validate the order has been delivered, either as a sale or a gift
     const isDeliveredSale = order.status === OrderStatus.DELIVERED
@@ -55,7 +62,7 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
     })
 
     // 5. Build WhatsApp template
-    const detail = await this.orderReadRepo.getDetail(order.id)
+    const detail = await this.orderReadRepo.getDetail(order.id, scope)
     const photoCount = detail?.photos.length ?? 0
     const customerFirstName = detail?.snapFirstName ?? ''
     const whatsappTemplate = `¡Hola ${customerFirstName}! \u{1F504} Te enviamos un nuevo enlace de descarga para tus ${photoCount} fotos: ${deliveryResult.deliveryUrl}. Estará disponible por 7 días. ¡Gracias! \u{1F389}`

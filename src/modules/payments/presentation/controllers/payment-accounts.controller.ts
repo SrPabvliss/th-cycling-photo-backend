@@ -8,7 +8,8 @@ import {
 import { PaymentAccountProjection } from '@payments/application/projections'
 import { GetPaymentAccountQuery } from '@payments/application/queries'
 import { EntityIdProjection } from '@shared/application'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Payments')
@@ -20,7 +21,7 @@ export class PaymentAccountsController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Roles('admin', 'operator')
+  @RequirePermission('payment.account.read')
   @Get()
   @SuccessMessage('success.FETCHED', { entity: 'entities.payphone_account' })
   @ApiOperation({ summary: 'Get the payment account configured by the current user' })
@@ -33,7 +34,7 @@ export class PaymentAccountsController {
     return this.queryBus.execute(new GetPaymentAccountQuery(user.userId))
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('payment.account.configure')
   @Put()
   @SuccessMessage('success.UPDATED', { entity: 'entities.payphone_account' })
   @ApiOperation({ summary: 'Configure and verify the payment account of the current user' })

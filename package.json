@@ -31,10 +31,12 @@
     "start:debug": "NODE_ENV=development nest start --debug --watch",
     "start:test": "NODE_ENV=test nest start",
     "start:prod": "node -r tsconfig-paths/register dist/src/main",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test": "jest --selectProjects unit",
+    "test:integration": "NODE_OPTIONS='--experimental-vm-modules' jest --selectProjects integration",
+    "test:all": "NODE_OPTIONS='--experimental-vm-modules' jest",
+    "test:watch": "jest --watch --selectProjects unit",
+    "test:cov": "jest --coverage --selectProjects unit",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --selectProjects unit --runInBand",
     "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' NODE_ENV=test jest --config ./test/jest-e2e.json --forceExit --runInBand",
     "prepare": "husky"
   },
@@ -105,44 +107,5 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "testPathIgnorePatterns": [],
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "moduleNameMapper": {
-      "^@shared/(.*)$": "<rootDir>/shared/$1",
-      "^@generated/(.*)$": "<rootDir>/generated/$1",
-      "^@event-assets/(.*)$": "<rootDir>/modules/event-assets/$1",
-      "^@events/(.*)$": "<rootDir>/modules/events/$1",
-      "^@photo-categories/(.*)$": "<rootDir>/modules/photo-categories/$1",
-      "^@photos/(.*)$": "<rootDir>/modules/photos/$1",
-      "^@classifications/(.*)$": "<rootDir>/modules/classifications/$1",
-      "^@locations/(.*)$": "<rootDir>/modules/locations/$1",
-      "^@mail/(.*)$": "<rootDir>/modules/mail/$1",
-      "^@users/(.*)$": "<rootDir>/modules/users/$1",
-      "^@previews/(.*)$": "<rootDir>/modules/previews/$1",
-      "^@deliveries/(.*)$": "<rootDir>/modules/deliveries/$1",
-      "^@orders/(.*)$": "<rootDir>/modules/orders/$1",
-      "^@notifications/(.*)$": "<rootDir>/modules/notifications/$1",
-      "^@auth/(.*)$": "<rootDir>/modules/auth/$1",
-      "^@cart/(.*)$": "<rootDir>/modules/cart/$1",
-      "^@pricing/(.*)$": "<rootDir>/modules/pricing/$1",
-      "^@payments/(.*)$": "<rootDir>/modules/payments/$1",
-      "^(\\.{1,2}/.*)\\.js$": "$1"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
   }
 }

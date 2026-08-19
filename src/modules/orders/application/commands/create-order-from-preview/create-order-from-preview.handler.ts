@@ -16,6 +16,7 @@ import {
 } from '@previews/domain/ports'
 import { PreviewLinkStatus } from '@previews/domain/value-objects/preview-link-status.vo'
 import type { EntityIdProjection } from '@shared/application'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { AppException } from '@shared/domain'
 import { CreateOrderFromPreviewCommand } from './create-order-from-preview.command'
 
@@ -84,8 +85,12 @@ export class CreateOrderFromPreviewHandler
       await this.previewWriteRepo.save(previewLink)
     }
 
-    // 6. Emit notification (fetch detail to get eventName)
-    const detail = await this.orderReadRepo.getDetail(saved.id)
+    // 6. Emit notification (fetch detail to get eventName). This is a
+    // re-fetch of the order this handler itself just created for
+    // `previewLink.eventId` — not a caller-driven read that needs a
+    // tenant-boundary check, so `unrestricted()` is correct here rather
+    // than resolving the buyer's own (customer) scope.
+    const detail = await this.orderReadRepo.getDetail(saved.id, EventScope.unrestricted())
     this.notifications.emitOrderCreated({
       orderId: saved.id,
       eventName: detail?.eventName ?? '',

@@ -4,5 +4,6 @@ export class DeleteEventAssetCommand {
   constructor(
     public readonly eventId: string,
     public readonly assetType: EventAssetType,
+    public readonly userId: string,
   ) {}
 }

@@ -3,7 +3,8 @@ import { CommandBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { ChoosePaymentMethodCommand, ChoosePaymentMethodDto } from '@orders/application/commands'
 import { OrderPaymentMethodProjection } from '@orders/application/projections'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Orders (Checkout)')
@@ -12,7 +13,7 @@ import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@
 export class OrderCheckoutController {
   constructor(private readonly commandBus: CommandBus) {}
 
-  @Roles('customer')
+  @RequirePermission('order.payment_method.set')
   @Patch('payment-method')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Record the payment method the buyer chose for a group of orders' })

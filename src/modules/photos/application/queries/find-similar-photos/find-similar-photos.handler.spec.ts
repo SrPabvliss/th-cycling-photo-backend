@@ -1,5 +1,7 @@
 import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { FindSimilarPhotosHandler } from './find-similar-photos.handler'
 import { FindSimilarPhotosQuery } from './find-similar-photos.query'
 
@@ -31,30 +33,38 @@ describe('FindSimilarPhotosHandler', () => {
     retouchedAt: null,
   })
 
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope'>>
+  const scope = EventScope.unrestricted()
+
   beforeEach(() => {
     jest.clearAllMocks()
 
     photoReadRepo = {
       findById: jest.fn(),
+      findByIdInScope: jest.fn(),
       findSimilar: jest.fn(),
     } as unknown as jest.Mocked<IPhotoReadRepository>
 
-    handler = new FindSimilarPhotosHandler(photoReadRepo)
+    authz = { resolveEventScope: jest.fn().mockResolvedValue(scope) }
+
+    handler = new FindSimilarPhotosHandler(photoReadRepo, authz as never)
   })
 
-  it('should throw 404 when photo is not found', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(null)
+  it('should throw 404 when photo is not found (including out-of-scope)', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(null)
 
-    const query = new FindSimilarPhotosQuery(photoId)
+    const query = new FindSimilarPhotosQuery(photoId, 10, 'u1')
 
     await expect(handler.execute(query)).rejects.toThrow('errors.NOT_FOUND')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(photoReadRepo.findByIdInScope).toHaveBeenCalledWith(photoId, scope)
   })
 
   it('should return empty array when no similar photos', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(existingPhoto)
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(existingPhoto)
     photoReadRepo.findSimilar.mockResolvedValueOnce([])
 
-    const query = new FindSimilarPhotosQuery(photoId)
+    const query = new FindSimilarPhotosQuery(photoId, 10, 'u1')
     const result = await handler.execute(query)
 
     expect(result).toEqual([])
@@ -62,7 +72,7 @@ describe('FindSimilarPhotosHandler', () => {
   })
 
   it('should return similar photos with similarity scores', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(existingPhoto)
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(existingPhoto)
 
     photoReadRepo.findSimilar.mockResolvedValueOnce([
       {
@@ -85,7 +95,7 @@ describe('FindSimilarPhotosHandler', () => {
       },
     ])
 
-    const query = new FindSimilarPhotosQuery(photoId, 5)
+    const query = new FindSimilarPhotosQuery(photoId, 5, 'u1')
     const result = await handler.execute(query)
 
     expect(result).toHaveLength(2)

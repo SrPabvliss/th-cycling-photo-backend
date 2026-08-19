@@ -4,9 +4,12 @@ import configuration from '../src/config/configuration'
 import { Order } from '../src/modules/orders/domain/entities'
 import { OrderReadRepository } from '../src/modules/orders/infrastructure/repositories/order-read.repository'
 import { OrderWriteRepository } from '../src/modules/orders/infrastructure/repositories/order-write.repository'
+import { EventScope } from '../src/shared/authorization/domain/event-scope.vo'
 import { CdnUrlBuilder } from '../src/shared/cloudflare/infrastructure'
 import { PrismaService } from '../src/shared/infrastructure/prisma/prisma.service'
 import { createEventFixture, createUserFixture } from './fixtures/factories/user.factory'
+
+const unrestrictedScope = EventScope.unrestricted()
 
 describe('Order sale/gift conversion — revenue (integration)', () => {
   let prisma: PrismaService
@@ -69,19 +72,19 @@ describe('Order sale/gift conversion — revenue (integration)', () => {
   }
 
   it('drops the order out of revenue when converted to a gift, and back in when converted to a sale', async () => {
-    expect(await readRepo.sumRevenue(eventId)).toBe('17.5')
+    expect(await readRepo.sumRevenue(eventId, unrestrictedScope)).toBe('17.5')
 
     const delivered = await loadOrder()
     delivered.convertToGift(userId)
     await writeRepo.save(delivered)
 
-    expect(await readRepo.sumRevenue(eventId)).toBe('0')
+    expect(await readRepo.sumRevenue(eventId, unrestrictedScope)).toBe('0')
 
     const gifted = await loadOrder()
     gifted.convertToSale(userId)
     await writeRepo.save(gifted)
 
-    expect(await readRepo.sumRevenue(eventId)).toBe('17.5')
+    expect(await readRepo.sumRevenue(eventId, unrestrictedScope)).toBe('17.5')
   })
 
   it('keeps deliveredAt across a full round trip and lands back on delivered', async () => {

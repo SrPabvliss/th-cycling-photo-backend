@@ -5,6 +5,11 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { hashSync } from 'bcryptjs'
 import { config } from 'dotenv'
 import { PrismaClient } from '../src/generated/prisma/client'
+import {
+  TEMPLATE_KEYS,
+  type TemplateKey,
+} from '../src/shared/authorization/domain/permission-template.constants'
+import { syncPermissionCatalog } from '../src/shared/authorization/infrastructure/sync-permission-catalog'
 
 const env = process.env.NODE_ENV || 'development'
 config({ path: `.env.${env}` })
@@ -30,6 +35,31 @@ type LocationFile = {
     name: string
     cities: string[]
   }>
+}
+
+/**
+ * Resolves the single platform tenant's id. Created by the tenant-backfill migration, so it must
+ * already exist — a staff user seeded with `tenant_id = NULL` resolves to zero permissions.
+ */
+async function getPlatformTenantId(): Promise<string> {
+  const tenant = await prisma.tenant.findFirst({ where: { is_platform: true } })
+  if (!tenant) {
+    throw new Error(
+      'Platform tenant not found — the TIT-38 tenant migration must run before seeding staff users',
+    )
+  }
+  return tenant.id
+}
+
+/** Resolves a template id by key. Fails loudly if `syncPermissionCatalog()` has not run yet. */
+async function getPermissionTemplateId(key: TemplateKey): Promise<string> {
+  const template = await prisma.permissionTemplate.findUnique({ where: { key } })
+  if (!template) {
+    throw new Error(
+      `Permission template '${key}' not found — syncPermissionCatalog() must run before seeding users`,
+    )
+  }
+  return template.id
 }
 
 async function seedCountries() {
@@ -207,6 +237,11 @@ async function seedAdminUser() {
 
   const passwordHash = hashSync(password, 10)
 
+  // An admin needs the platform tenant and the platform_admin template, or it resolves to zero
+  // permissions.
+  const tenantId = await getPlatformTenantId()
+  const templateId = await getPermissionTemplateId(TEMPLATE_KEYS.PLATFORM_ADMIN)
+
   const user = await prisma.user.create({
     data: {
       email: adminEmail,
@@ -214,6 +249,8 @@ async function seedAdminUser() {
       first_name: 'Pablo',
       last_name: 'Villacres',
       is_active: true,
+      tenant_id: tenantId,
+      permission_template_id: templateId,
     },
   })
 
@@ -282,6 +319,12 @@ async function seedProtectedUser(
 
   const passwordHash = hashSync(password, 10)
 
+  // Operators join the platform tenant; customers stay tenant-less but still need a template.
+  const templateKey =
+    roleName === 'operator' ? TEMPLATE_KEYS.PLATFORM_STAFF : TEMPLATE_KEYS.CUSTOMER
+  const templateId = await getPermissionTemplateId(templateKey)
+  const tenantId = roleName === 'operator' ? await getPlatformTenantId() : null
+
   const user = await prisma.user.create({
     data: {
       email,
@@ -289,6 +332,8 @@ async function seedProtectedUser(
       first_name: defaults.firstName,
       last_name: defaults.lastName,
       is_active: true,
+      tenant_id: tenantId,
+      permission_template_id: templateId,
     },
   })
 
@@ -340,9 +385,96 @@ async function seedConsumerUser() {
   })
 }
 
+/**
+ * `ADMIN_SEED_EMAIL` IS the break-glass account. Marks it `is_protected = true`, idempotently.
+ *
+ * The tenant migration does the same, but only for users that already exist when it runs — on a
+ * fresh database that step is a no-op, so this is what designates the account.
+ *
+ * Fails loudly (never warns) when the variable is unset or matches no user: the protected account
+ * is why the TOCTOU race in the last-holder check was accepted rather than fixed, and that
+ * argument only holds if the account really exists.
+ */
+async function seedBreakGlassProtection() {
+  const targetEmail = process.env.ADMIN_SEED_EMAIL
+  if (!targetEmail) {
+    throw new Error(
+      'ADMIN_SEED_EMAIL is not set — there is no account to designate as break-glass. ' +
+        'The last-holder TOCTOU race has no compensating control without one — refusing to ' +
+        'finish the seed.',
+    )
+  }
+
+  const result = await prisma.user.updateMany({
+    where: { email: targetEmail },
+    data: { is_protected: true },
+  })
+
+  if (result.count === 0) {
+    throw new Error(
+      `ADMIN_SEED_EMAIL is set to '${targetEmail}' but no user has that email. ` +
+        'No account would be protected — refusing to finish the seed.',
+    )
+  }
+
+  await assertBreakGlassCanGrantPermissions(targetEmail)
+
+  console.log(`Marked ${targetEmail} as break-glass protected (is_protected = true)`)
+}
+
+/**
+ * Confirms the break-glass account resolves `permission.grant` to `allow`, reproducing
+ * `AuthorizationService.can()`'s precedence: platformOnly first, then the global grant (the key has
+ * `eventScope: false`), then template membership.
+ */
+async function assertBreakGlassCanGrantPermissions(email: string): Promise<void> {
+  const user = await prisma.user.findFirst({
+    where: { email },
+    select: {
+      is_active: true,
+      tenant: { select: { is_platform: true } },
+      permission_template: {
+        select: { key: true, permissions: { select: { permission: { select: { key: true } } } } },
+      },
+      permission_grants: {
+        where: { scope_type: 'global', permission: { key: 'permission.grant' } },
+        select: { effect: true },
+      },
+    },
+  })
+
+  const fail = (reason: string): never => {
+    throw new Error(
+      `Break-glass account ${email} cannot recover the platform: ${reason}. The last-holder ` +
+        'TOCTOU race has no compensating control without it — refusing to finish the seed.',
+    )
+  }
+
+  if (!user) fail('the account no longer exists')
+  if (!user?.is_active) fail('the account is deactivated')
+  if (!user?.tenant?.is_platform) {
+    fail('it is not on the platform tenant, and permission.grant is platform-only')
+  }
+
+  const grantEffect = user?.permission_grants[0]?.effect
+  if (grantEffect === 'deny') fail('an explicit global deny grant overrides its template')
+  if (grantEffect === 'allow') return
+
+  const templateKeys = (user?.permission_template?.permissions ?? []).map((p) => p.permission.key)
+  if (!templateKeys.includes('permission.grant')) {
+    fail(
+      `its permission template ('${user?.permission_template?.key ?? 'none'}') does not include ` +
+        'permission.grant',
+    )
+  }
+}
+
 async function main() {
   console.log('Seeding database...')
 
+  // Same implementation the deploy path runs via `sync-permission-catalog.cli.ts`, so the seeded
+  // and deployed catalogs can't drift.
+  await syncPermissionCatalog(prisma)
   await seedCountries()
   await seedLocations()
   await seedEventTypes()
@@ -352,6 +484,7 @@ async function main() {
   await seedAdminUser()
   await seedOperatorUser()
   await seedConsumerUser()
+  await seedBreakGlassProtection()
 
   console.log('Seeding completed.')
 }
