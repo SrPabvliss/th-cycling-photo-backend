@@ -18,20 +18,9 @@ const isDynamicModule = (x: unknown): x is DynamicModuleLike =>
   typeof x === 'object' && x !== null && 'module' in x
 
 /**
- * Statically walks the module graph reachable from `AppModule` — the exact
- * traversal Nest's own bootstrap performs to register routes — collecting
- * every controller class along the way. It reads each module's `@Module()`
- * decorator metadata directly via `Reflect.getMetadata` (the same technique
- * `app.module.spec.ts` uses for `AppModule` itself) instead of compiling a
- * `TestingModule` and calling `app.init()`.
- *
- * No provider is ever instantiated — `imports: [BullModule.forRootAsync(...)]`
- * and friends are only ever read as inert `DynamicModule` descriptor objects,
- * never resolved through Nest's DI container — so this needs no Postgres, no
- * Redis, and no `AppModule` boot at all. `forwardRef(() => X)` entries (used
- * throughout the module graph to break circular imports, e.g.
- * `PhotosModule` <-> `EventsModule`) are unwrapped the same way Nest itself
- * unwraps them.
+ * Collects every controller reachable from `AppModule` by reading `@Module()` metadata with
+ * `Reflect.getMetadata`, the same traversal Nest's bootstrap performs. No provider is instantiated,
+ * so this needs no Postgres, no Redis and no `app.init()`. `forwardRef()` entries are unwrapped.
  */
 function collectControllers(): Set<ModuleClass> {
   const controllers = new Set<ModuleClass>()
@@ -53,9 +42,7 @@ function collectControllers(): Set<ModuleClass> {
       inlineImports = entry.imports ?? []
       inlineControllers = entry.controllers ?? []
     } else {
-      // Not a module reference (e.g. a provider token) — nothing reachable
-      // from AppModule's own import graph takes this shape, but skip rather
-      // than throw so an unexpected shape doesn't crash the whole census.
+      // Not a module reference (e.g. a provider token) — skip rather than crash the census.
       continue
     }
 
@@ -76,53 +63,21 @@ function collectControllers(): Set<ModuleClass> {
 }
 
 /**
- * Every route in the application must carry exactly one authorization
- * marker: `@Public()`, `@Authenticated()`, or `@RequirePermission(key)`.
- * A route with none — or, pathologically, more than one — is a bug: either
- * it is silently reachable by any authenticated user (today's state for 19
- * routes, 9 of which expose every event and photo on the platform to any
- * logged-in buyer), or its authorization intent is ambiguous.
+ * Every route must carry exactly one authorization marker: `@Public()`, `@Authenticated()` or
+ * `@RequirePermission(key)`. None means it is silently reachable by any authenticated user; more
+ * than one means its intent is ambiguous.
  *
- * This test is EXPECTED TO FAIL when Task 8 lands: it lists every route
- * still missing a marker. Tasks 9-12 apply decorators until this passes.
- * Do not weaken this assertion to make it green early — the failing list
- * is the worklist.
+ * Markers are read off the controller class and its prototype method rather than Express's router
+ * stack, which only sees method-level metadata and so reports class-level `@Public()` as missing.
+ * This mirrors `PermissionGuard`'s own `getAllAndOverride(key, [handler, class])`.
  *
- * Discovery approach: a static module-graph walk (see `collectControllers`
- * above) rather than walking Express's router stack. The Express handler
- * Nest registers per route only carries metadata set directly on the
- * controller *method* — a marker applied at the *class* level (e.g.
- * `AppController`'s `@Public()`) never reaches it, which produces a false
- * "unclassified" positive for an already-correctly-classified route.
- * `PermissionGuard` itself resolves markers via
- * `reflector.getAllAndOverride(key, [handler, class])` (checking both), so
- * this test mirrors that exactly by reading metadata off the controller
- * class and its prototype method directly, which is accurate for both
- * placements.
+ * Don't mix marker types across class and method level on one controller: the guard resolves by
+ * marker *type*, not by specificity, so a class-level `@Public()` beats a method-level
+ * `@RequirePermission()`. This test flags the mix, but as a 2-marker error rather than a clear one.
  *
- * Do not mix marker types across class and method level on the same
- * controller. `PermissionGuard` resolves by *type* first — it checks
- * `IS_PUBLIC_KEY` everywhere (handler and class) before it ever looks at
- * `IS_AUTHENTICATED_KEY`, and only then `PERMISSION_KEY` — not by
- * *specificity* of where the marker sits. A class-level `@Public()` on a
- * controller wins over a method-level `@RequirePermission(key)` or
- * `@Authenticated()` inside it, even though the method-level marker reads
- * as more specific. This test catches the mix as a 2-marker error, but
- * getting there costs a debugging session; don't combine marker types on
- * one controller.
- *
- * `totalRoutes` guards against a vacuous pass: `METHOD_METADATA` /
- * `PATH_METADATA` are read from `@nestjs/common/constants`, an internal
- * (not `@publicApi`) path. If a future Nest upgrade moves or renames them,
- * the imports silently become `undefined`, every route fails the `httpMethod
- * === undefined` check below, `unclassified` stays empty, and this test
- * would pass while checking nothing — permanently and silently, for the one
- * gate protecting the entire authorization model. The floor (117 routes
- * today) makes that failure mode loud instead of invisible. The same logic
- * applies to `MODULE_METADATA` in `collectControllers`: if it silently
- * resolved to `undefined`, every module's imports/controllers would read as
- * empty, `collectControllers` would return nothing, `totalRoutes` would stay
- * at 0, and this floor would still catch it.
+ * `totalRoutes` guards against a vacuous pass: `METHOD_METADATA` and friends come from an internal
+ * Nest path, and if an upgrade renames them every constant silently becomes `undefined` and this
+ * test would pass while checking nothing.
  */
 describe('route classification', () => {
   it('every route carries exactly one authorization marker', () => {
@@ -157,11 +112,8 @@ describe('route classification', () => {
       }
     }
 
-    // Guards against a vacuous pass — see the docstring above. 117 routes
-    // exist today; the floor stays well under that so ordinary route
-    // additions/removals don't require bumping it, while a discovery
-    // mechanism that silently stopped finding routes (e.g. METHOD_METADATA
-    // resolving to undefined after a Nest upgrade) still trips it.
+    // Vacuous-pass floor (see docstring). 117 routes exist today; the floor sits well under that
+    // so ordinary route churn doesn't need a bump, but broken discovery still trips it.
     expect(totalRoutes).toBeGreaterThan(100)
 
     expect(unclassified).toEqual([])

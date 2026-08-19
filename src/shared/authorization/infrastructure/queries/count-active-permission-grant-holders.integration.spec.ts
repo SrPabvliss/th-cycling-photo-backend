@@ -7,30 +7,13 @@ import { validate } from '../../../../config/env.validation'
 import { countActivePermissionGrantHolders } from './count-active-permission-grant-holders'
 
 /**
- * Real-database integration test (not mocked) for Ruling 4 (TIT-38 Task
- * 13): proves the last-holder query counts holders via a direct UBAC
- * grant, not just template membership, and that a deny grant overrides
- * template membership. A unit test that mocks `$queryRaw` wholesale
- * cannot catch a regression here — the mock returns a canned value no
- * matter what SQL is sent, so reverting the query to the brief's
- * template-only version would leave every unit test green. This test
- * exercises the real SQL against the seeded dev database, following the
- * same ConfigModule + real-service pattern as
- * permission.repository.integration.spec.ts.
+ * Runs the real SQL against the dev database, because a unit test that mocks `$queryRaw` returns a
+ * canned value whatever SQL is sent — reverting to a template-only query would leave it green.
  *
- * TIT-38 Task 13 fix report: this test's assertions are relative
- * (baseline + 1, afterDeny === afterGrant), which is exactly what makes
- * them vulnerable to another integration test file mutating the *same*
- * global holder population concurrently — Jest runs test files in
- * parallel by default, and e.g. apply-template.handler.integration.spec.ts
- * holds one extra real holder open for its `beforeAll`→`afterAll` window.
- * The whole sequence below runs inside one `RepeatableRead` transaction so
- * it sees a single consistent snapshot for its entire duration: an
- * ambient holder from another file, if present throughout that snapshot,
- * becomes a constant offset that cancels out in every relative assertion
- * here. The two throwaway users are also created *and* deleted inside
- * that same transaction, so nothing is visible to any other connection at
- * any point — no `afterAll` cleanup needed.
+ * Assertions here are relative (baseline + 1), so a parallel test file mutating the same global
+ * holder population would break them. Everything runs in one `RepeatableRead` transaction: an
+ * ambient holder becomes a constant offset that cancels out, and the throwaway users are created
+ * and deleted inside it, so no cleanup is needed.
  */
 describe('countActivePermissionGrantHolders', () => {
   let module: TestingModule
@@ -73,9 +56,8 @@ describe('countActivePermissionGrantHolders', () => {
       async (tx) => {
         const baseline = await countActivePermissionGrantHolders(tx)
 
-        // Direct-grant-only holder: no template, a global allow grant.
-        // Ruling 4's whole point — the brief's template-only query would
-        // not count this user at all.
+        // Direct-grant-only holder: no template, a global allow grant. A template-only query
+        // would miss this user entirely.
         const directGrantHolder = await tx.user.create({
           data: {
             email: `tit38-ruling4-grant-${Date.now()}@example.test`,
@@ -95,10 +77,7 @@ describe('countActivePermissionGrantHolders', () => {
 
         const afterGrant = await countActivePermissionGrantHolders(tx)
 
-        // Template holder with an explicit deny grant: grant beats
-        // template, per AuthorizationService's own precedence, so this
-        // user must NOT be counted even though their template includes
-        // permission.grant.
+        // Grant beats template, so this user must not be counted despite holding the key.
         const deniedTemplateHolder = await tx.user.create({
           data: {
             email: `tit38-ruling4-deny-${Date.now()}@example.test`,
@@ -125,8 +104,7 @@ describe('countActivePermissionGrantHolders', () => {
           directGrantHolder.id,
         )
 
-        // Both temp users are deleted inside this same transaction, before
-        // it commits — nothing outlives this test, on any connection.
+        // Deleted inside the same transaction — nothing outlives this test, on any connection.
         await tx.user.delete({ where: { id: directGrantHolder.id } })
         await tx.user.delete({ where: { id: deniedTemplateHolder.id } })
 

@@ -67,20 +67,15 @@ export class AuthUserRepository implements IAuthUserRepository {
   /** Registers a new user with role, profile, and phone in a single transaction. */
   async register(payload: RegisterUserPayload): Promise<RegisteredUserProjection> {
     return this.prisma.$transaction(async (tx) => {
-      // TIT-38: a user with no permission template resolves to zero
-      // permissions, which fails closed on every permissioned route — a
-      // buyer registered without one cannot check out or place an order.
-      // The migration backfilled existing users; this is what covers every
-      // user created from here on. Buyers stay `tenant_id = NULL` on
-      // purpose: they belong to no tenant, only to the customer template.
+      // A user with no template resolves to zero permissions and fails closed everywhere — a
+      // buyer registered without one cannot check out. The migration backfilled existing users;
+      // this covers every user created from here on. Buyers stay `tenant_id = NULL` on purpose.
       const customerTemplate = await tx.permissionTemplate.findUnique({
         where: { key: TEMPLATE_KEYS.CUSTOMER },
         select: { id: true },
       })
       if (!customerTemplate) {
-        // Never write a NULL template instead: the resulting account is
-        // unusable and only raw SQL can repair it, since ApplyTemplateCommand
-        // has no route.
+        // Never write a NULL template: that account is unusable and only raw SQL can repair it.
         throw AppException.internal('authz.template_missing', {
           template: TEMPLATE_KEYS.CUSTOMER,
         })

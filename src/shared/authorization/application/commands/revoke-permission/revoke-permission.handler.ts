@@ -28,14 +28,9 @@ export class RevokePermissionHandler implements ICommandHandler<RevokePermission
     if (target.is_protected) throw AppException.businessRule('authz.protected_account')
 
     if (cmd.key === 'permission.grant') {
-      // Total active holders, including `cmd.userId` — this revoke hasn't
-      // happened yet. `<= 1` therefore means either this user is the sole
-      // holder (must block) or, more conservatively, the platform already
-      // has at most one holder and this revoke touches `permission.grant`
-      // at all (blocked even if it would have been a no-op on a
-      // non-holder) — see countActivePermissionGrantHolders' doc comment
-      // for why DeactivateUserHandler uses a different, exclusion-based
-      // question instead.
+      // Total active holders, `cmd.userId` included, since the revoke hasn't happened yet. `<= 1`
+      // blocks both the sole-holder case and, conservatively, any revoke of `permission.grant`
+      // while the platform is down to one holder.
       const holders = await countActivePermissionGrantHolders(this.prisma)
       if (holders <= 1) {
         throw AppException.businessRule('authz.last_grant_admin')

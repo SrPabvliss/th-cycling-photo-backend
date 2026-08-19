@@ -5,12 +5,8 @@ import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import configuration from '../../config/configuration'
 import { validate } from '../../config/env.validation'
 
-// Real-database integration test (not mocked): verifies the `permissions`
-// table seeded from PERMISSIONS matches the constant exactly, in both
-// directions. `PrismaService` requires a `ConfigService` to build its
-// connection string, so it is resolved through a TestingModule instead of
-// being constructed bare — same pattern as tenant-backfill.integration.spec.ts
-// and backblaze-b2.adapter.integration.spec.ts.
+// Verifies the seeded `permissions` table matches PERMISSIONS exactly, in both directions.
+// `PrismaService` needs a `ConfigService` for its connection string, hence the TestingModule.
 describe('catalog drift', () => {
   let module: TestingModule
   let prisma: PrismaService

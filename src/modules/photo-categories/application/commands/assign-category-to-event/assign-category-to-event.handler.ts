@@ -26,13 +26,9 @@ export class AssignCategoryToEventHandler implements ICommandHandler<AssignCateg
   ) {}
 
   async execute(command: AssignCategoryToEventCommand): Promise<EntityIdProjection> {
-    // Scoped load first (Ruling 21). The previous `findById` was unscoped:
-    // `assert` only tests whether the caller holds the permission key, never
-    // whether the target event belongs to the caller's tenant, so any tenant
-    // knowing another tenant's event UUID could rewrite its category
-    // assignments — `photo_category.event.assign` is in the TENANT template.
-    // An out-of-scope id must resolve to null (404), not 403, so the
-    // existence of the event is not disclosed either.
+    // Scoped load first: `assert` only tests whether the caller holds the key, so with an unscoped
+    // `findById` any tenant knowing another's event UUID could rewrite its category assignments.
+    // Out-of-scope ids resolve to null (404, not 403) so the event's existence isn't disclosed.
     const scope = await this.authz.resolveEventScope(command.assignedById)
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)

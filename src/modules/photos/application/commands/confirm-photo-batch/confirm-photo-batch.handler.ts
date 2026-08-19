@@ -28,10 +28,8 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
   ) {}
 
   /**
-   * Validates event, checks objectKey prefixes, and batch-inserts photo
-   * metadata. See `GeneratePresignedUrlHandler` for why the tenant-boundary
-   * check is done via `scope.includesEvent()` against the unscoped
-   * `eventReadRepo.findById` result rather than a scoped query method.
+   * Validates event, checks objectKey prefixes, and batch-inserts photo metadata. See
+   * `GeneratePresignedUrlHandler` for why the boundary check uses `scope.includesEvent()`.
    */
   async execute(command: ConfirmPhotoBatchCommand): Promise<ConfirmBatchProjection> {
     if (!command.audit) {

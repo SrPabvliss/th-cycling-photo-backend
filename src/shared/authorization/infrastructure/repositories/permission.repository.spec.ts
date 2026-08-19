@@ -1,14 +1,9 @@
 import type { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import { PermissionRepository } from './permission.repository'
 
-// Unit test with a mocked Prisma client: exercises the pure shaping logic in
-// PermissionRepository.load() directly, independent of seed data. The
-// integration spec (permission.repository.integration.spec.ts) proves the
-// query itself works against the real schema; this spec proves the mapping
-// from a raw query result to PrincipalPermissions is correct — in particular
-// the global/event grant split, the per-event Map accumulation when two
-// grants target the same event, and the collaboratorEventIds mapping, none
-// of which the seeded platform_admin/customer users exercise.
+// Covers the shaping logic in `PermissionRepository.load()` with a mocked client: the global/event
+// grant split, per-event Map accumulation, and collaboratorEventIds mapping, none of which the
+// seeded users exercise. The integration spec proves the query itself against the real schema.
 describe('PermissionRepository.load (grant shaping)', () => {
   let prisma: any
   let repo: PermissionRepository

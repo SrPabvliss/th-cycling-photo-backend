@@ -25,27 +25,17 @@ export class ApplyTemplateHandler implements ICommandHandler<ApplyTemplateComman
       select: { is_protected: true, tenant: { select: { is_platform: true } } },
     })
     if (target.is_protected) throw AppException.businessRule('authz.protected_account')
-    // Write-time enforcement: mirrors GrantPermissionHandler's platform-only
-    // check. AuthorizationService already denies platform-only permissions
-    // at read time, but that leaves the template assignment itself
-    // possible — this is the only place that performs it.
+    // Mirrors GrantPermissionHandler: read-time denial still leaves the assignment itself
+    // possible, and this is the only place that performs it.
     if (template.is_platform_only && !target.tenant?.is_platform) {
       throw AppException.businessRule('authz.platform_only_permission')
     }
 
-    // TIT-38 Task 13 fix report: a template swap is a third route to the
-    // same lockout Revoke/DeactivateUserHandler already guard against —
-    // moving the last platform_admin onto a template without
-    // `permission.grant` removes their effective grant just as surely as
-    // revoking it directly. The update and the check both run inside one
-    // transaction rather than replicating AuthorizationService's
-    // grant-beats-template precedence by hand: this way the check runs
-    // against the real post-swap state, including the case where the
-    // target also holds `permission.grant` through a direct UBAC grant —
-    // which a template swap never touches, so it poses no risk at all —
-    // without this handler needing to know that. If the count comes back
-    // 0, throwing here aborts the transaction and the `update` never
-    // persists.
+    // A template swap is a third route to the lockout Revoke/DeactivateUserHandler guard against:
+    // moving the last platform_admin onto a template without `permission.grant` removes it just as
+    // surely as revoking it. Update and check share one transaction so the count sees the real
+    // post-swap state — including a direct grant a swap never touches — without this handler
+    // replicating can()'s precedence. Throwing on 0 rolls the update back.
     await this.prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: cmd.userId },

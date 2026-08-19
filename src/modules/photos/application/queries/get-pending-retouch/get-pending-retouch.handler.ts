@@ -16,11 +16,8 @@ export class GetPendingRetouchHandler implements IQueryHandler<GetPendingRetouch
   ) {}
 
   /**
-   * Returns paid orders that have at least one un-retouched photo, ordered
-   * FIFO, scoped to the caller. Closes the gap Task 11 documented and left
-   * open: this route reads through the orders module (out of Task 11's
-   * file boundary), so it stayed unscoped even though every other
-   * single-entity read/listing in the platform was closed by that point.
+   * Paid orders with at least one un-retouched photo, FIFO, scoped to the caller. Reads through
+   * the orders module, which is why it was the last listing left unscoped.
    */
   async execute(query: GetPendingRetouchQuery): Promise<PendingRetouchOrderProjection[]> {
     const scope = await this.authz.resolveEventScope(query.userId)

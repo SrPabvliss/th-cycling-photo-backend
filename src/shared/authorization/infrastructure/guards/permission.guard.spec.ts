@@ -77,8 +77,7 @@ describe('PermissionGuard', () => {
     expect(authz.can).not.toHaveBeenCalled()
   })
 
-  // This is the single behaviour the guard exists to provide: a route that
-  // carries none of the three markers must never be silently reachable.
+  // The single behaviour the guard exists for: an unmarked route is never silently reachable.
   it('denies a route with no marker at all, fail closed, without consulting the authorization service', async () => {
     const authz = authzReturning(true)
     const guard = new PermissionGuard(reflector, authz)

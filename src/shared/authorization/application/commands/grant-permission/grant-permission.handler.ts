@@ -9,12 +9,8 @@ import {
 import { assertGrantScopePairing } from '../assert-grant-scope-pairing'
 import { GrantPermissionCommand } from './grant-permission.command'
 
-/**
- * A placeholder that can never collide with a real row: `id` defaults to
- * `uuid()` (v4), which never generates the nil UUID. Used below to key
- * `upsert` on the primary key when no existing row was found, so the
- * `create` branch runs.
- */
+/** Keys the `upsert` below when no row was found, so its `create` branch runs. `uuid()` (v4)
+ * never generates the nil UUID, so this can't collide with a real row. */
 const NIL_UUID = '00000000-0000-0000-0000-000000000000'
 
 @CommandHandler(GrantPermissionCommand)
@@ -33,31 +29,18 @@ export class GrantPermissionHandler implements ICommandHandler<GrantPermissionCo
       select: { is_protected: true, tenant: { select: { is_platform: true } } },
     })
     if (target.is_protected) throw AppException.businessRule('authz.protected_account')
-    // Write-time enforcement: AuthorizationService already denies a
-    // platform-only permission at read time for a non-platform user, but
-    // that leaves the assignment itself possible — this is the only place
-    // that actually creates the grant, so it is where assignment must be
-    // refused too.
+    // `AuthorizationService` already denies platform-only keys at read time, but this is the only
+    // place that creates a grant, so assignment has to be refused here too.
     if (permission.is_platform_only && !target.tenant?.is_platform) {
       throw AppException.businessRule('authz.platform_only_permission')
     }
 
     const eventId = cmd.eventId ?? null
 
-    // Prisma types the compound `(user_id, permission_id, scope_type,
-    // event_id)` unique key's `event_id` as non-nullable `string`, even
-    // though the column — and the physical NULLS NOT DISTINCT index
-    // backing it — is nullable. That is a known Prisma limitation with
-    // compound unique keys over a nullable column: `upsert`/`findUnique`
-    // cannot look up a row by a null member. A global grant's `event_id`
-    // is always null, so `findFirst` (a normal filter, which handles NULL
-    // correctly) locates any existing row first; `upsert` is then keyed
-    // on that row's real, never-null primary key. This costs the
-    // atomicity of a single-query upsert — a concurrent duplicate grant
-    // in the tiny window between the two calls would surface as an
-    // uncaught unique-constraint error rather than being silently wrong,
-    // which is an acceptable trade for an admin-only, low-concurrency
-    // operation.
+    // Prisma can't look a row up by a null member of a compound unique key, and a global grant's
+    // `event_id` is always null. So `findFirst` locates the row (a normal filter handles NULL),
+    // then `upsert` keys on its real primary key. The cost is atomicity: a concurrent duplicate
+    // grant surfaces as a unique-constraint error, acceptable for an admin-only operation.
     const existing = await this.prisma.userPermissionGrant.findFirst({
       where: {
         user_id: cmd.userId,

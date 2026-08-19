@@ -15,11 +15,8 @@ describe('GrantPermissionHandler', () => {
         .mockResolvedValue({ is_protected: isProtected, tenant: { is_platform: isPlatform } }),
       update: jest.fn(),
     },
-    // `findFirst` is Prisma's own null-aware lookup, used because the
-    // compound (user_id, permission_id, scope_type, event_id) unique key
-    // can't be looked up directly when event_id is null — see the
-    // handler's doc comment. Defaults to "no existing row" (the create
-    // path); individual tests override it to exercise the update path.
+    // `findFirst` is the null-aware lookup the handler uses in place of the compound unique key.
+    // Defaults to "no existing row" (create path); tests override it for the update path.
     userPermissionGrant: { findFirst: jest.fn().mockResolvedValue(null), upsert: jest.fn() },
   })
 
@@ -93,8 +90,7 @@ describe('GrantPermissionHandler', () => {
     )
   })
 
-  // Ruling 13: the command's `eventId` presence and `scopeType` must agree,
-  // enforced here since GrantPermissionHandler is the only writer.
+  // `eventId` presence and `scopeType` must agree, enforced here as the only writer.
   describe('Ruling 13 — scope/event pairing', () => {
     it('rejects scope_type "event" with no eventId', async () => {
       const prisma = prismaWith(true, false)

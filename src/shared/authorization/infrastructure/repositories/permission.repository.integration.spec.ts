@@ -5,12 +5,8 @@ import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import configuration from '../../../../config/configuration'
 import { validate } from '../../../../config/env.validation'
 
-// Real-database integration test (not mocked): verifies PermissionRepository
-// loads a principal's templates, grants, tenant and collaborator events from
-// the real schema. `PrismaService` requires a `ConfigService` to build its
-// connection string, so it is resolved through a TestingModule instead of
-// being constructed bare — same pattern as tenant-backfill.integration.spec.ts
-// and catalog-drift.integration.spec.ts.
+// Verifies PermissionRepository loads a principal's templates, grants, tenant and collaborator
+// events from the real schema. `PrismaService` needs a `ConfigService`, hence the TestingModule.
 describe('PermissionRepository', () => {
   let module: TestingModule
   let prisma: PrismaService

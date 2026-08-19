@@ -4,30 +4,17 @@ import type { IAuthorizationCache } from '../../domain/ports/authorization-cache
 import type { PrincipalPermissions } from '../../domain/principal'
 
 /**
- * Per-request memoisation store for resolved `PrincipalPermissions`.
- *
- * Opened once per request by `RequestIdMiddleware` and torn down when the
- * request finishes — it cannot go stale because it never outlives the
- * request. This is deliberately NOT a cross-request cache: a stale
- * permission cache is a security bug, so cross-request caching (Redis,
- * keyed on `permissions_version`) is deferred to a later task instead of
- * being bolted on here.
+ * Per-request memoisation of resolved `PrincipalPermissions`, opened by `RequestIdMiddleware`. It
+ * never outlives the request, so it can't go stale. Cross-request caching is deliberately out of
+ * scope — a stale permission cache is a security bug.
  */
 export const authorizationStore = new AsyncLocalStorage<Map<string, PrincipalPermissions>>()
 
 /**
- * `IAuthorizationCache` adapter backed by `authorizationStore`.
+ * `IAuthorizationCache` adapter over `authorizationStore`. Uses `AsyncLocalStorage` rather than a
+ * Nest `REQUEST`-scoped provider, which would propagate request scope up the whole injection chain.
  *
- * Deliberately implemented with `AsyncLocalStorage` instead of a Nest
- * `REQUEST`-scoped provider: request scope propagates up the entire
- * injection chain, silently making every consumer (and every consumer of
- * those consumers) request-scoped, which is a serious performance
- * regression. `AsyncLocalStorage` keeps this a singleton provider while
- * still isolating state per request.
- *
- * Degrades gracefully with no store present (e.g. background jobs, BullMQ
- * processors, tests): `get` resolves to `null`, `set`/`invalidate` are
- * no-ops rather than throwing.
+ * With no store present (background jobs, tests) `get` resolves to `null` and the writes no-op.
  */
 @Injectable()
 export class RequestScopedAuthorizationCache implements IAuthorizationCache {

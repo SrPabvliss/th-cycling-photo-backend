@@ -16,19 +16,12 @@ import { IS_AUTHENTICATED_KEY } from '../../presentation/decorators/authenticate
 import { PERMISSION_KEY } from '../../presentation/decorators/require-permission.decorator'
 
 /**
- * The coarse authorization enforcement point: does this principal hold the
- * required permission *anywhere*. Every route must carry exactly one of
- * `@Public()`, `@Authenticated()`, or `@RequirePermission(key)` — a route
- * with none of the three is denied. This is a deliberate fail-closed
- * default: an unclassified route must never be silently reachable by any
- * authenticated user.
+ * The coarse enforcement point: does this principal hold the required permission *anywhere*. Every
+ * route must carry exactly one of `@Public()`, `@Authenticated()` or `@RequirePermission(key)`, and
+ * a route with none is denied — an unclassified route must never be silently reachable.
  *
- * Resource-scoped (per-event) assertions are NOT performed here. Routes are
- * slug-based, so scoping at the guard level would force a double fetch of
- * the entity; handlers assert scope themselves once the entity is loaded.
- *
- * Runs after `JwtAuthGuard` in the `APP_GUARD` chain, which populates
- * `request.user` for authenticated requests.
+ * Per-event scoping is left to the handlers: routes are slug-based, so scoping here would force a
+ * double fetch. Runs after `JwtAuthGuard`, which populates `request.user`.
  */
 @Injectable()
 export class PermissionGuard implements CanActivate {

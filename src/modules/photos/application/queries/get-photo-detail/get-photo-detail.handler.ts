@@ -17,10 +17,8 @@ export class GetPhotoDetailHandler implements IQueryHandler<GetPhotoDetailQuery>
   ) {}
 
   /**
-   * Retrieves a single photo's detail with classification data, or throws
-   * 404 — including when the photo exists but its event is outside the
-   * caller's scope, so an out-of-scope id cannot be distinguished from an
-   * unknown one.
+   * A photo's detail with classification data, or 404 — including when the photo exists but its
+   * event is out of scope, so an out-of-scope id is indistinguishable from an unknown one.
    */
   async execute(query: GetPhotoDetailQuery): Promise<PhotoDetailProjection> {
     const scope = await this.authz.resolveEventScope(query.userId)

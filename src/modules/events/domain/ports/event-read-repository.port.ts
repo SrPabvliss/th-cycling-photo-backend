@@ -16,13 +16,9 @@ export type AssignedEventStatus = 'active' | 'completed'
 export interface IEventReadRepository {
   findById(id: string, includeArchived?: boolean): Promise<Event | null>
   /**
-   * Scoped load — the tenant-boundary check for every mutation in this
-   * module. `findById` alone is not a safe basis for `authz.assert()`:
-   * `assert` only tests whether the caller holds the permission key
-   * (template/grants), never whether the target row belongs to the
-   * caller's tenant. Loading through this method means an out-of-scope id
-   * resolves to `null` (404), the same non-disclosure behaviour as
-   * `getEventDetailBySlug`.
+   * Scoped load — the tenant-boundary check for every mutation in this module. `findById` is not a
+   * safe basis for `authz.assert()`, which only tests whether the caller holds the key, never
+   * whether the row is theirs. An out-of-scope id resolves to `null` (404).
    */
   findByIdInScope(id: string, scope: EventScope, includeArchived?: boolean): Promise<Event | null>
   getEventsList(

@@ -38,11 +38,8 @@ type LocationFile = {
 }
 
 /**
- * Resolves the single platform tenant's id. Ruling 11: on a fresh
- * environment (`migrate deploy` then `db seed` against an empty database)
- * this must already exist — it is created by the TIT-38 tenant-backfill
- * migration. Failing loudly here beats silently seeding a staff user with
- * `tenant_id = NULL`, which would resolve to zero permissions.
+ * Resolves the single platform tenant's id. Created by the tenant-backfill migration, so it must
+ * already exist — a staff user seeded with `tenant_id = NULL` resolves to zero permissions.
  */
 async function getPlatformTenantId(): Promise<string> {
   const tenant = await prisma.tenant.findFirst({ where: { is_platform: true } })
@@ -54,11 +51,7 @@ async function getPlatformTenantId(): Promise<string> {
   return tenant.id
 }
 
-/**
- * Resolves a permission template's id by key. Ruling 11: must fail loudly
- * (never silently leave `permission_template_id = NULL`) if
- * syncPermissionCatalog() has not run yet.
- */
+/** Resolves a template id by key. Fails loudly if `syncPermissionCatalog()` has not run yet. */
 async function getPermissionTemplateId(key: TemplateKey): Promise<string> {
   const template = await prisma.permissionTemplate.findUnique({ where: { key } })
   if (!template) {
@@ -244,9 +237,8 @@ async function seedAdminUser() {
 
   const passwordHash = hashSync(password, 10)
 
-  // Ruling 11: an admin must land on the platform tenant with the
-  // platform_admin template, or it resolves to zero permissions the moment
-  // the new authorization engine is live.
+  // An admin needs the platform tenant and the platform_admin template, or it resolves to zero
+  // permissions.
   const tenantId = await getPlatformTenantId()
   const templateId = await getPermissionTemplateId(TEMPLATE_KEYS.PLATFORM_ADMIN)
 
@@ -327,9 +319,7 @@ async function seedProtectedUser(
 
   const passwordHash = hashSync(password, 10)
 
-  // Ruling 11: operator joins the platform tenant with platform_staff;
-  // customer stays tenant-less (buyers are not tenant-scoped) but still
-  // gets the customer template, or it resolves to zero permissions.
+  // Operators join the platform tenant; customers stay tenant-less but still need a template.
   const templateKey =
     roleName === 'operator' ? TEMPLATE_KEYS.PLATFORM_STAFF : TEMPLATE_KEYS.CUSTOMER
   const templateId = await getPermissionTemplateId(templateKey)
@@ -396,27 +386,14 @@ async function seedConsumerUser() {
 }
 
 /**
- * Ruling 11 (owner decision, 2026-08-18): `ADMIN_SEED_EMAIL` IS the
- * break-glass account. Marks it `is_protected = true`, idempotently.
+ * `ADMIN_SEED_EMAIL` IS the break-glass account. Marks it `is_protected = true`, idempotently.
  *
- * The TIT-38 tenant migration already does this at migration time via the
- * `tit38.break_glass_email` Postgres session variable, but only for users
- * that exist when the migration runs. On a fresh environment (`migrate
- * deploy` then `db seed` against an empty `users` table) that migration step
- * is a deliberate no-op — there is nobody to protect yet — so this is what
- * actually designates the break-glass account once the seed creates it.
+ * The tenant migration does the same, but only for users that already exist when it runs — on a
+ * fresh database that step is a no-op, so this is what designates the account.
  *
- * There used to be a separate `BREAK_GLASS_EMAIL` variable with
- * `ADMIN_SEED_EMAIL` as its fallback. It was dropped: `ADMIN_SEED_EMAIL` is
- * already required for seeding an admin at all, so a second variable only
- * added a silent-absence risk with no legitimate unset case to justify it.
- *
- * Fails loudly — never warns — when `ADMIN_SEED_EMAIL` is unset, or set but
- * matches no user. This is not tidiness: the protected account is the stated
- * reason the known TOCTOU race in the last-holder check was accepted instead
- * of fixed, and that argument only holds if the account exists *and* holds
- * the permission it is supposed to be able to recover with. A defence whose
- * absence is announced only by a log line cannot carry it.
+ * Fails loudly (never warns) when the variable is unset or matches no user: the protected account
+ * is why the TOCTOU race in the last-holder check was accepted rather than fixed, and that
+ * argument only holds if the account really exists.
  */
 async function seedBreakGlassProtection() {
   const targetEmail = process.env.ADMIN_SEED_EMAIL
@@ -446,15 +423,9 @@ async function seedBreakGlassProtection() {
 }
 
 /**
- * Confirms the designated break-glass account actually resolves
- * `permission.grant` to `allow`, reproducing `AuthorizationService.can()`'s
- * precedence for this key exactly:
- *
- *   1. `permission.grant` is `platformOnly`, so a non-platform principal is
- *      denied before any grant or template is consulted.
- *   2. it has `eventScope: false`, so per-event grants never apply — a global
- *      grant (allow *or* deny) decides on its own.
- *   3. only with no grant at all does template membership decide.
+ * Confirms the break-glass account resolves `permission.grant` to `allow`, reproducing
+ * `AuthorizationService.can()`'s precedence: platformOnly first, then the global grant (the key has
+ * `eventScope: false`), then template membership.
  */
 async function assertBreakGlassCanGrantPermissions(email: string): Promise<void> {
   const user = await prisma.user.findFirst({
@@ -501,11 +472,8 @@ async function assertBreakGlassCanGrantPermissions(email: string): Promise<void>
 async function main() {
   console.log('Seeding database...')
 
-  // Shared with the production deploy path — `scripts/docker-entrypoint.sh`
-  // runs the very same implementation through
-  // `sync-permission-catalog.cli.ts` right after `migrate deploy`, so the
-  // catalog the seed writes and the catalog production writes can never
-  // drift apart.
+  // Same implementation the deploy path runs via `sync-permission-catalog.cli.ts`, so the seeded
+  // and deployed catalogs can't drift.
   await syncPermissionCatalog(prisma)
   await seedCountries()
   await seedLocations()

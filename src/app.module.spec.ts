@@ -4,19 +4,12 @@ import { AppModule } from './app.module'
 import { PermissionGuard } from './shared/authorization/infrastructure/guards/permission.guard'
 
 /**
- * `PermissionGuard`'s own unit tests instantiate it directly, and
- * `route-classification.spec.ts` only reads decorator metadata off
- * routes — neither one would notice if the guard were quietly removed
- * from `AppModule`'s actual `APP_GUARD` chain, which is the one place
- * that decides whether it runs on a real request at all. Deleting that
- * one provider entry would open every route in the product while the
- * rest of the suite stayed green.
+ * Nothing else notices if `PermissionGuard` leaves `AppModule`'s `APP_GUARD` chain — its own tests
+ * instantiate it directly and `route-classification.spec.ts` only reads decorator metadata — yet
+ * deleting that one provider entry opens every route in the product.
  *
- * This reads the `providers` array directly off `AppModule`'s own
- * `@Module()` metadata via `Reflect.getMetadata` — no `TestingModule`
- * compile, no app boot, no Postgres/Redis dependency.
- * `route-classification.spec.ts` already pays the cost of a full
- * `AppModule` boot once; this does not need to pay it again.
+ * Reads the `providers` array off `AppModule`'s `@Module()` metadata via `Reflect.getMetadata`, so
+ * no `TestingModule` compile and no Postgres/Redis.
  */
 describe('AppModule wiring', () => {
   it('registers PermissionGuard as an APP_GUARD provider', () => {

@@ -28,11 +28,9 @@ describe('permission catalog', () => {
   })
 
   it('rejects inherited Object.prototype property names rather than treating them as valid keys', () => {
-    // `in` walks the prototype chain, so these would wrongly resolve to
-    // `true` if isPermissionKey used `value in PERMISSIONS` instead of
-    // `Object.hasOwn`. This is the one path by which a non-PermissionKey
-    // string reaches the engine: the guard reads the decorator's metadata
-    // as an untyped string.
+    // `in` walks the prototype chain, so these resolve to `true` unless `isPermissionKey` uses
+    // `Object.hasOwn`. The guard reads decorator metadata as an untyped string, so this path is
+    // how a non-PermissionKey string reaches the engine.
     for (const name of ['constructor', 'toString', 'valueOf', '__proto__', 'hasOwnProperty']) {
       expect(isPermissionKey(name)).toBe(false)
     }

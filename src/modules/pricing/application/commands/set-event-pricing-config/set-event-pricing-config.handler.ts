@@ -28,12 +28,9 @@ export class SetEventPricingConfigHandler implements ICommandHandler<SetEventPri
   ) {}
 
   async execute(cmd: SetEventPricingConfigCommand): Promise<void> {
-    // Ruling 21: this wrote per-event pricing keyed on a caller-supplied
-    // eventId with no scope resolution and no assert. `pricing.config.set` is
-    // not platformOnly, so it is grantable to a tenant even though no
-    // template holds it today — the scoped load is what keeps a future
-    // grant-holder inside its own tenant. 404, not 403, so an out-of-scope
-    // event's existence is not disclosed.
+    // `pricing.config.set` is not platformOnly, so a tenant could be granted it even though no
+    // template holds it today — the scoped load is what keeps such a holder inside its own tenant.
+    // 404, not 403, so an out-of-scope event's existence isn't disclosed.
     const scope = await this.authz.resolveEventScope(cmd.setById)
     const event = await this.eventReadRepo.findByIdInScope(cmd.eventId, scope)
     if (!event) throw AppException.notFound('Event', cmd.eventId)

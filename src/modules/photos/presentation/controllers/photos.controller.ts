@@ -140,12 +140,7 @@ export class PhotosController {
     return this.queryBus.execute(query)
   }
 
-  /**
-   * Returns paid orders with photos pending retouching, ordered FIFO,
-   * scoped to the caller's tenant (Task 12 closed the gap Task 11 left
-   * open here — `GetPendingRetouchQuery` reads through
-   * `IOrderReadRepository`, which belongs to the orders module).
-   */
+  /** Paid orders with photos pending retouching, FIFO, scoped to the caller's tenant. */
   @RequirePermission('photo.retouch.read')
   @Get('photos/pending-retouch')
   @SuccessMessage('success.LIST')

@@ -4,21 +4,14 @@ import { INTENTIONAL_DIVERGENCES, ROLE_INTENTIONAL_DIVERGENCES } from './intenti
 import { ROUTE_CENSUS } from './route-census'
 
 /**
- * The compensating control for cutting TIT-38 over without a production
- * shadow-mode period (design spec §10, D9). It proves the new permission
- * engine reaches the same allow/deny verdict as the legacy `RolesGuard` on
- * every route in `ROUTE_CENSUS`, for every legacy role, except:
- *  - the 18 routes in `INTENTIONAL_DIVERGENCES` (all four roles skipped), and
- *  - the 2 single-role entries in `ROLE_INTENTIONAL_DIVERGENCES` (only that
- *    role skipped; the other three roles on the same route still assert),
- * whose behaviour changes on purpose.
+ * The compensating control for cutting over without a production shadow-mode period: proves the new
+ * engine reaches the same verdict as the legacy `RolesGuard` on every route in `ROUTE_CENSUS`, for
+ * every legacy role, minus the entries in `INTENTIONAL_DIVERGENCES` and
+ * `ROLE_INTENTIONAL_DIVERGENCES`.
  *
- * `RolesGuard` itself is deliberately NOT imported — Task 15 deletes it, and
- * this matrix must keep passing afterwards. `legacyAllows` below is a literal
- * reimplementation of its rule (see src/shared/auth/guards/roles.guard.ts):
- * `requiredRoles.includes(user.role)`, with the historical quirk that a route
- * carrying no `@Roles()` at all (legacy marker 'NONE') let ANY authenticated
- * user through — that quirk is exactly why 19 routes needed reclassifying.
+ * `RolesGuard` is deliberately not imported — it is deleted, and this matrix must keep passing.
+ * `legacyAllows` reimplements its rule, including the quirk that a route with no `@Roles()` let any
+ * authenticated user through, which is why 19 routes needed reclassifying.
  */
 type LegacyRole = 'admin' | 'operator' | 'customer' | 'anonymous'
 
@@ -43,10 +36,8 @@ const engineAllows = (
   if (role === 'anonymous') return false
   if (permission === 'AUTHENTICATED') return true
   const isPlatform = role === 'admin' || role === 'operator'
-  // Ruling 22: dashboard.operator.read, dashboard.review_queue.read and
-  // photo.retouch.read are platformOnly. Step 1 of the resolution algorithm
-  // (design spec §6) denies platformOnly permissions to non-platform
-  // principals before templates are even consulted.
+  // These three keys are platformOnly, and step 1 of the resolution algorithm denies those to
+  // non-platform principals before templates are consulted.
   if (PERMISSIONS[permission].platformOnly && !isPlatform) return false
   return TEMPLATE_PERMISSIONS[TEMPLATE_FOR[role]].includes(permission)
 }

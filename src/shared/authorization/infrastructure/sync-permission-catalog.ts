@@ -1,10 +1,5 @@
-// Imports here are deliberately RELATIVE rather than using the `@shared/…`
-// / `@generated/…` tsconfig path aliases. This module is reachable from a
-// standalone entry point (`sync-permission-catalog.cli.ts`) that production
-// runs straight off `node dist/…` with no `tsconfig-paths/register` and no
-// `tsx`. `nest build` does rewrite the aliases, but keeping these relative
-// removes any dependence on that rewrite for the one code path whose whole
-// point is to work outside the Nest runtime.
+// Relative imports, not `@shared/…` aliases: the CLI entry point runs off plain `node dist/…`
+// with no `tsconfig-paths/register`.
 import type { PrismaClient } from '../../../generated/prisma/client'
 import { ALL_PERMISSION_KEYS, PERMISSIONS } from '../domain/permission-catalog'
 import {
@@ -15,16 +10,8 @@ import {
 } from '../domain/permission-template.constants'
 
 /**
- * Only the slice of the Prisma client this module touches. Typing the
- * parameter structurally (rather than as the full `PrismaClient`) lets the
- * seed, the CLI, and `PrismaService` all pass their own client without any
- * of them having to be the same nominal instance.
- *
- * `syncPermissions`, `syncPermissionTemplates` and `assertCatalogComplete`
- * all keep taking exactly this narrower type — Prisma's interactive
- * transaction client (`tx` below) satisfies it structurally without itself
- * exposing `$transaction`, so those three steps cannot open a nested
- * transaction even by accident.
+ * Structural (not nominal) so the seed, the CLI and `PrismaService` can each pass their own client.
+ * Omitting `$transaction` also stops the inner steps from nesting a transaction by accident.
  */
 export type PermissionCatalogClient = Pick<
   PrismaClient,
@@ -88,24 +75,14 @@ async function syncPermissionTemplates(prisma: PermissionCatalogClient): Promise
     })
     await prisma.permissionTemplatePermission.createMany({
       data: perms.map((p) => ({ template_id: tpl.id, permission_id: p.id })),
-      // permission_template_permissions has a composite primary key
-      // (template_id, permission_id): two containers running this sync at
-      // the same time on a fresh deploy would otherwise have one insert
-      // collide on the other's row and crash-loop. Low odds on a
-      // single-VPS deploy, but skipping the duplicate costs nothing.
+      // two containers syncing concurrently would otherwise collide on the composite PK
       skipDuplicates: true,
     })
   }
   console.log(`Synced ${Object.values(TEMPLATE_KEYS).length} permission templates`)
 }
 
-/**
- * Fail-fast guard. The permission guard is fail-closed: a `permissions` table
- * that is short even one row silently 403s whichever routes depend on the
- * missing keys, and an *empty* one 403s every permissioned route in the
- * product for admins, staff and customers alike. Blowing up here — before the
- * application is allowed to start — beats locking everyone out quietly.
- */
+/** The guard is fail-closed, so a short catalog silently 403s routes. Better to refuse to boot. */
 async function assertCatalogComplete(prisma: PermissionCatalogClient): Promise<void> {
   const actual = await prisma.permission.count()
   if (actual !== ALL_PERMISSION_KEYS.length) {
@@ -118,31 +95,14 @@ async function assertCatalogComplete(prisma: PermissionCatalogClient): Promise<v
 }
 
 /**
- * Brings the `permissions` table and the four permission templates (rows and
- * membership) in line with the TypeScript constants that the authorization
- * engine reads at request time.
+ * Syncs the `permissions` table and the four templates with the TypeScript constants. Idempotent.
  *
- * This is NOT optional test data. The TIT-38 migrations create an empty
- * `permissions` table and four *empty* templates, then assign every existing
- * and future user one of them. Until this runs, every template resolves to
- * zero permissions and the fail-closed guard denies ~80 routes. It therefore
- * has to run on every deploy, right after `prisma migrate deploy` — see
- * `scripts/docker-entrypoint.sh`.
+ * Not optional test data: the migrations create the catalog empty, so until this runs every
+ * template resolves to zero permissions and the fail-closed guard denies ~80 routes. Runs on every
+ * deploy right after `prisma migrate deploy` — see `scripts/docker-entrypoint.sh`.
  *
- * Wrapped in a single `$transaction`. This now runs on every container
- * start, not once from a manual seed, and `syncPermissionTemplates` rewrites
- * each template's membership as `deleteMany` then `createMany` with no
- * transaction of its own. The authorization cache is request-scoped, so a
- * request landing inside that window would have resolved an empty template
- * and 403'd a real caller. Under a zero-downtime deploy — the old container
- * still serving while the new one runs the entrypoint — that window is real
- * on every deploy, not a one-off migration risk. Wrapping the whole sync
- * (permissions, all four templates, and the completeness assertion) in one
- * transaction makes the window disappear: readers either see the fully
- * pre-sync or fully post-sync catalog, never a mid-rewrite one.
- *
- * Idempotent: upserts, prunes removed keys, and rewrites template membership,
- * so re-running it converges rather than duplicating.
+ * One transaction, because template membership is rewritten as delete + insert and a concurrent
+ * request landing in that window would resolve an empty template and 403 a real caller.
  */
 export async function syncPermissionCatalog(
   prisma: TransactionalPermissionCatalogClient,

@@ -17,10 +17,8 @@ export class FindSimilarPhotosHandler implements IQueryHandler<FindSimilarPhotos
   ) {}
 
   /**
-   * The source photo is loaded scoped, so an out-of-scope id 404s rather
-   * than leaking whether it exists. Once it resolves, its own event is by
-   * definition in scope, so `findSimilar` — a same-event vector query — is
-   * run unmodified; no separate scope filter is threaded into it.
+   * The source photo is loaded scoped, so an out-of-scope id 404s. Once it resolves its event is
+   * in scope by definition, so `findSimilar` — a same-event query — needs no filter of its own.
    */
   async execute(query: FindSimilarPhotosQuery): Promise<SimilarPhotoProjection[]> {
     const scope = await this.authz.resolveEventScope(query.userId)

@@ -7,13 +7,9 @@ import { GrantPermissionCommand } from './grant-permission.command'
 import { GrantPermissionHandler } from './grant-permission.handler'
 
 /**
- * Real-database integration test (not mocked): proves the
- * findFirst-then-upsert-by-id workaround in `GrantPermissionHandler`
- * actually works against the physical `NULLS NOT DISTINCT` unique index —
- * a unit test mocking `userPermissionGrant.upsert` cannot prove this,
- * since it never exercises Prisma's real compound-key limitation with a
- * null `event_id`. Same ConfigModule + real-service pattern as
- * count-active-permission-grant-holders.integration.spec.ts.
+ * Proves `GrantPermissionHandler`'s findFirst-then-upsert-by-id workaround works against the
+ * physical `NULLS NOT DISTINCT` index. A unit test mocking `upsert` never exercises Prisma's real
+ * compound-key limitation with a null `event_id`.
  */
 describe('GrantPermissionHandler (real database)', () => {
   let module: TestingModule

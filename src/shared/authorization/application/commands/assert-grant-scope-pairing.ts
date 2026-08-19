@@ -2,15 +2,10 @@ import { AppException } from '@shared/domain'
 import type { GrantScopeType } from '../../domain/principal'
 
 /**
- * Ruling 13 (TIT-38 Task 13): `UserPermissionGrant.scope_type` and
- * `event_id` must agree — `event_id` set if and only if `scope_type` is
- * `'event'`. Nothing at the database level prevents the malformed shapes
- * (`'event'` with a null `event_id`, or `'global'` with an `event_id` set),
- * and `PermissionRepository` silently mishandles both: the first is
- * dropped entirely, the second is read back as a global grant. A CHECK
- * constraint was considered and deliberately deferred, so
- * `GrantPermissionHandler` and `RevokePermissionHandler` — the only code
- * that writes these rows — call this before touching the database.
+ * `UserPermissionGrant.event_id` must be set if and only if `scope_type` is `'event'`. Nothing at
+ * the database level enforces that (a CHECK constraint was deferred) and `PermissionRepository`
+ * silently mishandles both malformed shapes — dropping one, reading the other back as global — so
+ * the two handlers that write these rows call this first.
  */
 export function assertGrantScopePairing(scopeType: GrantScopeType, eventId?: string): void {
   const hasEventId = Boolean(eventId)

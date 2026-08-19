@@ -95,12 +95,9 @@ describe('DeletePhotoHandler', () => {
   })
 
   it('throws NOT_FOUND — not FORBIDDEN — when the photo exists but its event is outside the caller scope', async () => {
-    // This is the coordinator-flagged case: a photo the caller's template
-    // permits `photo.delete` on in general, but whose event belongs to
-    // another tenant. The scoped load must be what denies it — findByIdInScope
-    // is the one deciding, and it returns null exactly as it would for an
-    // unknown id, so the caller cannot distinguish "not mine" from
-    // "does not exist" (no enumeration of other tenants' photo ids).
+    // A photo the caller's template permits `photo.delete` on, but whose event is another
+    // tenant's. `findByIdInScope` must be what denies it, returning null exactly as for an unknown
+    // id so "not mine" and "does not exist" stay indistinguishable.
     const restrictedScope = new EventScope(false, ['my-tenant'], [])
     authz.resolveEventScope.mockResolvedValueOnce(restrictedScope)
     photoRead.findByIdInScope.mockResolvedValueOnce(null)

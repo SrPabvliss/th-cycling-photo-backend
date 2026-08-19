@@ -1,12 +1,8 @@
 /**
- * Which Event rows a principal may see. Answers a structurally different
- * question than `can()`: `can` decides whether a verb is permitted at all;
+ * Which Event rows a principal may see. `can()` decides whether a verb is permitted at all;
  * `EventScope` decides which rows are in reach once it is.
  *
- * `toPrisma()` produces a where clause for the Event model directly, or
- * nested under `{ event: scope.toPrisma() }` for Photo/Order. An empty
- * scope yields `id: { in: [] }`, which matches nothing — deny-by-default
- * falls out of the data rather than needing a special case.
+ * An empty scope yields `id: { in: [] }`, so deny-by-default falls out of the data.
  */
 export class EventScope {
   constructor(
@@ -36,12 +32,8 @@ export class EventScope {
   }
 
   /**
-   * True when `event` falls inside this scope, without a database round
-   * trip. Mirrors `toPrisma()`'s tenant-or-id OR for an entity a handler
-   * has already loaded by its own id (e.g. an Event fetched via its
-   * unscoped `findById` before asserting a permission against it) — the
-   * in-memory equivalent of nesting `event: scope.toPrisma()` into a
-   * query's `where`, for callers that cannot cheaply re-query.
+   * In-memory equivalent of nesting `event: scope.toPrisma()` into a query, for a handler that has
+   * already loaded the Event by its own id and cannot cheaply re-query.
    */
   includesEvent(event: { id: string; tenantId: string }): boolean {
     if (this.all) return true

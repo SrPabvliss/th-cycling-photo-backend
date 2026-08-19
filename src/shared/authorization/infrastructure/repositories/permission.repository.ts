@@ -9,12 +9,11 @@ import {
 } from '../../domain/principal'
 
 /**
- * Loads everything the authorization decision point needs about a principal
- * in a single query: template permissions, global and per-event grants,
- * tenant/platform status, and (transitionally) `EventOperator` assignments.
+ * Loads everything the decision point needs about a principal in one query: template permissions,
+ * global and per-event grants, tenant/platform status, and (transitionally) `EventOperator` rows.
  *
- * Returns `EMPTY_PRINCIPAL_PERMISSIONS()` for an unknown user rather than
- * throwing — the guard depends on deny-by-default, not on exceptions.
+ * An unknown user yields `EMPTY_PRINCIPAL_PERMISSIONS()` rather than throwing — the guard depends
+ * on deny-by-default, not on exceptions.
  */
 @Injectable()
 export class PermissionRepository implements IPermissionRepository {

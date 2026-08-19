@@ -21,14 +21,9 @@ export class BulkAssignCategoryHandler implements ICommandHandler<BulkAssignCate
   ) {}
 
   /**
-   * `photoIds` can span multiple events, so there is no single entity to
-   * scope-load. Instead: resolve the distinct events among `photoIds` that
-   * fall inside the caller's scope (out-of-scope photos are silently
-   * excluded, not reported — same non-disclosure as everywhere else),
-   * assert the permission against each of those events, then let the
-   * write itself re-apply the same scope filter so an id the caller could
-   * not enumerate never gets updated even if the assert loop were somehow
-   * bypassed.
+   * `photoIds` can span events, so there is no single entity to scope-load. Instead resolve the
+   * distinct in-scope events, assert against each, then let the write re-apply the same filter so
+   * an id the caller couldn't enumerate is never updated even if the assert loop were bypassed.
    */
   async execute(command: BulkAssignCategoryCommand): Promise<{ updated: number }> {
     const scope = await this.authz.resolveEventScope(command.userId)

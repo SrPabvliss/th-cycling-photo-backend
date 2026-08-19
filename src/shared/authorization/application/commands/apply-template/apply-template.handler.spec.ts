@@ -5,15 +5,9 @@ import { ApplyTemplateHandler } from './apply-template.handler'
 describe('ApplyTemplateHandler', () => {
   const cache = { get: jest.fn(), set: jest.fn(), invalidate: jest.fn() }
 
-  // TIT-38 Task 13 fix report: the brief's original fixture (no
-  // `$transaction`/`$queryRaw`) can't accommodate the last-holder guard
-  // added below, so it was extended rather than left as given — a real
-  // invariant outranks a literal transcription of the brief's test body.
-  // `$transaction` invokes its callback with the mock itself as `tx`, so
-  // `tx.user.update`/`tx.$queryRaw` inside the handler are the exact same
-  // jest mocks asserted on below. `holders` defaults to 2 (i.e. "safe,
-  // not the last one") so tests that don't care about the guard aren't
-  // coupled to it.
+  // `$transaction` invokes its callback with the mock itself as `tx`, so `tx.user.update` and
+  // `tx.$queryRaw` inside the handler are the same jest mocks asserted on below. `holders` defaults
+  // to 2 ("safe, not the last one") so tests that don't care about the guard aren't coupled to it.
   const prismaWith = (
     isPlatform: boolean,
     templatePlatformOnly: boolean,
@@ -57,10 +51,8 @@ describe('ApplyTemplateHandler', () => {
     )
   })
 
-  // Layer 2 (TIT-38 Task 13): every mutating authorization command must
-  // reject a protected account, not just grant/revoke. Not exercised by
-  // the fixture above (it always returns is_protected: false), so this is
-  // asserted explicitly.
+  // Every mutating authorization command must reject a protected account, not just grant/revoke.
+  // The fixture always returns `is_protected: false`, so this is asserted explicitly.
   it('refuses to apply any template to a protected account', async () => {
     const handler = new ApplyTemplateHandler(prismaWith(true, false, true) as never, cache as never)
     await expect(
@@ -75,8 +67,7 @@ describe('ApplyTemplateHandler', () => {
     expect(cache.invalidate).toHaveBeenCalledWith('u1')
   })
 
-  // TIT-38 Task 13 fix report: a template swap is a third route to the
-  // same lockout revoke/deactivate already guard against.
+  // A template swap is a third route to the lockout revoke/deactivate already guard against.
   describe('last-holder guard (fix report item 1)', () => {
     it('refuses a swap that would leave zero active holders of permission.grant', async () => {
       const prisma = prismaWith(true, false, false, 0)
@@ -87,12 +78,9 @@ describe('ApplyTemplateHandler', () => {
         handler.execute(new ApplyTemplateCommand('u1', 'tenant', 'admin1')),
       ).rejects.toBeInstanceOf(AppException)
 
-      // The update ran inside the transaction — it has to, for the count
-      // that follows it to reflect the real post-swap state — but the
-      // handler must never reach `cache.invalidate` for a change that
-      // was then rolled back. `cache` is a module-level mock shared
-      // across this file's tests, so the assertion compares against the
-      // call count captured just above rather than `.not.toHaveBeenCalled()`.
+      // The update has to run inside the transaction for the count to see the post-swap state,
+      // but a rolled-back change must never reach `cache.invalidate`. `cache` is shared across
+      // this file, hence comparing call counts rather than `.not.toHaveBeenCalled()`.
       expect(prisma.user.update).toHaveBeenCalled()
       expect(cache.invalidate.mock.calls.length).toBe(invalidateCallsBefore)
     })

@@ -10,21 +10,10 @@ export interface RouteCensusEntry {
 }
 
 /**
- * One entry per route, transcribed from Appendix A of
- * docs/superpowers/plans/2026-08-17-tit-38-authorization-engine.md.
- *
- * Appendix A lists 116 module routes (everything under each module's
- * presentation/controllers directory, i.e. `src/modules/<module>/presentation/controllers`)
- * plus the handful of top-level feature controllers it covers.
- * `route-classification.spec.ts` counts 117
- * total routes app-wide; the extra one is `AppController`'s `GET /`
- * (src/app.controller.ts), which sits outside Appendix A's glob because it
- * isn't part of any feature module — it's the bare health/hello endpoint
- * mounted directly on the root `AppModule`. It carries a class-level
- * `@Public()` today and always has (see git history), so it is included
- * here as the 117th entry with legacyMarker 'PUBLIC' — there is no legacy
- * vs. TIT-38 behaviour question for it, but leaving it out would make this
- * census silently narrower than the classification gate it complements.
+ * One entry per route: the 116 module routes under `src/modules/<module>/presentation/controllers`,
+ * plus `AppController`'s `GET /`. That last one is the bare health endpoint on the root module and
+ * has always been `@Public()`, but including it keeps this census exactly as wide as the 117 routes
+ * `route-classification.spec.ts` counts.
  */
 export const ROUTE_CENSUS: RouteCensusEntry[] = [
   { method: 'POST', path: '/auth/register', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },

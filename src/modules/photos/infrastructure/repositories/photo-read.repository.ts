@@ -68,7 +68,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return record ? PhotoMapper.toEntity(record) : null
   }
 
-  /** Same as `findById`, but an id outside `scope` resolves to `null` — the tenant-boundary check for mutations and single-entity reads. */
+  /** Like `findById`, but an id outside `scope` resolves to `null` — the tenant-boundary check. */
   async findByIdInScope(id: string, scope: EventScope): Promise<Photo | null> {
     const record = await this.prisma.photo.findFirst({ where: { id, event: scope.toPrisma() } })
     return record ? PhotoMapper.toEntity(record) : null
@@ -294,7 +294,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     })
   }
 
-  /** Distinct event ids among `photoIds` that also fall inside `scope`. Used by bulk mutations to assert per affected event without trusting the caller's id list. */
+  /** Distinct in-scope event ids among `photoIds`, so bulk mutations needn't trust the id list. */
   async getDistinctEventIdsForPhotoIds(photoIds: string[], scope: EventScope): Promise<string[]> {
     if (photoIds.length === 0) return []
 
@@ -374,9 +374,8 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   }> {
     const { eventSlug, status, limit, offset, scope } = params
     const reviewedFilter = reviewedAtFilter(status)
-    // e.slug is unique, so this join is already a single row before the
-    // scope predicate is even evaluated — adding it does not broaden the
-    // join or change the query's cardinality.
+    // e.slug is unique, so this join is a single row already — the predicate can't change
+    // cardinality.
     const scopeFilter = eventScopeFilter(scope, 'e')
 
     type Row = {
@@ -627,10 +626,8 @@ function reviewedAtFilter(status: ReviewQueueStatusFilter): Prisma.Sql {
 }
 
 /**
- * Raw-SQL equivalent of `EventScope.toPrisma()`, for queries that join the
- * `events` table directly rather than going through Prisma's relation
- * filters. `alias` must be a compile-time-controlled table alias (never
- * user input) — it is interpolated unescaped via `Prisma.raw`.
+ * Raw-SQL equivalent of `EventScope.toPrisma()`, for queries that join `events` directly. `alias`
+ * is interpolated unescaped via `Prisma.raw`, so it must never come from user input.
  */
 function eventScopeFilter(scope: EventScope, alias: string): Prisma.Sql {
   if (scope.all) return Prisma.empty

@@ -32,13 +32,9 @@ export const REVIEW_QUEUE_STATUS_FILTERS: ReviewQueueStatusFilter[] = ['all', 'p
 export interface IPhotoReadRepository {
   findById(id: string): Promise<Photo | null>
   /**
-   * Scoped load — the tenant-boundary check for every mutation and
-   * single-entity read in this module. `findById` alone is not a safe
-   * basis for `authz.assert()`: `assert` only tests whether the caller
-   * holds the permission key (template/grants), never whether the target
-   * row belongs to the caller's tenant. Loading through this method means
-   * an out-of-scope id resolves to `null` (404), the same non-disclosure
-   * behaviour as `getEventDetailBySlug`.
+   * Scoped load — the tenant-boundary check for every mutation and single-entity read here.
+   * `findById` is not a safe basis for `authz.assert()`, which only tests whether the caller holds
+   * the key, never whether the row is theirs. An out-of-scope id resolves to `null` (404).
    */
   findByIdInScope(id: string, scope: EventScope): Promise<Photo | null>
   existsByEventAndFilename(eventId: string, filename: string): Promise<boolean>
@@ -71,7 +67,7 @@ export interface IPhotoReadRepository {
   ): Promise<{ photoId: string | null; page: number }>
   countByIds(ids: string[]): Promise<number>
   countByIdsAndEvent(photoIds: string[], eventId: string): Promise<number>
-  /** Distinct event ids among `photoIds` that also fall inside `scope` — out-of-scope photos are silently excluded, not reported. */
+  /** Distinct in-scope event ids among `photoIds`; out-of-scope photos are silently excluded. */
   getDistinctEventIdsForPhotoIds(photoIds: string[], scope: EventScope): Promise<string[]>
   findSimilar(photoId: string, eventId: string, limit: number): Promise<SimilarPhotoProjection[]>
   getPhotoViewBySlug(slug: string, scope: EventScope): Promise<PhotoViewProjection | null>

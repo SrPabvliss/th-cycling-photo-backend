@@ -4,12 +4,8 @@ import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import configuration from '../../config/configuration'
 import { validate } from '../../config/env.validation'
 
-// Real-database integration test (not mocked): verifies the TIT-38 tenant
-// backfill migration actually ran against the dev database, following the
-// same ConfigModule + real-service pattern as
-// backblaze-b2.adapter.integration.spec.ts. `PrismaService` requires a
-// `ConfigService` to build its connection string, so it is resolved through
-// a TestingModule instead of being constructed bare.
+// Verifies the tenant backfill migration actually ran against the dev database. `PrismaService`
+// needs a `ConfigService` for its connection string, hence the TestingModule.
 describe('tenant backfill', () => {
   let module: TestingModule
   let prisma: PrismaService

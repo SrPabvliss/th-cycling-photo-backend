@@ -7,27 +7,13 @@ import { ApplyTemplateCommand } from './apply-template.command'
 import { ApplyTemplateHandler } from './apply-template.handler'
 
 /**
- * Real-database integration test (not mocked): proves the last-holder
- * guard added to `ApplyTemplateHandler` (TIT-38 Task 13 fix report item 1)
- * actually runs its `$transaction` correctly against Postgres and commits
- * a safe swap. Creates one throwaway platform-tenant user holding
- * `permission.grant` only through the `platform_admin` template (no
- * direct grant), swaps them onto `tenant` (which doesn't carry
- * `permission.grant`), and confirms it succeeds and persists — this is
- * safe precisely *because* the seeded break-glass `platform_admin`
- * account remains as the other active holder, which this test never
- * touches. Same ConfigModule + real-service pattern as the sibling
- * integration specs in this directory.
+ * Proves `ApplyTemplateHandler`'s last-holder guard runs its `$transaction` correctly against
+ * Postgres and commits a safe swap: a throwaway user holding `permission.grant` only through
+ * `platform_admin` moves to `tenant`, which is safe because the seeded break-glass account remains.
  *
- * The reject path (this being the *only* holder) isn't exercised here: in
- * this dev database there is always at least one other real holder (the
- * protected break-glass account), and constructing a genuine "zero
- * holders left" scenario would mean mutating that account's real state —
- * deliberately avoided. That path is covered by a mocked unit test in
- * apply-template.handler.spec.ts instead, which only needs to prove the
- * handler's threshold logic and transactional wiring, not
- * countActivePermissionGrantHolders' SQL — that SQL already has its own
- * real-database proof in count-active-permission-grant-holders.integration.spec.ts.
+ * The reject path isn't exercised here — a genuine "zero holders left" scenario would mean mutating
+ * that break-glass account. It is covered by a mock in apply-template.handler.spec.ts, and the SQL
+ * itself by count-active-permission-grant-holders.integration.spec.ts.
  */
 describe('ApplyTemplateHandler (real database)', () => {
   let module: TestingModule

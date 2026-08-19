@@ -11,11 +11,7 @@ export interface PrincipalPermissions {
   eventGrants: Map<string, Map<PermissionKey, GrantEffectValue>>
   tenantId: string | null
   isPlatform: boolean
-  /**
-   * TRANSITIONAL — sourced from `EventOperator` rows (`User.assigned_events`).
-   * Task 7 unions this into event scope resolution; TIT-38's Task 40 removes
-   * it once collaborator assignment is fully replaced by grants.
-   */
+  /** TRANSITIONAL — `EventOperator` rows, unioned into event scope until TIT-40 replaces them. */
   collaboratorEventIds: string[]
 }
 

@@ -20,21 +20,16 @@ export class DeactivateUserHandler implements ICommandHandler<DeactivateUserComm
     const user = await this.readRepo.findById(command.userId)
     if (!user) throw AppException.notFound('User', command.userId)
 
-    // TIT-38 Task 13, Layer 2: the break-glass account rejects every
-    // mutating operation, including deactivating itself.
+    // The break-glass account rejects every mutating operation, including deactivating itself.
     const guard = await this.prisma.user.findUniqueOrThrow({
       where: { id: command.userId },
       select: { is_protected: true },
     })
     if (guard.is_protected) throw AppException.businessRule('authz.protected_account')
 
-    // TIT-38 Task 13, Layer 1: deactivating the last holder of
-    // `permission.grant` is the same lockout as revoking it directly.
-    // `excludeUserId` makes this the exact post-deactivation holder count
-    // (see countActivePermissionGrantHolders' doc comment) — unlike
-    // RevokePermissionHandler's unconditional total, this must not block
-    // deactivating an unrelated user just because admins are scarce
-    // elsewhere in the platform.
+    // Deactivating the last holder of `permission.grant` is the same lockout as revoking it.
+    // `excludeUserId` makes this the exact post-deactivation count, so — unlike
+    // RevokePermissionHandler's total — an unrelated user stays deactivatable when admins are few.
     const remainingHolders = await countActivePermissionGrantHolders(this.prisma, command.userId)
     if (remainingHolders === 0) {
       throw AppException.businessRule('authz.last_grant_admin')

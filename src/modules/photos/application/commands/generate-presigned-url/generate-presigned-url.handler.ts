@@ -23,15 +23,11 @@ export class GeneratePresignedUrlHandler implements ICommandHandler<GeneratePres
   ) {}
 
   /**
-   * Validates event existence, checks for duplicates, and generates a
-   * presigned upload URL.
+   * Validates event existence, checks for duplicates, and generates a presigned upload URL.
    *
-   * `IEventReadRepository.findById` is unscoped (events module territory,
-   * out of this task's boundary), so the tenant-boundary check is done
-   * in-memory against the already-loaded entity via
-   * `EventScope.includesEvent()` rather than by adding a scoped query
-   * method to a port this module does not own. An out-of-scope event 404s
-   * exactly like an unknown one.
+   * `IEventReadRepository.findById` is unscoped and belongs to another module, so the
+   * tenant-boundary check runs in-memory via `EventScope.includesEvent()`. An out-of-scope event
+   * 404s exactly like an unknown one.
    */
   async execute(command: GeneratePresignedUrlCommand): Promise<PresignedUrlProjection> {
     const scope = await this.authz.resolveEventScope(command.userId)

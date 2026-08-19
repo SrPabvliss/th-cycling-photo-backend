@@ -21,47 +21,18 @@ import { RequestScopedAuthorizationCache } from './infrastructure/cache/request-
 import { PermissionRepository } from './infrastructure/repositories/permission.repository'
 
 /**
- * The deployment-shaped test.
+ * Covers the *deploy* path, which every other gate on this branch is blind to. TIT-38 shipped two
+ * bugs there: nothing in `src/` wrote `users.permission_template_id`, and the permission rows lived
+ * only in `prisma/seed.ts`, which production never runs. Both 403'd real users and neither is
+ * visible to a mock.
  *
- * Every other gate on this branch exercises the *request* path — guards,
- * handlers, the classification census, the legacy-equivalence matrix. None of
- * them can see a bug that lives in the *deploy* path, and TIT-38 shipped two:
+ * So this reproduces a deploy for real: provision an empty database, run `prisma migrate deploy`
+ * and the catalog sync as `scripts/docker-entrypoint.sh` does, create users through the real
+ * repositories, and ask the real `AuthorizationService` what they can reach.
  *
- *  1. Nothing in `src/` ever wrote `users.permission_template_id`, so every
- *     user created after the deploy (registered buyer or admin-created staff)
- *     resolved to an empty template — the purchase funnel and the whole admin
- *     surface 403'd for anyone who did not already exist when the migration
- *     backfilled them.
- *  2. Permission rows and template membership existed only in `prisma/seed.ts`,
- *     which production never runs. The migrations create an empty
- *     `permissions` table and four empty templates, so a first production
- *     deploy 403'd every permissioned route for everybody.
- *
- * Both are invisible to a mock. This test therefore reproduces a deploy for
- * real: it provisions an EMPTY database, runs `prisma migrate deploy` and the
- * catalog sync exactly as `scripts/docker-entrypoint.sh` does, then creates
- * users through the real production code paths (`AuthUserRepository.register`
- * and `UserWriteRepository.save`, wired through Nest DI, against the real
- * Prisma client) and asks the real `AuthorizationService` whether they can
- * reach the routes they must reach.
- *
- * ## Database isolation
- *
- * This NEVER touches the developer's database. `beforeAll` connects to the
- * `postgres` maintenance database on the same server and issues
- * `CREATE DATABASE tit38_deploy_<pid>_<random>`; `afterAll` drops it with
- * `WITH (FORCE)`. `prisma migrate reset` is never invoked anywhere. The name
- * is unique per run, so concurrent runs cannot collide.
- *
- * Requires a role that may create databases — `postgres` locally
- * (docker-compose.yml) and in CI (.github/workflows/ci.yml), both superusers.
- * If Postgres is reachable but the configured role specifically lacks
- * `CREATEDB`, the suite skips itself with an actionable message (see
- * `checkCreateDbPrivilege` below) instead of failing — that gap is an
- * environment/role choice, not a regression this test exists to catch. Any
- * other provisioning failure (e.g. Postgres unreachable at all) still fails
- * loudly, since a silent pass there would restore exactly the blind spot
- * this test exists to close.
+ * Never touches the dev database: it creates `tit38_deploy_<pid>_<random>` and drops it after.
+ * Needs a role with CREATEDB; if only that is missing the suite skips with an actionable message,
+ * while any other provisioning failure still fails loudly.
  */
 
 const REPO_ROOT = join(__dirname, '..', '..', '..')
@@ -96,13 +67,8 @@ const run = (bin: string, args: string[], label: string): void => {
 }
 
 /**
- * Runs the catalog sync the way production does. Prefers the compiled
- * artifact — `node dist/…/sync-permission-catalog.cli.js`, byte for byte the
- * command in `scripts/docker-entrypoint.sh`, with no `tsx` and no TypeScript
- * involved — whenever a current build is present, so a post-`pnpm build`
- * test run exercises the real production artifact. Falls back to running the
- * same entry point through `tsx` when `dist` is absent or stale (CI's test
- * job does not build), which keeps the suite runnable from a clean checkout.
+ * Runs the catalog sync the way production does: the compiled `dist` artifact when one is current,
+ * falling back to `tsx` so the suite still runs from a clean checkout.
  */
 const runCatalogSync = (): string => {
   const source = join(
@@ -127,15 +93,9 @@ const runCatalogSync = (): string => {
 }
 
 /**
- * Checks whether the configured role may `CREATE DATABASE`, without ever
- * creating one — `SELECT rolcreatedb FROM pg_roles` is read-only. This must
- * resolve before any `describe`/`it` is registered (Jest collects the test
- * tree synchronously), and Node's Postgres driver is async-only, so the
- * check runs in a child process via `execFileSync`, which blocks the parent
- * until it exits — the same "shell out synchronously" pattern `run` above
- * already uses for `prisma migrate deploy`. The connection string travels
- * through an env var rather than interpolated into the script source, so a
- * password containing quotes or other special characters can't break it.
+ * Read-only CREATEDB check. Jest collects the test tree synchronously and the Postgres driver is
+ * async-only, so it shells out via `execFileSync`. The connection string travels in an env var so
+ * a password with quotes can't break the script.
  */
 const checkCreateDbPrivilege = (): 'ok' | 'missing' | 'unreachable' => {
   const probeScript = `
@@ -168,10 +128,7 @@ const checkCreateDbPrivilege = (): 'ok' | 'missing' | 'unreachable' => {
 
 const createDbPrivilege = checkCreateDbPrivilege()
 
-// Only the confirmed-missing-privilege case skips. `'unreachable'` (Postgres
-// down, wrong host, etc.) still runs `describe` as before, so the existing
-// `beforeAll` provisioning step fails loudly with its own actionable message
-// rather than being masked by a skip that would suggest nothing is wrong.
+// Only a confirmed missing privilege skips; 'unreachable' still fails loudly in `beforeAll`.
 if (createDbPrivilege === 'missing') {
   console.warn(
     `deployment bootstrap: SKIPPED — role "${DB_USER}" on ${DB_HOST}:${DB_PORT} can connect but ` +
@@ -232,12 +189,8 @@ describeIfCanCreateDb('deployment bootstrap', () => {
     authUserRepo = module.get(AuthUserRepository)
     userWriteRepo = module.get(USER_WRITE_REPOSITORY)
 
-    // 4. A country for the buyer's customer profile — reference data outside
-    //    the permission catalog and not part of any migration, so it is set
-    //    up here. The legacy `roles` table used to need the same treatment,
-    //    but migration `20260818232527_tit38_seed_legacy_roles` now inserts
-    //    those rows idempotently, so `migrate deploy` above already provides
-    //    them — proving that path for real is the point of this test.
+    // 4. A country for the buyer's profile — reference data no migration provides. The legacy
+    //    `roles` rows used to be set up here too, until migration `..._tit38_seed_legacy_roles`.
     const country = await prisma.country.create({ data: { name: 'Ecuador', iso_code: 'EC' } })
     countryId = country.id
   }, 600_000)
@@ -254,10 +207,8 @@ describeIfCanCreateDb('deployment bootstrap', () => {
   }, 120_000)
 
   it('starts from a database whose migrations alone leave every template empty', async () => {
-    // Pins the premise: the migrations create the four template rows but no
-    // membership, and an empty permissions table. If a future migration ever
-    // starts seeding membership itself, this test tells you the sync step's
-    // reason for existing has changed rather than silently going stale.
+    // Pins the premise: migrations leave the catalog empty, so the sync step is what fills it.
+    // If a migration ever starts seeding membership, this fails instead of going stale.
     const templates = await prisma.permissionTemplate.findMany({ select: { key: true } })
     expect(templates.map((t) => t.key).sort()).toEqual([
       'customer',

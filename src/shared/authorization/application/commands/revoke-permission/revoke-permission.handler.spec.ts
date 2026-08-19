@@ -5,13 +5,8 @@ import { RevokePermissionHandler } from './revoke-permission.handler'
 describe('RevokePermissionHandler', () => {
   const cache = { get: jest.fn(), set: jest.fn(), invalidate: jest.fn() }
 
-  // Note: the brief's fixture only mocked `user.findUnique`, but the given
-  // handler body also calls `user.update` (unconditionally, to bump
-  // `permissions_version`) after every successful revoke — including in
-  // the "allows the revoke" case below. `update` is added here so that
-  // path doesn't throw `TypeError: ... update is not a function`; the
-  // "bumps permissions_version" test still overrides it with its own
-  // fresh mock to make its assertion.
+  // `update` is mocked because the handler bumps `permissions_version` after every successful
+  // revoke; the "bumps permissions_version" test overrides it with its own mock to assert on.
   const prismaWith = (holders: number, targetProtected = false) => ({
     user: {
       findUnique: jest.fn().mockResolvedValue({ id: 'u1', is_protected: targetProtected }),
@@ -54,9 +49,8 @@ describe('RevokePermissionHandler', () => {
     )
   })
 
-  // Ruling 13: the command's `eventId` presence and `scopeType` must agree.
-  // PermissionRepository silently mishandles both malformed shapes, so the
-  // only writer (this handler) must reject them before touching the DB.
+  // `eventId` presence and `scopeType` must agree: PermissionRepository silently mishandles both
+  // malformed shapes, so the only writer must reject them before touching the DB.
   describe('Ruling 13 — scope/event pairing', () => {
     it('rejects scope_type "event" with no eventId', async () => {
       const prisma = prismaWith(2)

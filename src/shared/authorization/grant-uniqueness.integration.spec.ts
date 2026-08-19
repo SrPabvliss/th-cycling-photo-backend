@@ -5,30 +5,13 @@ import configuration from '../../config/configuration'
 import { validate } from '../../config/env.validation'
 
 /**
- * Real-database integration test (not mocked): a self-defending regression
- * test for the `user_permission_grants_unique` index's `NULLS NOT
- * DISTINCT` clause (TIT-38 Task 13 fix report item 2).
+ * Guards the `NULLS NOT DISTINCT` clause on `user_permission_grants_unique`, which
+ * `schema.prisma`'s `@@unique` cannot express and so silently understates. If a `prisma migrate
+ * dev` ever "fixed" that apparent drift, two global grants for the same (user, permission) would
+ * stop colliding and the authorization engine would read two conflicting effects with no winner.
  *
- * Task 4 verified this by hand, once, with raw `psql` inside a manual
- * `BEGIN`/`ROLLBACK` — useful evidence at the time, but nothing that runs
- * again. `schema.prisma`'s `@@unique` on `UserPermissionGrant` (added by
- * Task 13, for `GrantPermissionHandler`'s `upsert`) cannot express `NULLS
- * NOT DISTINCT` — see the comment on that line — so it silently
- * understates what the real index enforces. If a future `prisma migrate
- * dev` ever "fixed" that apparent drift by recreating the index without
- * the clause, nothing would catch it except this test: two global grants
- * for the same (user, permission) would stop colliding, and
- * `PermissionRepository`/`countActivePermissionGrantHolders` would start
- * reading two conflicting effects for the same key with no defined
- * winner.
- *
- * Everything happens inside one Prisma interactive transaction, which
- * automatically rolls back when the callback throws — including the temp
- * user created at its start — so this leaves the dev database exactly as
- * it found it, on both a pass and a failure. Same ConfigModule +
- * real-service pattern as the sibling integration specs in this
- * directory; the transaction-rollback technique itself mirrors Task 4's
- * manual `psql` verification, just automated.
+ * Runs inside a Prisma interactive transaction that rolls back when the callback throws, so the
+ * dev database is left untouched on both a pass and a failure.
  */
 describe('user_permission_grants NULLS NOT DISTINCT constraint', () => {
   let module: TestingModule
@@ -81,10 +64,8 @@ describe('user_permission_grants NULLS NOT DISTINCT constraint', () => {
           },
         })
 
-        // Second grant: identical (user_id, permission_id, scope_type:
-        // 'global', event_id: null). Without NULLS NOT DISTINCT, Postgres
-        // treats the two NULL event_ids as distinct and would allow both
-        // rows — this must fail.
+        // Identical to the first. Without NULLS NOT DISTINCT, Postgres treats the two NULL
+        // event_ids as distinct and allows both rows — this must fail.
         await tx.userPermissionGrant.create({
           data: {
             user_id: tempUser.id,
@@ -98,9 +79,7 @@ describe('user_permission_grants NULLS NOT DISTINCT constraint', () => {
     ).rejects.toThrow(/Unique constraint/i)
 
     expect(tempUserId).toBeDefined()
-    // The failing second insert aborts the whole transaction, including
-    // the temp user created at its start — confirms no residue, on top of
-    // Prisma's documented automatic-rollback-on-throw behavior.
+    // The failing insert aborts the transaction, temp user included — confirms no residue.
     const survivingUser = await prisma.user.findUnique({ where: { id: tempUserId } })
     expect(survivingUser).toBeNull()
   })

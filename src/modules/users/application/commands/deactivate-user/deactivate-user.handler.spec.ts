@@ -36,10 +36,8 @@ describe('DeactivateUserHandler', () => {
     lastLoginAt: null,
   })
 
-  // TIT-38 Task 13: mirrors `RevokePermissionHandler`'s `prismaWith` — the
-  // handler queries `PrismaService` directly (not through the domain
-  // repositories) for the two authorization guards, since `is_protected`
-  // and last-holder status aren't modeled on the `User` domain entity.
+  // Mirrors `RevokePermissionHandler`'s `prismaWith`: the handler hits `PrismaService` directly for
+  // its two guards, since `is_protected` and last-holder status aren't on the `User` entity.
   const prismaWith = (holders: number, isProtected = false) => ({
     user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ is_protected: isProtected }) },
     $queryRaw: jest.fn().mockResolvedValue([{ count: BigInt(holders) }]),
@@ -96,8 +94,7 @@ describe('DeactivateUserHandler', () => {
     expect(writeRepo.save).not.toHaveBeenCalled()
   })
 
-  // TIT-38 Task 13, Layer 2: the break-glass account rejects deactivation
-  // too, including of itself — this is the same invariant
+  // The break-glass account rejects deactivation, including of itself — the same invariant
   // Grant/Revoke/ApplyTemplateHandler enforce.
   it('refuses to deactivate a protected account', async () => {
     readRepo.findById.mockResolvedValue(activeUser)
@@ -109,8 +106,7 @@ describe('DeactivateUserHandler', () => {
     expect(writeRepo.save).not.toHaveBeenCalled()
   })
 
-  // TIT-38 Task 13, Layer 1: deactivating the last holder of
-  // `permission.grant` is the same lockout as revoking it directly.
+  // Deactivating the last holder of `permission.grant` is the same lockout as revoking it.
   it('refuses to deactivate the last holder of permission.grant', async () => {
     readRepo.findById.mockResolvedValue(activeUser)
     const handler = new DeactivateUserHandler(readRepo, writeRepo, prismaWith(0) as never)
@@ -121,17 +117,12 @@ describe('DeactivateUserHandler', () => {
     expect(writeRepo.save).not.toHaveBeenCalled()
   })
 
-  // Proves the guard asks "how many holders remain besides this user" —
-  // not "how many holders exist platform-wide". A platform with exactly
-  // one admin must still allow deactivating an unrelated account; only
-  // the admin's own deactivation should be blocked. Mutating the handler
-  // to reuse RevokePermissionHandler's unconditional "<= 1 total" check
-  // instead of the exclusion-based "=== 0 remaining" check would fail
-  // this test, even though every other test in this file would still pass.
+  // Proves the guard asks "how many holders remain besides this user", not "how many exist" — a
+  // platform with one admin must still allow deactivating an unrelated account. Swapping in
+  // RevokePermissionHandler's "<= 1 total" check fails only this test.
   it('allows deactivating an unrelated user even when the platform has only one admin elsewhere', async () => {
-    // A fresh instance, not the shared `activeUser` fixture: `deactivate()`
-    // mutates in place, and `activeUser` is reused (and deactivated) by
-    // an earlier test in this file.
+    // Fresh instance: `deactivate()` mutates in place and an earlier test already used
+    // `activeUser`.
     const unrelatedUser = User.fromPersistence({
       id: 'user-3',
       email: 'unrelated@test.com',
@@ -146,10 +137,7 @@ describe('DeactivateUserHandler', () => {
     })
     readRepo.findById.mockResolvedValue(unrelatedUser)
     writeRepo.save.mockImplementation(async (user: User) => user)
-    // countActivePermissionGrantHolders(prisma, 'user-3') is mocked to
-    // return 1 — one holder remains who *isn't* user-3, so removing
-    // user-3 (who was never counted, since they were excluded from this
-    // very query) cannot be the lockout.
+    // Mocked to 1: one holder remains who isn't user-3, so removing user-3 can't be the lockout.
     const handler = new DeactivateUserHandler(readRepo, writeRepo, prismaWith(1) as never)
 
     const result = await handler.execute(new DeactivateUserCommand('user-3'))

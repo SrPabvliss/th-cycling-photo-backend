@@ -170,13 +170,9 @@ describe('AuthorizationService.resolveEventScope', () => {
     expect(w.OR[1].id.in).toEqual([])
   })
 
-  // Guards against a mutation that grants `all` from `isPlatform` alone,
-  // skipping the `event.read.all` check. None of the four tests above catch
-  // that: the `isPlatform` fixtures they use either hold `event.read.all` (so
-  // both the correct check and the mutant agree) or leave `isPlatform` false
-  // (so the mutant never even fires). A restricted TitanTV staff member —
-  // `platform_staff` never includes `event.read.all` — must not see every
-  // event on the platform just for being platform staff.
+  // Guards against a mutation that grants `all` from `isPlatform` alone. The four tests above
+  // can't catch it: their fixtures either hold `event.read.all` (so mutant and original agree) or
+  // leave `isPlatform` false (so the mutant never fires).
   it('does not grant unrestricted scope to a platform_staff-shaped principal', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.isPlatform = true
@@ -195,12 +191,8 @@ describe('AuthorizationService.resolveEventScope', () => {
     expect((await svc.resolveEventScope('u1')).toPrisma()).toEqual({})
   })
 
-  // The cross-tenant leak the review caught: a non-platform (tenant) user
-  // can never reach `unrestricted()` via a global `event.read.all` grant,
-  // no matter what's in `globalGrants` — `can()`'s platformOnly check denies
-  // it before the grant is even consulted. This is the case that a mutant
-  // dropping the `isPlatform` guard (or re-deriving the flag by hand instead
-  // of delegating to `can()`) would silently let through.
+  // A tenant user can never reach `unrestricted()` through a global `event.read.all` grant —
+  // `can()`'s platformOnly check denies it first. Re-deriving the flag by hand would leak here.
   it('does not grant unrestricted scope to a tenant user holding event.read.all as a global grant', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.isPlatform = false
@@ -214,10 +206,7 @@ describe('AuthorizationService.resolveEventScope', () => {
     })
   })
 
-  // Semantic change from the pre-fix version: an explicit deny on
-  // event.read.all now overrides the template, matching can()'s documented
-  // precedence (grant beats template) instead of short-circuiting to
-  // unrestricted() just because the template holds the key.
+  // An explicit deny on event.read.all overrides the template, matching can()'s precedence.
   it('lets an explicit deny on event.read.all override the template', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.isPlatform = true
