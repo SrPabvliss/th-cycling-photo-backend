@@ -63,6 +63,8 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
     return {
       orderId: order.id,
       deliveryUrl: deliveryResult.deliveryUrl,
+      token: deliveryResult.token,
+      eventName: detail?.eventName ?? '',
       whatsappTemplate,
     }
   }

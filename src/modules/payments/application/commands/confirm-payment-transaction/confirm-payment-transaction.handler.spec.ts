@@ -1,8 +1,10 @@
 import { SettleCartCommand } from '@cart/application/commands'
 import { Logger } from '@nestjs/common'
+import { SendDeliveryCommand } from '@orders/application/commands'
 import { SellerAccountSuspension } from '@payments/application/services/seller-account-suspension.service'
 import { PaymentMode } from '@payments/domain/value-objects/payment-mode.vo'
 import { PaymentTransactionStatus } from '@payments/domain/value-objects/payment-transaction-status.vo'
+import { AuditContext } from '@shared/application'
 import { AppException } from '@shared/domain'
 import type { AuthorizationResult } from '@shared/payment-gateways'
 import { ConfirmPaymentTransactionCommand } from './confirm-payment-transaction.command'
@@ -131,6 +133,37 @@ function buildHandler({
   }
 }
 
+const DELIVERY = {
+  orderId: 'order-1',
+  eventName: 'Vuelta al Cotopaxi',
+  token: 'tok-1',
+  deliveryUrl: 'https://titantv.test/delivery/tok-1',
+}
+
+const EXPECTED_DELIVERY = {
+  orderId: DELIVERY.orderId,
+  eventName: DELIVERY.eventName,
+  token: DELIVERY.token,
+}
+
+function withDelivery(commandBus: { execute: jest.Mock }, deliveries = [DELIVERY]) {
+  commandBus.execute.mockImplementation((command: { orderId?: string }) => {
+    const match = deliveries.find((delivery) => delivery.orderId === command.orderId)
+    if (command instanceof SendDeliveryCommand) {
+      return match
+        ? Promise.resolve({
+            orderId: match.orderId,
+            deliveryUrl: match.deliveryUrl,
+            token: match.token,
+            eventName: match.eventName,
+            whatsappTemplate: 'plantilla',
+          })
+        : Promise.reject(new Error('not deliverable'))
+    }
+    return Promise.resolve({ id: command.orderId ?? 'order-1' })
+  })
+}
+
 describe('ConfirmPaymentTransactionHandler', () => {
   it('confirms with the credential that created the transaction', async () => {
     const { handler, gateway } = buildHandler()
@@ -182,7 +215,7 @@ describe('ConfirmPaymentTransactionHandler', () => {
     )
 
     expect(result.orderIds).toEqual(['order-1', 'order-2'])
-    expect(commandBus.execute).toHaveBeenCalledTimes(3)
+    expect(commandBus.execute).toHaveBeenCalledTimes(5)
     expect(commandBus.execute).toHaveBeenCalledWith(
       expect.objectContaining({ userId: BUYER, orderIds: ['order-1', 'order-2'] }),
     )
@@ -212,7 +245,7 @@ describe('ConfirmPaymentTransactionHandler', () => {
 
     await handler.execute(new ConfirmPaymentTransactionCommand('tt-multi', '900', BUYER))
 
-    expect(commandBus.execute).toHaveBeenCalledTimes(2)
+    expect(commandBus.execute).toHaveBeenCalledTimes(3)
     expect(commandBus.execute).toHaveBeenCalledWith(
       expect.objectContaining({ userId: BUYER, orderIds: ['order-2'] }),
     )
@@ -436,6 +469,7 @@ describe('ConfirmPaymentTransactionHandler', () => {
       'lock-close-2',
       'order-command',
       'order-command',
+      'order-command',
     ])
   })
 
@@ -482,7 +516,7 @@ describe('ConfirmPaymentTransactionHandler', () => {
     const result = await handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER))
 
     expect(result.approved).toBe(true)
-    expect(commandBus.execute).toHaveBeenCalledTimes(3)
+    expect(commandBus.execute).toHaveBeenCalledTimes(4)
     expect(commandBus.execute).toHaveBeenCalledWith(
       expect.objectContaining({ userId: BUYER, orderIds: ['order-2'] }),
     )
@@ -526,7 +560,7 @@ describe('ConfirmPaymentTransactionHandler', () => {
 
     expect(first.approved).toBe(true)
     expect(second.approved).toBe(true)
-    expect(commandBus.execute).toHaveBeenCalledTimes(2)
+    expect(commandBus.execute).toHaveBeenCalledTimes(3)
   })
 
   it('uses the platform token for a split transaction', async () => {
@@ -788,5 +822,135 @@ describe('ConfirmPaymentTransactionHandler', () => {
     await expect(call).rejects.not.toHaveProperty('approved')
     await expect(call).rejects.not.toHaveProperty('orderIds')
     expect(commandBus.execute).not.toHaveBeenCalled()
+  })
+
+  it('delivers every order it settled and returns their links', async () => {
+    const { handler, commandBus } = buildHandler({
+      contexts: [buildContext({ orderId: 'order-1', status: 'pending' })],
+    })
+    withDelivery(commandBus)
+
+    const result = await handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER))
+
+    expect(commandBus.execute).toHaveBeenCalledWith(
+      new SendDeliveryCommand('order-1', new AuditContext('system-user-1')),
+    )
+    expect(result.deliveries).toEqual([EXPECTED_DELIVERY])
+  })
+
+  it('never delivers an order that did not settle', async () => {
+    const { handler, commandBus } = buildHandler({
+      contexts: [buildContext({ orderId: 'order-1', status: 'cancelled' })],
+    })
+    withDelivery(commandBus)
+
+    const result = await handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER))
+
+    expect(commandBus.execute).not.toHaveBeenCalledWith(expect.any(SendDeliveryCommand))
+    expect(result.deliveries).toEqual([])
+  })
+
+  it('still reports the payment approved when a delivery fails, logging it instead', async () => {
+    const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation()
+    const { handler, commandBus } = buildHandler({
+      contexts: [buildContext({ orderId: 'order-1', status: 'pending' })],
+    })
+    withDelivery(commandBus, [])
+
+    const result = await handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER))
+
+    expect(result.approved).toBe(true)
+    expect(result.deliveries).toEqual([])
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('could not be delivered'))
+    errorSpy.mockRestore()
+  })
+
+  it('delivers the sibling order when one delivery in a multi-order charge fails', async () => {
+    const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation()
+    const { handler, commandBus } = buildHandler({
+      transaction: buildTransaction({ orderIds: ['order-1', 'order-2'] }),
+      contexts: [
+        buildContext({ orderId: 'order-1', status: 'pending' }),
+        buildContext({ orderId: 'order-2', status: 'pending' }),
+      ],
+    })
+    withDelivery(commandBus, [DELIVERY])
+
+    const result = await handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER))
+
+    expect(result.approved).toBe(true)
+    expect(result.deliveries).toEqual([EXPECTED_DELIVERY])
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('orderId=order-2'))
+
+    errorSpy.mockRestore()
+  })
+
+  it('still delivers the order when settling the buyer cart fails', async () => {
+    const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation()
+    const { handler, commandBus } = buildHandler({
+      contexts: [buildContext({ orderId: 'order-1', status: 'pending' })],
+    })
+    commandBus.execute.mockImplementation((command: unknown) => {
+      if (command instanceof SettleCartCommand) {
+        return Promise.reject(new Error('cart module exploded'))
+      }
+      if (command instanceof SendDeliveryCommand) {
+        return Promise.resolve({
+          orderId: DELIVERY.orderId,
+          deliveryUrl: DELIVERY.deliveryUrl,
+          token: DELIVERY.token,
+          eventName: DELIVERY.eventName,
+          whatsappTemplate: 'plantilla',
+        })
+      }
+      return Promise.resolve({ id: 'order-1' })
+    })
+
+    const result = await handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER))
+
+    expect(result.approved).toBe(true)
+    expect(result.deliveries).toEqual([EXPECTED_DELIVERY])
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("could not settle the buyer's cart"),
+    )
+
+    errorSpy.mockRestore()
+  })
+
+  it('delivers each order of a multi-event charge and returns one link per order', async () => {
+    const secondDelivery = {
+      orderId: 'order-2',
+      eventName: 'Ruta de las Cascadas',
+      token: 'tok-2',
+      deliveryUrl: 'https://titantv.test/delivery/tok-2',
+    }
+    const { handler, commandBus } = buildHandler({
+      transaction: buildTransaction({ orderIds: ['order-1', 'order-2'] }),
+      contexts: [
+        buildContext({ orderId: 'order-1', status: 'pending' }),
+        buildContext({ orderId: 'order-2', status: 'pending' }),
+      ],
+    })
+    withDelivery(commandBus, [DELIVERY, secondDelivery])
+
+    const result = await handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER))
+
+    expect(result.deliveries).toEqual([
+      EXPECTED_DELIVERY,
+      {
+        orderId: secondDelivery.orderId,
+        eventName: secondDelivery.eventName,
+        token: secondDelivery.token,
+      },
+    ])
+  })
+
+  it('returns no deliveries when the payment was declined', async () => {
+    const { handler } = buildHandler({ authorization: { approved: false, message: 'Rechazada' } })
+
+    const result = await handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER))
+
+    expect(result.approved).toBe(false)
+    expect(result.deliveries).toEqual([])
   })
 })

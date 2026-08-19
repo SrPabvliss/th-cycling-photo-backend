@@ -1,6 +1,7 @@
 import { AuthModule } from '@auth/auth.module'
 import { DeliveriesModule } from '@deliveries/deliveries.module'
 import { EventsModule } from '@events/events.module'
+import { MailModule } from '@mail/mail.module'
 import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { CancelOrderHandler } from '@orders/application/commands/cancel-order/cancel-order.handler'
@@ -48,6 +49,7 @@ const QueryHandlers = [GetOrdersListHandler, GetOrderDetailHandler, GetOrdersSta
     CqrsModule,
     forwardRef(() => PreviewsModule),
     DeliveriesModule,
+    MailModule,
     forwardRef(() => EventsModule),
     forwardRef(() => PhotosModule),
     forwardRef(() => AuthModule),

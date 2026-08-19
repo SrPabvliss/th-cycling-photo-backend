@@ -2,9 +2,13 @@ import { SettleCartCommand } from '@cart/application/commands'
 import { Inject, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import { ConfirmOrderPaymentCommand } from '@orders/application/commands'
+import { ConfirmOrderPaymentCommand, SendDeliveryCommand } from '@orders/application/commands'
+import type { OrderPaymentConfirmedProjection } from '@orders/application/projections'
 import type { OrderStatusType } from '@orders/domain/value-objects/order-status.vo'
-import type { PaymentResultProjection } from '@payments/application/projections'
+import type {
+  PaymentDeliveryProjection,
+  PaymentResultProjection,
+} from '@payments/application/projections'
 import { SellerAccountSuspension } from '@payments/application/services/seller-account-suspension.service'
 import type { PaymentTransaction } from '@payments/domain/entities'
 import {
@@ -31,6 +35,8 @@ import {
   type PaymentGatewayRegistry,
 } from '@shared/payment-gateways'
 import { ConfirmPaymentTransactionCommand } from './confirm-payment-transaction.command'
+
+type ConfirmationOutcome = Omit<PaymentResultProjection, 'deliveries'>
 
 @CommandHandler(ConfirmPaymentTransactionCommand)
 export class ConfirmPaymentTransactionHandler
@@ -121,7 +127,7 @@ export class ConfirmPaymentTransactionHandler
         return { approved: true, orderIds: transaction.orderIds, message: null }
       })
 
-    let outcome: PaymentResultProjection
+    let outcome: ConfirmationOutcome
     try {
       outcome = await runConfirmation()
     } catch (error) {
@@ -129,18 +135,22 @@ export class ConfirmPaymentTransactionHandler
       throw error
     }
 
-    if (outcome.approved) {
-      await this.settleOrders(command.clientTransactionId, outcome.orderIds, command.buyerUserId)
-    }
+    if (!outcome.approved) return { ...outcome, deliveries: [] }
 
-    return outcome
+    const deliveries = await this.settleOrders(
+      command.clientTransactionId,
+      outcome.orderIds,
+      command.buyerUserId,
+    )
+
+    return { ...outcome, deliveries }
   }
 
   private async settleOrders(
     clientTransactionId: string,
     orderIds: string[],
     buyerUserId: string,
-  ): Promise<void> {
+  ): Promise<PaymentDeliveryProjection[]> {
     const settleable = await this.transactionRepo.runLocked(clientTransactionId, async () => {
       const contexts = await this.contextRepo.findByOrderIds(orderIds)
       const foundOrderIds = new Set(contexts.map((context) => context.orderId))
@@ -204,8 +214,47 @@ export class ConfirmPaymentTransactionHandler
     const settledOrderIds = settledResults.filter((orderId): orderId is string => orderId !== null)
 
     if (settledOrderIds.length > 0) {
-      await this.commandBus.execute(new SettleCartCommand(buyerUserId, settledOrderIds))
+      try {
+        await this.commandBus.execute(new SettleCartCommand(buyerUserId, settledOrderIds))
+      } catch (error) {
+        this.logger.error(
+          `Approved payment settled its orders but could not settle the buyer's cart. clientTransactionId=${clientTransactionId} orderIds=${settledOrderIds.join(',')} reason=${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
     }
+
+    return this.deliverOrders(clientTransactionId, settledOrderIds)
+  }
+
+  private async deliverOrders(
+    clientTransactionId: string,
+    orderIds: string[],
+  ): Promise<PaymentDeliveryProjection[]> {
+    const results = await Promise.all(
+      orderIds.map(async (orderId) => {
+        try {
+          const delivery = await this.commandBus.execute<
+            SendDeliveryCommand,
+            OrderPaymentConfirmedProjection
+          >(new SendDeliveryCommand(orderId, new AuditContext(this.systemUserId)))
+
+          if (!delivery?.deliveryUrl || !delivery.token) return null
+
+          return {
+            orderId,
+            eventName: delivery.eventName,
+            token: delivery.token,
+          }
+        } catch (error) {
+          this.logger.error(
+            `A paid order could not be delivered automatically. clientTransactionId=${clientTransactionId} orderId=${orderId} reason=${error instanceof Error ? error.message : String(error)}`,
+          )
+          return null
+        }
+      }),
+    )
+
+    return results.filter((delivery): delivery is PaymentDeliveryProjection => delivery !== null)
   }
 
   private async resolveCredentials(

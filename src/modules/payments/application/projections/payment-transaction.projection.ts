@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { PaymentDeliveryProjection } from './payment-delivery.projection'
 
 export class PaymentTransactionProjection {
   @ApiProperty()
@@ -15,4 +16,7 @@ export class PaymentTransactionProjection {
 
   @ApiPropertyOptional({ nullable: true })
   failureMessage: string | null
+
+  @ApiProperty({ type: [PaymentDeliveryProjection] })
+  deliveries: PaymentDeliveryProjection[]
 }
