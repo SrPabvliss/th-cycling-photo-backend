@@ -55,9 +55,13 @@ import { PermissionRepository } from './infrastructure/repositories/permission.r
  *
  * Requires a role that may create databases — `postgres` locally
  * (docker-compose.yml) and in CI (.github/workflows/ci.yml), both superusers.
- * If provisioning fails the suite fails loudly with an actionable message
- * rather than passing quietly, since a silent pass here would restore exactly
- * the blind spot this test exists to close.
+ * If Postgres is reachable but the configured role specifically lacks
+ * `CREATEDB`, the suite skips itself with an actionable message (see
+ * `checkCreateDbPrivilege` below) instead of failing — that gap is an
+ * environment/role choice, not a regression this test exists to catch. Any
+ * other provisioning failure (e.g. Postgres unreachable at all) still fails
+ * loudly, since a silent pass there would restore exactly the blind spot
+ * this test exists to close.
  */
 
 const REPO_ROOT = join(__dirname, '..', '..', '..')
@@ -122,7 +126,64 @@ const runCatalogSync = (): string => {
   return 'tsx'
 }
 
-describe('deployment bootstrap', () => {
+/**
+ * Checks whether the configured role may `CREATE DATABASE`, without ever
+ * creating one — `SELECT rolcreatedb FROM pg_roles` is read-only. This must
+ * resolve before any `describe`/`it` is registered (Jest collects the test
+ * tree synchronously), and Node's Postgres driver is async-only, so the
+ * check runs in a child process via `execFileSync`, which blocks the parent
+ * until it exits — the same "shell out synchronously" pattern `run` above
+ * already uses for `prisma migrate deploy`. The connection string travels
+ * through an env var rather than interpolated into the script source, so a
+ * password containing quotes or other special characters can't break it.
+ */
+const checkCreateDbPrivilege = (): 'ok' | 'missing' | 'unreachable' => {
+  const probeScript = `
+    const { Client } = require('pg')
+    const client = new Client({ connectionString: process.env.PROBE_DB_URL })
+    client
+      .connect()
+      .then(() => client.query('SELECT rolcreatedb FROM pg_roles WHERE rolname = current_user'))
+      .then(({ rows }) => {
+        process.stdout.write(rows[0]?.rolcreatedb ? 'ok' : 'missing')
+      })
+      .catch(() => {
+        process.stdout.write('unreachable')
+      })
+      .finally(() => client.end().catch(() => {}))
+  `
+
+  try {
+    const stdout = execFileSync(process.execPath, ['-e', probeScript], {
+      cwd: REPO_ROOT,
+      env: { ...process.env, PROBE_DB_URL: urlFor('postgres') },
+      encoding: 'utf8',
+    })
+    const result = stdout.trim()
+    return result === 'ok' || result === 'missing' ? result : 'unreachable'
+  } catch {
+    return 'unreachable'
+  }
+}
+
+const createDbPrivilege = checkCreateDbPrivilege()
+
+// Only the confirmed-missing-privilege case skips. `'unreachable'` (Postgres
+// down, wrong host, etc.) still runs `describe` as before, so the existing
+// `beforeAll` provisioning step fails loudly with its own actionable message
+// rather than being masked by a skip that would suggest nothing is wrong.
+if (createDbPrivilege === 'missing') {
+  console.warn(
+    `deployment bootstrap: SKIPPED — role "${DB_USER}" on ${DB_HOST}:${DB_PORT} can connect but ` +
+      'lacks the CREATEDB privilege, so this suite cannot provision its disposable database. ' +
+      `Grant it (e.g. \`ALTER ROLE "${DB_USER}" CREATEDB;\`) or point DB_* at a role that has it ` +
+      '(docker-compose.yml and CI both use the postgres superuser) to run this suite.',
+  )
+}
+
+const describeIfCanCreateDb = createDbPrivilege === 'missing' ? describe.skip : describe
+
+describeIfCanCreateDb('deployment bootstrap', () => {
   let module: TestingModule
   let prisma: PrismaService
   let authz: IAuthorizationService
