@@ -25,6 +25,10 @@ function buildTransaction() {
   })
 }
 
+function buildQueryBus() {
+  return { execute: jest.fn().mockResolvedValue([]) }
+}
+
 function buildHandler(buyerUserId: string) {
   const readRepo = { findByClientTransactionId: jest.fn(() => Promise.resolve(buildTransaction())) }
   const contextRepo = {
@@ -48,7 +52,11 @@ function buildHandler(buyerUserId: string) {
     ),
   }
 
-  return new GetPaymentTransactionHandler(readRepo as never, contextRepo as never)
+  return new GetPaymentTransactionHandler(
+    readRepo as never,
+    contextRepo as never,
+    buildQueryBus() as never,
+  )
 }
 
 describe('GetPaymentTransactionHandler', () => {
@@ -90,10 +98,64 @@ describe('GetPaymentTransactionHandler', () => {
         ]),
       ),
     }
-    const handler = new GetPaymentTransactionHandler(readRepo as never, contextRepo as never)
+    const handler = new GetPaymentTransactionHandler(
+      readRepo as never,
+      contextRepo as never,
+      buildQueryBus() as never,
+    )
 
     await expect(
       handler.execute(new GetPaymentTransactionQuery('tt-multi', BUYER)),
     ).rejects.toMatchObject({ messageKey: 'payment.order_context_missing' })
+  })
+
+  it('returns the live delivery links of the orders the transaction covers', async () => {
+    const queryBus = {
+      execute: jest.fn().mockResolvedValue([
+        {
+          orderId: 'order-1',
+          eventName: 'Vuelta al Cotopaxi',
+          token: 'tok-1',
+        },
+      ]),
+    }
+    const readRepo = {
+      findByClientTransactionId: jest.fn(() => Promise.resolve(buildTransaction())),
+    }
+    const contextRepo = {
+      findByOrderIds: jest.fn(() =>
+        Promise.resolve([
+          {
+            orderId: 'order-1',
+            status: 'pending',
+            subtotalDollars: 10,
+            sellerUserId: 's',
+            buyerUserId: BUYER,
+          },
+          {
+            orderId: 'order-2',
+            status: 'pending',
+            subtotalDollars: 15,
+            sellerUserId: 's',
+            buyerUserId: BUYER,
+          },
+        ]),
+      ),
+    }
+    const handler = new GetPaymentTransactionHandler(
+      readRepo as never,
+      contextRepo as never,
+      queryBus as never,
+    )
+
+    const result = await handler.execute(new GetPaymentTransactionQuery('tt-multi', BUYER))
+
+    expect(result.deliveries).toEqual([
+      {
+        orderId: 'order-1',
+        eventName: 'Vuelta al Cotopaxi',
+        token: 'tok-1',
+      },
+    ])
   })
 })

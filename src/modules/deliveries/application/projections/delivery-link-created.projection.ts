@@ -5,4 +5,6 @@ export class DeliveryLinkCreatedProjection {
   token: string
   /** Full delivery URL for sharing */
   deliveryUrl: string
+  /** When the delivery link expires */
+  expiresAt: Date
 }

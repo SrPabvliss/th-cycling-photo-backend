@@ -1,6 +1,10 @@
+import { GetActiveDeliveriesQuery } from '@deliveries/application/queries'
 import { Inject } from '@nestjs/common'
-import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
-import type { PaymentTransactionProjection } from '@payments/application/projections'
+import { type IQueryHandler, QueryBus, QueryHandler } from '@nestjs/cqrs'
+import type {
+  PaymentDeliveryProjection,
+  PaymentTransactionProjection,
+} from '@payments/application/projections'
 import {
   type IOrderPaymentContextRepository,
   type IPaymentTransactionReadRepository,
@@ -17,6 +21,7 @@ export class GetPaymentTransactionHandler implements IQueryHandler<GetPaymentTra
     private readonly readRepo: IPaymentTransactionReadRepository,
     @Inject(ORDER_PAYMENT_CONTEXT_REPOSITORY)
     private readonly contextRepo: IOrderPaymentContextRepository,
+    private readonly queryBus: QueryBus,
   ) {}
 
   async execute(query: GetPaymentTransactionQuery): Promise<PaymentTransactionProjection> {
@@ -31,12 +36,18 @@ export class GetPaymentTransactionHandler implements IQueryHandler<GetPaymentTra
       throw AppException.forbidden('payment.order_not_yours')
     }
 
+    const deliveries = await this.queryBus.execute<
+      GetActiveDeliveriesQuery,
+      PaymentDeliveryProjection[]
+    >(new GetActiveDeliveriesQuery(transaction.orderIds))
+
     return {
       clientTransactionId: transaction.clientTransactionId,
       status: transaction.status,
       amountCents: transaction.amountCents,
       orderIds: transaction.orderIds,
       failureMessage: transaction.failureMessage,
+      deliveries,
     }
   }
 }

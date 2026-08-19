@@ -1,6 +1,7 @@
-import type { DeliveryDataRaw } from '@deliveries/application/projections'
+import type { ActiveDeliveryRaw, DeliveryDataRaw } from '@deliveries/application/projections'
 import type { DeliveryLink } from '@deliveries/domain/entities'
 import type { IDeliveryLinkReadRepository } from '@deliveries/domain/ports'
+import { DeliveryLinkStatus } from '@deliveries/domain/value-objects/delivery-link-status.vo'
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
 import * as DeliveryLinkMapper from '../mappers/delivery-link.mapper'
@@ -71,5 +72,26 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
         ),
       })),
     }
+  }
+
+  async findActiveByOrderIds(orderIds: string[]): Promise<ActiveDeliveryRaw[]> {
+    const records = await this.prisma.deliveryLink.findMany({
+      where: {
+        order_id: { in: orderIds },
+        status: DeliveryLinkStatus.ACTIVE,
+        expires_at: { gt: new Date() },
+      },
+      select: {
+        order_id: true,
+        token: true,
+        order: { select: { event: { select: { name: true } } } },
+      },
+    })
+
+    return records.map((record) => ({
+      orderId: record.order_id,
+      eventName: record.order.event.name,
+      token: record.token,
+    }))
   }
 }
