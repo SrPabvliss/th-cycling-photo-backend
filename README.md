@@ -178,8 +178,11 @@ pnpm check:ci
 ### Testing
 
 ```bash
-# Run unit tests
+# Run unit tests (no database or env needed — this is what CI runs)
 pnpm test
+
+# Run integration tests (needs Postgres; not run in CI)
+pnpm test:integration
 
 # Run tests in watch mode
 pnpm test:watch

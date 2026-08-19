@@ -54,6 +54,7 @@ module.exports = {
       displayName: 'unit',
       testRegex: '.*\\.spec\\.ts$',
       testPathIgnorePatterns: ['\\.integration\\.spec\\.ts$'],
+      setupFiles: [path.join(__dirname, 'test/setup-unit-env.ts')],
     },
     {
       ...baseProject,
