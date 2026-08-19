@@ -11,5 +11,7 @@
   "already_submitted": "Ya se ha enviado una orden para este enlace de vista previa",
   "not_delivered": "La orden no tiene estado entregado",
   "customer_profile_required": "Se requiere un perfil de cliente para realizar un pedido",
-  "photos_not_in_event": "Una o más fotos no pertenecen a este evento"
+  "photos_not_in_event": "Una o más fotos no pertenecen a este evento",
+  "method_not_selectable": "El método de pago ya no se puede cambiar en esta orden",
+  "not_draft": "La orden ya no es un borrador"
 }

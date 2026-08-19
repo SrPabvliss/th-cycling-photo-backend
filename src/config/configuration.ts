@@ -14,6 +14,19 @@ export default () => {
 
   const { AI_PIPELINE_BASE_URL, AI_PIPELINE_TIMEOUT_MS } = process.env
 
+  const {
+    PAYPHONE_ENVIRONMENT,
+    PAYPHONE_TOKEN,
+    PAYPHONE_STORE_ID,
+    PAYPHONE_SPLIT_ENCRYPTION_PASSWORD,
+    PAYPHONE_API_TOKEN,
+    PAYPHONE_API_STORE_ID,
+    PAYMENT_EXPIRY_SWEEP_DELAY_MS,
+    PAYMENT_SYSTEM_USER_ID,
+  } = process.env
+
+  const { CREDENTIAL_ENCRYPTION_KEY } = process.env
+
   const { JWT_SECRET, JWT_ACCESS_EXPIRATION_SECONDS, JWT_REFRESH_EXPIRY_DAYS, CORS_ORIGIN } =
     process.env
 
@@ -119,6 +132,23 @@ export default () => {
     aiPipeline: {
       baseUrl: AI_PIPELINE_BASE_URL || 'http://localhost:8001',
       timeoutMs: Number.parseInt(AI_PIPELINE_TIMEOUT_MS || '30000', 10),
+    },
+    payphone: {
+      environment: PAYPHONE_ENVIRONMENT,
+      token: PAYPHONE_TOKEN,
+      storeId: PAYPHONE_STORE_ID,
+      splitEncryptionPassword: PAYPHONE_SPLIT_ENCRYPTION_PASSWORD || '',
+      apiToken: PAYPHONE_API_TOKEN || '',
+      apiStoreId: PAYPHONE_API_STORE_ID || '',
+      timeoutMs: 15000,
+    },
+    payments: {
+      taxRate: 0,
+      expirySweepDelayMs: Number.parseInt(PAYMENT_EXPIRY_SWEEP_DELAY_MS || '900000', 10),
+      systemUserId: PAYMENT_SYSTEM_USER_ID,
+    },
+    crypto: {
+      credentialKey: CREDENTIAL_ENCRYPTION_KEY,
     },
   }
 }

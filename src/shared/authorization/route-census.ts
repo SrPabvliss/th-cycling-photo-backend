@@ -487,5 +487,41 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
     legacyMarker: 'admin',
     permission: 'user.avatar.manage',
   },
+  {
+    method: 'PATCH',
+    path: '/orders/payment-method',
+    legacyMarker: 'customer',
+    permission: 'order.payment_method.set',
+  },
+  {
+    method: 'POST',
+    path: '/payments/intent',
+    legacyMarker: 'customer',
+    permission: 'payment.intent.create',
+  },
+  {
+    method: 'POST',
+    path: '/payments/confirm',
+    legacyMarker: 'customer',
+    permission: 'payment.confirm',
+  },
+  {
+    method: 'GET',
+    path: '/payments/transactions/:clientTransactionId',
+    legacyMarker: 'customer',
+    permission: 'payment.transaction.read',
+  },
+  {
+    method: 'GET',
+    path: '/payphone-account',
+    legacyMarker: 'admin,operator',
+    permission: 'payment.account.read',
+  },
+  {
+    method: 'PUT',
+    path: '/payphone-account',
+    legacyMarker: 'admin,operator',
+    permission: 'payment.account.configure',
+  },
   { method: 'GET', path: '/', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
 ]

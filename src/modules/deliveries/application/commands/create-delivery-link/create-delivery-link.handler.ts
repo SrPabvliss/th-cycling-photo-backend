@@ -37,6 +37,7 @@ export class CreateDeliveryLinkHandler implements ICommandHandler<CreateDelivery
       id: saved.id,
       token: saved.token,
       deliveryUrl: `${this.deliveryBaseUrl}/${saved.token}`,
+      expiresAt: saved.expiresAt,
     }
   }
 }

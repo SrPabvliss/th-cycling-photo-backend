@@ -33,6 +33,7 @@ const moduleNameMapper = {
   '^@auth/(.*)$': '<rootDir>/modules/auth/$1',
   '^@cart/(.*)$': '<rootDir>/modules/cart/$1',
   '^@pricing/(.*)$': '<rootDir>/modules/pricing/$1',
+  '^@payments/(.*)$': '<rootDir>/modules/payments/$1',
   '^(\\.{1,2}/.*)\\.js$': '$1',
 }
 

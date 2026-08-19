@@ -36,10 +36,15 @@ export const INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
  * Divergences where only ONE of the four legacy roles changes. Entries are
  * `${role} ${METHOD} ${path}`, so the matrix skips that one assertion and keeps the other three.
  *
- * Both entries come from the owner decision that TitanTV admins can buy photos: `cart.checkout`
- * and `order.create` left `ADMIN_EXCLUDED`, which affects `admin` only.
+ * All of these follow from the owner decision that TitanTV admins can buy photos: `cart.checkout`
+ * and `order.create` left `ADMIN_EXCLUDED`, and the TIT-51 payment routes are the rest of that same
+ * purchase flow — an admin who may place an order may also pay for it.
  */
 export const ROLE_INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   'admin POST /cart/checkout',
   'admin POST /public/events/:eventId/orders',
+  'admin PATCH /orders/payment-method',
+  'admin POST /payments/intent',
+  'admin POST /payments/confirm',
+  'admin GET /payments/transactions/:clientTransactionId',
 ])

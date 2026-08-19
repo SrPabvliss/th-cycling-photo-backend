@@ -63,6 +63,13 @@ export const PERMISSIONS = {
   'order.gift': E(true, true, 'orders'),
   'order.convert_to_gift': E(true, true, 'orders'),
   'order.convert_to_sale': E(true, true, 'orders'),
+  'order.payment_method.set': E(false, false, 'orders'),
+  // payments
+  'payment.intent.create': E(false, false, 'payments'),
+  'payment.confirm': E(false, false, 'payments'),
+  'payment.transaction.read': E(false, false, 'payments'),
+  'payment.account.read': E(true, false, 'payments'),
+  'payment.account.configure': E(true, false, 'payments'),
   // cart
   'cart.checkout': E(false, false, 'cart'),
   // preview links

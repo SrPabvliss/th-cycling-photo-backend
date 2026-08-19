@@ -41,6 +41,8 @@ const STAFF: PermissionKey[] = [
   'photo_category.event.remove',
   'dashboard.operator.read',
   'dashboard.review_queue.read',
+  'payment.account.read',
+  'payment.account.configure',
   'notification.read',
   'notification.mark_read',
 ]
@@ -84,7 +86,14 @@ const TENANT: PermissionKey[] = [
   'notification.mark_read',
 ]
 
-const CUSTOMER: PermissionKey[] = ['cart.checkout', 'order.create']
+const CUSTOMER: PermissionKey[] = [
+  'cart.checkout',
+  'order.create',
+  'order.payment_method.set',
+  'payment.intent.create',
+  'payment.confirm',
+  'payment.transaction.read',
+]
 
 /**
  * `platform_admin` holds every *administrative* capability, not literally every key in the catalog:

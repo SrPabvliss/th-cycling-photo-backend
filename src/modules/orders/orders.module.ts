@@ -1,9 +1,11 @@
 import { AuthModule } from '@auth/auth.module'
 import { DeliveriesModule } from '@deliveries/deliveries.module'
 import { EventsModule } from '@events/events.module'
+import { MailModule } from '@mail/mail.module'
 import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { CancelOrderHandler } from '@orders/application/commands/cancel-order/cancel-order.handler'
+import { ChoosePaymentMethodHandler } from '@orders/application/commands/choose-payment-method/choose-payment-method.handler'
 import { ConfirmOrderPaymentHandler } from '@orders/application/commands/confirm-order-payment/confirm-order-payment.handler'
 import { ConvertOrderToGiftHandler } from '@orders/application/commands/convert-order-to-gift/convert-order-to-gift.handler'
 import { ConvertOrderToSaleHandler } from '@orders/application/commands/convert-order-to-sale/convert-order-to-sale.handler'
@@ -19,9 +21,11 @@ import { GetOrdersStatsHandler } from '@orders/application/queries/get-orders-st
 import { ORDER_READ_REPOSITORY, ORDER_WRITE_REPOSITORY } from '@orders/domain/ports'
 import { OrderReadRepository } from '@orders/infrastructure/repositories/order-read.repository'
 import { OrderWriteRepository } from '@orders/infrastructure/repositories/order-write.repository'
+import { OrderCheckoutController } from '@orders/presentation/controllers/order-checkout.controller'
 import { OrderGalleryController } from '@orders/presentation/controllers/order-gallery.controller'
 import { OrderPublicController } from '@orders/presentation/controllers/order-public.controller'
 import { OrdersController } from '@orders/presentation/controllers/orders.controller'
+import { PaymentsModule } from '@payments/payments.module'
 import { PhotosModule } from '@photos/photos.module'
 import { PreviewsModule } from '@previews/previews.module'
 
@@ -33,6 +37,7 @@ const CommandHandlers = [
   ConvertOrderToGiftHandler,
   GiftOrderHandler,
   NotifyPaymentInfoHandler,
+  ChoosePaymentMethodHandler,
   CancelOrderHandler,
   RegenerateDeliveryHandler,
   SendDeliveryHandler,
@@ -44,11 +49,18 @@ const QueryHandlers = [GetOrdersListHandler, GetOrderDetailHandler, GetOrdersSta
     CqrsModule,
     forwardRef(() => PreviewsModule),
     DeliveriesModule,
+    MailModule,
     forwardRef(() => EventsModule),
     forwardRef(() => PhotosModule),
     forwardRef(() => AuthModule),
+    forwardRef(() => PaymentsModule),
   ],
-  controllers: [OrdersController, OrderPublicController, OrderGalleryController],
+  controllers: [
+    OrderCheckoutController,
+    OrdersController,
+    OrderPublicController,
+    OrderGalleryController,
+  ],
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,

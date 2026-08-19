@@ -1,0 +1,19 @@
+{
+  "negative_amount": "Amount cannot be negative",
+  "account_not_verified": "The photographer has not finished setting up payments",
+  "account_not_found": "No payment account is configured for this event",
+  "order_context_missing": "Order information not found",
+  "invalid_phone": "The phone number format is not valid",
+  "phone_not_registered": "This number is not registered with Payphone",
+  "invalid_credentials": "The Payphone credentials are not valid",
+  "order_not_payable": "This order does not accept payments",
+  "transaction_not_found": "Transaction not found",
+  "duplicate_transaction": "This transaction was already registered",
+  "amount_mismatch": "The amount breakdown does not add up to the total",
+  "gateway_unavailable": "Payphone could not be reached",
+  "card_daily_limit": "You already made a purchase today with this card. Try another card or come back tomorrow.",
+  "split_not_enabled": "Split payments are not enabled",
+  "order_not_yours": "This order does not belong to you",
+  "receiver_verification_unavailable": "Cannot verify the number with Payphone: API application credentials are missing",
+  "mixed_sellers": "Orders from different photographers cannot be charged together"
+}

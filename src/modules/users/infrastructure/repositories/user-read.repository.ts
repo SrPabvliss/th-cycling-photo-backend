@@ -133,8 +133,9 @@ export class UserReadRepository implements IUserReadRepository {
           customer_profile: {
             select: { country: { select: { name: true } } },
           },
-          _count: { select: { orders_placed: true } },
+          _count: { select: { orders_placed: { where: { status: { not: 'draft' } } } } },
           orders_placed: {
+            where: { status: { not: 'draft' } },
             select: { created_at: true },
             orderBy: { created_at: 'desc' },
             take: 1,
