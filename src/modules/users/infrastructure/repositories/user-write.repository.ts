@@ -6,6 +6,7 @@ import {
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
 import type { User } from '@users/domain/entities'
+import type { UpdateProfilePayload } from '@users/domain/payloads'
 import type { IUserWriteRepository } from '@users/domain/ports'
 import * as UserMapper from '../mappers/user.mapper'
 
@@ -95,5 +96,55 @@ export class UserWriteRepository implements IUserWriteRepository {
     }
 
     return { permission_template_id: template.id, tenant_id: tenant.id }
+  }
+
+  async updateProfile(userId: string, data: UpdateProfilePayload): Promise<void> {
+    const userData = Object.fromEntries(
+      Object.entries({ first_name: data.firstName, last_name: data.lastName }).filter(
+        ([, value]) => value !== undefined,
+      ),
+    )
+
+    await this.prisma.$transaction(async (tx) => {
+      if (Object.keys(userData).length > 0) {
+        await tx.user.update({ where: { id: userId }, data: userData })
+      }
+
+      if (!data.profile) return
+
+      const existing = await tx.customerProfile.findUnique({ where: { user_id: userId } })
+      const { countryId, provinceId, cantonId, birthDate, gender } = data.profile
+
+      if (!existing) {
+        if (countryId === undefined) return
+
+        await tx.customerProfile.create({
+          data: {
+            user_id: userId,
+            country_id: countryId,
+            province_id: provinceId,
+            canton_id: cantonId,
+            birth_date: birthDate,
+            gender,
+          },
+        })
+        return
+      }
+
+      const profileUpdateData = Object.fromEntries(
+        Object.entries({
+          country_id: countryId,
+          province_id: provinceId,
+          canton_id: cantonId,
+          birth_date: birthDate,
+          gender,
+        }).filter(([, value]) => value !== undefined),
+      )
+
+      await tx.customerProfile.update({
+        where: { user_id: userId },
+        data: profileUpdateData,
+      })
+    })
   }
 }

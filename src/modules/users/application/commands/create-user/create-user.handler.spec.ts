@@ -12,6 +12,7 @@ describe('CreateUserHandler', () => {
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
+      updateProfile: jest.fn(),
     } as jest.Mocked<IUserWriteRepository>
 
     readRepo = {
@@ -22,6 +23,7 @@ describe('CreateUserHandler', () => {
       getUserDetail: jest.fn(),
       findActiveAdminIds: jest.fn(),
       getBuyersList: jest.fn(),
+      getMyProfile: jest.fn(),
     } as jest.Mocked<IUserReadRepository>
 
     handler = new CreateUserHandler(writeRepo, readRepo)
