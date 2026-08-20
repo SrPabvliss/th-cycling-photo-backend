@@ -1,10 +1,13 @@
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import { TENANT_REPOSITORY, type ITenantRepository } from '../../../domain/ports/tenant-repository.port'
-import { PrismaService } from '@shared/infrastructure'
-import { AppException } from '@shared/domain'
-import { CreateTenantCommand } from './create-tenant.command'
 import { TEMPLATE_KEYS } from '@shared/authorization/domain/permission-template.constants'
+import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
+import {
+  type ITenantRepository,
+  TENANT_REPOSITORY,
+} from '../../../domain/ports/tenant-repository.port'
+import { CreateTenantCommand } from './create-tenant.command'
 
 @CommandHandler(CreateTenantCommand)
 export class CreateTenantHandler implements ICommandHandler<CreateTenantCommand> {

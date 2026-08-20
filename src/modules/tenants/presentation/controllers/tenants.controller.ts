@@ -8,13 +8,13 @@ import { CreateTenantCommand } from '../../application/commands/create-tenant/cr
 import { UpdateTenantQuotaCommand } from '../../application/commands/update-tenant-quota/update-tenant-quota.command'
 import { GetTenantsListQuery } from '../../application/queries/get-tenants-list/get-tenants-list.query'
 import type { TenantListProjection } from '../../domain/ports/tenant-repository.port'
-import { CreateTenantDto } from '../../presentation/dtos/create-tenant.dto'
-import { UpdateTenantQuotaDto } from '../../presentation/dtos/update-tenant-quota.dto'
+import { CreateTenantDto } from '../dtos/create-tenant.dto'
+import { UpdateTenantQuotaDto } from '../dtos/update-tenant-quota.dto'
 
 @ApiTags('Tenants')
 @ApiBearerAuth()
 @UseGuards(PermissionGuard)
-@Controller('api/v1/tenants')
+@Controller('tenants')
 export class TenantsController {
   constructor(
     private readonly commandBus: CommandBus,

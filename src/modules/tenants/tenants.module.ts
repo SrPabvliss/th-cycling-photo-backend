@@ -4,8 +4,8 @@ import { CreateTenantHandler } from './application/commands/create-tenant/create
 import { UpdateTenantQuotaHandler } from './application/commands/update-tenant-quota/update-tenant-quota.handler'
 import { GetTenantsListHandler } from './application/queries/get-tenants-list/get-tenants-list.handler'
 import { TENANT_REPOSITORY } from './domain/ports/tenant-repository.port'
-import { TenantsController } from './infrastructure/controllers/tenants.controller'
 import { TenantRepository } from './infrastructure/repositories/tenant.repository'
+import { TenantsController } from './presentation/controllers/tenants.controller'
 
 const handlers = [CreateTenantHandler, UpdateTenantQuotaHandler, GetTenantsListHandler]
 

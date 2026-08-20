@@ -1,6 +1,9 @@
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import { TENANT_REPOSITORY, type ITenantRepository } from '../../../domain/ports/tenant-repository.port'
+import {
+  type ITenantRepository,
+  TENANT_REPOSITORY,
+} from '../../../domain/ports/tenant-repository.port'
 import { UpdateTenantQuotaCommand } from './update-tenant-quota.command'
 
 @CommandHandler(UpdateTenantQuotaCommand)

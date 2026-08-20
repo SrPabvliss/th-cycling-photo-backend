@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
-import type { ITenantRepository, TenantListProjection, CreateTenantPayload } from '../../domain/ports/tenant-repository.port'
+import type {
+  CreateTenantPayload,
+  ITenantRepository,
+  TenantListProjection,
+} from '../../domain/ports/tenant-repository.port'
 
 @Injectable()
 export class TenantRepository implements ITenantRepository {
@@ -64,7 +68,9 @@ export class TenantRepository implements ITenantRepository {
     return tenant.id
   }
 
-  async checkQuota(tenantId: string): Promise<{ quota: number; used: number; isPlatform: boolean }> {
+  async checkQuota(
+    tenantId: string,
+  ): Promise<{ quota: number; used: number; isPlatform: boolean }> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       include: {
@@ -77,9 +83,9 @@ export class TenantRepository implements ITenantRepository {
         },
       },
     })
-    
+
     if (!tenant) throw new Error('Tenant not found')
-      
+
     return {
       quota: tenant.event_quota,
       used: tenant._count.events,

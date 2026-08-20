@@ -24,5 +24,3 @@ export interface ITenantRepository {
   createTenantWithAdmin(data: CreateTenantPayload): Promise<string>
   checkQuota(tenantId: string): Promise<{ quota: number; used: number; isPlatform: boolean }>
 }
-
-
