@@ -47,7 +47,9 @@ export class UserReadRepository implements IUserReadRepository {
   ): Promise<PaginatedResult<UserListProjection>> {
     const where: Prisma.UserWhereInput = includeInactive ? {} : { is_active: true }
 
-    if (role && Object.values(RoleType).includes(role as RoleType)) {
+    if (role === 'operator') {
+      where.permission_template = { key: 'platform_staff' }
+    } else if (role && Object.values(RoleType).includes(role as RoleType)) {
       where.user_roles = { some: { role: { name: role as RoleType } } }
     }
 

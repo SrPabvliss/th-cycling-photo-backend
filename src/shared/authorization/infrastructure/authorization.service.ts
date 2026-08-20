@@ -82,9 +82,7 @@ export class AuthorizationService implements IAuthorizationService {
       .filter(([, keys]) => [...keys.values()].some((e) => e === 'allow'))
       .map(([eventId]) => eventId)
 
-    // TRANSITIONAL — EventOperator rows stand in for per-event grants until TIT-40 converts them.
-    // Delete this union and `collaboratorEventIds` then.
-    const eventIds = [...new Set([...granted, ...p.collaboratorEventIds])]
+    const eventIds = [...new Set([...granted])]
 
     return new EventScope(false, tenantIds, eventIds)
   }

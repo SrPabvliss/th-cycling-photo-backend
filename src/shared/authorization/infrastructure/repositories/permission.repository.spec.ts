@@ -27,7 +27,6 @@ describe('PermissionRepository.load (grant shaping)', () => {
     expect(p.eventGrants.size).toBe(0)
     expect(p.tenantId).toBeNull()
     expect(p.isPlatform).toBe(false)
-    expect(p.collaboratorEventIds).toEqual([])
   })
 
   it('splits grants into globalGrants and eventGrants, accumulates two grants on the same event, and maps collaboratorEventIds', async () => {
@@ -73,7 +72,6 @@ describe('PermissionRepository.load (grant shaping)', () => {
           permission: { key: 'not.a.real.permission' },
         },
       ],
-      assigned_events: [{ event_id: 'event-1' }, { event_id: 'event-3' }],
     })
 
     const p = await repo.load('user-1')
@@ -94,8 +92,5 @@ describe('PermissionRepository.load (grant shaping)', () => {
     // a different event's grant lands under its own key, not merged in
     expect(p.eventGrants.get('event-2')?.get('order.cancel')).toBe('deny')
     expect(p.eventGrants.size).toBe(2)
-
-    // collaboratorEventIds mapped straight from assigned_events
-    expect(p.collaboratorEventIds).toEqual(['event-1', 'event-3'])
   })
 })

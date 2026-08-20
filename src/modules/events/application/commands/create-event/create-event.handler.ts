@@ -10,6 +10,10 @@ import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
 import { type IUserReadRepository, USER_READ_REPOSITORY } from '@users/domain/ports'
+import {
+  type ITenantRepository,
+  TENANT_REPOSITORY,
+} from '../../../../tenants/domain/ports/tenant-repository.port'
 import { CreateEventCommand } from './create-event.command'
 
 @CommandHandler(CreateEventCommand)
@@ -20,6 +24,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
     @Inject(EVENT_OPERATOR_REPOSITORY) private readonly operatorRepo: IEventOperatorRepository,
     @Inject(USER_READ_REPOSITORY) private readonly userRepo: IUserReadRepository,
+    @Inject(TENANT_REPOSITORY) private readonly tenantRepo: ITenantRepository,
     private readonly locationValidator: LocationValidator,
   ) {}
 
@@ -32,6 +37,11 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     const tenantId = await this.userRepo.findTenantId(command.audit.userId)
     if (!tenantId) {
       throw AppException.businessRule('event.creator_tenant_required')
+    }
+
+    const { quota, used, isPlatform } = await this.tenantRepo.checkQuota(tenantId)
+    if (!isPlatform && used >= quota) {
+      throw AppException.businessRule('tenant.quota_exceeded')
     }
 
     const event = Event.create({

@@ -5,6 +5,7 @@ import { LocationValidator } from '@locations/application/services'
 import { AuditContext } from '@shared/application'
 import { AppException } from '@shared/domain'
 import type { IUserReadRepository } from '@users/domain/ports'
+import type { ITenantRepository } from '../../../../tenants/domain/ports/tenant-repository.port'
 import { CreateEventCommand } from './create-event.command'
 import { CreateEventHandler } from './create-event.handler'
 
@@ -13,6 +14,7 @@ describe('CreateEventHandler', () => {
   let writeRepo: jest.Mocked<IEventWriteRepository>
   let operatorRepo: jest.Mocked<IEventOperatorRepository>
   let userRepo: jest.Mocked<IUserReadRepository>
+  let tenantRepo: jest.Mocked<ITenantRepository>
   let locationValidator: jest.Mocked<LocationValidator>
 
   const futureStart = new Date()
@@ -47,11 +49,24 @@ describe('CreateEventHandler', () => {
       getBuyersList: jest.fn(),
     } as jest.Mocked<IUserReadRepository>
 
+    tenantRepo = {
+      getTenantsList: jest.fn(),
+      updateEventQuota: jest.fn(),
+      createTenantWithAdmin: jest.fn(),
+      checkQuota: jest.fn().mockResolvedValue({ quota: 10, used: 0, isPlatform: false }),
+    } as jest.Mocked<ITenantRepository>
+
     locationValidator = {
       validate: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<LocationValidator>
 
-    handler = new CreateEventHandler(writeRepo, operatorRepo, userRepo, locationValidator)
+    handler = new CreateEventHandler(
+      writeRepo,
+      operatorRepo,
+      userRepo,
+      tenantRepo,
+      locationValidator,
+    )
   })
 
   it('should create and save event, returning id', async () => {
@@ -116,6 +131,39 @@ describe('CreateEventHandler', () => {
 
     await expect(handler.execute(command)).rejects.toThrow('event.creator_tenant_required')
     expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('rejects creation when the tenant has exhausted its event quota', async () => {
+    tenantRepo.checkQuota.mockResolvedValue({ quota: 5, used: 5, isPlatform: false })
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+    )
+
+    await expect(handler.execute(command)).rejects.toThrow('tenant.quota_exceeded')
+    expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('lets the platform tenant exceed its quota', async () => {
+    tenantRepo.checkQuota.mockResolvedValue({ quota: 1, used: 99, isPlatform: true })
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+    )
+
+    writeRepo.save.mockImplementation(async (event: Event) => event)
+
+    await expect(handler.execute(command)).resolves.toHaveProperty('id')
   })
 
   it('should create event with valid province and canton', async () => {

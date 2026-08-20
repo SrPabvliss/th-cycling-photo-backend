@@ -11,8 +11,6 @@ export interface PrincipalPermissions {
   eventGrants: Map<string, Map<PermissionKey, GrantEffectValue>>
   tenantId: string | null
   isPlatform: boolean
-  /** TRANSITIONAL — `EventOperator` rows, unioned into event scope until TIT-40 replaces them. */
-  collaboratorEventIds: string[]
 }
 
 export interface Principal {
@@ -26,5 +24,4 @@ export const EMPTY_PRINCIPAL_PERMISSIONS = (): PrincipalPermissions => ({
   eventGrants: new Map(),
   tenantId: null,
   isPlatform: false,
-  collaboratorEventIds: [],
 })
