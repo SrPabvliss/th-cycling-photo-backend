@@ -178,6 +178,10 @@ export class TenantPayoutMethod {
     this.state.verifiedAt = new Date()
   }
 
+  activate(): void {
+    this.state.isActive = true
+  }
+
   deactivate(): void {
     this.state.isActive = false
   }

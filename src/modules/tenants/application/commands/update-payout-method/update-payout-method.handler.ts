@@ -44,8 +44,8 @@ export class UpdatePayoutMethodHandler implements ICommandHandler<UpdatePayoutMe
       method.updateBankDetails(command.bank)
     }
 
-    if (command.isActive === false) {
-      method.deactivate()
+    if (command.isActive !== undefined) {
+      command.isActive ? method.activate() : method.deactivate()
     }
 
     if (command.sortOrder !== undefined) {

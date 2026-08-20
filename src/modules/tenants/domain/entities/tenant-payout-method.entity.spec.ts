@@ -44,6 +44,18 @@ describe('TenantPayoutMethod.updateSplitReceiver', () => {
   })
 })
 
+describe('TenantPayoutMethod.activate', () => {
+  it('restores a deactivated method', () => {
+    const method = TenantPayoutMethod.createBankTransfer('t1', bank, 'u1')
+    method.deactivate()
+
+    method.activate()
+
+    expect(method.isActive).toBe(true)
+    expect(method.isUsable).toBe(true)
+  })
+})
+
 describe('TenantPayoutMethod.fromPersistence', () => {
   it('rejects a payphone row with no receiver', () => {
     expect(() =>
