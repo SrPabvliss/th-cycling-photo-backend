@@ -13,5 +13,8 @@
   "customer_profile_required": "Customer profile is required to place an order",
   "photos_not_in_event": "One or more photos do not belong to this event",
   "method_not_selectable": "The payment method can no longer be changed on this order",
-  "not_draft": "The order is no longer a draft"
+  "not_draft": "The order is no longer a draft",
+  "not_cancellable_by_owner": "You can only cancel an order that is still in process",
+  "payment_in_progress": "A payment is in progress, wait a few minutes before cancelling",
+  "not_downloadable": "This order has no photos to download yet"
 }

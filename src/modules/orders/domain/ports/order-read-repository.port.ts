@@ -1,4 +1,7 @@
 import type {
+  MyOrderDetailProjection,
+  MyOrderDownloadRaw,
+  MyOrderListProjection,
   OrderDetailProjection,
   OrderListProjection,
   RetouchCompletedOrderProjection,
@@ -30,6 +33,11 @@ export interface IOrderReadRepository {
   getPendingRetouch(): Promise<PendingRetouchOrderProjection[]>
   findOrdersFullyRetouchedByPhoto(photoId: string): Promise<RetouchCompletedOrderProjection[]>
   getPhotoIdsByOrderIds(orderIds: string[]): Promise<string[]>
+  getMyList(userId: string, pagination: Pagination): Promise<PaginatedResult<MyOrderListProjection>>
+  getMyDetail(userId: string, orderId: string): Promise<MyOrderDetailProjection | null>
+  getMyDownloadFiles(userId: string, orderId: string): Promise<MyOrderDownloadRaw[] | null>
+  /** True when a payment transaction for this order is still initiated or confirming. */
+  hasPaymentInFlight(orderId: string): Promise<boolean>
 }
 
 export const ORDER_READ_REPOSITORY = Symbol('ORDER_READ_REPOSITORY')

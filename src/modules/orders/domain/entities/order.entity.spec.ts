@@ -1,5 +1,5 @@
 import { AppException } from '@shared/domain'
-import { OrderStatus } from '../value-objects/order-status.vo'
+import { OrderStatus, type OrderStatusType } from '../value-objects/order-status.vo'
 import { PaymentMethod } from '../value-objects/payment-method.vo'
 import { Order } from './order.entity'
 
@@ -426,5 +426,51 @@ describe('Order.createDraft / draft transitions', () => {
 
     expect(order.paymentMethod).toBe(PaymentMethod.CARD)
     expect(order.status).toBe(OrderStatus.DRAFT)
+  })
+})
+
+function buildOrderInStatus(status: OrderStatusType): Order {
+  return Order.fromPersistence({
+    id: 'order-1',
+    previewLinkId: null,
+    eventId: 'event-1',
+    userId: 'user-1',
+    status,
+    notes: null,
+    bibNumber: null,
+    subtotal: null,
+    snapCurrency: null,
+    snapPricingConfig: null,
+    createdAt: new Date(),
+    notifiedAt: null,
+    paidAt: null,
+    deliveredAt: null,
+    cancelledAt: null,
+    notifiedById: null,
+    confirmedById: null,
+    paymentMethod: null,
+  })
+}
+
+describe('Order.cancelByOwner', () => {
+  it.each([
+    OrderStatus.PENDING,
+    OrderStatus.PAYMENT_INFO_SENT,
+  ])('cancels an order in %s', (status) => {
+    const order = buildOrderInStatus(status)
+    order.cancelByOwner()
+    expect(order.status).toBe(OrderStatus.CANCELLED)
+    expect(order.cancelledAt).toBeInstanceOf(Date)
+  })
+
+  it.each([
+    OrderStatus.DRAFT,
+    OrderStatus.PAID,
+    OrderStatus.DELIVERED,
+    OrderStatus.GIFTED,
+    OrderStatus.CANCELLED,
+  ])('refuses an order in %s', (status) => {
+    const order = buildOrderInStatus(status)
+    expect(() => order.cancelByOwner()).toThrow(/order\.not_cancellable_by_owner/)
   })
 })

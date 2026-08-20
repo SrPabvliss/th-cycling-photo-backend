@@ -1,3 +1,4 @@
+export { CancelMyOrderCommand } from './cancel-my-order/cancel-my-order.command'
 export { CancelOrderCommand } from './cancel-order/cancel-order.command'
 export { ChoosePaymentMethodCommand } from './choose-payment-method/choose-payment-method.command'
 export { ChoosePaymentMethodDto } from './choose-payment-method/choose-payment-method.dto'

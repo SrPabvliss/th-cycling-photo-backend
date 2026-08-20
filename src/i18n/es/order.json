@@ -13,5 +13,8 @@
   "customer_profile_required": "Se requiere un perfil de cliente para realizar un pedido",
   "photos_not_in_event": "Una o más fotos no pertenecen a este evento",
   "method_not_selectable": "El método de pago ya no se puede cambiar en esta orden",
-  "not_draft": "La orden ya no es un borrador"
+  "not_draft": "La orden ya no es un borrador",
+  "not_cancellable_by_owner": "Solo puedes cancelar una orden que aún está en proceso",
+  "payment_in_progress": "Tienes un pago en proceso, espera unos minutos antes de cancelar",
+  "not_downloadable": "Esta orden todavía no tiene fotos para descargar"
 }
