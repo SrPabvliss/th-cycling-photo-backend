@@ -1,5 +1,9 @@
 import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { AppException } from '@shared/domain'
 import {
@@ -18,6 +22,7 @@ export class GetOperatorRetouchOrderDetailHandler
     @Inject(OPERATOR_RETOUCH_READ_REPOSITORY)
     private readonly retouchRead: IOperatorRetouchReadRepository,
     private readonly cdn: CdnUrlBuilder,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(
@@ -28,7 +33,8 @@ export class GetOperatorRetouchOrderDetailHandler
       throw AppException.notFound('Order', query.orderId)
     }
 
-    if (query.userRole !== 'admin') {
+    const seesAllEvents = await this.authz.can(query.operatorId, 'event.read.all')
+    if (!seesAllEvents) {
       const isAssigned = await this.retouchRead.isOperatorAssigned(row.eventId, query.operatorId)
       if (!isAssigned) {
         throw AppException.forbidden('operator.not_assigned_to_event')

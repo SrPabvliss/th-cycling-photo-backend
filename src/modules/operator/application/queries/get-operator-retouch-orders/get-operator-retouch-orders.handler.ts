@@ -2,6 +2,10 @@ import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain
 import { ForbiddenException, Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import { PaginatedResult } from '@shared/application'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import {
   type IOperatorRetouchReadRepository,
@@ -21,12 +25,13 @@ export class GetOperatorRetouchOrdersHandler
     @Inject(OPERATOR_RETOUCH_READ_REPOSITORY)
     private readonly retouchRead: IOperatorRetouchReadRepository,
     private readonly cdn: CdnUrlBuilder,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(
     query: GetOperatorRetouchOrdersQuery,
   ): Promise<PaginatedResult<OperatorRetouchOrderProjection>> {
-    const isAdmin = query.userRole === 'admin'
+    const isAdmin = await this.authz.can(query.operatorId, 'event.read.all')
 
     let eventIdsForQuery: string[] | null = null
     if (isAdmin) {

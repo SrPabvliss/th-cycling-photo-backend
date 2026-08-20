@@ -143,7 +143,7 @@ export class OperatorController {
     @Query('scope') scope?: 'pending' | 'all',
   ) {
     return this.queryBus.execute(
-      new GetOperatorRetouchOrderDetailQuery(orderId, user.userId, scope ?? 'pending', user.role),
+      new GetOperatorRetouchOrderDetailQuery(orderId, user.userId, scope ?? 'pending'),
     )
   }
 
@@ -168,7 +168,6 @@ export class OperatorController {
         pagination,
         dto.scope ?? 'pending',
         dto.eventSlug ?? null,
-        user.role,
       ),
     )
   }
@@ -193,13 +192,7 @@ export class OperatorController {
   ) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     return this.queryBus.execute(
-      new GetRetouchQueueQuery(
-        eventSlug,
-        user.userId,
-        pagination,
-        dto.scope ?? 'pending',
-        user.role,
-      ),
+      new GetRetouchQueueQuery(eventSlug, user.userId, pagination, dto.scope ?? 'pending'),
     )
   }
 }

@@ -7,6 +7,5 @@ export class GetOperatorRetouchOrdersQuery {
     public readonly pagination: Pagination,
     public readonly scope: RetouchOrderScope,
     public readonly eventSlug: string | null,
-    public readonly userRole: string = 'operator',
   ) {}
 }
