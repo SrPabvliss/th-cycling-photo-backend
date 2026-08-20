@@ -10,7 +10,10 @@ import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
 import { type IUserReadRepository, USER_READ_REPOSITORY } from '@users/domain/ports'
-import { TENANT_REPOSITORY, type ITenantRepository } from '../../../../tenants/domain/ports/tenant-repository.port'
+import {
+  type ITenantRepository,
+  TENANT_REPOSITORY,
+} from '../../../../tenants/domain/ports/tenant-repository.port'
 import { CreateEventCommand } from './create-event.command'
 
 @CommandHandler(CreateEventCommand)
