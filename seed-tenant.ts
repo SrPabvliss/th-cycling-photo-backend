@@ -1,8 +1,8 @@
-import { PrismaClient } from './src/generated/prisma/client'
-import { hashSync } from 'bcryptjs'
 import { PrismaPg } from '@prisma/adapter-pg'
-import pg from 'pg'
+import { hashSync } from 'bcryptjs'
 import { config } from 'dotenv'
+import pg from 'pg'
+import { PrismaClient } from './src/generated/prisma/client'
 
 config({ path: '.env.development' })
 
@@ -13,7 +13,7 @@ const prisma = new PrismaClient({ adapter })
 async function main() {
   const tenantTpl = await prisma.permissionTemplate.findUnique({ where: { key: 'tenant' } })
   if (!tenantTpl) {
-    console.log("Tenant template not found! Run seed/migrations first.")
+    console.log('Tenant template not found! Run seed/migrations first.')
     return
   }
 
@@ -21,7 +21,7 @@ async function main() {
   let tenant = await prisma.tenant.findFirst({ where: { name: tenantName } })
   if (!tenant) {
     tenant = await prisma.tenant.create({ data: { name: tenantName, is_platform: false } })
-    console.log("Created Tenant:", tenant.name)
+    console.log('Created Tenant:', tenant.name)
   }
 
   const email = 'tenant@test.com'
@@ -37,7 +37,7 @@ async function main() {
         is_active: true,
         tenant_id: tenant.id,
         permission_template_id: tenantTpl.id,
-      }
+      },
     })
     console.log(`Created Tenant User! Email: ${email} Password: 123456`)
   } else {
@@ -57,14 +57,16 @@ async function main() {
           end_date: new Date(),
           tenant_id: tenant.id,
           event_type_id: evtType.id,
-        }
+        },
       })
-      console.log("Created Test Event for the tenant")
+      console.log('Created Test Event for the tenant')
     }
   }
 }
 
-main().catch(console.error).finally(() => {
-  prisma.$disconnect()
-  pool.end()
-})
+main()
+  .catch(console.error)
+  .finally(() => {
+    prisma.$disconnect()
+    pool.end()
+  })
