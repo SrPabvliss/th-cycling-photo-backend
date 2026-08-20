@@ -45,10 +45,12 @@ describe('DeactivateUserHandler', () => {
       getUserDetail: jest.fn(),
       findActiveAdminIds: jest.fn(),
       getBuyersList: jest.fn(),
+      getMyProfile: jest.fn(),
     } as jest.Mocked<IUserReadRepository>
 
     writeRepo = {
       save: jest.fn(),
+      updateProfile: jest.fn(),
     } as jest.Mocked<IUserWriteRepository>
 
     handler = new DeactivateUserHandler(readRepo, writeRepo)

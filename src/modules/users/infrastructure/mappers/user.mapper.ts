@@ -28,7 +28,7 @@ export const userDetailSelectConfig = {
 
 export type UserDetailSelect = Prisma.UserGetPayload<{ select: typeof userDetailSelectConfig }>
 
-function getDiceBearUrl(email: string): string {
+export function getDiceBearUrl(email: string): string {
   return `${DICEBEAR_BASE}?seed=${encodeURIComponent(email)}`
 }
 

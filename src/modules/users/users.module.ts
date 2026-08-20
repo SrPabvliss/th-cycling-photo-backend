@@ -1,3 +1,4 @@
+import { LocationsModule } from '@locations/locations.module'
 import { Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import {
@@ -12,6 +13,7 @@ import { UserReadRepository } from '@users/infrastructure/repositories/user-read
 import { UserWriteRepository } from '@users/infrastructure/repositories/user-write.repository'
 import { BuyersController } from '@users/presentation/controllers/buyers.controller'
 import { UserPhonesController } from '@users/presentation/controllers/user-phones.controller'
+import { UserProfileController } from '@users/presentation/controllers/user-profile.controller'
 import { UsersController } from '@users/presentation/controllers/users.controller'
 import { AddUserPhoneHandler } from './application/commands/add-user-phone/add-user-phone.handler'
 import { ConfirmAvatarUploadHandler } from './application/commands/confirm-avatar-upload/confirm-avatar-upload.handler'
@@ -22,9 +24,11 @@ import { GenerateAvatarUrlHandler } from './application/commands/generate-avatar
 import { ReactivateUserHandler } from './application/commands/reactivate-user/reactivate-user.handler'
 import { ResetPasswordHandler } from './application/commands/reset-password/reset-password.handler'
 import { SetPrimaryPhoneHandler } from './application/commands/set-primary-phone/set-primary-phone.handler'
+import { UpdateMyProfileHandler } from './application/commands/update-my-profile/update-my-profile.handler'
 import { UpdateUserHandler } from './application/commands/update-user/update-user.handler'
 import { UpdateUserPhoneHandler } from './application/commands/update-user-phone/update-user-phone.handler'
 import { GetBuyersListHandler } from './application/queries/get-buyers-list/get-buyers-list.handler'
+import { GetMyProfileHandler } from './application/queries/get-my-profile/get-my-profile.handler'
 import { GetUserDetailHandler } from './application/queries/get-user-detail/get-user-detail.handler'
 import { GetUserPhonesHandler } from './application/queries/get-user-phones/get-user-phones.handler'
 import { GetUsersListHandler } from './application/queries/get-users-list/get-users-list.handler'
@@ -41,17 +45,19 @@ const CommandHandlers = [
   UpdateUserPhoneHandler,
   DeleteUserPhoneHandler,
   SetPrimaryPhoneHandler,
+  UpdateMyProfileHandler,
 ]
 const QueryHandlers = [
   GetBuyersListHandler,
   GetUsersListHandler,
   GetUserDetailHandler,
   GetUserPhonesHandler,
+  GetMyProfileHandler,
 ]
 
 @Module({
-  imports: [CqrsModule],
-  controllers: [UsersController, UserPhonesController, BuyersController],
+  imports: [CqrsModule, LocationsModule],
+  controllers: [UserProfileController, UsersController, UserPhonesController, BuyersController],
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
