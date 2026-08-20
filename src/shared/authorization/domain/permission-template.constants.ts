@@ -40,6 +40,9 @@ const STAFF: PermissionKey[] = [
   'dashboard.review_queue.read',
   'payment.account.read',
   'payment.account.configure',
+  'tenant.profile.read',
+  'tenant.payout_method.read',
+  'tenant.payout_method.manage',
   'notification.read',
   'notification.mark_read',
 ]
@@ -81,6 +84,10 @@ const TENANT: PermissionKey[] = [
   'order.cancel',
   'notification.read',
   'notification.mark_read',
+  'tenant.profile.read',
+  'tenant.profile.update',
+  'tenant.payout_method.read',
+  'tenant.payout_method.manage',
 ]
 
 const CUSTOMER: PermissionKey[] = [
