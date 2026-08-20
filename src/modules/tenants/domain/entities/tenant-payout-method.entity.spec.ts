@@ -1,5 +1,5 @@
-import { AppException } from '@shared/domain'
 import { PaymentAccountStatus } from '@payments/domain/value-objects/payment-account-status.vo'
+import { AppException } from '@shared/domain'
 import { PayoutProvider } from '../value-objects/payout-provider.vo'
 import { TenantPayoutMethod } from './tenant-payout-method.entity'
 

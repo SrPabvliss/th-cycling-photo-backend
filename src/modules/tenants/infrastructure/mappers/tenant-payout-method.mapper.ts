@@ -1,4 +1,7 @@
-import type { Prisma, TenantPayoutMethod as PrismaTenantPayoutMethod } from '@generated/prisma/client'
+import type {
+  Prisma,
+  TenantPayoutMethod as PrismaTenantPayoutMethod,
+} from '@generated/prisma/client'
 import type { PaymentAccountStatusType } from '@payments/domain/value-objects/payment-account-status.vo'
 import type { PaymentModeType } from '@payments/domain/value-objects/payment-mode.vo'
 import { TenantPayoutMethod } from '../../domain/entities/tenant-payout-method.entity'

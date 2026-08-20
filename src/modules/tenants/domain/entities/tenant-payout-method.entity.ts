@@ -102,23 +102,57 @@ export class TenantPayoutMethod {
     return new TenantPayoutMethod(state)
   }
 
-  get id(): string { return this.state.id }
-  get tenantId(): string { return this.state.tenantId }
-  get provider(): PayoutProviderType { return this.state.provider }
-  get isActive(): boolean { return this.state.isActive }
-  get sortOrder(): number { return this.state.sortOrder }
-  get mode(): PaymentModeType | null { return this.state.mode }
-  get status(): PaymentAccountStatusType { return this.state.status }
-  get receiverIdentifier(): string | null { return this.state.receiverIdentifier }
-  get credentialsEncrypted(): string | null { return this.state.credentialsEncrypted }
-  get verifiedAt(): Date | null { return this.state.verifiedAt }
-  get bankName(): string | null { return this.state.bankName }
-  get accountNumber(): string | null { return this.state.accountNumber }
-  get accountType(): string | null { return this.state.accountType }
-  get accountHolder(): string | null { return this.state.accountHolder }
-  get holderIdentification(): string | null { return this.state.holderIdentification }
-  get configuredById(): string | null { return this.state.configuredById }
-  get createdAt(): Date { return this.state.createdAt }
+  get id(): string {
+    return this.state.id
+  }
+  get tenantId(): string {
+    return this.state.tenantId
+  }
+  get provider(): PayoutProviderType {
+    return this.state.provider
+  }
+  get isActive(): boolean {
+    return this.state.isActive
+  }
+  get sortOrder(): number {
+    return this.state.sortOrder
+  }
+  get mode(): PaymentModeType | null {
+    return this.state.mode
+  }
+  get status(): PaymentAccountStatusType {
+    return this.state.status
+  }
+  get receiverIdentifier(): string | null {
+    return this.state.receiverIdentifier
+  }
+  get credentialsEncrypted(): string | null {
+    return this.state.credentialsEncrypted
+  }
+  get verifiedAt(): Date | null {
+    return this.state.verifiedAt
+  }
+  get bankName(): string | null {
+    return this.state.bankName
+  }
+  get accountNumber(): string | null {
+    return this.state.accountNumber
+  }
+  get accountType(): string | null {
+    return this.state.accountType
+  }
+  get accountHolder(): string | null {
+    return this.state.accountHolder
+  }
+  get holderIdentification(): string | null {
+    return this.state.holderIdentification
+  }
+  get configuredById(): string | null {
+    return this.state.configuredById
+  }
+  get createdAt(): Date {
+    return this.state.createdAt
+  }
 
   get isUsable(): boolean {
     return this.state.isActive && this.state.status === PaymentAccountStatus.VERIFIED
