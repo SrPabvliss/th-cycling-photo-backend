@@ -151,6 +151,13 @@ enum PaymentProvider {
   @@map("payment_provider")
 }
 
+enum PayoutProvider {
+  payphone
+  bank_transfer
+
+  @@map("payout_provider")
+}
+
 enum PaymentMethod {
   card
   transfer
@@ -274,25 +281,25 @@ model User {
   customer_profile      CustomerProfile?
   consents              UserConsent[]
 
-  events_created         Event[]               @relation("EventCreatedBy")
-  events_updated         Event[]               @relation("EventUpdatedBy")
-  photos_created         Photo[]               @relation("PhotoCreatedBy")
-  photos_updated         Photo[]               @relation("PhotoUpdatedBy")
-  photos_retouched       Photo[]               @relation("PhotoRetouchedBy")
-  created_bibs           PhotoBib[]            @relation("UserCreatedBibs")
-  created_colors         PhotoColor[]          @relation("UserCreatedColors")
-  deleted_bibs           PhotoBib[]            @relation("UserDeletedBibs")
-  deleted_colors         PhotoColor[]          @relation("UserDeletedColors")
-  corrections            Correction[]          @relation("UserCorrections")
-  preview_links_created  PreviewLink[]         @relation("PreviewLinkCreatedBy")
-  orders_confirmed       Order[]               @relation("OrderConfirmedBy")
-  orders_notified        Order[]               @relation("OrderNotifiedBy")
-  orders_placed          Order[]               @relation("OrderUser")
-  carts                  Cart[]
-  notifications          Notification[]
-  permission_grants      UserPermissionGrant[] @relation("GrantHolder")
-  permissions_issued     UserPermissionGrant[] @relation("GrantIssuer")
-  seller_payment_account SellerPaymentAccount? @relation("SellerPaymentAccountUser")
+  events_created            Event[]               @relation("EventCreatedBy")
+  events_updated            Event[]               @relation("EventUpdatedBy")
+  photos_created            Photo[]               @relation("PhotoCreatedBy")
+  photos_updated            Photo[]               @relation("PhotoUpdatedBy")
+  photos_retouched          Photo[]               @relation("PhotoRetouchedBy")
+  created_bibs              PhotoBib[]            @relation("UserCreatedBibs")
+  created_colors            PhotoColor[]          @relation("UserCreatedColors")
+  deleted_bibs              PhotoBib[]            @relation("UserDeletedBibs")
+  deleted_colors            PhotoColor[]          @relation("UserDeletedColors")
+  corrections               Correction[]          @relation("UserCorrections")
+  preview_links_created     PreviewLink[]         @relation("PreviewLinkCreatedBy")
+  orders_confirmed          Order[]               @relation("OrderConfirmedBy")
+  orders_notified           Order[]               @relation("OrderNotifiedBy")
+  orders_placed             Order[]               @relation("OrderUser")
+  carts                     Cart[]
+  notifications             Notification[]
+  permission_grants         UserPermissionGrant[] @relation("GrantHolder")
+  permissions_issued        UserPermissionGrant[] @relation("GrantIssuer")
+  payout_methods_configured TenantPayoutMethod[]  @relation("PayoutMethodConfiguredBy")
 
   @@index([tenant_id])
   @@map("users")
@@ -402,8 +409,6 @@ model Event {
   @@index([tenant_id])
   @@map("events")
 }
-
-
 
 model Photo {
   id       String @id @default(uuid()) @db.Uuid
@@ -895,8 +900,14 @@ model Tenant {
   event_quota Int      @default(0)
   created_at  DateTime @default(now()) @db.Timestamptz
 
-  users  User[]
-  events Event[]
+  public_name           String?   @db.VarChar(200)
+  watermark_storage_key String?   @db.VarChar(500)
+  whatsapp_number       String?   @db.VarChar(20)
+  whatsapp_verified_at  DateTime? @db.Timestamptz
+
+  users          User[]
+  events         Event[]
+  payout_methods TenantPayoutMethod[]
 
   @@map("tenants")
 }
@@ -966,8 +977,6 @@ model UserPermissionGrant {
   event      Event?     @relation(fields: [event_id], references: [id], onDelete: Cascade)
   granted_by User       @relation("GrantIssuer", fields: [granted_by_id], references: [id], onDelete: Restrict)
 
-  @@index([user_id])
-  @@index([event_id])
   // Declared for Prisma Client's compound `WhereUniqueInput` only, so
   // GrantPermissionHandler can `upsert` idempotently. THE PHYSICAL INDEX
   // IS NOT WHAT THIS LINE WOULD CREATE: it already exists, built by the
@@ -990,29 +999,41 @@ model UserPermissionGrant {
   // ever happens). `prisma generate` only reads this file and never
   // touches the database, so it remains safe.
   @@unique([user_id, permission_id, scope_type, event_id], map: "user_permission_grants_unique")
+  @@index([user_id])
+  @@index([event_id])
   @@map("user_permission_grants")
 }
 
 // ─── Payments ───────────────────────────────────────────────────────────────
 
-model SellerPaymentAccount {
-  id       String               @id @default(uuid()) @db.Uuid
-  user_id  String               @unique @db.Uuid
-  provider PaymentProvider
-  mode     PaymentMode
-  status   PaymentAccountStatus @default(pending)
+model TenantPayoutMethod {
+  id         String         @id @default(uuid()) @db.Uuid
+  tenant_id  String         @db.Uuid
+  provider   PayoutProvider
+  is_active  Boolean        @default(true)
+  sort_order Int            @default(0)
 
-  receiver_identifier   String? @db.VarChar(100)
-  credentials_encrypted String? @db.Text
+  mode                  PaymentMode?
+  status                PaymentAccountStatus @default(pending)
+  receiver_identifier   String?              @db.VarChar(100)
+  credentials_encrypted String?              @db.Text
+  verified_at           DateTime?            @db.Timestamptz
 
-  verified_at DateTime? @db.Timestamptz
-  created_at  DateTime  @default(now()) @db.Timestamptz
-  updated_at  DateTime  @default(now()) @updatedAt @db.Timestamptz
+  bank_name             String? @db.VarChar(100)
+  account_number        String? @db.VarChar(50)
+  account_type          String? @db.VarChar(20)
+  account_holder        String? @db.VarChar(200)
+  holder_identification String? @db.VarChar(20)
 
-  user User @relation("SellerPaymentAccountUser", fields: [user_id], references: [id], onDelete: Cascade)
+  configured_by_id String?  @db.Uuid
+  created_at       DateTime @default(now()) @db.Timestamptz
+  updated_at       DateTime @default(now()) @updatedAt @db.Timestamptz
 
-  @@index([status])
-  @@map("seller_payment_accounts")
+  tenant        Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  configured_by User?  @relation("PayoutMethodConfiguredBy", fields: [configured_by_id], references: [id], onDelete: SetNull)
+
+  @@index([tenant_id, is_active])
+  @@map("tenant_payout_methods")
 }
 
 model PaymentTransaction {
