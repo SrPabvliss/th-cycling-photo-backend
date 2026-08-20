@@ -4,6 +4,7 @@ import { PaginatedResult, type Pagination } from '@shared/application'
 import { PrismaService } from '@shared/infrastructure'
 import type {
   BuyerListProjection,
+  MyProfileProjection,
   UserDetailProjection,
   UserListProjection,
 } from '@users/application/projections'
@@ -154,5 +155,59 @@ export class UserReadRepository implements IUserReadRepository {
     }))
 
     return new PaginatedResult(items, total, pagination)
+  }
+
+  async getMyProfile(userId: string): Promise<MyProfileProjection | null> {
+    const record = await this.prisma.user.findFirst({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        avatar_url: true,
+        customer_profile: {
+          select: {
+            country_id: true,
+            province_id: true,
+            canton_id: true,
+            birth_date: true,
+            gender: true,
+          },
+        },
+        phones: {
+          select: {
+            id: true,
+            phone_number: true,
+            label: true,
+            is_whatsapp: true,
+            is_primary: true,
+          },
+          orderBy: [{ is_primary: 'desc' }, { created_at: 'asc' }],
+        },
+      },
+    })
+
+    if (!record) return null
+
+    return {
+      id: record.id,
+      email: record.email,
+      firstName: record.first_name,
+      lastName: record.last_name,
+      avatarUrl: record.avatar_url ?? UserMapper.getDiceBearUrl(record.email),
+      countryId: record.customer_profile?.country_id ?? null,
+      provinceId: record.customer_profile?.province_id ?? null,
+      cantonId: record.customer_profile?.canton_id ?? null,
+      birthDate: record.customer_profile?.birth_date ?? null,
+      gender: record.customer_profile?.gender ?? null,
+      phones: record.phones.map((phone) => ({
+        id: phone.id,
+        phoneNumber: phone.phone_number,
+        label: phone.label,
+        isWhatsapp: phone.is_whatsapp,
+        isPrimary: phone.is_primary,
+      })),
+    }
   }
 }
