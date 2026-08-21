@@ -1,8 +1,8 @@
 import { ConfigService } from '@nestjs/config'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { CloudflareKvAdapter } from '@shared/cloudflare/infrastructure/cloudflare-kv.adapter'
 import { config } from 'dotenv'
 import { PrismaClient } from '../../../generated/prisma/client'
+import { CloudflareKvAdapter } from '../../../shared/cloudflare/infrastructure/cloudflare-kv.adapter'
 
 const env = process.env.NODE_ENV || 'development'
 config({ path: `.env.${env}`, quiet: true })
