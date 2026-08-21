@@ -11,5 +11,6 @@
   "creator_tenant_required": "The event creator must belong to a tenant",
   "frozen_not_configurable": "A frozen event's configuration cannot be edited",
   "configuration_incomplete": "Complete the profile before creating an event. Missing: {missing}",
-  "payout_method_required": "The event must have at least one active payout method"
+  "payout_method_required": "The event must have at least one active payout method",
+  "photo_quota_exceeded": "This event allows {quota} photos and {used} are already used. You can upload {remaining} more."
 }

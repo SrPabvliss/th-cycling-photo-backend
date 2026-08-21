@@ -17,6 +17,7 @@ describe('ConfirmPhotoBatchHandler', () => {
   let embeddingQueue: { add: jest.Mock; addBulk: jest.Mock }
   let classificationQueue: { add: jest.Mock; addBulk: jest.Mock }
   let authz: jest.Mocked<IAuthorizationService>
+  let prisma: { $transaction: jest.Mock; event: { findUniqueOrThrow: jest.Mock } }
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
   const audit = new AuditContext('u1')
@@ -77,7 +78,7 @@ describe('ConfirmPhotoBatchHandler', () => {
     photoWriteRepo = {
       save: jest.fn(),
       saveMany: jest.fn(),
-      claimPhotoQuota: jest.fn(),
+      claimPhotoQuota: jest.fn().mockResolvedValue(true),
       delete: jest.fn(),
       bulkUpdateCategory: jest.fn(),
       setRequiresRetouch: jest.fn().mockResolvedValue(undefined),
@@ -93,6 +94,11 @@ describe('ConfirmPhotoBatchHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as jest.Mocked<IAuthorizationService>
 
+    prisma = {
+      $transaction: jest.fn((fn) => fn(prisma)),
+      event: { findUniqueOrThrow: jest.fn() },
+    }
+
     handler = new ConfirmPhotoBatchHandler(
       eventReadRepo,
       photoWriteRepo,
@@ -100,6 +106,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       embeddingQueue as unknown as import('bullmq').Queue,
       classificationQueue as unknown as import('bullmq').Queue,
       authz,
+      prisma as any,
     )
   })
 
@@ -185,6 +192,7 @@ describe('ConfirmPhotoBatchHandler', () => {
         expect.objectContaining({ eventId, filename: 'IMG_001.jpg' }),
         expect.objectContaining({ eventId, filename: 'IMG_002.jpg' }),
       ]),
+      prisma,
     )
     expect(result).toEqual({ confirmed: 2 })
   })
@@ -228,5 +236,18 @@ describe('ConfirmPhotoBatchHandler', () => {
     const result = await handler.execute(command)
 
     expect(result).toEqual({ confirmed: 0 })
+  })
+
+  it('rejects the whole batch when the event photo quota would be exceeded', async () => {
+    eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
+    photoWriteRepo.saveMany.mockResolvedValue(2)
+    photoWriteRepo.claimPhotoQuota.mockResolvedValue(false)
+    prisma.event.findUniqueOrThrow.mockResolvedValue({ photo_quota: 10, photos_uploaded: 9 })
+
+    const command = new ConfirmPhotoBatchCommand(eventId, [validBatchItem], audit)
+
+    await expect(handler.execute(command)).rejects.toMatchObject({
+      messageKey: 'event.photo_quota_exceeded',
+    })
   })
 })
