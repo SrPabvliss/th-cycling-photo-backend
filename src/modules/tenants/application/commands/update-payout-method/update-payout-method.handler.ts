@@ -34,7 +34,11 @@ export class UpdatePayoutMethodHandler implements ICommandHandler<UpdatePayoutMe
     if (command.phone !== undefined && command.phone !== null) {
       const gateway = this.registry.get(PAYPHONE_PROVIDER)
       const registered = await gateway.verifyReceiver(command.phone, gateway.platformCredentials())
-      if (!registered) throw AppException.businessRule('payment.phone_not_registered')
+      if (!registered) {
+        throw AppException.businessRule('payment.phone_not_registered', false, {
+          rule: 'phone_not_registered',
+        })
+      }
 
       method.updateSplitReceiver(normalizeEcuadorPhone(command.phone))
       method.markVerified()
