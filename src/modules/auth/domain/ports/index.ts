@@ -7,6 +7,15 @@ export {
   type IConsentRepository,
 } from './consent-repository.port'
 export {
+  EMAIL_VERIFICATION_CODE_SERVICE,
+  type GeneratedEmailVerificationCode,
+  type IEmailVerificationCodeService,
+} from './email-verification-code.service.port'
+export {
+  EMAIL_VERIFICATION_CODE_REPOSITORY,
+  type IEmailVerificationCodeRepository,
+} from './email-verification-code-repository.port'
+export {
   type GeneratedPasswordResetToken,
   type IPasswordResetTokenService,
   PASSWORD_RESET_TOKEN_SERVICE,
@@ -24,3 +33,7 @@ export {
   type ITokenHashService,
   TOKEN_HASH_SERVICE,
 } from './token-hash.service.port'
+export {
+  type IUserPromptSnoozeRepository,
+  USER_PROMPT_SNOOZE_REPOSITORY,
+} from './user-prompt-snooze-repository.port'

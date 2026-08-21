@@ -5,28 +5,42 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { CqrsModule } from '@nestjs/cqrs'
 import { JwtModule } from '@nestjs/jwt'
 import { PassportModule } from '@nestjs/passport'
+import { ChangePasswordHandler } from './application/commands/change-password/change-password.handler'
+import { ConfirmEmailVerificationHandler } from './application/commands/confirm-email-verification/confirm-email-verification.handler'
 import { ConfirmPasswordResetHandler } from './application/commands/confirm-password-reset/confirm-password-reset.handler'
 import { LoginHandler } from './application/commands/login/login.handler'
 import { LogoutHandler } from './application/commands/logout/logout.handler'
 import { RecordConsentsHandler } from './application/commands/record-consents/record-consents.handler'
 import { RefreshHandler } from './application/commands/refresh/refresh.handler'
 import { RegisterHandler } from './application/commands/register/register.handler'
+import { RequestEmailChangeHandler } from './application/commands/request-email-change/request-email-change.handler'
 import { RequestPasswordResetHandler } from './application/commands/request-password-reset/request-password-reset.handler'
+import { ResendEmailVerificationHandler } from './application/commands/resend-email-verification/resend-email-verification.handler'
+import { SendEmailVerificationHandler } from './application/commands/send-email-verification/send-email-verification.handler'
+import { SnoozePromptHandler } from './application/commands/snooze-prompt/snooze-prompt.handler'
 import { ValidatePasswordResetTokenHandler } from './application/commands/validate-password-reset-token/validate-password-reset-token.handler'
+import { GetEmailVerificationStatusHandler } from './application/queries/get-email-verification-status/get-email-verification-status.handler'
 import { GetMeHandler } from './application/queries/me/get-me.handler'
+import { EmailVerificationSendGuard } from './application/services'
 import {
   AUTH_USER_REPOSITORY,
   CONSENT_REPOSITORY,
+  EMAIL_VERIFICATION_CODE_REPOSITORY,
+  EMAIL_VERIFICATION_CODE_SERVICE,
   PASSWORD_RESET_TOKEN_REPOSITORY,
   PASSWORD_RESET_TOKEN_SERVICE,
   REFRESH_TOKEN_REPOSITORY,
   TOKEN_HASH_SERVICE,
+  USER_PROMPT_SNOOZE_REPOSITORY,
 } from './domain/ports'
 import { JwtAuthGuard } from './infrastructure/guards/jwt-auth.guard'
 import { AuthUserRepository } from './infrastructure/repositories/auth-user.repository'
 import { ConsentRepository } from './infrastructure/repositories/consent.repository'
+import { EmailVerificationCodeRepository } from './infrastructure/repositories/email-verification-code.repository'
 import { PasswordResetTokenRepository } from './infrastructure/repositories/password-reset-token.repository'
 import { RefreshTokenRepository } from './infrastructure/repositories/refresh-token.repository'
+import { UserPromptSnoozeRepository } from './infrastructure/repositories/user-prompt-snooze.repository'
+import { EmailVerificationCodeService } from './infrastructure/services/email-verification-code.service'
 import { PasswordResetTokenService } from './infrastructure/services/password-reset-token.service'
 import { TokenHashService } from './infrastructure/services/token-hash.service'
 import { JwtStrategy } from './infrastructure/strategies/jwt.strategy'
@@ -41,8 +55,14 @@ const CommandHandlers = [
   ConfirmPasswordResetHandler,
   ValidatePasswordResetTokenHandler,
   RecordConsentsHandler,
+  ChangePasswordHandler,
+  SendEmailVerificationHandler,
+  ResendEmailVerificationHandler,
+  ConfirmEmailVerificationHandler,
+  RequestEmailChangeHandler,
+  SnoozePromptHandler,
 ]
-const QueryHandlers = [GetMeHandler]
+const QueryHandlers = [GetMeHandler, GetEmailVerificationStatusHandler]
 
 @Module({
   imports: [
@@ -73,6 +93,10 @@ const QueryHandlers = [GetMeHandler]
     { provide: PASSWORD_RESET_TOKEN_REPOSITORY, useClass: PasswordResetTokenRepository },
     { provide: PASSWORD_RESET_TOKEN_SERVICE, useClass: PasswordResetTokenService },
     { provide: CONSENT_REPOSITORY, useClass: ConsentRepository },
+    { provide: EMAIL_VERIFICATION_CODE_REPOSITORY, useClass: EmailVerificationCodeRepository },
+    { provide: EMAIL_VERIFICATION_CODE_SERVICE, useClass: EmailVerificationCodeService },
+    { provide: USER_PROMPT_SNOOZE_REPOSITORY, useClass: UserPromptSnoozeRepository },
+    EmailVerificationSendGuard,
   ],
   exports: [JwtAuthGuard, JwtModule, AUTH_USER_REPOSITORY],
 })

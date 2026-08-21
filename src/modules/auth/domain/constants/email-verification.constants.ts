@@ -1,0 +1,12 @@
+export const EMAIL_VERIFICATION_PURPOSE = {
+  VERIFY_CURRENT: 'verify_current',
+  CHANGE_EMAIL: 'change_email',
+} as const
+
+export type EmailVerificationPurpose =
+  (typeof EMAIL_VERIFICATION_PURPOSE)[keyof typeof EMAIL_VERIFICATION_PURPOSE]
+
+export const EMAIL_VERIFICATION_CODE_TTL_MINUTES = 15
+export const EMAIL_VERIFICATION_MAX_ATTEMPTS = 5
+export const EMAIL_VERIFICATION_RESEND_COOLDOWN_MS = 60_000
+export const EMAIL_VERIFICATION_DAILY_SEND_LIMIT = 10
