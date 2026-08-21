@@ -3,6 +3,7 @@ export {
   type EventOperatorProjection,
   type IEventOperatorRepository,
 } from './event-operator-repository.port'
+export * from './event-payout-method-repository.port'
 export {
   type AssignedEventStatus,
   EVENT_READ_REPOSITORY,

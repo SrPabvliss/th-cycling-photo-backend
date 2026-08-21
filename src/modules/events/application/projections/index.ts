@@ -1,4 +1,9 @@
 export { EventBriefProjection } from './event-brief.projection'
+export {
+  EventConfigurationPresetProjection,
+  EventConfigurationProjection,
+  EventPayoutMethodProjection,
+} from './event-configuration.projection'
 export { EventDetailProjection } from './event-detail.projection'
 export { EventListProjection } from './event-list.projection'
 export { EventSummaryProjection } from './event-summary.projection'

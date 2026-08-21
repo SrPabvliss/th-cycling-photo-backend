@@ -49,6 +49,6 @@ const handlers = [
       useClass: TenantPayoutMethodRepository,
     },
   ],
-  exports: [TENANT_REPOSITORY, TENANT_PAYOUT_METHOD_REPOSITORY],
+  exports: [TENANT_REPOSITORY, TENANT_PROFILE_REPOSITORY, TENANT_PAYOUT_METHOD_REPOSITORY],
 })
 export class TenantsModule {}

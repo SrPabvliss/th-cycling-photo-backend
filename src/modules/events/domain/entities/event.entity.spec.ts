@@ -1,4 +1,5 @@
 import { AppException } from '@shared/domain'
+import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo'
 import { Event } from './event.entity'
 
 describe('Event Entity', () => {
@@ -185,6 +186,9 @@ describe('Event Entity', () => {
         cantonId: null,
         eventTypeId: 1,
         status: 'active',
+        snapPublicName: null,
+        snapWatermarkStorageKey: null,
+        snapWhatsappNumber: null,
         createdAt: new Date('2020-01-01'),
         updatedAt: new Date('2020-06-01'),
         deletedAt: null,
@@ -212,6 +216,9 @@ describe('Event Entity', () => {
         cantonId: 1,
         eventTypeId: 1,
         status: 'archived',
+        snapPublicName: null,
+        snapWatermarkStorageKey: null,
+        snapWhatsappNumber: null,
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date('2024-06-15'),
         deletedAt: deletedDate,
@@ -266,6 +273,36 @@ describe('Event Entity', () => {
       const event = Event.create(baseInput)
       expect((event as unknown as Record<string, unknown>).description).toBeUndefined()
       expect((event as unknown as Record<string, unknown>).isFeatured).toBeUndefined()
+    })
+  })
+
+  describe('assertConfigurable', () => {
+    const buildEvent = (status: EventStatusType) =>
+      Event.fromPersistence({
+        id: crypto.randomUUID(),
+        tenantId: crypto.randomUUID(),
+        name: 'Vuelta al Cotopaxi',
+        slug: 'vuelta-al-cotopaxi',
+        startDate: new Date('2026-06-15'),
+        endDate: new Date('2026-06-17'),
+        provinceId: null,
+        cantonId: null,
+        eventTypeId: 1,
+        status,
+        snapPublicName: null,
+        snapWatermarkStorageKey: null,
+        snapWhatsappNumber: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      })
+
+    it('throws when the event is frozen', () => {
+      expect(() => buildEvent(EventStatus.FROZEN).assertConfigurable()).toThrow(AppException)
+    })
+
+    it('passes when the event is active', () => {
+      expect(() => buildEvent(EventStatus.ACTIVE).assertConfigurable()).not.toThrow()
     })
   })
 })
