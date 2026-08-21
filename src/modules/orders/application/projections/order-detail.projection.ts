@@ -40,6 +40,7 @@ export class OrderDetailProjection {
   snapWhatsapp: string | null
   /** Snap email at time of order */
   snapEmail: string | null
+  eventId: string
   /** Event name */
   eventName: string
   /** Order subtotal (Decimal serialized as string to preserve precision) */

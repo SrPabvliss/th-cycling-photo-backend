@@ -46,6 +46,7 @@ function buildDetail(overrides: Partial<OrderDetailProjection> = {}): OrderDetai
     snapLastName: 'Villacres',
     snapWhatsapp: '0999999999',
     snapEmail: 'buyer@example.com',
+    eventId: 'event-1',
     eventName: 'Vuelta al Cotopaxi',
     subtotal: '30.00',
     snapCurrency: 'USD',
