@@ -77,6 +77,7 @@ describe('ConfirmPhotoBatchHandler', () => {
     photoWriteRepo = {
       save: jest.fn(),
       saveMany: jest.fn(),
+      claimPhotoQuota: jest.fn(),
       delete: jest.fn(),
       bulkUpdateCategory: jest.fn(),
       setRequiresRetouch: jest.fn().mockResolvedValue(undefined),
