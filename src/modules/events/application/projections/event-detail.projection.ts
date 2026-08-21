@@ -33,6 +33,8 @@ export class EventDetailProjection {
   classifiedCount: number
   /** Total file size of all photos in bytes (computed) */
   totalFileSize: number
+  /** Whether the event is frozen — tenant editing and photo mutations are blocked. */
+  isFrozen: boolean
   /** When the event record was created */
   createdAt: Date
   /** When the event record was last updated */
