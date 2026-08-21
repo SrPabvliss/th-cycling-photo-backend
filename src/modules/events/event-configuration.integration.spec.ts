@@ -63,6 +63,7 @@ describe('event configuration', () => {
   let confirmWatermarkUpload: ConfirmWatermarkUploadHandler
   let payoutRepo: ITenantPayoutMethodRepository
   let kv: jest.Mocked<IKvStorageAdapter>
+  let storage: jest.Mocked<Pick<IStorageAdapter, 'delete'>>
 
   let completeTenant: { id: string }
   let incompleteTenant: { id: string }
@@ -156,6 +157,7 @@ describe('event configuration', () => {
     confirmWatermarkUpload = module.get(ConfirmWatermarkUploadHandler)
     payoutRepo = module.get(TENANT_PAYOUT_METHOD_REPOSITORY)
     kv = module.get(KV_STORAGE_ADAPTER)
+    storage = module.get(STORAGE_ADAPTER)
 
     completeTenant = await prisma.tenant.create({
       data: {
@@ -409,6 +411,7 @@ describe('event configuration', () => {
       new GetEventConfigurationQuery(eventId, completeUser.id),
     )
     kv.write.mockClear()
+    storage.delete.mockClear()
 
     await confirmWatermarkUpload.execute(
       new ConfirmWatermarkUploadCommand(
@@ -423,6 +426,7 @@ describe('event configuration', () => {
 
     expect(after.watermarkStorageKey).toBe(before.watermarkStorageKey)
     expect(kv.write).not.toHaveBeenCalledWith(`wm-${eventId}`, expect.anything())
+    expect(storage.delete).not.toHaveBeenCalled()
   })
 
   it('hides another tenant payout method behind notFound, never forbidden', async () => {

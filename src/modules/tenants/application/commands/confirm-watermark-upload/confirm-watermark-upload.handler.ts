@@ -2,7 +2,6 @@ import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
-import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
 import { type IUserReadRepository, USER_READ_REPOSITORY } from '@users/domain/ports'
 import {
   type ITenantProfileRepository,
@@ -19,7 +18,6 @@ export class ConfirmWatermarkUploadHandler
   constructor(
     @Inject(TENANT_PROFILE_REPOSITORY) private readonly profileRepo: ITenantProfileRepository,
     @Inject(USER_READ_REPOSITORY) private readonly userRepo: IUserReadRepository,
-    @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
     @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
   ) {}
 
@@ -36,13 +34,8 @@ export class ConfirmWatermarkUploadHandler
     const profile = await this.profileRepo.findByTenantId(tenantId)
     if (!profile) throw AppException.notFound('entities.tenant', tenantId)
 
-    const previous = profile.watermarkStorageKey
     profile.changeBrand(undefined, command.storageKey)
     await this.profileRepo.save(profile)
-
-    if (previous && previous !== command.storageKey) {
-      await this.storage.delete(previous)
-    }
 
     await this.kv.write(`wm-tenant-${tenantId}`, command.storageKey).catch((err) => {
       this.logger.error(`Failed to publish watermark KV entry for tenant ${tenantId}`, err)
