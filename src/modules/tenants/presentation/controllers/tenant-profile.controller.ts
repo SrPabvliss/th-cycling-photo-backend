@@ -5,6 +5,7 @@ import type { EntityIdProjection } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
 import { PermissionGuard } from '@shared/authorization/infrastructure/guards/permission.guard'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
+import { AppException } from '@shared/domain'
 import { CreatePayoutMethodCommand } from '../../application/commands/create-payout-method/create-payout-method.command'
 import { DeletePayoutMethodCommand } from '../../application/commands/delete-payout-method/delete-payout-method.command'
 import { UpdateMyTenantProfileCommand } from '../../application/commands/update-my-tenant-profile/update-my-tenant-profile.command'
@@ -48,7 +49,7 @@ function toBankDetailsOrUndefined(dto: {
   accountType?: string
   accountHolder?: string
   holderIdentification?: string
-}): BankTransferDetails | null | undefined {
+}): BankTransferDetails | undefined {
   const anyBankField =
     dto.bankName !== undefined ||
     dto.accountNumber !== undefined ||
@@ -56,7 +57,9 @@ function toBankDetailsOrUndefined(dto: {
     dto.accountHolder !== undefined ||
     dto.holderIdentification !== undefined
   if (!anyBankField) return undefined
-  return toBankDetails(dto)
+  const bank = toBankDetails(dto)
+  if (!bank) throw AppException.businessRule('payment.invalid_bank_details')
+  return bank
 }
 
 @ApiTags('Tenant Profile')
@@ -84,9 +87,9 @@ export class TenantProfileController {
     await this.commandBus.execute(
       new UpdateMyTenantProfileCommand(
         user.userId,
-        dto.publicName ?? null,
-        dto.watermarkStorageKey ?? null,
-        dto.whatsappNumber ?? null,
+        dto.publicName,
+        dto.watermarkStorageKey,
+        dto.whatsappNumber,
       ),
     )
   }

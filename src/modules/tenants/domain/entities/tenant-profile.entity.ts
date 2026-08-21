@@ -26,12 +26,13 @@ export class TenantProfile {
     )
   }
 
-  changeBrand(publicName: string | null, watermarkStorageKey: string | null): void {
-    this.publicName = publicName
-    this.watermarkStorageKey = watermarkStorageKey
+  changeBrand(publicName?: string | null, watermarkStorageKey?: string | null): void {
+    if (publicName !== undefined) this.publicName = publicName
+    if (watermarkStorageKey !== undefined) this.watermarkStorageKey = watermarkStorageKey
   }
 
-  changeWhatsapp(whatsappNumber: string | null): void {
+  changeWhatsapp(whatsappNumber?: string | null): void {
+    if (whatsappNumber === undefined) return
     if (whatsappNumber === this.whatsappNumber) return
     this.whatsappNumber = whatsappNumber
     this.whatsappVerifiedAt = null
