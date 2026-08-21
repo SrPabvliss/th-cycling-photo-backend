@@ -8,5 +8,6 @@
   "canton_requires_province": "Se debe especificar una provincia al seleccionar un cantón",
   "invalid_cover_storage_key": "La clave de almacenamiento no corresponde a la ruta de imagen de portada de este evento",
   "operator_already_assigned": "Este operador ya está asignado al evento",
-  "creator_tenant_required": "El creador del evento debe pertenecer a un tenant"
+  "creator_tenant_required": "El creador del evento debe pertenecer a un tenant",
+  "frozen_not_configurable": "No se puede editar la configuración de un evento congelado"
 }

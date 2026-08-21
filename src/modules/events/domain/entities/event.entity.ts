@@ -89,6 +89,12 @@ export class Event {
     this.audit.markUpdated()
   }
 
+  assertConfigurable(): void {
+    if (this.status === EventStatus.FROZEN) {
+      throw AppException.businessRule('event.frozen_not_configurable')
+    }
+  }
+
   static generateSlug(name: string): string {
     return slugify(name, { lower: true, strict: true, locale: 'es' })
   }
