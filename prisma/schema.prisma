@@ -14,6 +14,7 @@ enum EventStatus {
   active
   completed
   archived
+  frozen
 
   @@map("event_status")
 }
@@ -383,6 +384,10 @@ model Event {
 
   tenant_id String @db.Uuid
 
+  snap_public_name           String? @db.VarChar(200)
+  snap_watermark_storage_key String? @db.VarChar(500)
+  snap_whatsapp_number       String? @db.VarChar(20)
+
   event_type        EventType             @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
   province          Province?             @relation(fields: [province_id], references: [id])
   canton            Canton?               @relation(fields: [canton_id], references: [id])
@@ -396,6 +401,7 @@ model Event {
   photo_categories  EventPhotoCategory[]
   cart_items        CartItem[]
   permission_grants UserPermissionGrant[]
+  payout_methods    EventPayoutMethod[]
 
   @@index([status])
   @@index([event_type_id])
@@ -1029,8 +1035,9 @@ model TenantPayoutMethod {
   created_at       DateTime @default(now()) @db.Timestamptz
   updated_at       DateTime @default(now()) @updatedAt @db.Timestamptz
 
-  tenant        Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  configured_by User?  @relation("PayoutMethodConfiguredBy", fields: [configured_by_id], references: [id], onDelete: SetNull)
+  tenant        Tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  configured_by User?               @relation("PayoutMethodConfiguredBy", fields: [configured_by_id], references: [id], onDelete: SetNull)
+  event_copies  EventPayoutMethod[]
 
   @@index([tenant_id, is_active])
   @@map("tenant_payout_methods")
@@ -1081,4 +1088,31 @@ model PaymentTransactionOrder {
   @@id([payment_transaction_id, order_id])
   @@index([order_id])
   @@map("payment_transaction_orders")
+}
+
+model EventPayoutMethod {
+  id         String         @id @default(uuid()) @db.Uuid
+  event_id   String         @db.Uuid
+  provider   PayoutProvider
+  is_active  Boolean        @default(true)
+  sort_order Int            @default(0)
+
+  mode                PaymentMode?
+  receiver_identifier String?      @db.VarChar(100)
+
+  bank_name             String? @db.VarChar(100)
+  account_number        String? @db.VarChar(50)
+  account_type          String? @db.VarChar(20)
+  account_holder        String? @db.VarChar(200)
+  holder_identification String? @db.VarChar(20)
+
+  source_payout_method_id String?  @db.Uuid
+  created_at              DateTime @default(now()) @db.Timestamptz
+  updated_at              DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  event  Event               @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  source TenantPayoutMethod? @relation(fields: [source_payout_method_id], references: [id], onDelete: SetNull)
+
+  @@index([event_id, is_active])
+  @@map("event_payout_methods")
 }
