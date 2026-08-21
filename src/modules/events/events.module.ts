@@ -6,6 +6,7 @@ import { RestoreEventHandler } from '@events/application/commands/restore-event/
 import { UnassignOperatorHandler } from '@events/application/commands/unassign-operator/unassign-operator.handler'
 import { UpdateEventHandler } from '@events/application/commands/update-event/update-event.handler'
 import { UpdateEventConfigurationHandler } from '@events/application/commands/update-event-configuration/update-event-configuration.handler'
+import { UpdateEventPhotoQuotaHandler } from '@events/application/commands/update-event-photo-quota/update-event-photo-quota.handler'
 import { GetEventConfigurationHandler } from '@events/application/queries/get-event-configuration/get-event-configuration.handler'
 import { GetEventConfigurationPresetHandler } from '@events/application/queries/get-event-configuration-preset/get-event-configuration-preset.handler'
 import { GetEventDetailHandler } from '@events/application/queries/get-event-detail/get-event-detail.handler'
@@ -43,6 +44,7 @@ const CommandHandlers = [
   UnassignOperatorHandler,
   UpdateEventHandler,
   UpdateEventConfigurationHandler,
+  UpdateEventPhotoQuotaHandler,
 ]
 const QueryHandlers = [
   GetEventsListHandler,

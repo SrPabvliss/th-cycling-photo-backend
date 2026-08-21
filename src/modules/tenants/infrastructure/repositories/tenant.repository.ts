@@ -44,6 +44,13 @@ export class TenantRepository implements ITenantRepository {
     })
   }
 
+  async updateEventPhotoQuotaDefault(tenantId: string, quota: number | null): Promise<void> {
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { default_event_photo_quota: quota },
+    })
+  }
+
   async createTenantWithAdmin(data: CreateTenantPayload): Promise<string> {
     const tenant = await this.prisma.$transaction(async (tx) => {
       const newTenant = await tx.tenant.create({

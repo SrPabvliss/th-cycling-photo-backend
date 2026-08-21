@@ -21,6 +21,7 @@ export interface CreateTenantPayload {
 export interface ITenantRepository {
   getTenantsList(): Promise<TenantListProjection[]>
   updateEventQuota(tenantId: string, quota: number): Promise<void>
+  updateEventPhotoQuotaDefault(tenantId: string, quota: number | null): Promise<void>
   createTenantWithAdmin(data: CreateTenantPayload): Promise<string>
   checkQuota(tenantId: string): Promise<{
     quota: number

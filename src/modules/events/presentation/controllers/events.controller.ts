@@ -11,6 +11,7 @@ import {
   UpdateEventConfigurationCommand,
   UpdateEventConfigurationDto,
   UpdateEventDto,
+  UpdateEventPhotoQuotaCommand,
 } from '@events/application/commands'
 import {
   EventConfigurationPresetProjection,
@@ -35,6 +36,7 @@ import { AuditContext, EntityIdProjection, Pagination } from '@shared/applicatio
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
+import { UpdateEventPhotoQuotaDto } from '../dtos/update-event-photo-quota.dto'
 
 @ApiTags('Events')
 @ApiBearerAuth()
@@ -213,6 +215,19 @@ export class EventsController {
   async archive(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
     const command = new ArchiveEventCommand(id, user.userId)
     return this.commandBus.execute(command)
+  }
+
+  @RequirePermission('event.photo_quota.set')
+  @Patch(':id/photo-quota')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
+  @ApiOperation({ summary: "Override an event's photo quota" })
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
+  async updatePhotoQuota(
+    @Param('id') id: string,
+    @Body() dto: UpdateEventPhotoQuotaDto,
+  ): Promise<void> {
+    await this.commandBus.execute(new UpdateEventPhotoQuotaCommand(id, dto.quota))
   }
 
   @RequirePermission('event.restore')

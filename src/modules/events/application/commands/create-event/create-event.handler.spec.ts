@@ -33,6 +33,7 @@ describe('CreateEventHandler', () => {
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
+      updatePhotoQuota: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
 
     operatorRepo = {
@@ -56,6 +57,7 @@ describe('CreateEventHandler', () => {
     tenantRepo = {
       getTenantsList: jest.fn(),
       updateEventQuota: jest.fn(),
+      updateEventPhotoQuotaDefault: jest.fn(),
       createTenantWithAdmin: jest.fn(),
       checkQuota: jest
         .fn()

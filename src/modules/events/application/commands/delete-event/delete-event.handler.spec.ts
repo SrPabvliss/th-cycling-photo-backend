@@ -40,6 +40,7 @@ describe('DeleteEventHandler', () => {
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
+      updatePhotoQuota: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
 
     readRepo = {

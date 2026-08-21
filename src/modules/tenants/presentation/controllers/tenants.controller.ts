@@ -5,10 +5,12 @@ import { PermissionGuard } from '@shared/authorization/infrastructure/guards/per
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { hashSync } from 'bcryptjs'
 import { CreateTenantCommand } from '../../application/commands/create-tenant/create-tenant.command'
+import { UpdateTenantPhotoQuotaDefaultCommand } from '../../application/commands/update-tenant-photo-quota-default/update-tenant-photo-quota-default.command'
 import { UpdateTenantQuotaCommand } from '../../application/commands/update-tenant-quota/update-tenant-quota.command'
 import { GetTenantsListQuery } from '../../application/queries/get-tenants-list/get-tenants-list.query'
 import type { TenantListProjection } from '../../domain/ports/tenant-repository.port'
 import { CreateTenantDto } from '../dtos/create-tenant.dto'
+import { UpdateTenantPhotoQuotaDefaultDto } from '../dtos/update-tenant-photo-quota-default.dto'
 import { UpdateTenantQuotaDto } from '../dtos/update-tenant-quota.dto'
 
 @ApiTags('Tenants')
@@ -48,5 +50,14 @@ export class TenantsController {
   @RequirePermission('tenant.quota.set')
   async updateQuota(@Param('id') id: string, @Body() dto: UpdateTenantQuotaDto): Promise<void> {
     await this.commandBus.execute(new UpdateTenantQuotaCommand(id, dto.quota))
+  }
+
+  @Patch(':id/photo-quota-default')
+  @RequirePermission('tenant.quota.set')
+  async updatePhotoQuotaDefault(
+    @Param('id') id: string,
+    @Body() dto: UpdateTenantPhotoQuotaDefaultDto,
+  ): Promise<void> {
+    await this.commandBus.execute(new UpdateTenantPhotoQuotaDefaultCommand(id, dto.quota))
   }
 }
