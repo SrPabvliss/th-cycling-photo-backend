@@ -3,6 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { config } from 'dotenv'
 import { PrismaClient } from '../../../generated/prisma/client'
 import { CloudflareKvAdapter } from '../../../shared/cloudflare/infrastructure/cloudflare-kv.adapter'
+import { isSafeStorageKey } from '../../../shared/storage/domain/storage-key'
 
 const env = process.env.NODE_ENV || 'development'
 config({ path: `.env.${env}`, quiet: true })
@@ -42,6 +43,16 @@ function buildKvAdapter(): CloudflareKvAdapter {
   return new CloudflareKvAdapter(configService)
 }
 
+function toSafeEntries(
+  entries: { key: string; value: string }[],
+): { key: string; value: string }[] {
+  return entries.filter((entry) => {
+    if (isSafeStorageKey(entry.value)) return true
+    console.error(`Skipping ${entry.key}: unsafe storage key ${entry.value}`)
+    return false
+  })
+}
+
 async function main(): Promise<void> {
   const adapter = new PrismaPg({ connectionString: buildConnectionString() })
   const prisma = new PrismaClient({ adapter })
@@ -52,14 +63,28 @@ async function main(): Promise<void> {
       where: { snap_watermark_storage_key: { not: null } },
       select: { id: true, snap_watermark_storage_key: true },
     })
+    const tenants = await prisma.tenant.findMany({
+      where: { watermark_storage_key: { not: null } },
+      select: { id: true, watermark_storage_key: true },
+    })
 
-    const entries = events.map((event) => ({
-      key: `wm-${event.id}`,
-      value: event.snap_watermark_storage_key as string,
-    }))
+    const eventEntries = toSafeEntries(
+      events.map((event) => ({
+        key: `wm-${event.id}`,
+        value: event.snap_watermark_storage_key as string,
+      })),
+    )
+    const tenantEntries = toSafeEntries(
+      tenants.map((tenant) => ({
+        key: `wm-tenant-${tenant.id}`,
+        value: tenant.watermark_storage_key as string,
+      })),
+    )
 
-    await kv.writeBulk(entries)
-    console.log(`Backfilled ${entries.length} watermark KV entries`)
+    await kv.writeBulk([...eventEntries, ...tenantEntries])
+    console.log(
+      `Backfilled ${eventEntries.length} event and ${tenantEntries.length} tenant watermark KV entries`,
+    )
   } finally {
     await prisma.$disconnect()
   }
