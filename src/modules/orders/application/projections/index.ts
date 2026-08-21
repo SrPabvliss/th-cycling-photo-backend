@@ -13,6 +13,10 @@ export {
   MyOrderPreviewPhotoProjection,
 } from './my-order-list.projection'
 export {
+  MyOrdersSpentProjection,
+  MyOrdersSummaryProjection,
+} from './my-orders-summary.projection'
+export {
   OrderDeliveryLinkProjection,
   OrderDetailProjection,
   OrderPhotoProjection,

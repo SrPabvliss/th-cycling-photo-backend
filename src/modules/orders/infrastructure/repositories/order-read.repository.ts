@@ -5,6 +5,7 @@ import type {
   MyOrderDetailProjection,
   MyOrderDownloadRaw,
   MyOrderListProjection,
+  MyOrdersSummaryProjection,
   OrderDetailProjection,
   OrderListProjection,
   RetouchCompletedOrderProjection,
@@ -63,9 +64,18 @@ const DOWNLOADABLE_STATUSES: string[] = [
   OrderStatus.GIFTED,
 ]
 const IN_PROCESS_STATUSES: string[] = [OrderStatus.PENDING, OrderStatus.PAYMENT_INFO_SENT]
+const MY_ORDER_STATUSES: string[] = [
+  OrderStatus.PENDING,
+  OrderStatus.PAYMENT_INFO_SENT,
+  OrderStatus.PAID,
+  OrderStatus.DELIVERED,
+  OrderStatus.GIFTED,
+]
+const SPENT_STATUSES: string[] = [OrderStatus.PAID, OrderStatus.DELIVERED]
 
 function toCustomerState(status: string): MyOrderCustomerState {
-  if (DOWNLOADABLE_STATUSES.includes(status)) return 'ready'
+  if (status === OrderStatus.GIFTED) return 'gifted'
+  if (status === OrderStatus.PAID || status === OrderStatus.DELIVERED) return 'ready'
   if (status === OrderStatus.CANCELLED) return 'cancelled'
   return 'in_process'
 }
@@ -505,6 +515,57 @@ export class OrderReadRepository implements IOrderReadRepository {
       })
       return { id: item.photo.id, storageKey: file.storageKey, fileSize: file.fileSize }
     })
+  }
+
+  async getMySummary(userId: string): Promise<MyOrdersSummaryProjection> {
+    const [orderCount, photoCount, events, spentGroups] = await Promise.all([
+      this.prisma.order.count({
+        where: {
+          user_id: userId,
+          status: { in: MY_ORDER_STATUSES } as Prisma.EnumOrderStatusFilter,
+        },
+      }),
+      this.prisma.orderItem.count({
+        where: {
+          order: {
+            user_id: userId,
+            status: { in: DOWNLOADABLE_STATUSES } as Prisma.EnumOrderStatusFilter,
+          },
+        },
+      }),
+      this.prisma.order.findMany({
+        where: {
+          user_id: userId,
+          status: { in: MY_ORDER_STATUSES } as Prisma.EnumOrderStatusFilter,
+        },
+        distinct: ['event_id'],
+        select: { event_id: true },
+      }),
+      this.prisma.order.groupBy({
+        by: ['snap_currency'],
+        where: {
+          user_id: userId,
+          status: { in: SPENT_STATUSES } as Prisma.EnumOrderStatusFilter,
+          subtotal: { not: null },
+          snap_currency: { not: null },
+        },
+        _sum: { subtotal: true },
+      }),
+    ])
+
+    return {
+      orderCount,
+      photoCount,
+      eventCount: events.length,
+      spent: spentGroups
+        .filter((group) => group.snap_currency !== null && group._sum.subtotal !== null)
+        .map((group) => ({
+          currency: group.snap_currency as string,
+          amount: (
+            group._sum.subtotal as NonNullable<(typeof group)['_sum']['subtotal']>
+          ).toString(),
+        })),
+    }
   }
 
   async hasPaymentInFlight(orderId: string): Promise<boolean> {

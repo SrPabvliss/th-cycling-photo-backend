@@ -6,12 +6,14 @@ import {
   MyOrderDetailProjection,
   MyOrderDownloadsProjection,
   MyOrderListProjection,
+  MyOrdersSummaryProjection,
 } from '@orders/application/projections'
 import {
   GetMyOrderDetailQuery,
   GetMyOrderDownloadsQuery,
   GetMyOrdersListDto,
   GetMyOrdersListQuery,
+  GetMyOrdersSummaryQuery,
 } from '@orders/application/queries'
 import { EntityIdProjection, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
@@ -38,6 +40,18 @@ export class OrderAccountController {
   async findMine(@CurrentUser() user: ICurrentUser, @Query() dto: GetMyOrdersListDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     return this.queryBus.execute(new GetMyOrdersListQuery(user.userId, pagination))
+  }
+
+  @Get('summary')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
+  @ApiOperation({ summary: 'Get aggregate figures over all of my orders' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Order counts, photo count, event count and spend per currency',
+    type: MyOrdersSummaryProjection,
+  })
+  async summary(@CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetMyOrdersSummaryQuery(user.userId))
   }
 
   @Get(':id')

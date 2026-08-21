@@ -19,6 +19,7 @@ import { SendDeliveryHandler } from '@orders/application/commands/send-delivery/
 import { GetMyOrderDetailHandler } from '@orders/application/queries/get-my-order-detail/get-my-order-detail.handler'
 import { GetMyOrderDownloadsHandler } from '@orders/application/queries/get-my-order-downloads/get-my-order-downloads.handler'
 import { GetMyOrdersListHandler } from '@orders/application/queries/get-my-orders-list/get-my-orders-list.handler'
+import { GetMyOrdersSummaryHandler } from '@orders/application/queries/get-my-orders-summary/get-my-orders-summary.handler'
 import { GetOrderDetailHandler } from '@orders/application/queries/get-order-detail/get-order-detail.handler'
 import { GetOrdersListHandler } from '@orders/application/queries/get-orders-list/get-orders-list.handler'
 import { GetOrdersStatsHandler } from '@orders/application/queries/get-orders-stats/get-orders-stats.handler'
@@ -55,6 +56,7 @@ const QueryHandlers = [
   GetMyOrdersListHandler,
   GetMyOrderDetailHandler,
   GetMyOrderDownloadsHandler,
+  GetMyOrdersSummaryHandler,
 ]
 
 @Module({

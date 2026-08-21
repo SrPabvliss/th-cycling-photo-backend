@@ -2,6 +2,7 @@ import type {
   MyOrderDetailProjection,
   MyOrderDownloadRaw,
   MyOrderListProjection,
+  MyOrdersSummaryProjection,
   OrderDetailProjection,
   OrderListProjection,
   RetouchCompletedOrderProjection,
@@ -36,6 +37,7 @@ export interface IOrderReadRepository {
   getMyList(userId: string, pagination: Pagination): Promise<PaginatedResult<MyOrderListProjection>>
   getMyDetail(userId: string, orderId: string): Promise<MyOrderDetailProjection | null>
   getMyDownloadFiles(userId: string, orderId: string): Promise<MyOrderDownloadRaw[] | null>
+  getMySummary(userId: string): Promise<MyOrdersSummaryProjection>
   /** True when a payment transaction for this order is still initiated or confirming. */
   hasPaymentInFlight(orderId: string): Promise<boolean>
 }

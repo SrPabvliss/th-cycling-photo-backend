@@ -21,6 +21,7 @@ function buildRepository() {
     repository: new OrderReadRepository(prisma as never, cdn as never),
     findMany,
     findFirst,
+    count,
     groupBy,
     orderItemCount,
     orderItemFindMany,
@@ -160,6 +161,62 @@ describe('OrderReadRepository customer scoping', () => {
     expect(where.status).toEqual({
       in: [OrderStatus.PAID, OrderStatus.DELIVERED, OrderStatus.GIFTED],
     })
+  })
+
+  it('maps a gifted order to its own state while keeping it downloadable', async () => {
+    const { repository, findFirst } = buildRepository()
+    findFirst.mockResolvedValue({
+      id: 'order-1',
+      status: OrderStatus.GIFTED,
+      created_at: new Date('2026-01-01'),
+      subtotal: null,
+      snap_currency: 'USD',
+      event: { name: 'Event 1' },
+      items: [],
+    })
+
+    const detail = await repository.getMyDetail('user-1', 'order-1')
+
+    expect(detail?.state).toBe('gifted')
+    expect(detail?.canDownload).toBe(true)
+  })
+
+  it('scopes the summary to the caller and excludes gifted orders from spend', async () => {
+    const { repository, findMany, count, orderItemCount, groupBy } = buildRepository()
+    count.mockResolvedValue(4)
+    orderItemCount.mockResolvedValue(9)
+    findMany.mockResolvedValue([{ event_id: 'event-1' }, { event_id: 'event-2' }])
+    groupBy.mockResolvedValue([
+      { snap_currency: 'USD', _sum: { subtotal: { toString: () => '50.00' } } },
+    ])
+
+    const summary = await repository.getMySummary('user-1')
+
+    expect(count.mock.calls[0][0].where.user_id).toBe('user-1')
+    expect(orderItemCount.mock.calls[0][0].where.order.user_id).toBe('user-1')
+    expect(orderItemCount.mock.calls[0][0].where.order.status).toEqual({
+      in: [OrderStatus.PAID, OrderStatus.DELIVERED, OrderStatus.GIFTED],
+    })
+    expect(findMany.mock.calls[0][0].where.user_id).toBe('user-1')
+    expect(groupBy.mock.calls[0][0].where.user_id).toBe('user-1')
+    expect(groupBy.mock.calls[0][0].where.status).toEqual({
+      in: [OrderStatus.PAID, OrderStatus.DELIVERED],
+    })
+    expect(summary).toEqual({
+      orderCount: 4,
+      photoCount: 9,
+      eventCount: 2,
+      spent: [{ currency: 'USD', amount: '50.00' }],
+    })
+  })
+
+  it('returns an empty spend list when nothing was spent', async () => {
+    const { repository, groupBy } = buildRepository()
+    groupBy.mockResolvedValue([])
+
+    const summary = await repository.getMySummary('user-1')
+
+    expect(summary.spent).toEqual([])
   })
 
   it('reports a payment in flight only for initiated and confirming transactions', async () => {

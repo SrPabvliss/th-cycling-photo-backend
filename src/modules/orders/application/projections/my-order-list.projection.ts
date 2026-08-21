@@ -1,4 +1,4 @@
-export type MyOrderCustomerState = 'in_process' | 'ready' | 'cancelled'
+export type MyOrderCustomerState = 'in_process' | 'ready' | 'gifted' | 'cancelled'
 
 export class MyOrderPreviewPhotoProjection {
   /** Photo UUID */
