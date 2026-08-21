@@ -15,5 +15,6 @@
   "split_not_enabled": "El reparto de pagos no está habilitado",
   "order_not_yours": "Esta orden no te pertenece",
   "receiver_verification_unavailable": "No se puede verificar el número en Payphone: faltan credenciales de la aplicación API",
-  "mixed_sellers": "No se pueden cobrar juntas órdenes de fotógrafos distintos"
+  "mixed_sellers": "No se pueden cobrar juntas órdenes de fotógrafos distintos",
+  "invalid_bank_details": "Los datos bancarios están incompletos"
 }

@@ -56,4 +56,10 @@ export const ROLE_INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   'operator POST /photos/:id/retouched/presigned-url',
   'operator POST /photos/:id/retouched/confirm',
   'operator PATCH /photos/:id/retouch-flag',
+
+  // TIT-42: payout configuration moves from /payphone-account to /tenants/me/payout-methods.
+  'admin GET /payphone-account',
+  'admin PUT /payphone-account',
+  'operator GET /payphone-account',
+  'operator PUT /payphone-account',
 ])

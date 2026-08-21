@@ -511,17 +511,5 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
     legacyMarker: 'customer',
     permission: 'payment.transaction.read',
   },
-  {
-    method: 'GET',
-    path: '/payphone-account',
-    legacyMarker: 'admin,operator',
-    permission: 'payment.account.read',
-  },
-  {
-    method: 'PUT',
-    path: '/payphone-account',
-    legacyMarker: 'admin,operator',
-    permission: 'payment.account.configure',
-  },
   { method: 'GET', path: '/', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
 ]

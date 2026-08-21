@@ -68,8 +68,6 @@ export const PERMISSIONS = {
   'payment.intent.create': E(false, false, 'payments'),
   'payment.confirm': E(false, false, 'payments'),
   'payment.transaction.read': E(false, false, 'payments'),
-  'payment.account.read': E(true, false, 'payments'),
-  'payment.account.configure': E(true, false, 'payments'),
   // cart
   'cart.checkout': E(false, false, 'cart'),
   // preview links
@@ -97,6 +95,10 @@ export const PERMISSIONS = {
   'tenant.read': E(true, false, 'tenants'),
   'tenant.create': E(true, false, 'tenants'),
   'tenant.quota.set': E(true, false, 'tenants'),
+  'tenant.profile.read': E(false, false, 'tenants'),
+  'tenant.profile.update': E(false, false, 'tenants'),
+  'tenant.payout_method.read': E(false, false, 'tenants'),
+  'tenant.payout_method.manage': E(false, false, 'tenants'),
   'permission.grant': E(true, false, 'admin'),
 } as const satisfies Record<string, PermissionMeta>
 

@@ -10,7 +10,7 @@ import type { AuthorizationResult } from '@shared/payment-gateways'
 import { ConfirmPaymentTransactionCommand } from './confirm-payment-transaction.command'
 import { ConfirmPaymentTransactionHandler } from './confirm-payment-transaction.handler'
 
-const SELLER = 'seller-1'
+const SELLER_TENANT = 'tenant-1'
 const BUYER = 'buyer-1'
 
 const APPROVED: AuthorizationResult = {
@@ -33,7 +33,7 @@ type FixtureContext = {
   orderId: string
   status: string
   subtotalDollars: number | null
-  sellerUserId: string
+  sellerTenantId: string
   buyerUserId: string
 }
 
@@ -61,7 +61,7 @@ function buildContext(overrides: Partial<FixtureContext> = {}): FixtureContext {
     orderId: 'order-1',
     status: 'pending',
     subtotalDollars: 10,
-    sellerUserId: SELLER,
+    sellerTenantId: SELLER_TENANT,
     buyerUserId: BUYER,
     ...overrides,
   }
@@ -79,12 +79,12 @@ function buildHandler({
   const transactionRepo = {
     runLocked: jest.fn().mockImplementation((_id, work) => work(transaction)),
   }
-  const accountRepo = {
-    findByUserId: jest
+  const payoutRepo = {
+    findActivePayphoneForTenant: jest
       .fn()
-      .mockResolvedValue({ credentialsEncrypted: 'cipher', disable: jest.fn() }),
+      .mockResolvedValue({ credentialsEncrypted: 'cipher', deactivate: jest.fn() }),
+    save: jest.fn().mockImplementation((a) => Promise.resolve(a)),
   }
-  const accountWriteRepo = { save: jest.fn().mockImplementation((a) => Promise.resolve(a)) }
   const contextRepo = {
     findByOrderIds: jest.fn().mockResolvedValue(contexts),
   }
@@ -111,21 +111,20 @@ function buildHandler({
 
   const handler = new ConfirmPaymentTransactionHandler(
     transactionRepo as never,
-    accountRepo as never,
+    payoutRepo as never,
     contextRepo as never,
     registry as never,
     cipher as never,
     commandBus as never,
     config as never,
-    new SellerAccountSuspension(accountRepo as never, accountWriteRepo as never),
+    new SellerAccountSuspension(payoutRepo as never),
   )
 
   return {
     handler,
     transaction,
     transactionRepo,
-    accountRepo,
-    accountWriteRepo,
+    payoutRepo,
     contextRepo,
     gateway,
     commandBus,
@@ -196,14 +195,14 @@ describe('ConfirmPaymentTransactionHandler', () => {
           orderId: 'order-1',
           status: 'pending',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
+          sellerTenantId: SELLER_TENANT,
           buyerUserId: BUYER,
         },
         {
           orderId: 'order-2',
           status: 'pending',
           subtotalDollars: 15,
-          sellerUserId: SELLER,
+          sellerTenantId: SELLER_TENANT,
           buyerUserId: BUYER,
         },
       ],
@@ -229,14 +228,14 @@ describe('ConfirmPaymentTransactionHandler', () => {
           orderId: 'order-1',
           status: 'paid',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
+          sellerTenantId: SELLER_TENANT,
           buyerUserId: BUYER,
         },
         {
           orderId: 'order-2',
           status: 'pending',
           subtotalDollars: 15,
-          sellerUserId: SELLER,
+          sellerTenantId: SELLER_TENANT,
           buyerUserId: BUYER,
         },
       ],
@@ -367,14 +366,14 @@ describe('ConfirmPaymentTransactionHandler', () => {
           orderId: 'order-1',
           status: 'pending',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
+          sellerTenantId: SELLER_TENANT,
           buyerUserId: BUYER,
         },
         {
           orderId: 'order-2',
           status: 'pending',
           subtotalDollars: 15,
-          sellerUserId: SELLER,
+          sellerTenantId: SELLER_TENANT,
           buyerUserId: BUYER,
         },
       ],
@@ -390,9 +389,9 @@ describe('ConfirmPaymentTransactionHandler', () => {
   })
 
   it('disables the seller account when the gateway rejects its credentials', async () => {
-    const { handler, accountRepo, accountWriteRepo, gateway } = buildHandler()
-    const account = { credentialsEncrypted: 'cipher', disable: jest.fn() }
-    accountRepo.findByUserId.mockResolvedValue(account)
+    const { handler, payoutRepo, gateway } = buildHandler()
+    const account = { credentialsEncrypted: 'cipher', deactivate: jest.fn() }
+    payoutRepo.findActivePayphoneForTenant.mockResolvedValue(account)
     gateway.confirm.mockRejectedValue(AppException.businessRule('payment.invalid_credentials'))
     const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation()
 
@@ -400,8 +399,8 @@ describe('ConfirmPaymentTransactionHandler', () => {
       handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER)),
     ).rejects.toMatchObject({ messageKey: 'payment.invalid_credentials' })
 
-    expect(account.disable).toHaveBeenCalled()
-    expect(accountWriteRepo.save).toHaveBeenCalledWith(account)
+    expect(account.deactivate).toHaveBeenCalled()
+    expect(payoutRepo.save).toHaveBeenCalledWith(account)
 
     errorSpy.mockRestore()
   })
@@ -494,14 +493,14 @@ describe('ConfirmPaymentTransactionHandler', () => {
           orderId: 'order-1',
           status: 'pending',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
+          sellerTenantId: SELLER_TENANT,
           buyerUserId: BUYER,
         },
         {
           orderId: 'order-2',
           status: 'pending',
           subtotalDollars: 15,
-          sellerUserId: SELLER,
+          sellerTenantId: SELLER_TENANT,
           buyerUserId: BUYER,
         },
       ],
@@ -675,8 +674,8 @@ describe('ConfirmPaymentTransactionHandler', () => {
   })
 
   it('raises invalid_credentials when the account is missing', async () => {
-    const { handler, accountRepo } = buildHandler()
-    accountRepo.findByUserId.mockResolvedValue(null)
+    const { handler, payoutRepo } = buildHandler()
+    payoutRepo.findActivePayphoneForTenant.mockResolvedValue(null)
 
     await expect(
       handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER)),
@@ -684,10 +683,10 @@ describe('ConfirmPaymentTransactionHandler', () => {
   })
 
   it('raises invalid_credentials when the account has no credentials', async () => {
-    const { handler, accountRepo } = buildHandler()
-    accountRepo.findByUserId.mockResolvedValue({
+    const { handler, payoutRepo } = buildHandler()
+    payoutRepo.findActivePayphoneForTenant.mockResolvedValue({
       credentialsEncrypted: null,
-      disable: jest.fn(),
+      deactivate: jest.fn(),
     })
 
     await expect(
@@ -801,7 +800,7 @@ describe('ConfirmPaymentTransactionHandler', () => {
 
   it('raises account_not_found instead of invalid_credentials when the order context has no seller', async () => {
     const { handler, contextRepo } = buildHandler()
-    contextRepo.findByOrderIds.mockResolvedValue([buildContext({ sellerUserId: null as never })])
+    contextRepo.findByOrderIds.mockResolvedValue([buildContext({ sellerTenantId: null as never })])
 
     await expect(
       handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER)),
