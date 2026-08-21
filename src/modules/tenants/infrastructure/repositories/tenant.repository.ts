@@ -6,6 +6,9 @@ import type {
   TenantListProjection,
 } from '../../domain/ports/tenant-repository.port'
 
+// A deleted event still holds its slot if it was ever used, closing the delete-refund loophole.
+const SLOT_CONSUMED_FILTER = { OR: [{ deleted_at: null }, { photos_uploaded: { gt: 0 } }] }
+
 @Injectable()
 export class TenantRepository implements ITenantRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -17,7 +20,7 @@ export class TenantRepository implements ITenantRepository {
         _count: {
           select: {
             events: {
-              where: { deleted_at: null },
+              where: SLOT_CONSUMED_FILTER,
             },
           },
         },
@@ -79,9 +82,8 @@ export class TenantRepository implements ITenantRepository {
       include: {
         _count: {
           select: {
-            // A deleted event still holds its slot if it was ever used, closing the delete-refund loophole.
             events: {
-              where: { OR: [{ deleted_at: null }, { photos_uploaded: { gt: 0 } }] },
+              where: SLOT_CONSUMED_FILTER,
             },
           },
         },
