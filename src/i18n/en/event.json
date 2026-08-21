@@ -9,5 +9,6 @@
   "invalid_cover_storage_key": "The storage key does not match the expected cover image path for this event",
   "operator_already_assigned": "This operator is already assigned to the event",
   "creator_tenant_required": "The event creator must belong to a tenant",
-  "frozen_not_configurable": "A frozen event's configuration cannot be edited"
+  "frozen_not_configurable": "A frozen event's configuration cannot be edited",
+  "configuration_incomplete": "Complete the profile before creating an event. Missing: {missing}"
 }
