@@ -20,6 +20,7 @@ describe('photo quota', () => {
   let module: TestingModule
   let prisma: PrismaService
   let confirmHandler: ConfirmPhotoBatchHandler
+  let photoWriteRepo: PhotoWriteRepository
 
   let tenant: { id: string }
   let user: { id: string }
@@ -71,6 +72,7 @@ describe('photo quota', () => {
 
     prisma = module.get(PrismaService)
     confirmHandler = module.get(ConfirmPhotoBatchHandler)
+    photoWriteRepo = module.get(PHOTO_WRITE_REPOSITORY)
 
     tenant = await prisma.tenant.create({
       data: { name: 'Quota Tenant', is_platform: false, event_quota: 10 },
@@ -153,7 +155,8 @@ describe('photo quota', () => {
     await confirmBatch(eventId, 3)
 
     const photos = await prisma.photo.findMany({ where: { event_id: eventId } })
-    await prisma.photo.deleteMany({ where: { id: { in: photos.map((p) => p.id) } } })
+    // Delete through the production repository so a future decrement added there would fail this test.
+    for (const photo of photos) await photoWriteRepo.delete(photo.id)
 
     await expect(confirmBatch(eventId, 1)).rejects.toMatchObject({
       messageKey: 'event.photo_quota_exceeded',
