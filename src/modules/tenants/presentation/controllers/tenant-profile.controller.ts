@@ -28,9 +28,9 @@ import type { TenantProfileProjection } from '../../application/projections/tena
 import { GetMyPayoutMethodsQuery } from '../../application/queries/get-my-payout-methods/get-my-payout-methods.query'
 import { GetMyTenantProfileQuery } from '../../application/queries/get-my-tenant-profile/get-my-tenant-profile.query'
 import type { BankTransferDetails } from '../../domain/entities/tenant-payout-method.entity'
-import type { CreatePayoutMethodDto, UpdatePayoutMethodDto } from '../dtos/payout-method.dto'
-import type { UpdateTenantProfileDto } from '../dtos/update-tenant-profile.dto'
-import type {
+import { CreatePayoutMethodDto, UpdatePayoutMethodDto } from '../dtos/payout-method.dto'
+import { UpdateTenantProfileDto } from '../dtos/update-tenant-profile.dto'
+import {
   ConfirmWatermarkUploadDto,
   GenerateWatermarkPresignedUrlDto,
 } from '../dtos/watermark-upload.dto'
