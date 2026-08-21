@@ -106,6 +106,15 @@ describe('EventConfigurationService', () => {
       expect(profile.publicName).toBe('Foto Andes')
     })
 
+    it('clears a brand field when the selection passes an explicit null', async () => {
+      const service = buildService(completeProfile(), [payphone(), bank()])
+
+      const result = await service.materialise(tenantId, eventId, { publicName: null })
+
+      expect(result.brand.publicName).toBeNull()
+      expect(result.brand.whatsappNumber).toBe('0991234567')
+    })
+
     it('copies only the selected payout methods', async () => {
       const chosen = payphone()
       const service = buildService(completeProfile(), [chosen, bank()])
