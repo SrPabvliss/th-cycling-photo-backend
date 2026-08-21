@@ -1,3 +1,4 @@
+import type { ConfigurationSelection } from '@events/application/services/event-configuration.service'
 import type { AuditContext } from '@shared/application'
 
 export class CreateEventCommand {
@@ -9,5 +10,6 @@ export class CreateEventCommand {
     public readonly cantonId: number | null,
     public readonly eventTypeId: number,
     public readonly audit: AuditContext,
+    public readonly configuration?: ConfigurationSelection,
   ) {}
 }

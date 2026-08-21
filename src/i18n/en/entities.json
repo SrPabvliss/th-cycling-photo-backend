@@ -27,5 +27,6 @@
   "dashboard": "Dashboard",
   "payphone_account": "payment account",
   "payment": "payment",
-  "email_verification": "Email verification"
+  "email_verification": "Email verification",
+  "payoutMethod": "Payout method"
 }

@@ -1,5 +1,6 @@
 import { AppException, AuditFields } from '@shared/domain'
 import slugify from 'slugify'
+import type { EventBrandSnapshot } from '../value-objects/event-brand-snapshot.vo'
 import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo'
 
 export class Event {
@@ -14,6 +15,11 @@ export class Event {
     public cantonId: number | null,
     public eventTypeId: number,
     public status: EventStatusType,
+    public snapPublicName: string | null,
+    public snapWatermarkStorageKey: string | null,
+    public snapWhatsappNumber: string | null,
+    public readonly photoQuota: number | null,
+    public readonly photosUploaded: number,
     public readonly audit: AuditFields,
   ) {}
 
@@ -25,6 +31,8 @@ export class Event {
     cantonId: number | null
     eventTypeId: number
     tenantId: string
+    photoQuota?: number | null
+    photosUploaded?: number
   }): Event {
     Event.validateName(data.name)
     Event.validateDateRange(data.startDate, data.endDate)
@@ -40,6 +48,12 @@ export class Event {
       data.cantonId,
       data.eventTypeId,
       EventStatus.ACTIVE,
+      null,
+      null,
+      null,
+      // copied at creation, not referenced, so raising the tenant default never re-caps existing events
+      data.photoQuota ?? null,
+      data.photosUploaded ?? 0,
       AuditFields.initialize(),
     )
   }
@@ -89,6 +103,19 @@ export class Event {
     this.audit.markUpdated()
   }
 
+  assertConfigurable(): void {
+    if (this.status === EventStatus.FROZEN) {
+      throw AppException.businessRule('event.frozen_not_configurable')
+    }
+  }
+
+  applyBrandSnapshot(brand: EventBrandSnapshot): void {
+    this.snapPublicName = brand.publicName
+    this.snapWatermarkStorageKey = brand.watermarkStorageKey
+    this.snapWhatsappNumber = brand.whatsappNumber
+    this.audit.markUpdated()
+  }
+
   static generateSlug(name: string): string {
     return slugify(name, { lower: true, strict: true, locale: 'es' })
   }
@@ -116,6 +143,11 @@ export class Event {
     cantonId: number | null
     eventTypeId: number
     status: EventStatusType
+    snapPublicName: string | null
+    snapWatermarkStorageKey: string | null
+    snapWhatsappNumber: string | null
+    photoQuota?: number | null
+    photosUploaded?: number
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
@@ -133,6 +165,11 @@ export class Event {
       data.cantonId,
       data.eventTypeId,
       data.status,
+      data.snapPublicName,
+      data.snapWatermarkStorageKey,
+      data.snapWhatsappNumber,
+      data.photoQuota ?? null,
+      data.photosUploaded ?? 0,
       AuditFields.fromPersistence({
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,

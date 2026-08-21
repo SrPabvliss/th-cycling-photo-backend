@@ -10,6 +10,7 @@ import {
 } from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
 import type { Queue } from 'bullmq'
 import type { ConfirmBatchProjection } from '../../projections'
 import { ConfirmPhotoBatchCommand } from './confirm-photo-batch.command'
@@ -25,6 +26,7 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     @InjectQueue('embedding-generation') private readonly embeddingQueue: Queue,
     @InjectQueue('photo-classification') private readonly classificationQueue: Queue,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -62,7 +64,27 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
       return photo
     })
 
-    const confirmed = await this.photoWriteRepo.saveMany(photos)
+    const confirmed = await this.prisma.$transaction(async (tx) => {
+      // Insert first, then charge the rows actually written — skipDuplicates
+      // means a retried batch must not burn quota it never used.
+      const inserted = await this.photoWriteRepo.saveMany(photos, tx)
+      if (inserted === 0) return 0
+
+      const claimed = await this.photoWriteRepo.claimPhotoQuota(command.eventId, inserted, tx)
+      if (!claimed) {
+        const { photo_quota: quota, photos_uploaded: used } = await tx.event.findUniqueOrThrow({
+          where: { id: command.eventId },
+          select: { photo_quota: true, photos_uploaded: true },
+        })
+        throw AppException.businessRule('event.photo_quota_exceeded', false, {
+          quota,
+          used,
+          remaining: Math.max(0, (quota ?? 0) - used),
+        })
+      }
+
+      return inserted
+    })
 
     // Register slug→path mappings in Workers KV for CDN resolution
     const kvEntries = photos.map((photo) => ({

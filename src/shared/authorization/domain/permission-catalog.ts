@@ -24,6 +24,7 @@ export const PERMISSIONS = {
   'event.collaborator.read': E(false, true, 'events'),
   'event.collaborator.assign': E(true, true, 'events'),
   'event.collaborator.unassign': E(true, true, 'events'),
+  'event.photo_quota.set': E(true, false, 'events'),
   // event assets
   'event_asset.presign': E(false, true, 'event_assets'),
   'event_asset.confirm': E(false, true, 'event_assets'),

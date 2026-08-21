@@ -28,6 +28,9 @@ describe('DeleteEventHandler', () => {
       cantonId: null,
       eventTypeId: 1,
       status: 'active',
+      snapPublicName: null,
+      snapWatermarkStorageKey: null,
+      snapWhatsappNumber: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       deletedAt: null,
@@ -37,6 +40,7 @@ describe('DeleteEventHandler', () => {
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
+      updatePhotoQuota: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
 
     readRepo = {

@@ -27,5 +27,6 @@
   "dashboard": "Panel de control",
   "payphone_account": "cuenta de cobros",
   "payment": "pago",
-  "email_verification": "Verificación de correo"
+  "email_verification": "Verificación de correo",
+  "payoutMethod": "Método de cobro"
 }

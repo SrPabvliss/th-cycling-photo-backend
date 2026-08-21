@@ -37,6 +37,14 @@ export class GeneratePresignedUrlHandler implements ICommandHandler<GeneratePres
     }
     await this.authz.assert(command.userId, 'photo.upload', event.id)
 
+    if (event.photoQuota !== null && event.photosUploaded >= event.photoQuota) {
+      throw AppException.businessRule('event.photo_quota_exceeded', false, {
+        quota: event.photoQuota,
+        used: event.photosUploaded,
+        remaining: 0,
+      })
+    }
+
     const exists = await this.photoReadRepo.existsByEventAndFilename(
       command.eventId,
       command.fileName,

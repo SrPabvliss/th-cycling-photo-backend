@@ -1,15 +1,44 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import {
+  IsArray,
   IsDate,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator'
+
+export class EventConfigurationSelectionDto {
+  @ApiPropertyOptional({ nullable: true })
+  @IsString()
+  @MaxLength(200)
+  @IsOptional()
+  publicName?: string | null
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsString()
+  @MaxLength(500)
+  @IsOptional()
+  watermarkStorageKey?: string | null
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsString()
+  @MaxLength(20)
+  @IsOptional()
+  whatsappNumber?: string | null
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  payoutMethodIds?: string[]
+}
 
 export class CreateEventDto {
   @ApiProperty({ description: 'Name of the cycling event', example: 'Vuelta al Cotopaxi 2026' })
@@ -57,4 +86,10 @@ export class CreateEventDto {
   @Min(1)
   @Type(() => Number)
   eventTypeId: number
+
+  @ApiPropertyOptional({ type: EventConfigurationSelectionDto })
+  @ValidateNested()
+  @Type(() => EventConfigurationSelectionDto)
+  @IsOptional()
+  configuration?: EventConfigurationSelectionDto
 }

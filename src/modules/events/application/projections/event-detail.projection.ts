@@ -25,6 +25,10 @@ export class EventDetailProjection {
   status: string
   /** Number of photos associated with this event (computed) */
   photoCount: number
+  /** Photos this event may accept in total; null means unlimited. */
+  photoQuota: number | null
+  /** Cumulative photos ever uploaded — never decreases when photos are deleted. */
+  photosUploaded: number
   /** Number of classified photos (computed) */
   classifiedCount: number
   /** Total file size of all photos in bytes (computed) */

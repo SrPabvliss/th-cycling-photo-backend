@@ -8,14 +8,21 @@ import {
   RestoreEventCommand,
   UnassignOperatorCommand,
   UpdateEventCommand,
+  UpdateEventConfigurationCommand,
+  UpdateEventConfigurationDto,
   UpdateEventDto,
+  UpdateEventPhotoQuotaCommand,
 } from '@events/application/commands'
 import {
+  EventConfigurationPresetProjection,
+  EventConfigurationProjection,
   EventDetailProjection,
   EventListProjection,
   EventsStatsProjection,
 } from '@events/application/projections'
 import {
+  GetEventConfigurationPresetQuery,
+  GetEventConfigurationQuery,
   GetEventDetailQuery,
   GetEventOperatorsQuery,
   GetEventsListDto,
@@ -29,6 +36,7 @@ import { AuditContext, EntityIdProjection, Pagination } from '@shared/applicatio
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
+import { UpdateEventPhotoQuotaDto } from '../dtos/update-event-photo-quota.dto'
 
 @ApiTags('Events')
 @ApiBearerAuth()
@@ -73,6 +81,19 @@ export class EventsController {
     return this.queryBus.execute(new GetEventsStatsQuery(user.userId))
   }
 
+  @RequirePermission('event.create')
+  @Get('configuration/preset')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
+  @ApiOperation({ summary: 'Get the tenant configuration preset for a new event' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Configuration preset retrieved',
+    type: EventConfigurationPresetProjection,
+  })
+  async getConfigurationPreset(@CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetEventConfigurationPresetQuery(user.userId))
+  }
+
   @RequirePermission('event.read')
   @Get(':slug')
   @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
@@ -108,6 +129,7 @@ export class EventsController {
       dto.cantonId ?? null,
       dto.eventTypeId,
       new AuditContext(user.userId),
+      dto.configuration,
     )
     return this.commandBus.execute(command)
   }
@@ -142,6 +164,42 @@ export class EventsController {
     return this.commandBus.execute(command)
   }
 
+  @RequirePermission('event.read')
+  @Get(':id/configuration')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
+  @ApiOperation({ summary: "Get an event's configuration" })
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Event configuration retrieved',
+    type: EventConfigurationProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
+  async getConfiguration(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetEventConfigurationQuery(id, user.userId))
+  }
+
+  @RequirePermission('event.update')
+  @Patch(':id/configuration')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
+  @ApiOperation({ summary: "Update an event's configuration" })
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Event configuration updated successfully',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Event is frozen and not configurable' })
+  async updateConfiguration(
+    @Param('id') id: string,
+    @Body() dto: UpdateEventConfigurationDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    const command = new UpdateEventConfigurationCommand(id, user.userId, dto)
+    return this.commandBus.execute(command)
+  }
+
   @RequirePermission('event.archive')
   @Patch(':id/archive')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
@@ -157,6 +215,19 @@ export class EventsController {
   async archive(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
     const command = new ArchiveEventCommand(id, user.userId)
     return this.commandBus.execute(command)
+  }
+
+  @RequirePermission('event.photo_quota.set')
+  @Patch(':id/photo-quota')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
+  @ApiOperation({ summary: "Override an event's photo quota" })
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
+  async updatePhotoQuota(
+    @Param('id') id: string,
+    @Body() dto: UpdateEventPhotoQuotaDto,
+  ): Promise<void> {
+    await this.commandBus.execute(new UpdateEventPhotoQuotaCommand(id, dto.quota))
   }
 
   @RequirePermission('event.restore')

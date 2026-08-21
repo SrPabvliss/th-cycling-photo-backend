@@ -6,6 +6,7 @@ import { CreateTenantHandler } from './application/commands/create-tenant/create
 import { DeletePayoutMethodHandler } from './application/commands/delete-payout-method/delete-payout-method.handler'
 import { UpdateMyTenantProfileHandler } from './application/commands/update-my-tenant-profile/update-my-tenant-profile.handler'
 import { UpdatePayoutMethodHandler } from './application/commands/update-payout-method/update-payout-method.handler'
+import { UpdateTenantPhotoQuotaDefaultHandler } from './application/commands/update-tenant-photo-quota-default/update-tenant-photo-quota-default.handler'
 import { UpdateTenantQuotaHandler } from './application/commands/update-tenant-quota/update-tenant-quota.handler'
 import { GetMyPayoutMethodsHandler } from './application/queries/get-my-payout-methods/get-my-payout-methods.handler'
 import { GetMyTenantProfileHandler } from './application/queries/get-my-tenant-profile/get-my-tenant-profile.handler'
@@ -22,6 +23,7 @@ import { TenantsController } from './presentation/controllers/tenants.controller
 const handlers = [
   CreateTenantHandler,
   UpdateTenantQuotaHandler,
+  UpdateTenantPhotoQuotaDefaultHandler,
   GetTenantsListHandler,
   GetMyTenantProfileHandler,
   GetMyPayoutMethodsHandler,
@@ -49,6 +51,6 @@ const handlers = [
       useClass: TenantPayoutMethodRepository,
     },
   ],
-  exports: [TENANT_REPOSITORY, TENANT_PAYOUT_METHOD_REPOSITORY],
+  exports: [TENANT_REPOSITORY, TENANT_PROFILE_REPOSITORY, TENANT_PAYOUT_METHOD_REPOSITORY],
 })
 export class TenantsModule {}

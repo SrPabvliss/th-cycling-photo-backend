@@ -35,7 +35,8 @@
       "@auth/*": ["src/modules/auth/*"],
       "@cart/*": ["src/modules/cart/*"],
       "@pricing/*": ["src/modules/pricing/*"],
-      "@payments/*": ["src/modules/payments/*"]
+      "@payments/*": ["src/modules/payments/*"],
+      "@tenants/*": ["src/modules/tenants/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

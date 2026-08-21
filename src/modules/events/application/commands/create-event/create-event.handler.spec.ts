@@ -1,9 +1,11 @@
+import type { EventConfigurationService } from '@events/application/services/event-configuration.service'
 import { Event } from '@events/domain/entities'
-import { IEventWriteRepository } from '@events/domain/ports'
+import { IEventPayoutMethodRepository, IEventWriteRepository } from '@events/domain/ports'
 import type { IEventOperatorRepository } from '@events/domain/ports/event-operator-repository.port'
 import { LocationValidator } from '@locations/application/services'
 import { AuditContext } from '@shared/application'
 import { AppException } from '@shared/domain'
+import type { PrismaService } from '@shared/infrastructure'
 import type { IUserReadRepository } from '@users/domain/ports'
 import type { ITenantRepository } from '../../../../tenants/domain/ports/tenant-repository.port'
 import { CreateEventCommand } from './create-event.command'
@@ -15,7 +17,9 @@ describe('CreateEventHandler', () => {
   let operatorRepo: jest.Mocked<IEventOperatorRepository>
   let userRepo: jest.Mocked<IUserReadRepository>
   let tenantRepo: jest.Mocked<ITenantRepository>
+  let payoutRepo: jest.Mocked<IEventPayoutMethodRepository>
   let locationValidator: jest.Mocked<LocationValidator>
+  let configService: jest.Mocked<EventConfigurationService>
 
   const futureStart = new Date()
   futureStart.setFullYear(futureStart.getFullYear() + 1)
@@ -29,6 +33,7 @@ describe('CreateEventHandler', () => {
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
+      updatePhotoQuota: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
 
     operatorRepo = {
@@ -52,20 +57,44 @@ describe('CreateEventHandler', () => {
     tenantRepo = {
       getTenantsList: jest.fn(),
       updateEventQuota: jest.fn(),
+      updateEventPhotoQuotaDefault: jest.fn(),
       createTenantWithAdmin: jest.fn(),
-      checkQuota: jest.fn().mockResolvedValue({ quota: 10, used: 0, isPlatform: false }),
+      checkQuota: jest
+        .fn()
+        .mockResolvedValue({ quota: 10, used: 0, isPlatform: false, defaultEventPhotoQuota: null }),
     } as jest.Mocked<ITenantRepository>
+
+    payoutRepo = {
+      findByEventId: jest.fn(),
+      replaceForEvent: jest.fn().mockResolvedValue(undefined),
+    } as jest.Mocked<IEventPayoutMethodRepository>
 
     locationValidator = {
       validate: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<LocationValidator>
+
+    configService = {
+      findMissingRequirements: jest.fn(),
+      assertProfileComplete: jest.fn().mockResolvedValue(undefined),
+      materialise: jest.fn().mockResolvedValue({
+        brand: { publicName: null, watermarkStorageKey: null, whatsappNumber: null },
+        payoutMethods: [],
+      }),
+    } as unknown as jest.Mocked<EventConfigurationService>
+
+    const prisma = {
+      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
+    } as unknown as PrismaService
 
     handler = new CreateEventHandler(
       writeRepo,
       operatorRepo,
       userRepo,
       tenantRepo,
+      payoutRepo,
       locationValidator,
+      configService,
+      prisma,
     )
   })
 
@@ -93,6 +122,7 @@ describe('CreateEventHandler', () => {
         name: 'Test Event',
         status: 'active',
       }),
+      expect.anything(),
     )
   })
 
@@ -114,6 +144,7 @@ describe('CreateEventHandler', () => {
     expect(userRepo.findTenantId).toHaveBeenCalledWith(creatorId)
     expect(writeRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({ tenantId: creatorTenantId }),
+      expect.anything(),
     )
   })
 
@@ -134,7 +165,12 @@ describe('CreateEventHandler', () => {
   })
 
   it('rejects creation when the tenant has exhausted its event quota', async () => {
-    tenantRepo.checkQuota.mockResolvedValue({ quota: 5, used: 5, isPlatform: false })
+    tenantRepo.checkQuota.mockResolvedValue({
+      quota: 5,
+      used: 5,
+      isPlatform: false,
+      defaultEventPhotoQuota: null,
+    })
     const command = new CreateEventCommand(
       'Test Event',
       futureStart,
@@ -145,12 +181,17 @@ describe('CreateEventHandler', () => {
       audit,
     )
 
-    await expect(handler.execute(command)).rejects.toThrow('tenant.quota_exceeded')
+    await expect(handler.execute(command)).rejects.toThrow('event.tenant_quota_exceeded')
     expect(writeRepo.save).not.toHaveBeenCalled()
   })
 
   it('lets the platform tenant exceed its quota', async () => {
-    tenantRepo.checkQuota.mockResolvedValue({ quota: 1, used: 99, isPlatform: true })
+    tenantRepo.checkQuota.mockResolvedValue({
+      quota: 1,
+      used: 99,
+      isPlatform: true,
+      defaultEventPhotoQuota: null,
+    })
     const command = new CreateEventCommand(
       'Test Event',
       futureStart,
@@ -209,5 +250,49 @@ describe('CreateEventHandler', () => {
 
     await expect(handler.execute(command)).rejects.toThrow(AppException)
     expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('refuses to create when the profile is incomplete', async () => {
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+    )
+
+    configService.assertProfileComplete.mockRejectedValue(
+      AppException.businessRule('event.configuration_incomplete', false, { missing: 'watermark' }),
+    )
+
+    await expect(handler.execute(command)).rejects.toMatchObject({
+      messageKey: 'event.configuration_incomplete',
+    })
+    expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('freezes the configuration onto the created event', async () => {
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+    )
+
+    writeRepo.save.mockImplementation(async (event: Event) => event)
+
+    await handler.execute(command)
+
+    expect(configService.materialise).toHaveBeenCalledWith(
+      creatorTenantId,
+      expect.any(String),
+      undefined,
+    )
+    expect(payoutRepo.replaceForEvent).toHaveBeenCalled()
   })
 })
