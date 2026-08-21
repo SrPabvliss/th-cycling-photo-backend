@@ -5,6 +5,7 @@ import { EventStatus, type EventStatusType } from '../value-objects/event-status
 export class Event {
   constructor(
     public readonly id: string,
+    public readonly tenantId: string,
     public name: string,
     public slug: string,
     public startDate: Date,
@@ -23,12 +24,14 @@ export class Event {
     provinceId: number | null
     cantonId: number | null
     eventTypeId: number
+    tenantId: string
   }): Event {
     Event.validateName(data.name)
     Event.validateDateRange(data.startDate, data.endDate)
 
     return new Event(
       crypto.randomUUID(),
+      data.tenantId,
       data.name,
       Event.generateSlug(data.name),
       data.startDate,
@@ -104,6 +107,7 @@ export class Event {
 
   static fromPersistence(data: {
     id: string
+    tenantId: string
     name: string
     slug: string
     startDate: Date
@@ -120,6 +124,7 @@ export class Event {
   }): Event {
     return new Event(
       data.id,
+      data.tenantId,
       data.name,
       data.slug,
       data.startDate,

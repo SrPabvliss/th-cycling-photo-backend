@@ -151,6 +151,13 @@ enum PaymentProvider {
   @@map("payment_provider")
 }
 
+enum PayoutProvider {
+  payphone
+  bank_transfer
+
+  @@map("payout_provider")
+}
+
 enum PaymentMethod {
   card
   transfer
@@ -259,6 +266,14 @@ model User {
   created_at         DateTime  @default(now()) @db.Timestamptz
   last_login_at      DateTime? @db.Timestamptz
 
+  tenant_id           String? @db.Uuid
+  is_protected        Boolean @default(false)
+  permissions_version Int     @default(0)
+  tenant              Tenant? @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+
+  permission_template_id String?             @db.Uuid
+  permission_template    PermissionTemplate? @relation(fields: [permission_template_id], references: [id], onDelete: Restrict)
+
   user_roles            UserRole[]
   refresh_tokens        RefreshToken[]
   password_reset_tokens PasswordResetToken[]
@@ -266,26 +281,27 @@ model User {
   customer_profile      CustomerProfile?
   consents              UserConsent[]
 
-  events_created         Event[]               @relation("EventCreatedBy")
-  events_updated         Event[]               @relation("EventUpdatedBy")
-  photos_created         Photo[]               @relation("PhotoCreatedBy")
-  photos_updated         Photo[]               @relation("PhotoUpdatedBy")
-  photos_retouched       Photo[]               @relation("PhotoRetouchedBy")
-  created_bibs           PhotoBib[]            @relation("UserCreatedBibs")
-  created_colors         PhotoColor[]          @relation("UserCreatedColors")
-  deleted_bibs           PhotoBib[]            @relation("UserDeletedBibs")
-  deleted_colors         PhotoColor[]          @relation("UserDeletedColors")
-  corrections            Correction[]          @relation("UserCorrections")
-  preview_links_created  PreviewLink[]         @relation("PreviewLinkCreatedBy")
-  orders_confirmed       Order[]               @relation("OrderConfirmedBy")
-  orders_notified        Order[]               @relation("OrderNotifiedBy")
-  orders_placed          Order[]               @relation("OrderUser")
-  carts                  Cart[]
-  notifications          Notification[]
-  assigned_events        EventOperator[]       @relation("EventOperatorUser")
-  event_assignments_made EventOperator[]       @relation("EventOperatorAssignedBy")
-  seller_payment_account SellerPaymentAccount? @relation("SellerPaymentAccountUser")
+  events_created            Event[]               @relation("EventCreatedBy")
+  events_updated            Event[]               @relation("EventUpdatedBy")
+  photos_created            Photo[]               @relation("PhotoCreatedBy")
+  photos_updated            Photo[]               @relation("PhotoUpdatedBy")
+  photos_retouched          Photo[]               @relation("PhotoRetouchedBy")
+  created_bibs              PhotoBib[]            @relation("UserCreatedBibs")
+  created_colors            PhotoColor[]          @relation("UserCreatedColors")
+  deleted_bibs              PhotoBib[]            @relation("UserDeletedBibs")
+  deleted_colors            PhotoColor[]          @relation("UserDeletedColors")
+  corrections               Correction[]          @relation("UserCorrections")
+  preview_links_created     PreviewLink[]         @relation("PreviewLinkCreatedBy")
+  orders_confirmed          Order[]               @relation("OrderConfirmedBy")
+  orders_notified           Order[]               @relation("OrderNotifiedBy")
+  orders_placed             Order[]               @relation("OrderUser")
+  carts                     Cart[]
+  notifications             Notification[]
+  permission_grants         UserPermissionGrant[] @relation("GrantHolder")
+  permissions_issued        UserPermissionGrant[] @relation("GrantIssuer")
+  payout_methods_configured TenantPayoutMethod[]  @relation("PayoutMethodConfiguredBy")
 
+  @@index([tenant_id])
   @@map("users")
 }
 
@@ -365,18 +381,21 @@ model Event {
   created_by_id String? @db.Uuid
   updated_by_id String? @db.Uuid
 
-  event_type       EventType            @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
-  province         Province?            @relation(fields: [province_id], references: [id])
-  canton           Canton?              @relation(fields: [canton_id], references: [id])
-  created_by       User?                @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
-  updated_by       User?                @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
-  photos           Photo[]
-  preview_links    PreviewLink[]
-  orders           Order[]
-  assets           EventAsset[]
-  photo_categories EventPhotoCategory[]
-  cart_items       CartItem[]
-  operators        EventOperator[]
+  tenant_id String @db.Uuid
+
+  event_type        EventType             @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
+  province          Province?             @relation(fields: [province_id], references: [id])
+  canton            Canton?               @relation(fields: [canton_id], references: [id])
+  created_by        User?                 @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  updated_by        User?                 @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  tenant            Tenant                @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  photos            Photo[]
+  preview_links     PreviewLink[]
+  orders            Order[]
+  assets            EventAsset[]
+  photo_categories  EventPhotoCategory[]
+  cart_items        CartItem[]
+  permission_grants UserPermissionGrant[]
 
   @@index([status])
   @@index([event_type_id])
@@ -387,25 +406,8 @@ model Event {
   @@index([canton_id])
   @@index([created_by_id])
   @@index([updated_by_id])
+  @@index([tenant_id])
   @@map("events")
-}
-
-model EventOperator {
-  id             String   @id @default(uuid()) @db.Uuid
-  event_id       String   @db.Uuid
-  user_id        String   @db.Uuid
-  assigned_at    DateTime @default(now()) @db.Timestamptz
-  assigned_by_id String   @db.Uuid
-
-  event       Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  user        User  @relation("EventOperatorUser", fields: [user_id], references: [id], onDelete: Cascade)
-  assigned_by User  @relation("EventOperatorAssignedBy", fields: [assigned_by_id], references: [id], onDelete: Restrict)
-
-  @@unique([event_id, user_id])
-  @@index([event_id])
-  @@index([user_id])
-  @@index([assigned_by_id])
-  @@map("event_operators")
 }
 
 model Photo {
@@ -889,26 +891,149 @@ model Notification {
   @@map("notifications")
 }
 
+// ─── Authorization ──────────────────────────────────────────────────────────
+
+model Tenant {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(200)
+  is_platform Boolean  @default(false)
+  event_quota Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  public_name           String?   @db.VarChar(200)
+  watermark_storage_key String?   @db.VarChar(500)
+  whatsapp_number       String?   @db.VarChar(20)
+  whatsapp_verified_at  DateTime? @db.Timestamptz
+
+  users          User[]
+  events         Event[]
+  payout_methods TenantPayoutMethod[]
+
+  @@map("tenants")
+}
+
+model Permission {
+  id                 String  @id @default(uuid()) @db.Uuid
+  key                String  @unique @db.VarChar(100)
+  category           String  @db.VarChar(50)
+  is_platform_only   Boolean @default(false)
+  allows_event_scope Boolean @default(false)
+
+  template_memberships PermissionTemplatePermission[]
+  grants               UserPermissionGrant[]
+
+  @@map("permissions")
+}
+
+model PermissionTemplate {
+  id               String  @id @default(uuid()) @db.Uuid
+  key              String  @unique @db.VarChar(50)
+  name             String  @db.VarChar(100)
+  is_platform_only Boolean @default(false)
+
+  permissions PermissionTemplatePermission[]
+  users       User[]
+
+  @@map("permission_templates")
+}
+
+model PermissionTemplatePermission {
+  template_id   String @db.Uuid
+  permission_id String @db.Uuid
+
+  template   PermissionTemplate @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  permission Permission         @relation(fields: [permission_id], references: [id], onDelete: Restrict)
+
+  @@id([template_id, permission_id])
+  @@map("permission_template_permissions")
+}
+
+enum GrantScopeType {
+  global
+  event
+
+  @@map("grant_scope_type")
+}
+
+enum GrantEffect {
+  allow
+  deny
+
+  @@map("grant_effect")
+}
+
+model UserPermissionGrant {
+  id            String         @id @default(uuid()) @db.Uuid
+  user_id       String         @db.Uuid
+  permission_id String         @db.Uuid
+  scope_type    GrantScopeType
+  event_id      String?        @db.Uuid
+  effect        GrantEffect
+  granted_by_id String         @db.Uuid
+  granted_at    DateTime       @default(now()) @db.Timestamptz
+
+  user       User       @relation("GrantHolder", fields: [user_id], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permission_id], references: [id], onDelete: Restrict)
+  event      Event?     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  granted_by User       @relation("GrantIssuer", fields: [granted_by_id], references: [id], onDelete: Restrict)
+
+  // Declared for Prisma Client's compound `WhereUniqueInput` only, so
+  // GrantPermissionHandler can `upsert` idempotently. THE PHYSICAL INDEX
+  // IS NOT WHAT THIS LINE WOULD CREATE: it already exists, built by the
+  // 20260818143434_tit38_grants migration's raw SQL, WITH `NULLS NOT
+  // DISTINCT` — the clause that makes two global grants (event_id IS
+  // NULL) collide as duplicates instead of Postgres's default of treating
+  // every NULL as distinct. Prisma's schema DSL cannot express `NULLS NOT
+  // DISTINCT` in an `@@unique`, so this declaration is deliberately
+  // incomplete: it exists for the generated TypeScript types only.
+  //
+  // THE MIGRATION FILE IS THE SOURCE OF TRUTH for what's actually on the
+  // database — this line is not. Never run `prisma migrate dev` or
+  // `prisma db push` from this schema: Prisma will see this `@@unique` as
+  // plain (NULLS-DISTINCT) drift from the real index and offer to "fix"
+  // it by recreating `user_permission_grants_unique` WITHOUT `NULLS NOT
+  // DISTINCT` — which reopens the duplicate-global-grant hole Task 4
+  // closed and proved shut against a live database (see
+  // count-active-permission-grant-holders.integration.spec.ts and
+  // grant-uniqueness.integration.spec.ts, which fail immediately if that
+  // ever happens). `prisma generate` only reads this file and never
+  // touches the database, so it remains safe.
+  @@unique([user_id, permission_id, scope_type, event_id], map: "user_permission_grants_unique")
+  @@index([user_id])
+  @@index([event_id])
+  @@map("user_permission_grants")
+}
+
 // ─── Payments ───────────────────────────────────────────────────────────────
 
-model SellerPaymentAccount {
-  id       String               @id @default(uuid()) @db.Uuid
-  user_id  String               @unique @db.Uuid
-  provider PaymentProvider
-  mode     PaymentMode
-  status   PaymentAccountStatus @default(pending)
+model TenantPayoutMethod {
+  id         String         @id @default(uuid()) @db.Uuid
+  tenant_id  String         @db.Uuid
+  provider   PayoutProvider
+  is_active  Boolean        @default(true)
+  sort_order Int            @default(0)
 
-  receiver_identifier   String? @db.VarChar(100)
-  credentials_encrypted String? @db.Text
+  mode                  PaymentMode?
+  status                PaymentAccountStatus @default(pending)
+  receiver_identifier   String?              @db.VarChar(100)
+  credentials_encrypted String?              @db.Text
+  verified_at           DateTime?            @db.Timestamptz
 
-  verified_at DateTime? @db.Timestamptz
-  created_at  DateTime  @default(now()) @db.Timestamptz
-  updated_at  DateTime  @default(now()) @updatedAt @db.Timestamptz
+  bank_name             String? @db.VarChar(100)
+  account_number        String? @db.VarChar(50)
+  account_type          String? @db.VarChar(20)
+  account_holder        String? @db.VarChar(200)
+  holder_identification String? @db.VarChar(20)
 
-  user User @relation("SellerPaymentAccountUser", fields: [user_id], references: [id], onDelete: Cascade)
+  configured_by_id String?  @db.Uuid
+  created_at       DateTime @default(now()) @db.Timestamptz
+  updated_at       DateTime @default(now()) @updatedAt @db.Timestamptz
 
-  @@index([status])
-  @@map("seller_payment_accounts")
+  tenant        Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  configured_by User?  @relation("PayoutMethodConfiguredBy", fields: [configured_by_id], references: [id], onDelete: SetNull)
+
+  @@index([tenant_id, is_active])
+  @@map("tenant_payout_methods")
 }
 
 model PaymentTransaction {

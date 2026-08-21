@@ -10,6 +10,7 @@ import type { IOrderReadRepository, OrderListFilters } from '@orders/domain/port
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import type { PendingRetouchOrderProjection } from '@photos/application/projections'
 import { PaginatedResult, type Pagination } from '@shared/application'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 import * as OrderMapper from '../mappers/order.mapper'
@@ -65,12 +66,19 @@ export class OrderReadRepository implements IOrderReadRepository {
     return record ? OrderMapper.toEntity(record) : null
   }
 
-  /** Retrieves a paginated list of orders with filters. */
+  /** Scoped load — an out-of-scope id yields null (404), not a 403. */
+  async findByIdInScope(id: string, scope: EventScope): Promise<Order | null> {
+    const record = await this.prisma.order.findFirst({ where: { id, event: scope.toPrisma() } })
+    return record ? OrderMapper.toEntity(record) : null
+  }
+
+  /** Retrieves a paginated list of orders with filters, scoped to the caller. */
   async getList(
     pagination: Pagination,
     filters: OrderListFilters,
+    scope: EventScope,
   ): Promise<PaginatedResult<OrderListProjection>> {
-    const where: Prisma.OrderWhereInput = {}
+    const where: Prisma.OrderWhereInput = { event: scope.toPrisma() }
 
     if (filters.eventId) where.event_id = filters.eventId
     if (filters.status) {
@@ -144,10 +152,10 @@ export class OrderReadRepository implements IOrderReadRepository {
     )
   }
 
-  /** Retrieves order detail with user, photos, and delivery link. */
-  async getDetail(id: string): Promise<OrderDetailProjection | null> {
+  /** Retrieves order detail with user, photos, and delivery link, scoped to the caller. */
+  async getDetail(id: string, scope: EventScope): Promise<OrderDetailProjection | null> {
     const record = await this.prisma.order.findFirst({
-      where: { id, status: { not: OrderStatus.DRAFT } },
+      where: { id, status: { not: OrderStatus.DRAFT }, event: scope.toPrisma() },
       select: {
         id: true,
         status: true,
@@ -233,12 +241,16 @@ export class OrderReadRepository implements IOrderReadRepository {
     }
   }
 
-  /** Counts orders grouped by status, optionally scoped to a single event. */
-  async countByStatus(eventId?: string): Promise<Record<string, number>> {
+  /** Counts orders grouped by status, optionally scoped to a single event, always scoped to the caller. */
+  async countByStatus(
+    eventId: string | undefined,
+    scope: EventScope,
+  ): Promise<Record<string, number>> {
     const groups = await this.prisma.order.groupBy({
       by: ['status'],
       where: {
         status: { not: OrderStatus.DRAFT },
+        event: scope.toPrisma(),
         ...(eventId ? { event_id: eventId } : {}),
       },
       _count: { id: true },
@@ -246,12 +258,13 @@ export class OrderReadRepository implements IOrderReadRepository {
     return Object.fromEntries(groups.map((g) => [g.status, g._count.id]))
   }
 
-  /** Sums subtotal of paid + delivered orders, optionally scoped to a single event. */
-  async sumRevenue(eventId?: string): Promise<string> {
+  /** Sums subtotal of paid + delivered orders, optionally scoped to a single event, always scoped to the caller. */
+  async sumRevenue(eventId: string | undefined, scope: EventScope): Promise<string> {
     const result = await this.prisma.order.aggregate({
       _sum: { subtotal: true },
       where: {
         status: { in: [OrderStatus.PAID, OrderStatus.DELIVERED] },
+        event: scope.toPrisma(),
         ...(eventId ? { event_id: eventId } : {}),
       },
     })
@@ -283,10 +296,10 @@ export class OrderReadRepository implements IOrderReadRepository {
     return photos.map((p) => p.photo_id)
   }
 
-  /** Returns paid orders with at least one un-retouched photo, ordered FIFO. */
-  async getPendingRetouch(): Promise<PendingRetouchOrderProjection[]> {
+  /** Returns paid orders with at least one un-retouched photo, ordered FIFO, scoped to the caller. */
+  async getPendingRetouch(scope: EventScope): Promise<PendingRetouchOrderProjection[]> {
     const orders = await this.prisma.order.findMany({
-      where: { status: 'paid' },
+      where: { status: 'paid', event: scope.toPrisma() },
       orderBy: { created_at: 'asc' },
       select: {
         id: true,

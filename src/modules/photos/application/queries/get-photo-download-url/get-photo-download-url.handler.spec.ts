@@ -1,5 +1,7 @@
 import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
 import { GetPhotoDownloadUrlHandler } from './get-photo-download-url.handler'
@@ -9,6 +11,8 @@ describe('GetPhotoDownloadUrlHandler', () => {
   let handler: GetPhotoDownloadUrlHandler
   let photoReadRepo: jest.Mocked<IPhotoReadRepository>
   let storageAdapter: jest.Mocked<IStorageAdapter>
+  let authz: jest.Mocked<IAuthorizationService>
+  const scope = EventScope.unrestricted()
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
   const originalKey = `events/${eventId}/photos/abc-original.jpg`
@@ -39,6 +43,7 @@ describe('GetPhotoDownloadUrlHandler', () => {
   beforeEach(() => {
     photoReadRepo = {
       findById: jest.fn(),
+      findByIdInScope: jest.fn(),
       existsByEventAndFilename: jest.fn(),
       getPhotosList: jest.fn(),
       getPhotoDetail: jest.fn(),
@@ -51,6 +56,7 @@ describe('GetPhotoDownloadUrlHandler', () => {
       getClassifiedCountsByEventIds: jest.fn(),
       getAllPhotoKeysForEvent: jest.fn(),
       getResumePoint: jest.fn(),
+      getDistinctEventIdsForPhotoIds: jest.fn(),
       countAll: jest.fn(),
       sumAllFileSize: jest.fn(),
       countByIds: jest.fn(),
@@ -68,26 +74,48 @@ describe('GetPhotoDownloadUrlHandler', () => {
       delete: jest.fn(),
     } as jest.Mocked<IStorageAdapter>
 
-    handler = new GetPhotoDownloadUrlHandler(photoReadRepo, storageAdapter)
+    authz = {
+      can: jest.fn(),
+      assert: jest.fn().mockResolvedValue(undefined),
+      resolveEventScope: jest.fn().mockResolvedValue(scope),
+    } as jest.Mocked<IAuthorizationService>
+
+    handler = new GetPhotoDownloadUrlHandler(photoReadRepo, storageAdapter, authz)
   })
 
   it('should throw NOT_FOUND when photo does not exist', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(null)
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(null)
 
-    const query = new GetPhotoDownloadUrlQuery('non-existent', 'original')
+    const query = new GetPhotoDownloadUrlQuery('non-existent', 'original', 'u1')
 
     const error = await handler.execute(query).catch((e) => e)
     expect(error).toBeInstanceOf(AppException)
     expect(error.code).toBe('NOT_FOUND')
   })
 
+  it('should throw NOT_FOUND when the photo exists but its event is outside the caller scope', async () => {
+    // The repository is what enforces this — findByIdInScope returns null
+    // for an out-of-scope id exactly as it would for an unknown one.
+    const restrictedScope = new EventScope(false, ['other-tenant'], [])
+    authz.resolveEventScope.mockResolvedValueOnce(restrictedScope)
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(null)
+
+    const query = new GetPhotoDownloadUrlQuery('photo-001', 'original', 'u2')
+
+    const error = await handler.execute(query).catch((e) => e)
+    expect(error).toBeInstanceOf(AppException)
+    expect(error.code).toBe('NOT_FOUND')
+    expect(photoReadRepo.findByIdInScope).toHaveBeenCalledWith('photo-001', restrictedScope)
+    expect(authz.assert).not.toHaveBeenCalled()
+  })
+
   it('should return presigned download URL for original photo', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(createPhoto())
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(createPhoto())
     storageAdapter.getPresignedDownloadUrl.mockResolvedValueOnce(
       'https://s3.us-west-004.backblazeb2.com/file/bucket/events/550e8400/photos/abc-original.jpg?signed=1',
     )
 
-    const query = new GetPhotoDownloadUrlQuery('photo-001', 'original')
+    const query = new GetPhotoDownloadUrlQuery('photo-001', 'original', 'u1')
     const result = await handler.execute(query)
 
     expect(result.url).toBe(
@@ -97,15 +125,16 @@ describe('GetPhotoDownloadUrlHandler', () => {
       key: originalKey,
       filename: 'original.jpg',
     })
+    expect(authz.assert).toHaveBeenCalledWith('u1', 'photo.download', eventId)
   })
 
   it('should return presigned download URL for retouched photo', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(createPhoto(true))
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(createPhoto(true))
     storageAdapter.getPresignedDownloadUrl.mockResolvedValueOnce(
       'https://s3.us-west-004.backblazeb2.com/file/bucket/events/550e8400/retouched/def-retouched.jpg?signed=1',
     )
 
-    const query = new GetPhotoDownloadUrlQuery('photo-001', 'retouched')
+    const query = new GetPhotoDownloadUrlQuery('photo-001', 'retouched', 'u1')
     const result = await handler.execute(query)
 
     expect(result.url).toBe(
@@ -118,12 +147,22 @@ describe('GetPhotoDownloadUrlHandler', () => {
   })
 
   it('should throw NOT_FOUND when requesting retouched but none exists', async () => {
-    photoReadRepo.findById.mockResolvedValueOnce(createPhoto(false))
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(createPhoto(false))
 
-    const query = new GetPhotoDownloadUrlQuery('photo-001', 'retouched')
+    const query = new GetPhotoDownloadUrlQuery('photo-001', 'retouched', 'u1')
 
     const error = await handler.execute(query).catch((e) => e)
     expect(error).toBeInstanceOf(AppException)
     expect(error.code).toBe('NOT_FOUND')
+  })
+
+  it('rejects when the caller lacks photo.download for this event', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(createPhoto())
+    authz.assert.mockRejectedValueOnce(new Error('Insufficient permissions'))
+
+    const query = new GetPhotoDownloadUrlQuery('photo-001', 'original', 'u1')
+
+    await expect(handler.execute(query)).rejects.toThrow('Insufficient permissions')
+    expect(storageAdapter.getPresignedDownloadUrl).not.toHaveBeenCalled()
   })
 })

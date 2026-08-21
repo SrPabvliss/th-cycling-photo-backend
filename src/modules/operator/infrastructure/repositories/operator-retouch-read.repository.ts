@@ -252,8 +252,12 @@ export class OperatorRetouchReadRepository implements IOperatorRetouchReadReposi
   }
 
   async isOperatorAssigned(eventId: string, operatorId: string): Promise<boolean> {
-    const record = await this.prisma.eventOperator.findUnique({
-      where: { event_id_user_id: { event_id: eventId, user_id: operatorId } },
+    const record = await this.prisma.userPermissionGrant.findFirst({
+      where: {
+        event_id: eventId,
+        user_id: operatorId,
+        permission: { key: 'photo.retouch.read' },
+      },
       select: { id: true },
     })
     return record !== null

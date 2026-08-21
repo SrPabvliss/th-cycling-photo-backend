@@ -1,5 +1,9 @@
+import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import type { IKvStorageAdapter } from '@shared/cloudflare/domain/ports'
+import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports'
 import type { IEventAssetReadRepository, IEventAssetWriteRepository } from '../../../domain/ports'
 import { ConfirmAssetUploadCommand } from './confirm-asset-upload.command'
@@ -12,10 +16,30 @@ describe('ConfirmAssetUploadHandler', () => {
   let writeRepo: jest.Mocked<IEventAssetWriteRepository>
   let storage: jest.Mocked<IStorageAdapter>
   let kvStorage: jest.Mocked<IKvStorageAdapter>
+  let authz: jest.Mocked<IAuthorizationService>
+  const unrestrictedScope = EventScope.unrestricted()
+
+  const buildEvent = () =>
+    Event.fromPersistence({
+      id: 'event-uuid',
+      tenantId: 'tenant-a',
+      name: 'Race',
+      slug: 'race',
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-01-02'),
+      provinceId: null,
+      cantonId: null,
+      eventTypeId: 1,
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    })
 
   beforeEach(() => {
     eventReadRepo = {
       findById: jest.fn(),
+      findByIdInScope: jest.fn(),
     } as unknown as jest.Mocked<IEventReadRepository>
 
     readRepo = {
@@ -31,11 +55,24 @@ describe('ConfirmAssetUploadHandler', () => {
     } as unknown as jest.Mocked<IStorageAdapter>
 
     kvStorage = {
-      write: jest.fn(),
-      delete: jest.fn(),
+      write: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IKvStorageAdapter>
 
-    handler = new ConfirmAssetUploadHandler(eventReadRepo, readRepo, writeRepo, storage, kvStorage)
+    authz = {
+      can: jest.fn(),
+      assert: jest.fn().mockResolvedValue(undefined),
+      resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
+    } as jest.Mocked<IAuthorizationService>
+
+    handler = new ConfirmAssetUploadHandler(
+      eventReadRepo,
+      readRepo,
+      writeRepo,
+      storage,
+      kvStorage,
+      authz,
+    )
   })
 
   it('rejects asset types other than cover_image', async () => {
@@ -46,10 +83,56 @@ describe('ConfirmAssetUploadHandler', () => {
       'events/event-uuid/assets/poster/foo.jpg',
       null,
       null,
+      'user-1',
     )
 
     await expect(handler.execute(command)).rejects.toThrow(/event_asset\.unsupported_type/)
-    expect(eventReadRepo.findById).not.toHaveBeenCalled()
+    expect(eventReadRepo.findByIdInScope).not.toHaveBeenCalled()
     expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('throws NOT_FOUND — not FORBIDDEN — when the event exists but is outside the caller scope', async () => {
+    const restrictedScope = new EventScope(false, ['my-tenant'], [])
+    authz.resolveEventScope.mockResolvedValueOnce(restrictedScope)
+    eventReadRepo.findByIdInScope.mockResolvedValue(null)
+    const command = new ConfirmAssetUploadCommand(
+      'other-tenant-event',
+      'cover_image',
+      'events/other-tenant-event/assets/cover_image/foo.jpg',
+      null,
+      null,
+      'user-1',
+    )
+
+    const error = await handler.execute(command).catch((e) => e)
+
+    expect(error).toBeInstanceOf(AppException)
+    expect(error.code).toBe('NOT_FOUND')
+    expect(eventReadRepo.findByIdInScope).toHaveBeenCalledWith(
+      'other-tenant-event',
+      restrictedScope,
+    )
+    expect(authz.assert).not.toHaveBeenCalled()
+    expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('confirms the upload once the event is verified in scope', async () => {
+    eventReadRepo.findByIdInScope.mockResolvedValue(buildEvent())
+    readRepo.findByEventAndType.mockResolvedValue(null)
+    writeRepo.save.mockImplementation(async (asset) => asset)
+    const command = new ConfirmAssetUploadCommand(
+      'event-uuid',
+      'cover_image',
+      'events/event-uuid/assets/cover_image/foo.jpg',
+      1024n,
+      'image/jpeg',
+      'user-1',
+    )
+
+    const result = await handler.execute(command)
+
+    expect(authz.assert).toHaveBeenCalledWith('user-1', 'event_asset.confirm', 'event-uuid')
+    expect(writeRepo.save).toHaveBeenCalled()
+    expect(result.id).toBeDefined()
   })
 })

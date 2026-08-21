@@ -11,11 +11,3 @@ export {
   type IPaymentTransactionWriteRepository,
   PAYMENT_TRANSACTION_WRITE_REPOSITORY,
 } from './payment-transaction-write-repository.port'
-export {
-  type ISellerPaymentAccountReadRepository,
-  SELLER_PAYMENT_ACCOUNT_READ_REPOSITORY,
-} from './seller-payment-account-read-repository.port'
-export {
-  type ISellerPaymentAccountWriteRepository,
-  SELLER_PAYMENT_ACCOUNT_WRITE_REPOSITORY,
-} from './seller-payment-account-write-repository.port'

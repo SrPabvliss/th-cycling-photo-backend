@@ -1,6 +1,8 @@
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
 import { GeneratePresignedUrlCommand } from './generate-presigned-url.command'
@@ -11,6 +13,8 @@ describe('GeneratePresignedUrlHandler', () => {
   let eventReadRepo: jest.Mocked<IEventReadRepository>
   let photoReadRepo: jest.Mocked<IPhotoReadRepository>
   let storageAdapter: jest.Mocked<IStorageAdapter>
+  let authz: jest.Mocked<IAuthorizationService>
+  const unrestrictedScope = EventScope.unrestricted()
 
   const futureDate = new Date()
   futureDate.setFullYear(futureDate.getFullYear() + 1)
@@ -18,6 +22,7 @@ describe('GeneratePresignedUrlHandler', () => {
   const existingEvent = Event.fromPersistence({
     slug: 'test-event',
     id: '550e8400-e29b-41d4-a716-446655440000',
+    tenantId: '11111111-1111-4111-8111-111111111111',
     name: 'Test Event',
     startDate: futureDate,
     endDate: futureDate,
@@ -34,6 +39,7 @@ describe('GeneratePresignedUrlHandler', () => {
   beforeEach(() => {
     eventReadRepo = {
       findById: jest.fn(),
+      findByIdInScope: jest.fn(),
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
       getEventDetailBySlug: jest.fn(),
@@ -52,6 +58,7 @@ describe('GeneratePresignedUrlHandler', () => {
 
     photoReadRepo = {
       findById: jest.fn(),
+      findByIdInScope: jest.fn(),
       existsByEventAndFilename: jest.fn(),
       getPhotosList: jest.fn(),
       getPhotoDetail: jest.fn(),
@@ -64,6 +71,7 @@ describe('GeneratePresignedUrlHandler', () => {
       getClassifiedCountsByEventIds: jest.fn(),
       getAllPhotoKeysForEvent: jest.fn(),
       getResumePoint: jest.fn(),
+      getDistinctEventIdsForPhotoIds: jest.fn(),
       countAll: jest.fn(),
       sumAllFileSize: jest.fn(),
       countByIds: jest.fn(),
@@ -81,17 +89,66 @@ describe('GeneratePresignedUrlHandler', () => {
       delete: jest.fn(),
     } as jest.Mocked<IStorageAdapter>
 
-    handler = new GeneratePresignedUrlHandler(eventReadRepo, photoReadRepo, storageAdapter)
+    authz = {
+      can: jest.fn(),
+      assert: jest.fn().mockResolvedValue(undefined),
+      resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
+    } as jest.Mocked<IAuthorizationService>
+
+    handler = new GeneratePresignedUrlHandler(eventReadRepo, photoReadRepo, storageAdapter, authz)
   })
 
   it('should throw NOT_FOUND when event does not exist', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(null)
 
-    const command = new GeneratePresignedUrlCommand('non-existent-id', 'photo.jpg', 'image/jpeg')
+    const command = new GeneratePresignedUrlCommand(
+      'non-existent-id',
+      'photo.jpg',
+      'image/jpeg',
+      'u1',
+    )
 
     const error = await handler.execute(command).catch((e) => e)
     expect(error).toBeInstanceOf(AppException)
     expect(error.code).toBe('NOT_FOUND')
+    expect(authz.assert).not.toHaveBeenCalled()
+  })
+
+  it('should throw NOT_FOUND — not FORBIDDEN — when the event exists but is outside the caller scope', async () => {
+    // eventReadRepo.findById is unscoped (events module territory); the
+    // in-memory scope.includesEvent() check is what enforces the tenant
+    // boundary here, mirroring the scoped-load pattern used everywhere
+    // else in this module for entities loaded through photos' own repo.
+    eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
+    authz.resolveEventScope.mockResolvedValueOnce(new EventScope(false, ['some-other-tenant'], []))
+
+    const command = new GeneratePresignedUrlCommand(
+      existingEvent.id,
+      'photo.jpg',
+      'image/jpeg',
+      'u2',
+    )
+
+    const error = await handler.execute(command).catch((e) => e)
+    expect(error).toBeInstanceOf(AppException)
+    expect(error.code).toBe('NOT_FOUND')
+    expect(authz.assert).not.toHaveBeenCalled()
+    expect(photoReadRepo.existsByEventAndFilename).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the caller lacks photo.upload for this event', async () => {
+    eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
+    authz.assert.mockRejectedValueOnce(new Error('Insufficient permissions'))
+
+    const command = new GeneratePresignedUrlCommand(
+      existingEvent.id,
+      'photo.jpg',
+      'image/jpeg',
+      'u1',
+    )
+
+    await expect(handler.execute(command)).rejects.toThrow('Insufficient permissions')
+    expect(photoReadRepo.existsByEventAndFilename).not.toHaveBeenCalled()
   })
 
   it('should return isDuplicate: true when photo already exists for event', async () => {
@@ -102,6 +159,7 @@ describe('GeneratePresignedUrlHandler', () => {
       existingEvent.id,
       'already-uploaded.jpg',
       'image/jpeg',
+      'u1',
     )
 
     const result = await handler.execute(command)
@@ -132,6 +190,7 @@ describe('GeneratePresignedUrlHandler', () => {
       existingEvent.id,
       'photo with spaces!@#.jpg',
       'image/jpeg',
+      'u1',
     )
 
     await handler.execute(command)
@@ -156,7 +215,12 @@ describe('GeneratePresignedUrlHandler', () => {
       expiresIn: 300,
     })
 
-    const command = new GeneratePresignedUrlCommand(existingEvent.id, 'photo.jpg', 'image/jpeg')
+    const command = new GeneratePresignedUrlCommand(
+      existingEvent.id,
+      'photo.jpg',
+      'image/jpeg',
+      'u1',
+    )
 
     const result = await handler.execute(command)
     expect(result).toEqual({
@@ -176,7 +240,12 @@ describe('GeneratePresignedUrlHandler', () => {
       expiresIn: 300,
     })
 
-    const command = new GeneratePresignedUrlCommand(existingEvent.id, 'clean-file.png', 'image/png')
+    const command = new GeneratePresignedUrlCommand(
+      existingEvent.id,
+      'clean-file.png',
+      'image/png',
+      'u1',
+    )
 
     await handler.execute(command)
 

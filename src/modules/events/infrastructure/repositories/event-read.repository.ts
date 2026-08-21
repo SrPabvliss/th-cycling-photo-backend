@@ -1,6 +1,7 @@
 import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { PaginatedResult, type Pagination } from '@shared/application'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 import type {
@@ -29,14 +30,30 @@ export class EventReadRepository implements IEventReadRepository {
     return record ? EventMapper.toEntity(record) : null
   }
 
+  async findByIdInScope(
+    id: string,
+    scope: EventScope,
+    includeArchived = false,
+  ): Promise<Event | null> {
+    // Folding scope into the where clause makes an out-of-scope id 404 rather than 403, so the
+    // caller can't learn an event exists by probing UUIDs.
+    const where = includeArchived
+      ? { id, ...scope.toPrisma() }
+      : { id, deleted_at: null, ...scope.toPrisma() }
+    const record = await this.prisma.event.findFirst({ where })
+    return record ? EventMapper.toEntity(record) : null
+  }
+
   async getEventsList(
     pagination: Pagination,
-    includeArchived = false,
-    search?: string,
+    includeArchived: boolean,
+    search: string | undefined,
+    scope: EventScope,
   ): Promise<PaginatedResult<EventListProjection>> {
-    const where: Record<string, unknown> = includeArchived ? {} : { deleted_at: null }
-    if (search) {
-      where.name = { contains: search, mode: 'insensitive' }
+    const where: Prisma.EventWhereInput = {
+      ...scope.toPrisma(),
+      ...(includeArchived ? {} : { deleted_at: null }),
+      ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
     }
 
     const [events, total] = await Promise.all([
@@ -57,9 +74,14 @@ export class EventReadRepository implements IEventReadRepository {
     )
   }
 
-  async getEventDetail(id: string): Promise<EventDetailProjection | null> {
+  async getEventDetailBySlug(
+    slug: string,
+    scope: EventScope,
+  ): Promise<EventDetailProjection | null> {
+    // Folding scope into the where clause makes an out-of-scope slug 404 rather than 403, so the
+    // caller can't learn an event exists by probing slugs.
     const record = await this.prisma.event.findFirst({
-      where: { id },
+      where: { slug, ...scope.toPrisma() },
       select: EventMapper.eventDetailSelectConfig,
     })
 
@@ -68,19 +90,8 @@ export class EventReadRepository implements IEventReadRepository {
     return EventMapper.toDetailProjection(record, this.cdn)
   }
 
-  async getEventDetailBySlug(slug: string): Promise<EventDetailProjection | null> {
-    const record = await this.prisma.event.findFirst({
-      where: { slug },
-      select: EventMapper.eventDetailSelectConfig,
-    })
-
-    if (!record) return null
-
-    return EventMapper.toDetailProjection(record, this.cdn)
-  }
-
-  async countAll(): Promise<number> {
-    return this.prisma.event.count()
+  async countAll(scope: EventScope): Promise<number> {
+    return this.prisma.event.count({ where: scope.toPrisma() })
   }
 
   async getAssignedEventsByStatus(
@@ -91,7 +102,9 @@ export class EventReadRepository implements IEventReadRepository {
     const where: Prisma.EventWhereInput = {
       status,
       deleted_at: null,
-      operators: { some: { user_id: operatorId } },
+      permission_grants: {
+        some: { user_id: operatorId, permission: { key: 'photo.retouch.read' } },
+      },
     }
 
     const [events, total] = await Promise.all([
@@ -117,7 +130,9 @@ export class EventReadRepository implements IEventReadRepository {
       where: {
         status,
         deleted_at: null,
-        operators: { some: { user_id: operatorId } },
+        permission_grants: {
+          some: { user_id: operatorId, permission: { key: 'photo.retouch.read' } },
+        },
       },
     })
   }
@@ -130,7 +145,9 @@ export class EventReadRepository implements IEventReadRepository {
       where: {
         status,
         deleted_at: null,
-        operators: { some: { user_id: operatorId } },
+        permission_grants: {
+          some: { user_id: operatorId, permission: { key: 'photo.retouch.read' } },
+        },
       },
       select: { id: true },
     })
@@ -141,7 +158,9 @@ export class EventReadRepository implements IEventReadRepository {
     const rows = await this.prisma.event.findMany({
       where: {
         deleted_at: null,
-        operators: { some: { user_id: operatorId } },
+        permission_grants: {
+          some: { user_id: operatorId, permission: { key: 'photo.retouch.read' } },
+        },
       },
       select: { id: true },
     })

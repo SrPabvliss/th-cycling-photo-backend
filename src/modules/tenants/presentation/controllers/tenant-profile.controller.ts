@@ -1,0 +1,146 @@
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
+import { CommandBus, QueryBus } from '@nestjs/cqrs'
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
+import type { EntityIdProjection } from '@shared/application'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { PermissionGuard } from '@shared/authorization/infrastructure/guards/permission.guard'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
+import { AppException } from '@shared/domain'
+import { CreatePayoutMethodCommand } from '../../application/commands/create-payout-method/create-payout-method.command'
+import { DeletePayoutMethodCommand } from '../../application/commands/delete-payout-method/delete-payout-method.command'
+import { UpdateMyTenantProfileCommand } from '../../application/commands/update-my-tenant-profile/update-my-tenant-profile.command'
+import { UpdatePayoutMethodCommand } from '../../application/commands/update-payout-method/update-payout-method.command'
+import type { PayoutMethodProjection } from '../../application/projections/payout-method.projection'
+import type { TenantProfileProjection } from '../../application/projections/tenant-profile.projection'
+import { GetMyPayoutMethodsQuery } from '../../application/queries/get-my-payout-methods/get-my-payout-methods.query'
+import { GetMyTenantProfileQuery } from '../../application/queries/get-my-tenant-profile/get-my-tenant-profile.query'
+import type { BankTransferDetails } from '../../domain/entities/tenant-payout-method.entity'
+import type { CreatePayoutMethodDto, UpdatePayoutMethodDto } from '../dtos/payout-method.dto'
+import type { UpdateTenantProfileDto } from '../dtos/update-tenant-profile.dto'
+
+function toBankDetails(dto: {
+  bankName?: string
+  accountNumber?: string
+  accountType?: string
+  accountHolder?: string
+  holderIdentification?: string
+}): BankTransferDetails | null {
+  if (
+    !dto.bankName ||
+    !dto.accountNumber ||
+    !dto.accountType ||
+    !dto.accountHolder ||
+    !dto.holderIdentification
+  ) {
+    return null
+  }
+  return {
+    bankName: dto.bankName,
+    accountNumber: dto.accountNumber,
+    accountType: dto.accountType,
+    accountHolder: dto.accountHolder,
+    holderIdentification: dto.holderIdentification,
+  }
+}
+
+function toBankDetailsOrUndefined(dto: {
+  bankName?: string
+  accountNumber?: string
+  accountType?: string
+  accountHolder?: string
+  holderIdentification?: string
+}): BankTransferDetails | undefined {
+  const anyBankField =
+    dto.bankName !== undefined ||
+    dto.accountNumber !== undefined ||
+    dto.accountType !== undefined ||
+    dto.accountHolder !== undefined ||
+    dto.holderIdentification !== undefined
+  if (!anyBankField) return undefined
+  const bank = toBankDetails(dto)
+  if (!bank) throw AppException.businessRule('payment.invalid_bank_details')
+  return bank
+}
+
+@ApiTags('Tenant Profile')
+@ApiBearerAuth()
+@UseGuards(PermissionGuard)
+@Controller('tenants/me')
+export class TenantProfileController {
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
+
+  @Get('profile')
+  @RequirePermission('tenant.profile.read')
+  async getProfile(@CurrentUser() user: ICurrentUser): Promise<TenantProfileProjection> {
+    return this.queryBus.execute(new GetMyTenantProfileQuery(user.userId))
+  }
+
+  @Patch('profile')
+  @RequirePermission('tenant.profile.update')
+  async updateProfile(
+    @Body() dto: UpdateTenantProfileDto,
+    @CurrentUser() user: ICurrentUser,
+  ): Promise<void> {
+    await this.commandBus.execute(
+      new UpdateMyTenantProfileCommand(
+        user.userId,
+        dto.publicName,
+        dto.watermarkStorageKey,
+        dto.whatsappNumber,
+      ),
+    )
+  }
+
+  @Get('payout-methods')
+  @RequirePermission('tenant.payout_method.read')
+  async getPayoutMethods(@CurrentUser() user: ICurrentUser): Promise<PayoutMethodProjection[]> {
+    return this.queryBus.execute(new GetMyPayoutMethodsQuery(user.userId))
+  }
+
+  @Post('payout-methods')
+  @RequirePermission('tenant.payout_method.manage')
+  async createPayoutMethod(
+    @Body() dto: CreatePayoutMethodDto,
+    @CurrentUser() user: ICurrentUser,
+  ): Promise<EntityIdProjection> {
+    return this.commandBus.execute(
+      new CreatePayoutMethodCommand(
+        user.userId,
+        dto.provider,
+        dto.phone ?? null,
+        toBankDetails(dto),
+      ),
+    )
+  }
+
+  @Patch('payout-methods/:id')
+  @RequirePermission('tenant.payout_method.manage')
+  async updatePayoutMethod(
+    @Param('id') id: string,
+    @Body() dto: UpdatePayoutMethodDto,
+    @CurrentUser() user: ICurrentUser,
+  ): Promise<void> {
+    await this.commandBus.execute(
+      new UpdatePayoutMethodCommand(
+        user.userId,
+        id,
+        dto.phone,
+        toBankDetailsOrUndefined(dto),
+        dto.isActive,
+        dto.sortOrder,
+      ),
+    )
+  }
+
+  @Delete('payout-methods/:id')
+  @RequirePermission('tenant.payout_method.manage')
+  async deletePayoutMethod(
+    @Param('id') id: string,
+    @CurrentUser() user: ICurrentUser,
+  ): Promise<void> {
+    await this.commandBus.execute(new DeletePayoutMethodCommand(user.userId, id))
+  }
+}

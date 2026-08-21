@@ -1,6 +1,9 @@
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
 import type { IPhotoWriteRepository } from '@photos/domain/ports'
+import { AuditContext } from '@shared/application'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import type { PhotoBatchItem } from './confirm-photo-batch.command'
 import { ConfirmPhotoBatchCommand } from './confirm-photo-batch.command'
@@ -13,8 +16,11 @@ describe('ConfirmPhotoBatchHandler', () => {
   let kvStorage: { writeBulk: jest.Mock }
   let embeddingQueue: { add: jest.Mock; addBulk: jest.Mock }
   let classificationQueue: { add: jest.Mock; addBulk: jest.Mock }
+  let authz: jest.Mocked<IAuthorizationService>
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
+  const audit = new AuditContext('u1')
+  const unrestrictedScope = EventScope.unrestricted()
 
   const futureDate = new Date()
   futureDate.setFullYear(futureDate.getFullYear() + 1)
@@ -22,6 +28,7 @@ describe('ConfirmPhotoBatchHandler', () => {
   const existingEvent = Event.fromPersistence({
     slug: 'test-event',
     id: eventId,
+    tenantId: '11111111-1111-4111-8111-111111111111',
     name: 'Test Event',
     startDate: futureDate,
     endDate: futureDate,
@@ -47,6 +54,7 @@ describe('ConfirmPhotoBatchHandler', () => {
 
     eventReadRepo = {
       findById: jest.fn(),
+      findByIdInScope: jest.fn(),
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
       getEventDetailBySlug: jest.fn(),
@@ -75,23 +83,62 @@ describe('ConfirmPhotoBatchHandler', () => {
     embeddingQueue = { add: jest.fn(), addBulk: jest.fn() }
     classificationQueue = { add: jest.fn(), addBulk: jest.fn() }
 
+    authz = {
+      can: jest.fn(),
+      assert: jest.fn().mockResolvedValue(undefined),
+      resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
+    } as jest.Mocked<IAuthorizationService>
+
     handler = new ConfirmPhotoBatchHandler(
       eventReadRepo,
       photoWriteRepo,
       kvStorage as any,
       embeddingQueue as unknown as import('bullmq').Queue,
       classificationQueue as unknown as import('bullmq').Queue,
+      authz,
     )
   })
 
   it('should throw NOT_FOUND when event does not exist', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(null)
 
-    const command = new ConfirmPhotoBatchCommand(eventId, [validBatchItem])
+    const command = new ConfirmPhotoBatchCommand(eventId, [validBatchItem], audit)
     const error = await handler.execute(command).catch((e) => e)
 
     expect(error).toBeInstanceOf(AppException)
     expect(error.code).toBe('NOT_FOUND')
+    expect(authz.assert).not.toHaveBeenCalled()
+  })
+
+  it('should throw INTERNAL when the command carries no audit context', async () => {
+    const command = new ConfirmPhotoBatchCommand(eventId, [validBatchItem])
+    const error = await handler.execute(command).catch((e) => e)
+
+    expect(error).toBeInstanceOf(AppException)
+    expect(eventReadRepo.findById).not.toHaveBeenCalled()
+  })
+
+  it('should throw NOT_FOUND — not FORBIDDEN — when the event exists but is outside the caller scope', async () => {
+    eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
+    authz.resolveEventScope.mockResolvedValueOnce(new EventScope(false, ['some-other-tenant'], []))
+
+    const command = new ConfirmPhotoBatchCommand(eventId, [validBatchItem], audit)
+    const error = await handler.execute(command).catch((e) => e)
+
+    expect(error).toBeInstanceOf(AppException)
+    expect(error.code).toBe('NOT_FOUND')
+    expect(authz.assert).not.toHaveBeenCalled()
+    expect(photoWriteRepo.saveMany).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the caller lacks photo.upload for this event', async () => {
+    eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
+    authz.assert.mockRejectedValueOnce(new Error('Insufficient permissions'))
+
+    const command = new ConfirmPhotoBatchCommand(eventId, [validBatchItem], audit)
+
+    await expect(handler.execute(command)).rejects.toThrow('Insufficient permissions')
+    expect(photoWriteRepo.saveMany).not.toHaveBeenCalled()
   })
 
   it('should throw BUSINESS_RULE when objectKey has wrong prefix', async () => {
@@ -102,7 +149,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       objectKey: 'events/other-event-id/abc-123-IMG_001.jpg',
     }
 
-    const command = new ConfirmPhotoBatchCommand(eventId, [wrongItem])
+    const command = new ConfirmPhotoBatchCommand(eventId, [wrongItem], audit)
     const error = await handler.execute(command).catch((e) => e)
 
     expect(error).toBeInstanceOf(AppException)
@@ -113,17 +160,22 @@ describe('ConfirmPhotoBatchHandler', () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
     photoWriteRepo.saveMany.mockResolvedValueOnce(2)
 
-    const command = new ConfirmPhotoBatchCommand(eventId, [
-      validBatchItem,
-      {
-        ...validBatchItem,
-        objectKey: `events/${eventId}/def-456-IMG_002.jpg`,
-        fileName: 'IMG_002.jpg',
-      },
-    ])
+    const command = new ConfirmPhotoBatchCommand(
+      eventId,
+      [
+        validBatchItem,
+        {
+          ...validBatchItem,
+          objectKey: `events/${eventId}/def-456-IMG_002.jpg`,
+          fileName: 'IMG_002.jpg',
+        },
+      ],
+      audit,
+    )
 
     const result = await handler.execute(command)
 
+    expect(authz.assert).toHaveBeenCalledWith('u1', 'photo.upload', eventId)
     expect(photoWriteRepo.saveMany).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ eventId, filename: 'IMG_001.jpg' }),
@@ -137,14 +189,18 @@ describe('ConfirmPhotoBatchHandler', () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
     photoWriteRepo.saveMany.mockResolvedValueOnce(2)
 
-    const command = new ConfirmPhotoBatchCommand(eventId, [
-      validBatchItem,
-      {
-        ...validBatchItem,
-        objectKey: `events/${eventId}/def-456-IMG_002.jpg`,
-        fileName: 'IMG_002.jpg',
-      },
-    ])
+    const command = new ConfirmPhotoBatchCommand(
+      eventId,
+      [
+        validBatchItem,
+        {
+          ...validBatchItem,
+          objectKey: `events/${eventId}/def-456-IMG_002.jpg`,
+          fileName: 'IMG_002.jpg',
+        },
+      ],
+      audit,
+    )
 
     await handler.execute(command)
 
@@ -164,7 +220,7 @@ describe('ConfirmPhotoBatchHandler', () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
     photoWriteRepo.saveMany.mockResolvedValueOnce(0)
 
-    const command = new ConfirmPhotoBatchCommand(eventId, [validBatchItem])
+    const command = new ConfirmPhotoBatchCommand(eventId, [validBatchItem], audit)
     const result = await handler.execute(command)
 
     expect(result).toEqual({ confirmed: 0 })

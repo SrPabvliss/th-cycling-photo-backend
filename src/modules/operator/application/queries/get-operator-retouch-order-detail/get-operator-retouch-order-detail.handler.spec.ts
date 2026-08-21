@@ -12,6 +12,7 @@ describe('GetOperatorRetouchOrderDetailHandler', () => {
     Pick<IOperatorRetouchReadRepository, 'findOrderDetailRow' | 'isOperatorAssigned'>
   >
   let cdn: jest.Mocked<Pick<CdnUrlBuilder, 'internalUrl'>>
+  let authz: { can: jest.Mock }
 
   beforeEach(() => {
     retouchRead = {
@@ -19,7 +20,12 @@ describe('GetOperatorRetouchOrderDetailHandler', () => {
       isOperatorAssigned: jest.fn(),
     }
     cdn = { internalUrl: jest.fn().mockReturnValue('https://cdn.test/thumb.jpg') }
-    handler = new GetOperatorRetouchOrderDetailHandler(retouchRead as never, cdn as never)
+    authz = { can: jest.fn().mockResolvedValue(false) }
+    handler = new GetOperatorRetouchOrderDetailHandler(
+      retouchRead as never,
+      cdn as never,
+      authz as never,
+    )
   })
 
   const buildRow = (): OperatorRetouchOrderDetailRow => ({
@@ -86,5 +92,17 @@ describe('GetOperatorRetouchOrderDetailHandler', () => {
     await expect(
       handler.execute(new GetOperatorRetouchOrderDetailQuery('order-1', 'operator-x')),
     ).rejects.toThrow()
+  })
+  it('omite la comprobación de asignación cuando el usuario ve todos los eventos', async () => {
+    authz.can.mockResolvedValue(true)
+    retouchRead.findOrderDetailRow.mockResolvedValue(buildRow())
+
+    const result = await handler.execute(
+      new GetOperatorRetouchOrderDetailQuery('order-1', 'platform-1'),
+    )
+
+    expect(authz.can).toHaveBeenCalledWith('platform-1', 'event.read.all')
+    expect(retouchRead.isOperatorAssigned).not.toHaveBeenCalled()
+    expect(result.orderId).toBe('order-1')
   })
 })

@@ -2,7 +2,8 @@ import { Controller, Get, Param, Query } from '@nestjs/common'
 import { QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { Pagination } from '@shared/application'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import { I18nLang } from 'nestjs-i18n'
 import {
@@ -37,7 +38,7 @@ export class OperatorController {
   constructor(private readonly queryBus: QueryBus) {}
 
   @Get('dashboard/summary')
-  @Roles('operator')
+  @RequirePermission('dashboard.operator.read')
   @SuccessMessage('success.FETCHED', { entity: 'entities.dashboard' })
   @ApiOperation({ summary: 'Get operator dashboard KPI summary' })
   @ApiEnvelopeResponse({
@@ -50,7 +51,7 @@ export class OperatorController {
   }
 
   @Get('dashboard/events/active')
-  @Roles('operator')
+  @RequirePermission('dashboard.operator.read')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List operator active assigned events with progress' })
   @ApiEnvelopeResponse({
@@ -65,7 +66,7 @@ export class OperatorController {
   }
 
   @Get('dashboard/events/completed')
-  @Roles('operator')
+  @RequirePermission('dashboard.operator.read')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List operator completed assigned events' })
   @ApiEnvelopeResponse({
@@ -80,7 +81,7 @@ export class OperatorController {
   }
 
   @Get('dashboard/recent-activity')
-  @Roles('operator')
+  @RequirePermission('dashboard.operator.read')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Recent activity (review + retouch) of the operator' })
   @ApiEnvelopeResponse({
@@ -99,7 +100,7 @@ export class OperatorController {
   }
 
   @Get('dashboard/review-queue')
-  @Roles('admin', 'operator')
+  @RequirePermission('dashboard.review_queue.read')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Cross-event review queue scoped to the operator' })
   @ApiEnvelopeResponse({
@@ -121,7 +122,7 @@ export class OperatorController {
   }
 
   @Get('retouch/orders/:orderId')
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.retouch.read')
   @SuccessMessage('success.GET')
   @ApiOperation({ summary: 'Detalle de orden de retoque para el workspace' })
   @ApiParam({ name: 'orderId', description: 'Order UUID', format: 'uuid' })
@@ -142,12 +143,12 @@ export class OperatorController {
     @Query('scope') scope?: 'pending' | 'all',
   ) {
     return this.queryBus.execute(
-      new GetOperatorRetouchOrderDetailQuery(orderId, user.userId, scope ?? 'pending', user.role),
+      new GetOperatorRetouchOrderDetailQuery(orderId, user.userId, scope ?? 'pending'),
     )
   }
 
   @Get('retouch/orders')
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.retouch.read')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Cross-event FIFO list of orders pending retouch for the operator' })
   @ApiEnvelopeResponse({
@@ -167,13 +168,12 @@ export class OperatorController {
         pagination,
         dto.scope ?? 'pending',
         dto.eventSlug ?? null,
-        user.role,
       ),
     )
   }
 
   @Get('events/:eventSlug/retouch-queue')
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.retouch.read')
   @SuccessMessage('success.LIST')
   @ApiOperation({
     summary: 'Get retouch queue for an event (orders with pending retouched photos)',
@@ -192,13 +192,7 @@ export class OperatorController {
   ) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     return this.queryBus.execute(
-      new GetRetouchQueueQuery(
-        eventSlug,
-        user.userId,
-        pagination,
-        dto.scope ?? 'pending',
-        user.role,
-      ),
+      new GetRetouchQueueQuery(eventSlug, user.userId, pagination, dto.scope ?? 'pending'),
     )
   }
 }

@@ -17,6 +17,10 @@ import {
   ORDER_WRITE_REPOSITORY,
 } from '@orders/domain/ports'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { SendDeliveryCommand } from './send-delivery.command'
 
@@ -38,6 +42,8 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
     private readonly writeRepo: IOrderWriteRepository,
     @Inject(ORDER_READ_REPOSITORY)
     private readonly readRepo: IOrderReadRepository,
+    @Inject(AUTHORIZATION_SERVICE)
+    private readonly authz: IAuthorizationService,
     @Inject(DELIVERY_LINK_READ_REPOSITORY)
     private readonly deliveryReadRepo: IDeliveryLinkReadRepository,
     private readonly commandBus: CommandBus,
@@ -50,9 +56,12 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
   }
 
   async execute(command: SendDeliveryCommand): Promise<OrderPaymentConfirmedProjection> {
-    // 1. Find order
-    const order = await this.readRepo.findById(command.orderId)
+    // 1. Scoped load, then assert: the scoped load is what enforces the tenant boundary, since
+    //    `assert` never compares the order's event to the caller's scope.
+    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const order = await this.readRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
+    await this.authz.assert(command.audit.userId, 'order.deliver', order.eventId)
 
     // 2. Validate: paid (sale) or gifted still awaiting its link
     const isSale = order.status === OrderStatus.PAID
@@ -78,7 +87,7 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
     await this.writeRepo.save(order)
 
     // 7. Get detail for notification + template
-    const detail = await this.readRepo.getDetail(order.id)
+    const detail = await this.readRepo.getDetail(order.id, scope)
     const photoCount = detail?.photos.length ?? 0
     const customerFirstName = detail?.snapFirstName ?? ''
     const customerName = detail?.userName ?? ''

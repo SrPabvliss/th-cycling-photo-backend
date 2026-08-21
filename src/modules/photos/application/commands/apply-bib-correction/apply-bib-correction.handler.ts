@@ -9,6 +9,10 @@ import {
   PHOTO_BIB_WRITE_REPOSITORY,
   PHOTO_READ_REPOSITORY,
 } from '@photos/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { ApplyBibCorrectionCommand } from './apply-bib-correction.command'
 
@@ -20,13 +24,16 @@ export class ApplyBibCorrectionHandler implements ICommandHandler<ApplyBibCorrec
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(PHOTO_BIB_WRITE_REPOSITORY) private readonly bibRepo: IPhotoBibWriteRepository,
     @Inject(CORRECTION_REPOSITORY) private readonly correctionRepo: ICorrectionRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(
     cmd: ApplyBibCorrectionCommand,
   ): Promise<{ changed: boolean; correctionId?: string }> {
-    const photo = await this.photoReadRepo.findById(cmd.photoId)
+    const scope = await this.authz.resolveEventScope(cmd.reviewerId)
+    const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', cmd.photoId)
+    await this.authz.assert(cmd.reviewerId, 'photo.bib.correct', photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')
     }

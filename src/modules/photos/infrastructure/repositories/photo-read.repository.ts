@@ -16,6 +16,7 @@ import {
 } from '@photos/domain/ports'
 
 import { PaginatedResult, type Pagination } from '@shared/application'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 import {
@@ -67,6 +68,12 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return record ? PhotoMapper.toEntity(record) : null
   }
 
+  /** Like `findById`, but an id outside `scope` resolves to `null` — the tenant-boundary check. */
+  async findByIdInScope(id: string, scope: EventScope): Promise<Photo | null> {
+    const record = await this.prisma.photo.findFirst({ where: { id, event: scope.toPrisma() } })
+    return record ? PhotoMapper.toEntity(record) : null
+  }
+
   /** Checks if a photo already exists for a given event and filename. */
   async existsByEventAndFilename(eventId: string, filename: string): Promise<boolean> {
     const record = await this.prisma.photo.findFirst({
@@ -80,10 +87,11 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   async getPhotosList(
     eventId: string,
     pagination: Pagination,
-    classified?: boolean,
-    photoCategoryId?: number,
+    classified: boolean | undefined,
+    photoCategoryId: number | undefined,
+    scope: EventScope,
   ): Promise<PaginatedResult<PhotoListProjection>> {
-    const where: Prisma.PhotoWhereInput = { event_id: eventId }
+    const where: Prisma.PhotoWhereInput = { event_id: eventId, event: scope.toPrisma() }
     if (classified === true) where.status = PhotoStatus.reviewed
     if (classified === false) where.status = { not: PhotoStatus.reviewed }
     if (photoCategoryId) where.photo_category_id = photoCategoryId
@@ -107,9 +115,9 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   }
 
   /** Retrieves a single photo's detail by ID. */
-  async getPhotoDetail(id: string): Promise<PhotoDetailProjection | null> {
-    const record = await this.prisma.photo.findUnique({
-      where: { id },
+  async getPhotoDetail(id: string, scope: EventScope): Promise<PhotoDetailProjection | null> {
+    const record = await this.prisma.photo.findFirst({
+      where: { id, event: scope.toPrisma() },
       select: PhotoMapper.photoDetailSelectConfig,
     })
 
@@ -119,9 +127,12 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   }
 
   /** Retrieves a single photo's detail by public slug (admin/operator). */
-  async getPhotoDetailBySlug(slug: string): Promise<PhotoDetailProjection | null> {
+  async getPhotoDetailBySlug(
+    slug: string,
+    scope: EventScope,
+  ): Promise<PhotoDetailProjection | null> {
     const record = await this.prisma.photo.findFirst({
-      where: { public_slug: slug },
+      where: { public_slug: slug, event: scope.toPrisma() },
       select: PhotoMapper.photoDetailSelectConfig,
     })
 
@@ -131,9 +142,9 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   }
 
   /** Retrieves a lightweight photo view by public slug. */
-  async getPhotoViewBySlug(slug: string): Promise<PhotoViewProjection | null> {
+  async getPhotoViewBySlug(slug: string, scope: EventScope): Promise<PhotoViewProjection | null> {
     const record = await this.prisma.photo.findFirst({
-      where: { public_slug: slug },
+      where: { public_slug: slug, event: scope.toPrisma() },
       select: PhotoMapper.photoViewSelectConfig,
     })
 
@@ -144,6 +155,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   async searchPhotos(
     filters: SearchPhotosFilters,
     pagination: Pagination,
+    scope: EventScope,
   ): Promise<PaginatedResult<PhotoListProjection>> {
     const matchedIds = await this.findPhotoIdsByAttributeFilters(filters)
     if (matchedIds !== null && matchedIds.length === 0) {
@@ -151,6 +163,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     }
 
     const where = this.buildSearchWhere(filters)
+    where.event = scope.toPrisma()
     if (matchedIds !== null) where.id = { in: matchedIds }
 
     const [photos, total] = await Promise.all([
@@ -193,14 +206,17 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return new Map(results.map((r) => [r.event_id, Number(r._sum.file_size ?? 0)]))
   }
 
-  /** Counts all photos globally. */
-  async countAll(): Promise<number> {
-    return this.prisma.photo.count()
+  /** Counts photos inside `scope` (all of them for an unrestricted/platform caller). */
+  async countAll(scope: EventScope): Promise<number> {
+    return this.prisma.photo.count({ where: { event: scope.toPrisma() } })
   }
 
-  /** Returns the sum of all photo file sizes in bytes. */
-  async sumAllFileSize(): Promise<number> {
-    const result = await this.prisma.photo.aggregate({ _sum: { file_size: true } })
+  /** Returns the sum of file sizes (bytes) for photos inside `scope`. */
+  async sumAllFileSize(scope: EventScope): Promise<number> {
+    const result = await this.prisma.photo.aggregate({
+      where: { event: scope.toPrisma() },
+      _sum: { file_size: true },
+    })
     return Number(result._sum.file_size ?? 0)
   }
 
@@ -227,9 +243,10 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   /** Returns all photo keys for an event, ordered by filename. Used for download manifest. */
   async getAllPhotoKeysForEvent(
     eventId: string,
+    scope: EventScope,
   ): Promise<Array<{ filename: string; storageKey: string; fileSize: number }>> {
     const photos = await this.prisma.photo.findMany({
-      where: { event_id: eventId },
+      where: { event_id: eventId, event: scope.toPrisma() },
       orderBy: { filename: 'asc' },
       select: { filename: true, storage_key: true, file_size: true },
     })
@@ -244,9 +261,10 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   async getResumePoint(
     eventId: string,
     limit: number,
+    scope: EventScope,
   ): Promise<{ photoId: string | null; page: number }> {
     const firstUnclassified = await this.prisma.photo.findFirst({
-      where: { event_id: eventId, status: { not: PhotoStatus.reviewed } },
+      where: { event_id: eventId, event: scope.toPrisma(), status: { not: PhotoStatus.reviewed } },
       orderBy: { filename: 'asc' },
       select: { id: true, filename: true },
     })
@@ -274,6 +292,18 @@ export class PhotoReadRepository implements IPhotoReadRepository {
         status: { in: [PhotoStatus.processed, PhotoStatus.reviewed] },
       },
     })
+  }
+
+  /** Distinct in-scope event ids among `photoIds`, so bulk mutations needn't trust the id list. */
+  async getDistinctEventIdsForPhotoIds(photoIds: string[], scope: EventScope): Promise<string[]> {
+    if (photoIds.length === 0) return []
+
+    const rows = await this.prisma.photo.findMany({
+      where: { id: { in: photoIds }, event: scope.toPrisma() },
+      select: { event_id: true },
+      distinct: ['event_id'],
+    })
+    return rows.map((r) => r.event_id)
   }
 
   /** Finds visually similar photos using vector cosine similarity. */
@@ -328,6 +358,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     status: ReviewQueueStatusFilter
     limit: number
     offset: number
+    scope: EventScope
   }): Promise<{
     items: Array<{
       id: string
@@ -341,8 +372,11 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     }>
     total: number
   }> {
-    const { eventSlug, status, limit, offset } = params
+    const { eventSlug, status, limit, offset, scope } = params
     const reviewedFilter = reviewedAtFilter(status)
+    // e.slug is unique, so this join is a single row already — the predicate can't change
+    // cardinality.
+    const scopeFilter = eventScopeFilter(scope, 'e')
 
     type Row = {
       id: string
@@ -365,6 +399,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       WHERE e.slug = ${eventSlug}
         AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
         ${reviewedFilter}
+        ${scopeFilter}
       ORDER BY (SELECT MIN(confidence) FROM photo_bibs WHERE photo_id = p.id AND deleted_at IS NULL) ASC NULLS FIRST,
                p.uploaded_at ASC
       LIMIT ${limit} OFFSET ${offset}
@@ -377,6 +412,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       WHERE e.slug = ${eventSlug}
         AND p.status IN ('processed'::photo_status, 'reviewed'::photo_status, 'failed'::photo_status)
         ${reviewedFilter}
+        ${scopeFilter}
     `
 
     return {
@@ -587,4 +623,13 @@ function reviewedAtFilter(status: ReviewQueueStatusFilter): Prisma.Sql {
   if (status === 'pending') return Prisma.sql`AND p.reviewed_at IS NULL`
   if (status === 'reviewed') return Prisma.sql`AND p.reviewed_at IS NOT NULL`
   return Prisma.empty
+}
+
+/**
+ * Raw-SQL equivalent of `EventScope.toPrisma()`, for queries that join `events` directly. `alias`
+ * is interpolated unescaped via `Prisma.raw`, so it must never come from user input.
+ */
+function eventScopeFilter(scope: EventScope, alias: string): Prisma.Sql {
+  if (scope.all) return Prisma.empty
+  return Prisma.sql`AND (${Prisma.raw(alias)}.tenant_id = ANY(${scope.tenantIds}::uuid[]) OR ${Prisma.raw(alias)}.id = ANY(${scope.eventIds}::uuid[]))`
 }

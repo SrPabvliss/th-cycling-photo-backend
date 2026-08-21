@@ -15,6 +15,7 @@ describe('GetOperatorRetouchOrdersHandler', () => {
     Pick<IOperatorRetouchReadRepository, 'findOperatorRetouchOrdersPage'>
   >
   let cdn: jest.Mocked<Pick<CdnUrlBuilder, 'internalUrl'>>
+  let authz: { can: jest.Mock }
 
   beforeEach(() => {
     eventRead = {
@@ -25,10 +26,12 @@ describe('GetOperatorRetouchOrdersHandler', () => {
       findOperatorRetouchOrdersPage: jest.fn(),
     }
     cdn = { internalUrl: jest.fn().mockReturnValue('https://cdn.test/thumb.jpg') }
+    authz = { can: jest.fn().mockResolvedValue(false) }
     handler = new GetOperatorRetouchOrdersHandler(
       eventRead as never,
       retouchRead as never,
       cdn as never,
+      authz as never,
     )
   })
 

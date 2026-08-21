@@ -8,6 +8,6 @@ export class CreateEventCommand {
     public readonly provinceId: number | null,
     public readonly cantonId: number | null,
     public readonly eventTypeId: number,
-    public readonly audit?: AuditContext,
+    public readonly audit: AuditContext,
   ) {}
 }

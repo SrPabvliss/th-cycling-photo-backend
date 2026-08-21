@@ -1,3 +1,4 @@
+import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import {
@@ -5,6 +6,11 @@ import {
   type IEventPricingWriteRepository,
 } from '@pricing/domain/ports'
 import { PricingTier } from '@pricing/domain/value-objects/pricing-tier.vo'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
+import { AppException } from '@shared/domain'
 import { SetEventPricingConfigCommand } from './set-event-pricing-config.command'
 
 /**
@@ -17,9 +23,20 @@ export class SetEventPricingConfigHandler implements ICommandHandler<SetEventPri
   constructor(
     @Inject(EVENT_PRICING_WRITE_REPOSITORY)
     private readonly repo: IEventPricingWriteRepository,
+    @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(cmd: SetEventPricingConfigCommand): Promise<void> {
+    // `pricing.config.set` is not platformOnly, so a tenant could be granted it even though no
+    // template holds it today — the scoped load is what keeps such a holder inside its own tenant.
+    // 404, not 403, so an out-of-scope event's existence isn't disclosed.
+    const scope = await this.authz.resolveEventScope(cmd.setById)
+    const event = await this.eventReadRepo.findByIdInScope(cmd.eventId, scope)
+    if (!event) throw AppException.notFound('Event', cmd.eventId)
+
+    await this.authz.assert(cmd.setById, 'pricing.config.set', event.id)
+
     const tiers = cmd.config.tiers.map((t) => ({
       minQty: t.minQty,
       maxQty: t.maxQty ?? null,
@@ -28,6 +45,6 @@ export class SetEventPricingConfigHandler implements ICommandHandler<SetEventPri
     tiers.forEach((t) => {
       PricingTier.create(t)
     })
-    await this.repo.upsertConfig(cmd.eventId, { currency: cmd.config.currency, tiers })
+    await this.repo.upsertConfig(event.id, { currency: cmd.config.currency, tiers })
   }
 }

@@ -3,6 +3,8 @@ import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository, IPhotoWriteRepository } from '@photos/domain/ports'
 import { PhotoStatus } from '@photos/domain/value-objects/photo-status.vo'
 import type { IPreviewLinkReadRepository } from '@previews/domain/ports'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import type { IKvStorageAdapter } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports'
@@ -17,6 +19,8 @@ describe('DeletePhotoHandler', () => {
   let kv: jest.Mocked<IKvStorageAdapter>
   let orderRead: jest.Mocked<IOrderReadRepository>
   let previewRead: jest.Mocked<IPreviewLinkReadRepository>
+  let authz: jest.Mocked<IAuthorizationService>
+  const unrestrictedScope = EventScope.unrestricted()
 
   const command = new DeletePhotoCommand('photo-001', 'user-001')
 
@@ -44,7 +48,10 @@ describe('DeletePhotoHandler', () => {
     })
 
   beforeEach(() => {
-    photoRead = { findById: jest.fn() } as unknown as jest.Mocked<IPhotoReadRepository>
+    photoRead = {
+      findById: jest.fn(),
+      findByIdInScope: jest.fn(),
+    } as unknown as jest.Mocked<IPhotoReadRepository>
     photoWrite = {
       delete: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IPhotoWriteRepository>
@@ -60,21 +67,62 @@ describe('DeletePhotoHandler', () => {
     previewRead = {
       existsByPhotoId: jest.fn().mockResolvedValue(false),
     } as unknown as jest.Mocked<IPreviewLinkReadRepository>
+    authz = {
+      can: jest.fn(),
+      assert: jest.fn().mockResolvedValue(undefined),
+      resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
+    } as jest.Mocked<IAuthorizationService>
 
-    handler = new DeletePhotoHandler(photoRead, photoWrite, storage, kv, orderRead, previewRead)
+    handler = new DeletePhotoHandler(
+      photoRead,
+      photoWrite,
+      storage,
+      kv,
+      orderRead,
+      previewRead,
+      authz,
+    )
   })
 
   it('throws NOT_FOUND when the photo does not exist', async () => {
-    photoRead.findById.mockResolvedValueOnce(null)
+    photoRead.findByIdInScope.mockResolvedValueOnce(null)
     const error = await handler.execute(command).catch((e) => e)
     expect(error).toBeInstanceOf(AppException)
     expect(error.code).toBe('NOT_FOUND')
     expect(photoWrite.delete).not.toHaveBeenCalled()
     expect(storage.delete).not.toHaveBeenCalled()
+    expect(authz.assert).not.toHaveBeenCalled()
+  })
+
+  it('throws NOT_FOUND — not FORBIDDEN — when the photo exists but its event is outside the caller scope', async () => {
+    // A photo the caller's template permits `photo.delete` on, but whose event is another
+    // tenant's. `findByIdInScope` must be what denies it, returning null exactly as for an unknown
+    // id so "not mine" and "does not exist" stay indistinguishable.
+    const restrictedScope = new EventScope(false, ['my-tenant'], [])
+    authz.resolveEventScope.mockResolvedValueOnce(restrictedScope)
+    photoRead.findByIdInScope.mockResolvedValueOnce(null)
+
+    const error = await handler.execute(command).catch((e) => e)
+
+    expect(error).toBeInstanceOf(AppException)
+    expect(error.code).toBe('NOT_FOUND')
+    expect(photoRead.findByIdInScope).toHaveBeenCalledWith('photo-001', restrictedScope)
+    expect(authz.assert).not.toHaveBeenCalled()
+    expect(photoWrite.delete).not.toHaveBeenCalled()
+    expect(storage.delete).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the caller holds photo.delete in general but is denied on this event', async () => {
+    photoRead.findByIdInScope.mockResolvedValueOnce(makePhoto())
+    authz.assert.mockRejectedValueOnce(new Error('Insufficient permissions'))
+
+    await expect(handler.execute(command)).rejects.toThrow('Insufficient permissions')
+    expect(photoWrite.delete).not.toHaveBeenCalled()
+    expect(storage.delete).not.toHaveBeenCalled()
   })
 
   it('throws BUSINESS_RULE and does not delete when the photo is in an order', async () => {
-    photoRead.findById.mockResolvedValueOnce(makePhoto())
+    photoRead.findByIdInScope.mockResolvedValueOnce(makePhoto())
     orderRead.existsByPhotoId.mockResolvedValueOnce(true)
     const error = await handler.execute(command).catch((e) => e)
     expect(error).toBeInstanceOf(AppException)
@@ -84,7 +132,7 @@ describe('DeletePhotoHandler', () => {
   })
 
   it('throws BUSINESS_RULE and does not delete when the photo is in a preview link', async () => {
-    photoRead.findById.mockResolvedValueOnce(makePhoto())
+    photoRead.findByIdInScope.mockResolvedValueOnce(makePhoto())
     previewRead.existsByPhotoId.mockResolvedValueOnce(true)
     const error = await handler.execute(command).catch((e) => e)
     expect(error).toBeInstanceOf(AppException)
@@ -93,8 +141,9 @@ describe('DeletePhotoHandler', () => {
   })
 
   it('deletes the row then the original object and slug (no retouched version)', async () => {
-    photoRead.findById.mockResolvedValueOnce(makePhoto())
+    photoRead.findByIdInScope.mockResolvedValueOnce(makePhoto())
     await handler.execute(command)
+    expect(authz.assert).toHaveBeenCalledWith('user-001', 'photo.delete', 'event-001')
     expect(photoWrite.delete).toHaveBeenCalledWith('photo-001')
     expect(storage.delete).toHaveBeenCalledWith('events/e1/original/photo-001.jpg')
     expect(storage.delete).toHaveBeenCalledTimes(1)
@@ -103,7 +152,7 @@ describe('DeletePhotoHandler', () => {
   })
 
   it('also deletes the retouched object and slug when present', async () => {
-    photoRead.findById.mockResolvedValueOnce(
+    photoRead.findByIdInScope.mockResolvedValueOnce(
       makePhoto({
         retouchedStorageKey: 'events/e1/retouched/photo-001.jpg',
         retouchedPublicSlug: 'slug-ret',
@@ -117,7 +166,7 @@ describe('DeletePhotoHandler', () => {
   })
 
   it('still succeeds when bucket/KV cleanup fails (best-effort)', async () => {
-    photoRead.findById.mockResolvedValueOnce(makePhoto())
+    photoRead.findByIdInScope.mockResolvedValueOnce(makePhoto())
     storage.delete.mockRejectedValueOnce(new Error('B2 down'))
     kv.delete.mockRejectedValueOnce(new Error('KV down'))
     await expect(handler.execute(command)).resolves.toBeUndefined()

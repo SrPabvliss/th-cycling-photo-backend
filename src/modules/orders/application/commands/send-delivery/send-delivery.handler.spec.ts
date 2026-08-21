@@ -1,9 +1,13 @@
 import { AuditContext } from '@shared/application'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { Order } from '../../../domain/entities'
 import type { OrderDetailProjection } from '../../projections/order-detail.projection'
 import { SendDeliveryCommand } from './send-delivery.command'
 import { SendDeliveryHandler } from './send-delivery.handler'
+
+const unrestrictedScope = EventScope.unrestricted()
 
 function buildPaidOrder(): Order {
   const order = Order.create({
@@ -61,7 +65,8 @@ function buildDetail(overrides: Partial<OrderDetailProjection> = {}): OrderDetai
 function buildHandler(options: { detail?: Partial<OrderDetailProjection>; order?: Order } = {}): {
   handler: SendDeliveryHandler
   writeRepo: { save: jest.Mock; updateItemsDeliveredAs: jest.Mock }
-  readRepo: { findById: jest.Mock; getDetail: jest.Mock }
+  readRepo: { findByIdInScope: jest.Mock; getDetail: jest.Mock }
+  authz: jest.Mocked<IAuthorizationService>
   deliveryReadRepo: { findActiveByOrderIds: jest.Mock }
   commandBus: { execute: jest.Mock }
   notifications: { emitOrderDelivered: jest.Mock }
@@ -77,9 +82,14 @@ function buildHandler(options: { detail?: Partial<OrderDetailProjection>; order?
     updateItemsDeliveredAs: jest.fn().mockResolvedValue(undefined),
   }
   const readRepo = {
-    findById: jest.fn().mockResolvedValue(order),
+    findByIdInScope: jest.fn().mockResolvedValue(order),
     getDetail: jest.fn().mockResolvedValue(detail),
   }
+  const authz = {
+    can: jest.fn(),
+    assert: jest.fn().mockResolvedValue(undefined),
+    resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
+  } as unknown as jest.Mocked<IAuthorizationService>
   const deliveryReadRepo = {
     findActiveByOrderIds: jest.fn().mockResolvedValue([]),
   }
@@ -105,6 +115,7 @@ function buildHandler(options: { detail?: Partial<OrderDetailProjection>; order?
   const handler = new SendDeliveryHandler(
     writeRepo as never,
     readRepo as never,
+    authz,
     deliveryReadRepo as never,
     commandBus as never,
     notifications as never,
@@ -116,6 +127,7 @@ function buildHandler(options: { detail?: Partial<OrderDetailProjection>; order?
     handler,
     writeRepo,
     readRepo,
+    authz,
     deliveryReadRepo,
     commandBus,
     notifications,
@@ -129,12 +141,39 @@ describe('SendDeliveryHandler', () => {
   const audit = new AuditContext('operator-1')
 
   it('throws when the order does not exist', async () => {
-    const { handler, readRepo } = buildHandler()
-    readRepo.findById.mockResolvedValue(null)
+    const { handler, readRepo, authz } = buildHandler()
+    readRepo.findByIdInScope.mockResolvedValue(null)
 
     await expect(handler.execute(new SendDeliveryCommand('missing', audit))).rejects.toThrow(
       AppException,
     )
+    expect(authz.assert).not.toHaveBeenCalled()
+  })
+
+  it('throws NOT_FOUND — not FORBIDDEN — when the order exists but its event is outside the caller scope', async () => {
+    const { handler, readRepo, writeRepo, authz } = buildHandler()
+    const restrictedScope = new EventScope(false, ['my-tenant'], [])
+    authz.resolveEventScope.mockResolvedValueOnce(restrictedScope)
+    readRepo.findByIdInScope.mockResolvedValue(null)
+
+    const error = await handler
+      .execute(new SendDeliveryCommand('other-tenant-order', audit))
+      .catch((e) => e)
+
+    expect(error).toBeInstanceOf(AppException)
+    expect(error.code).toBe('NOT_FOUND')
+    expect(readRepo.findByIdInScope).toHaveBeenCalledWith('other-tenant-order', restrictedScope)
+    expect(authz.assert).not.toHaveBeenCalled()
+    expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('asserts order.deliver against the order event and re-fetches detail with the same scope', async () => {
+    const { handler, readRepo, authz, order } = buildHandler()
+
+    await handler.execute(new SendDeliveryCommand(order.id, audit))
+
+    expect(authz.assert).toHaveBeenCalledWith('operator-1', 'order.deliver', 'event-1')
+    expect(readRepo.getDetail).toHaveBeenCalledWith(order.id, unrestrictedScope)
   })
 
   it('emails the buyer the download link', async () => {

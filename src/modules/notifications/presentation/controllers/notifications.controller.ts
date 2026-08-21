@@ -12,7 +12,8 @@ import {
   GetUnreadCountQuery,
 } from '@notifications/application/queries'
 import { EntityIdProjection, Pagination } from '@shared/application'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Notifications')
@@ -24,7 +25,7 @@ export class NotificationsController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Roles('admin', 'operator')
+  @RequirePermission('notification.read')
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List notifications for the current user' })
@@ -39,7 +40,7 @@ export class NotificationsController {
     return this.queryBus.execute(new GetNotificationsListQuery(user.userId, pagination, dto.isRead))
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('notification.read')
   @Get('unread-count')
   @SuccessMessage('success.FETCHED', { entity: 'entities.notification' })
   @ApiOperation({ summary: 'Get unread notification count' })
@@ -52,7 +53,7 @@ export class NotificationsController {
     return this.queryBus.execute(new GetUnreadCountQuery(user.userId))
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('notification.mark_read')
   @Patch('read-all')
   @SuccessMessage('success.UPDATED', { entity: 'entities.notification' })
   @ApiOperation({ summary: 'Mark all notifications as read' })
@@ -60,7 +61,7 @@ export class NotificationsController {
     return this.commandBus.execute(new MarkAllReadCommand(user.userId))
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('notification.mark_read')
   @Patch(':id/read')
   @SuccessMessage('success.UPDATED', { entity: 'entities.notification' })
   @ApiOperation({ summary: 'Mark a notification as read' })

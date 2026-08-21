@@ -4,7 +4,8 @@ export class GetPhotosListQuery {
   constructor(
     public readonly eventId: string,
     public readonly pagination: Pagination,
-    public readonly classified?: boolean,
-    public readonly photoCategoryId?: number,
+    public readonly classified: boolean | undefined,
+    public readonly photoCategoryId: number | undefined,
+    public readonly userId: string,
   ) {}
 }

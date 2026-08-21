@@ -11,6 +11,10 @@ import {
   type IPreviewLinkReadRepository,
   PREVIEW_LINK_READ_REPOSITORY,
 } from '@previews/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
@@ -27,11 +31,14 @@ export class DeletePhotoHandler implements ICommandHandler<DeletePhotoCommand> {
     @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
     @Inject(ORDER_READ_REPOSITORY) private readonly orderRead: IOrderReadRepository,
     @Inject(PREVIEW_LINK_READ_REPOSITORY) private readonly previewRead: IPreviewLinkReadRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(command: DeletePhotoCommand): Promise<void> {
-    const photo = await this.photoRead.findById(command.photoId)
+    const scope = await this.authz.resolveEventScope(command.userId)
+    const photo = await this.photoRead.findByIdInScope(command.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', command.photoId)
+    await this.authz.assert(command.userId, 'photo.delete', photo.eventId)
 
     const [inOrder, inPreview] = await Promise.all([
       this.orderRead.existsByPhotoId(command.photoId),

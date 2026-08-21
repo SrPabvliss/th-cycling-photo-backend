@@ -3,6 +3,7 @@ import type {
   PreviewLinkListProjection,
 } from '@previews/application/projections'
 import type { PaginatedResult, Pagination } from '@shared/application'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { PreviewLink } from '../entities'
 
 export interface IPreviewLinkReadRepository {
@@ -10,6 +11,7 @@ export interface IPreviewLinkReadRepository {
   getListByEvent(
     eventId: string,
     pagination: Pagination,
+    scope: EventScope,
   ): Promise<PaginatedResult<PreviewLinkListProjection>>
   getPreviewData(token: string): Promise<PreviewDataProjection | null>
   /** True if any preview link includes this photo (blocks hard-delete). */
