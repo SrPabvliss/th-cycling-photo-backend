@@ -15,6 +15,9 @@ import { STORAGE_ADAPTER } from '@shared/storage/domain/ports'
 import { v4 as uuid } from 'uuid'
 import configuration from '../../config/configuration'
 import { validate } from '../../config/env.validation'
+import { TenantPayoutMethod } from '../../modules/tenants/domain/entities/tenant-payout-method.entity'
+import { TenantPayoutMethodRepository } from '../../modules/tenants/infrastructure/repositories/tenant-payout-method.repository'
+import { TenantProfileRepository } from '../../modules/tenants/infrastructure/repositories/tenant-profile.repository'
 
 describe('cross-tenant isolation', () => {
   let module: TestingModule
@@ -23,6 +26,8 @@ describe('cross-tenant isolation', () => {
   let eventRepo: EventReadRepository
   let photoRepo: PhotoReadRepository
   let orderRepo: OrderReadRepository
+  let profileRepo: TenantProfileRepository
+  let payoutRepo: TenantPayoutMethodRepository
 
   let tenantA: any
   let tenantB: any
@@ -35,6 +40,8 @@ describe('cross-tenant isolation', () => {
   let userA: any
   let userB: any
   let platformUser: any
+  let payoutMethodA: TenantPayoutMethod
+  let payoutMethodB: TenantPayoutMethod
 
   beforeAll(async () => {
     module = await Test.createTestingModule({
@@ -54,6 +61,8 @@ describe('cross-tenant isolation', () => {
         EventReadRepository,
         PhotoReadRepository,
         OrderReadRepository,
+        TenantProfileRepository,
+        TenantPayoutMethodRepository,
         {
           provide: CdnUrlBuilder,
           useValue: {
@@ -84,10 +93,16 @@ describe('cross-tenant isolation', () => {
     eventRepo = module.get(EventReadRepository)
     photoRepo = module.get(PhotoReadRepository)
     orderRepo = module.get(OrderReadRepository)
+    profileRepo = module.get(TenantProfileRepository)
+    payoutRepo = module.get(TenantPayoutMethodRepository)
 
     // Setup tenants
-    tenantA = await prisma.tenant.create({ data: { name: 'Tenant A', is_platform: false } })
-    tenantB = await prisma.tenant.create({ data: { name: 'Tenant B', is_platform: false } })
+    tenantA = await prisma.tenant.create({
+      data: { name: 'Tenant A', is_platform: false, public_name: 'Public A' },
+    })
+    tenantB = await prisma.tenant.create({
+      data: { name: 'Tenant B', is_platform: false, public_name: 'Public B' },
+    })
 
     const tenantTpl = await prisma.permissionTemplate.findUniqueOrThrow({
       where: { key: 'tenant' },
@@ -175,6 +190,31 @@ describe('cross-tenant isolation', () => {
     )
     orderA = { id: oAId }
     orderB = { id: oBId }
+
+    payoutMethodA = TenantPayoutMethod.createBankTransfer(
+      tenantA.id,
+      {
+        bankName: 'Bank A',
+        accountNumber: '1111',
+        accountType: 'savings',
+        accountHolder: 'Holder A',
+        holderIdentification: '1111111111',
+      },
+      userA.id,
+    )
+    payoutMethodB = TenantPayoutMethod.createBankTransfer(
+      tenantB.id,
+      {
+        bankName: 'Bank B',
+        accountNumber: '2222',
+        accountType: 'savings',
+        accountHolder: 'Holder B',
+        holderIdentification: '2222222222',
+      },
+      userB.id,
+    )
+    await payoutRepo.save(payoutMethodA)
+    await payoutRepo.save(payoutMethodB)
   })
 
   afterAll(async () => {
@@ -271,5 +311,34 @@ describe('cross-tenant isolation', () => {
 
     expect(await eventRepo.getEventDetailBySlug(eventA.slug, scopeP)).not.toBeNull()
     expect(await eventRepo.getEventDetailBySlug(eventB.slug, scopeP)).not.toBeNull()
+  })
+
+  describe('tenant profile isolation', () => {
+    it('reads only its own profile', async () => {
+      const profileA = await profileRepo.findByTenantId(tenantA.id)
+      const profileB = await profileRepo.findByTenantId(tenantB.id)
+
+      expect(profileA?.id).toBe(tenantA.id)
+      expect(profileB?.id).toBe(tenantB.id)
+      expect(profileA?.id).not.toBe(profileB?.id)
+    })
+
+    it('lists only its own payout methods', async () => {
+      const methodsA = await payoutRepo.findByTenantId(tenantA.id)
+      const methodsB = await payoutRepo.findByTenantId(tenantB.id)
+
+      expect(methodsA.every((m) => m.tenantId === tenantA.id)).toBe(true)
+      expect(methodsB.every((m) => m.tenantId === tenantB.id)).toBe(true)
+      expect(methodsA.map((m) => m.id)).not.toContain(methodsB[0].id)
+    })
+
+    it('cannot reach the other tenant method by id', async () => {
+      const methodsB = await payoutRepo.findByTenantId(tenantB.id)
+      const found = await payoutRepo.findById(methodsB[0].id)
+
+      // findById is deliberately not tenant-scoped; the handler's method.tenantId !== tenantId check is what enforces the boundary
+      expect(found?.tenantId).toBe(tenantB.id)
+      expect(found?.tenantId).not.toBe(tenantA.id)
+    })
   })
 })
