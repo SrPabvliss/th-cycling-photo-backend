@@ -34,7 +34,7 @@ export class CdnUrlBuilder {
   }
 
   watermarkUrl(tenantId: string, storageKey: string): string {
-    const version = storageKey.split('/').pop() ?? ''
+    const version = encodeURIComponent(storageKey.split('/').pop() ?? '')
     return `${this.baseUrl}/assets/wm-tenant-${tenantId}.png?v=${version}`
   }
 
