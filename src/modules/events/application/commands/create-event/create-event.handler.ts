@@ -55,7 +55,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     const { quota, used, isPlatform, defaultEventPhotoQuota } =
       await this.tenantRepo.checkQuota(tenantId)
     if (!isPlatform && used >= quota) {
-      throw AppException.businessRule('tenant.quota_exceeded')
+      throw AppException.businessRule('event.tenant_quota_exceeded', false, { quota, used })
     }
 
     const event = Event.create({

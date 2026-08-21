@@ -179,7 +179,7 @@ describe('CreateEventHandler', () => {
       audit,
     )
 
-    await expect(handler.execute(command)).rejects.toThrow('tenant.quota_exceeded')
+    await expect(handler.execute(command)).rejects.toThrow('event.tenant_quota_exceeded')
     expect(writeRepo.save).not.toHaveBeenCalled()
   })
 

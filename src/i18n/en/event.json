@@ -12,5 +12,6 @@
   "frozen_not_configurable": "A frozen event's configuration cannot be edited",
   "configuration_incomplete": "Complete the profile before creating an event. Missing: {missing}",
   "payout_method_required": "The event must have at least one active payout method",
-  "photo_quota_exceeded": "This event allows {quota} photos and {used} are already used. You can upload {remaining} more."
+  "photo_quota_exceeded": "This event allows {quota} photos and {used} are already used. You can upload {remaining} more.",
+  "tenant_quota_exceeded": "Your plan allows {quota} events and all of them are in use. Contact TitanTV to increase the quota."
 }

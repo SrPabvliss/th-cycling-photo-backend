@@ -79,8 +79,9 @@ export class TenantRepository implements ITenantRepository {
       include: {
         _count: {
           select: {
+            // A deleted event still holds its slot if it was ever used, closing the delete-refund loophole.
             events: {
-              where: { deleted_at: null },
+              where: { OR: [{ deleted_at: null }, { photos_uploaded: { gt: 0 } }] },
             },
           },
         },
