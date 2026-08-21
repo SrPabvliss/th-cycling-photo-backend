@@ -1,4 +1,5 @@
 import { PaymentAccountStatus } from '@payments/domain/value-objects/payment-account-status.vo'
+import { PaymentMode } from '@payments/domain/value-objects/payment-mode.vo'
 import { AppException } from '@shared/domain'
 import { PayoutProvider } from '../value-objects/payout-provider.vo'
 import { TenantPayoutMethod } from './tenant-payout-method.entity'
@@ -57,7 +58,31 @@ describe('TenantPayoutMethod.activate', () => {
 })
 
 describe('TenantPayoutMethod.fromPersistence', () => {
-  it('rejects a payphone row with no receiver', () => {
+  it('accepts an own-merchant payphone row with no receiver: the receiver comes from the store id', () => {
+    expect(() =>
+      TenantPayoutMethod.fromPersistence({
+        id: 'm0',
+        tenantId: 't1',
+        provider: PayoutProvider.PAYPHONE,
+        isActive: true,
+        sortOrder: 0,
+        mode: PaymentMode.OWN_MERCHANT,
+        status: PaymentAccountStatus.VERIFIED,
+        receiverIdentifier: null,
+        credentialsEncrypted: 'cipher',
+        verifiedAt: new Date(),
+        bankName: null,
+        accountNumber: null,
+        accountType: null,
+        accountHolder: null,
+        holderIdentification: null,
+        configuredById: null,
+        createdAt: new Date(),
+      }),
+    ).not.toThrow()
+  })
+
+  it('rejects a payphone split row with no receiver', () => {
     expect(() =>
       TenantPayoutMethod.fromPersistence({
         id: 'm1',
@@ -65,7 +90,7 @@ describe('TenantPayoutMethod.fromPersistence', () => {
         provider: PayoutProvider.PAYPHONE,
         isActive: true,
         sortOrder: 0,
-        mode: null,
+        mode: PaymentMode.SPLIT_RECEIVER,
         status: PaymentAccountStatus.VERIFIED,
         receiverIdentifier: null,
         credentialsEncrypted: null,

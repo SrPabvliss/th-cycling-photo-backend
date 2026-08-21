@@ -90,8 +90,12 @@ export class TenantPayoutMethod {
   }
 
   static fromPersistence(state: TenantPayoutMethodState): TenantPayoutMethod {
-    if (state.provider === PayoutProvider.PAYPHONE && !state.receiverIdentifier) {
-      throw AppException.internal('Payphone payout method persisted without a receiver identifier')
+    if (
+      state.provider === PayoutProvider.PAYPHONE &&
+      state.mode === PaymentMode.SPLIT_RECEIVER &&
+      !state.receiverIdentifier
+    ) {
+      throw AppException.internal('Payphone split payout method persisted without a receiver')
     }
     if (
       state.provider === PayoutProvider.BANK_TRANSFER &&
