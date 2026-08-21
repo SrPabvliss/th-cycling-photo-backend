@@ -108,6 +108,7 @@ export class EventsController {
       dto.cantonId ?? null,
       dto.eventTypeId,
       new AuditContext(user.userId),
+      dto.configuration,
     )
     return this.commandBus.execute(command)
   }
