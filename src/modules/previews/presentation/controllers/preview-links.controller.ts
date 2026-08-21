@@ -9,6 +9,7 @@ import {
 import { GetPreviewLinksListDto, GetPreviewLinksListQuery } from '@previews/application/queries'
 import { AuditContext, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { AllowedWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
@@ -22,6 +23,7 @@ export class PreviewLinksController {
   ) {}
 
   @RequirePermission('preview_link.create')
+  @AllowedWhenFrozen()
   @Post()
   @SuccessMessage('success.CREATED', { entity: 'entities.preview_link' })
   @ApiOperation({ summary: 'Create a preview link for an event' })
