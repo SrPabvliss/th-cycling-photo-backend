@@ -235,3 +235,58 @@ describe('OrderReadRepository customer scoping', () => {
     expect(where.payment_transaction.status).toEqual({ in: ['initiated', 'confirming'] })
   })
 })
+
+describe('OrderReadRepository buyer queries are deliberately ownership-scoped, not tenant-scoped', () => {
+  const assertOwnershipNotTenantScoped = (where: Record<string, unknown>) => {
+    expect(where.user_id).toBe('user-1')
+    expect(JSON.stringify(where)).not.toContain('tenant_id')
+    expect(JSON.stringify(where)).not.toContain('event_id')
+  }
+
+  it('scopes getMyList to the buyer by user_id, with no tenant_id/event_id fragment from EventScope', async () => {
+    const { repository, findMany } = buildRepository()
+
+    await repository.getMyList('user-1', { page: 1, limit: 20, skip: 0, take: 20 } as never)
+
+    assertOwnershipNotTenantScoped(findMany.mock.calls[0][0].where)
+  })
+
+  it('scopes getMyDetail to the buyer by user_id, with no tenant_id/event_id fragment from EventScope', async () => {
+    const { repository, findFirst } = buildRepository()
+
+    await repository.getMyDetail('user-1', 'order-1')
+
+    assertOwnershipNotTenantScoped(findFirst.mock.calls[0][0].where)
+  })
+
+  it('scopes getMyDownloadFiles to the buyer by user_id, with no tenant_id/event_id fragment from EventScope', async () => {
+    const { repository, findFirst } = buildRepository()
+
+    await repository.getMyDownloadFiles('user-1', 'order-1')
+
+    assertOwnershipNotTenantScoped(findFirst.mock.calls[0][0].where)
+  })
+
+  it("scopes getMySummary's queries to the buyer by user_id, with no tenant_id/event_id fragment from EventScope", async () => {
+    const { repository, findMany, count, orderItemCount, groupBy } = buildRepository()
+
+    await repository.getMySummary('user-1')
+
+    assertOwnershipNotTenantScoped(count.mock.calls[0][0].where)
+    assertOwnershipNotTenantScoped(findMany.mock.calls[0][0].where)
+    assertOwnershipNotTenantScoped(groupBy.mock.calls[0][0].where)
+
+    const orderItemWhere = orderItemCount.mock.calls[0][0].where
+    expect(orderItemWhere.order.user_id).toBe('user-1')
+    expect(JSON.stringify(orderItemWhere)).not.toContain('tenant_id')
+    expect(JSON.stringify(orderItemWhere)).not.toContain('event_id')
+  })
+
+  it('would silently break /orders/me for every buyer if it were ever scoped through EventScope: a buyer has no tenant_id, so resolveEventScope resolves to an empty scope, whose toPrisma() matches nothing', () => {
+    const scope = EventScope.empty()
+
+    expect(scope.toPrisma()).toEqual({
+      OR: [{ tenant_id: { in: [] } }, { id: { in: [] } }],
+    })
+  })
+})
