@@ -1,8 +1,10 @@
+import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { TEMPLATE_KEYS } from '@shared/authorization/domain/permission-template.constants'
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
 import type {
+  AuthCredentialsProjection,
   AuthUserProjection,
   MeProjection,
   PasswordResetUserProjection,
@@ -49,6 +51,8 @@ export class AuthUserRepository implements IAuthUserRepository {
         email: true,
         first_name: true,
         last_name: true,
+        email_verified_at: true,
+        is_protected: true,
         user_roles: { select: { role: { select: { name: true } } } },
       },
     })
@@ -61,6 +65,8 @@ export class AuthUserRepository implements IAuthUserRepository {
       firstName: user.first_name,
       lastName: user.last_name,
       role: user.user_roles[0]?.role.name ?? 'customer',
+      emailVerified: user.email_verified_at !== null,
+      isProtected: user.is_protected,
     }
   }
 
@@ -175,5 +181,58 @@ export class AuthUserRepository implements IAuthUserRepository {
     if (!user) return null
 
     return { id: user.id, firstName: user.first_name, isActive: user.is_active }
+  }
+
+  async findCredentials(userId: string): Promise<AuthCredentialsProjection | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        first_name: true,
+        password_hash: true,
+        is_active: true,
+        is_protected: true,
+      },
+    })
+
+    if (!user) return null
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      passwordHash: user.password_hash,
+      isActive: user.is_active,
+      isProtected: user.is_protected,
+    }
+  }
+
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password_hash: passwordHash },
+    })
+  }
+
+  async markEmailVerified(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { email_verified_at: new Date() },
+    })
+  }
+
+  async applyEmailChange(userId: string, newEmail: string): Promise<void> {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { email: newEmail, email_verified_at: new Date() },
+      })
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw AppException.businessRule('auth.email_change_target_taken')
+      }
+      throw error
+    }
   }
 }

@@ -1,4 +1,9 @@
-export type MailTemplate = 'password-reset' | 'password-changed' | 'order-delivered'
+export type MailTemplate =
+  | 'password-reset'
+  | 'password-changed'
+  | 'order-delivered'
+  | 'email-verification-code'
+  | 'email-changed-notice'
 
 export interface RenderedTemplate {
   html: string

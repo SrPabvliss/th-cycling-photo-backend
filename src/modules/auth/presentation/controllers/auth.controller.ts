@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, Param, Post, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
@@ -9,6 +9,10 @@ import { AppException } from '@shared/domain'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import type { CookieOptions, Request, Response } from 'express'
 import {
+  ChangePasswordCommand,
+  ChangePasswordDto,
+  ConfirmEmailVerificationCommand,
+  ConfirmEmailVerificationDto,
   ConfirmPasswordResetCommand,
   ConfirmPasswordResetDto,
   LoginCommand,
@@ -19,17 +23,23 @@ import {
   RefreshCommand,
   RegisterCommand,
   RegisterDto,
+  RequestEmailChangeCommand,
+  RequestEmailChangeDto,
   RequestPasswordResetCommand,
   RequestPasswordResetDto,
+  ResendEmailVerificationCommand,
+  SendEmailVerificationCommand,
+  SnoozePromptCommand,
   ValidatePasswordResetTokenCommand,
   ValidatePasswordResetTokenDto,
 } from '../../application/commands'
 import {
   AuthTokensProjection,
+  EmailVerificationStatusProjection,
   MeProjection,
   PasswordResetTokenValidityProjection,
 } from '../../application/projections'
-import { GetMeQuery } from '../../application/queries'
+import { GetEmailVerificationStatusQuery, GetMeQuery } from '../../application/queries'
 
 const REFRESH_COOKIE_NAME = 'refresh_token'
 
@@ -251,5 +261,127 @@ export class AuthController {
         req.headers['user-agent'] ?? null,
       ),
     )
+  }
+
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @Authenticated()
+  @Post('change-password')
+  @ApiBearerAuth()
+  @SuccessMessage('success.PASSWORD_UPDATED')
+  @ApiOperation({ summary: 'Change the password of the currently authenticated user' })
+  @ApiResponse({
+    status: 201,
+    description: 'Password updated successfully',
+  })
+  @ApiEnvelopeErrorResponse({
+    status: 422,
+    description: 'Current password invalid, new password same as current, or account deactivated',
+  })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
+  async changePassword(@Body() dto: ChangePasswordDto, @CurrentUser() user: ICurrentUser) {
+    await this.commandBus.execute(
+      new ChangePasswordCommand(user.userId, dto.currentPassword, dto.newPassword),
+    )
+  }
+
+  @Throttle({ short: { limit: 3, ttl: 900000 } })
+  @Authenticated()
+  @Post('email-change')
+  @SuccessMessage('success.EMAIL_VERIFICATION_SENT')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Request an email change: validates the password and codes the new address',
+  })
+  @ApiResponse({ status: 201, description: 'Verification code sent to the new address' })
+  @ApiEnvelopeErrorResponse({
+    status: 422,
+    description:
+      'Wrong password, address already taken, address equal to the current one, protected account, cooldown active, or daily limit reached',
+  })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
+  async requestEmailChange(@Body() dto: RequestEmailChangeDto, @CurrentUser() user: ICurrentUser) {
+    await this.commandBus.execute(
+      new RequestEmailChangeCommand(user.userId, dto.newEmail, dto.currentPassword),
+    )
+  }
+
+  @Throttle({ short: { limit: 3, ttl: 900000 } })
+  @Authenticated()
+  @Post('email-verification')
+  @SuccessMessage('success.EMAIL_VERIFICATION_SENT')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Send a verification code to the current user's email" })
+  @ApiResponse({ status: 201, description: 'Verification code sent' })
+  @ApiEnvelopeErrorResponse({
+    status: 422,
+    description: 'Cooldown active, daily limit reached, or account deactivated',
+  })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
+  async sendEmailVerification(@CurrentUser() user: ICurrentUser) {
+    await this.commandBus.execute(new SendEmailVerificationCommand(user.userId))
+  }
+
+  @Throttle({ short: { limit: 3, ttl: 900000 } })
+  @Authenticated()
+  @Post('email-verification/resend')
+  @SuccessMessage('success.EMAIL_VERIFICATION_SENT')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Resend the pending email verification code' })
+  @ApiResponse({ status: 201, description: 'Verification code resent (or already usable)' })
+  @ApiEnvelopeErrorResponse({
+    status: 422,
+    description: 'No pending verification, cooldown active, or daily limit reached',
+  })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
+  async resendEmailVerification(@CurrentUser() user: ICurrentUser) {
+    await this.commandBus.execute(new ResendEmailVerificationCommand(user.userId))
+  }
+
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @Authenticated()
+  @Post('email-verification/confirm')
+  @SuccessMessage('success.EMAIL_VERIFIED')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Redeem the pending email verification code' })
+  @ApiResponse({ status: 201, description: 'Email verified' })
+  @ApiEnvelopeErrorResponse({
+    status: 422,
+    description: 'Code invalid, expired, out of attempts, or nothing pending',
+  })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
+  async confirmEmailVerification(
+    @Body() dto: ConfirmEmailVerificationDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    await this.commandBus.execute(new ConfirmEmailVerificationCommand(user.userId, dto.code))
+  }
+
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @Authenticated()
+  @Get('email-verification')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.email_verification' })
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the status of the pending email verification, if any' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Pending verification status',
+    type: EmailVerificationStatusProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
+  async getEmailVerificationStatus(@CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetEmailVerificationStatusQuery(user.userId))
+  }
+
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @Authenticated()
+  @Post('prompts/:key/snooze')
+  @HttpCode(204)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Snooze a pending prompt for the currently authenticated user' })
+  @ApiResponse({ status: 204, description: 'Prompt snoozed' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Unknown prompt key' })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
+  async snoozePrompt(@Param('key') key: string, @CurrentUser() user: ICurrentUser) {
+    await this.commandBus.execute(new SnoozePromptCommand(user.userId, key))
   }
 }

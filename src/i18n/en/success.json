@@ -6,5 +6,7 @@
   "LIST": "List fetched successfully",
   "PASSWORD_RESET_REQUESTED": "If the address is registered, we sent the instructions",
   "PASSWORD_RESET_TOKEN_VALIDATED": "Link verified",
-  "PASSWORD_UPDATED": "Password updated successfully"
+  "PASSWORD_UPDATED": "Password updated successfully",
+  "EMAIL_VERIFICATION_SENT": "We sent you a verification code",
+  "EMAIL_VERIFIED": "Email verified"
 }

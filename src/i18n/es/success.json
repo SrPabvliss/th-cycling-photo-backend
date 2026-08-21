@@ -6,5 +6,7 @@
   "LIST": "Lista obtenida exitosamente",
   "PASSWORD_RESET_REQUESTED": "Si el correo está registrado, te enviamos las instrucciones",
   "PASSWORD_RESET_TOKEN_VALIDATED": "Enlace verificado",
-  "PASSWORD_UPDATED": "Contraseña actualizada exitosamente"
+  "PASSWORD_UPDATED": "Contraseña actualizada exitosamente",
+  "EMAIL_VERIFICATION_SENT": "Te enviamos un código de verificación",
+  "EMAIL_VERIFIED": "Correo verificado"
 }

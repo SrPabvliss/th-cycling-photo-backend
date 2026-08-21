@@ -24,6 +24,10 @@ describe('LoginHandler', () => {
       findByEmailExists: jest.fn(),
       getUserSnapData: jest.fn(),
       findForPasswordReset: jest.fn(),
+      findCredentials: jest.fn(),
+      updatePassword: jest.fn(),
+      markEmailVerified: jest.fn(),
+      applyEmailChange: jest.fn(),
     } as jest.Mocked<IAuthUserRepository>
 
     refreshTokenRepo = {
