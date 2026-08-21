@@ -2,9 +2,12 @@
   "name": "watermark-worker",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.js",
+    "check:sync": "diff -r src ../watermark-worker-prod/src"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

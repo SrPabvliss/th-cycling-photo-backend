@@ -1,4 +1,5 @@
 import { AwsClient } from 'aws4fetch'
+import { eventIdFromObjectPath, resolveWatermarkUrl } from './watermark-url.js'
 
 // ─── Preset maps ───────────────────────────────────────────────────────────
 
@@ -162,9 +163,9 @@ async function fetchWatermarked(slug, env) {
   const originUrl = getB2Url(env, objectPath)
   const signedReq = await b2.sign(originUrl)
 
-  // Bumped suffix busts the long-lived (immutable, 1y) cache on the
-  // watermark asset whenever the underlying PNG changes in KV.
-  const watermarkUrl = `https://${env.PUBLIC_DOMAIN}/gallery/_assets/watermark.png?v=3`
+  const eventId = eventIdFromObjectPath(objectPath)
+  const wmPath = eventId ? await env.IMAGE_MAP.get(`wm-${eventId}`) : null
+  const watermarkUrl = resolveWatermarkUrl(eventId, wmPath, env.PUBLIC_DOMAIN)
   const publicUrl = `https://${env.PUBLIC_DOMAIN}/gallery/${slug}.jpg`
   const qrUrl = `https://${env.QR_WORKER_HOST}/?url=${encodeURIComponent(publicUrl)}&v=2`
 
@@ -210,7 +211,7 @@ async function fetchWatermarked(slug, env) {
 
 // ─── Main router ───────────────────────────────────────────────────────────
 
-const ROUTE_REGEX = /^\/(gallery|internal|assets)\/(?:([a-z0-9-]+)\/)?([a-zA-Z0-9_-]+)\.jpg$/
+const ROUTE_REGEX = /^\/(gallery|internal|assets)\/(?:([a-z0-9-]+)\/)?([a-zA-Z0-9_-]+)\.(?:jpg|png)$/
 
 /**
  * Validates the Referer header to prevent hotlinking from unauthorized domains.
