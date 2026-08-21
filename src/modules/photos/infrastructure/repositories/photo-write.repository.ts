@@ -1,3 +1,4 @@
+import type { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import type { Photo } from '@photos/domain/entities'
 import type { IPhotoWriteRepository } from '@photos/domain/ports'
@@ -23,13 +24,29 @@ export class PhotoWriteRepository implements IPhotoWriteRepository {
   }
 
   /** Batch-inserts photos, silently skipping duplicates by storage_key. Returns count of created records. */
-  async saveMany(photos: Photo[]): Promise<number> {
+  async saveMany(photos: Photo[], tx?: Prisma.TransactionClient): Promise<number> {
+    const client = tx ?? this.prisma
     const data = photos.map(PhotoMapper.toPersistence)
-    const result = await this.prisma.photo.createMany({
+    const result = await client.photo.createMany({
       data,
       skipDuplicates: true,
     })
     return result.count
+  }
+
+  // Conditional UPDATE so concurrent batches cannot both pass the cap.
+  async claimPhotoQuota(
+    eventId: string,
+    amount: number,
+    tx: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const affected = await tx.$executeRaw`
+      UPDATE events
+         SET photos_uploaded = photos_uploaded + ${amount}
+       WHERE id = ${eventId}::uuid
+         AND (photo_quota IS NULL OR photos_uploaded + ${amount} <= photo_quota)
+    `
+    return affected > 0
   }
 
   /** Hard-deletes a photo by ID. */

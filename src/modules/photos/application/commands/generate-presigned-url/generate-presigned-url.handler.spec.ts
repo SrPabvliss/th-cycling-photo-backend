@@ -234,6 +234,50 @@ describe('GeneratePresignedUrlHandler', () => {
     })
   })
 
+  it('refuses a presigned url once the event is at its photo cap', async () => {
+    eventReadRepo.findById.mockResolvedValueOnce({
+      id: 'event-1',
+      tenantId: '11111111-1111-4111-8111-111111111111',
+      photoQuota: 10,
+      photosUploaded: 10,
+    } as Event)
+
+    const command = new GeneratePresignedUrlCommand(
+      existingEvent.id,
+      'photo.jpg',
+      'image/jpeg',
+      'u1',
+    )
+
+    await expect(handler.execute(command)).rejects.toMatchObject({
+      messageKey: 'event.photo_quota_exceeded',
+    })
+  })
+
+  it('issues a presigned url when the event has no cap', async () => {
+    eventReadRepo.findById.mockResolvedValueOnce({
+      id: 'event-1',
+      tenantId: '11111111-1111-4111-8111-111111111111',
+      photoQuota: null,
+      photosUploaded: 9999,
+    } as Event)
+    photoReadRepo.existsByEventAndFilename.mockResolvedValueOnce(false)
+    storageAdapter.getPresignedUrl.mockResolvedValueOnce({
+      url: 'https://s3.us-east-005.backblazeb2.com/signed-url',
+      objectKey: 'events/event-1/uuid-photo.jpg',
+      expiresIn: 300,
+    })
+
+    const command = new GeneratePresignedUrlCommand(
+      existingEvent.id,
+      'photo.jpg',
+      'image/jpeg',
+      'u1',
+    )
+
+    await expect(handler.execute(command)).resolves.toMatchObject({ isDuplicate: false })
+  })
+
   it('should build object key with event ID and UUID prefix under photos/', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
     photoReadRepo.existsByEventAndFilename.mockResolvedValueOnce(false)

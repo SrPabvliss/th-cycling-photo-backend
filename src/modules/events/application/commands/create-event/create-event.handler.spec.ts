@@ -33,6 +33,7 @@ describe('CreateEventHandler', () => {
   beforeEach(() => {
     writeRepo = {
       save: jest.fn(),
+      updatePhotoQuota: jest.fn(),
     } as jest.Mocked<IEventWriteRepository>
 
     operatorRepo = {
@@ -56,8 +57,11 @@ describe('CreateEventHandler', () => {
     tenantRepo = {
       getTenantsList: jest.fn(),
       updateEventQuota: jest.fn(),
+      updateEventPhotoQuotaDefault: jest.fn(),
       createTenantWithAdmin: jest.fn(),
-      checkQuota: jest.fn().mockResolvedValue({ quota: 10, used: 0, isPlatform: false }),
+      checkQuota: jest
+        .fn()
+        .mockResolvedValue({ quota: 10, used: 0, isPlatform: false, defaultEventPhotoQuota: null }),
     } as jest.Mocked<ITenantRepository>
 
     payoutRepo = {
@@ -161,7 +165,12 @@ describe('CreateEventHandler', () => {
   })
 
   it('rejects creation when the tenant has exhausted its event quota', async () => {
-    tenantRepo.checkQuota.mockResolvedValue({ quota: 5, used: 5, isPlatform: false })
+    tenantRepo.checkQuota.mockResolvedValue({
+      quota: 5,
+      used: 5,
+      isPlatform: false,
+      defaultEventPhotoQuota: null,
+    })
     const command = new CreateEventCommand(
       'Test Event',
       futureStart,
@@ -172,12 +181,17 @@ describe('CreateEventHandler', () => {
       audit,
     )
 
-    await expect(handler.execute(command)).rejects.toThrow('tenant.quota_exceeded')
+    await expect(handler.execute(command)).rejects.toThrow('event.tenant_quota_exceeded')
     expect(writeRepo.save).not.toHaveBeenCalled()
   })
 
   it('lets the platform tenant exceed its quota', async () => {
-    tenantRepo.checkQuota.mockResolvedValue({ quota: 1, used: 99, isPlatform: true })
+    tenantRepo.checkQuota.mockResolvedValue({
+      quota: 1,
+      used: 99,
+      isPlatform: true,
+      defaultEventPhotoQuota: null,
+    })
     const command = new CreateEventCommand(
       'Test Event',
       futureStart,

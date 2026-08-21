@@ -36,4 +36,11 @@ export class EventWriteRepository implements IEventWriteRepository {
       event.slug = `${event.slug}-${nanoid(6)}`
     }
   }
+
+  async updatePhotoQuota(eventId: string, quota: number | null): Promise<void> {
+    await this.prisma.event.update({
+      where: { id: eventId },
+      data: { photo_quota: quota },
+    })
+  }
 }

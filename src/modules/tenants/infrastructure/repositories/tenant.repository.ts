@@ -6,6 +6,9 @@ import type {
   TenantListProjection,
 } from '../../domain/ports/tenant-repository.port'
 
+// A deleted event still holds its slot if it was ever used, closing the delete-refund loophole.
+const SLOT_CONSUMED_FILTER = { OR: [{ deleted_at: null }, { photos_uploaded: { gt: 0 } }] }
+
 @Injectable()
 export class TenantRepository implements ITenantRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -17,7 +20,7 @@ export class TenantRepository implements ITenantRepository {
         _count: {
           select: {
             events: {
-              where: { deleted_at: null },
+              where: SLOT_CONSUMED_FILTER,
             },
           },
         },
@@ -38,6 +41,13 @@ export class TenantRepository implements ITenantRepository {
     await this.prisma.tenant.update({
       where: { id: tenantId },
       data: { event_quota: quota },
+    })
+  }
+
+  async updateEventPhotoQuotaDefault(tenantId: string, quota: number | null): Promise<void> {
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { default_event_photo_quota: quota },
     })
   }
 
@@ -68,16 +78,19 @@ export class TenantRepository implements ITenantRepository {
     return tenant.id
   }
 
-  async checkQuota(
-    tenantId: string,
-  ): Promise<{ quota: number; used: number; isPlatform: boolean }> {
+  async checkQuota(tenantId: string): Promise<{
+    quota: number
+    used: number
+    isPlatform: boolean
+    defaultEventPhotoQuota: number | null
+  }> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       include: {
         _count: {
           select: {
             events: {
-              where: { deleted_at: null },
+              where: SLOT_CONSUMED_FILTER,
             },
           },
         },
@@ -90,6 +103,7 @@ export class TenantRepository implements ITenantRepository {
       quota: tenant.event_quota,
       used: tenant._count.events,
       isPlatform: tenant.is_platform,
+      defaultEventPhotoQuota: tenant.default_event_photo_quota,
     }
   }
 }
