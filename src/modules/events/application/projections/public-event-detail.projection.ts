@@ -31,6 +31,9 @@ export class PublicEventDetailProjection {
   @ApiProperty({ description: 'Number of photos' })
   photoCount: number
 
+  @ApiProperty({ description: 'Public name of the tenant that owns the event' })
+  ownerName: string
+
   @ApiProperty({ description: 'Event assets with CDN URLs', type: [PublicEventAssetProjection] })
   assets: PublicEventAssetProjection[]
 
