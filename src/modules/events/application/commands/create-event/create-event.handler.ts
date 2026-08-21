@@ -14,6 +14,7 @@ import { LocationValidator } from '@locations/application/services'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
+import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
 import { type IUserReadRepository, USER_READ_REPOSITORY } from '@users/domain/ports'
@@ -34,6 +35,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     @Inject(TENANT_REPOSITORY) private readonly tenantRepo: ITenantRepository,
     @Inject(EVENT_PAYOUT_METHOD_REPOSITORY)
     private readonly payoutRepo: IEventPayoutMethodRepository,
+    @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
     private readonly locationValidator: LocationValidator,
     private readonly configService: EventConfigurationService,
     private readonly prisma: PrismaService,
@@ -79,6 +81,12 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       await this.payoutRepo.replaceForEvent(persisted.id, config.payoutMethods, tx)
       return persisted
     })
+
+    if (config.brand.watermarkStorageKey) {
+      await this.kv.write(`wm-${saved.id}`, config.brand.watermarkStorageKey).catch((err) => {
+        this.logger.error(`Failed to register watermark KV entry for event ${saved.id}`, err)
+      })
+    }
 
     // Auto-assign first available operator
     const operatorId = await this.operatorRepo.findFirstOperatorId()

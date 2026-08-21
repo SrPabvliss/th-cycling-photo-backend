@@ -7,13 +7,14 @@ import {
   type IEventReadRepository,
   type IEventWriteRepository,
 } from '@events/domain/ports'
-import { Inject } from '@nestjs/common'
+import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
 import {
   AUTHORIZATION_SERVICE,
   type IAuthorizationService,
 } from '@shared/authorization/domain/ports/authorization.service.port'
+import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
 import { UpdateEventConfigurationCommand } from './update-event-configuration.command'
@@ -22,11 +23,14 @@ import { UpdateEventConfigurationCommand } from './update-event-configuration.co
 export class UpdateEventConfigurationHandler
   implements ICommandHandler<UpdateEventConfigurationCommand>
 {
+  private readonly logger = new Logger(UpdateEventConfigurationHandler.name)
+
   constructor(
     @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
     @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
     @Inject(EVENT_PAYOUT_METHOD_REPOSITORY)
     private readonly payoutRepo: IEventPayoutMethodRepository,
+    @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly configService: EventConfigurationService,
     private readonly prisma: PrismaService,
@@ -50,6 +54,13 @@ export class UpdateEventConfigurationHandler
       await this.writeRepo.save(event, tx)
       if (methods) await this.payoutRepo.replaceForEvent(event.id, methods, tx)
     })
+
+    const watermarkKey = config.brand.watermarkStorageKey
+    if (watermarkKey) {
+      await this.kv.write(`wm-${event.id}`, watermarkKey).catch((err) => {
+        this.logger.error(`Failed to update watermark KV entry for event ${event.id}`, err)
+      })
+    }
 
     return { id: event.id }
   }

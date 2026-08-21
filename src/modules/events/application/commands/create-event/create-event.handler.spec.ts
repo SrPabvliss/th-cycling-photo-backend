@@ -20,6 +20,7 @@ describe('CreateEventHandler', () => {
   let payoutRepo: jest.Mocked<IEventPayoutMethodRepository>
   let locationValidator: jest.Mocked<LocationValidator>
   let configService: jest.Mocked<EventConfigurationService>
+  let kvStorage: { write: jest.Mock; writeBulk: jest.Mock; delete: jest.Mock }
 
   const futureStart = new Date()
   futureStart.setFullYear(futureStart.getFullYear() + 1)
@@ -86,12 +87,15 @@ describe('CreateEventHandler', () => {
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
     } as unknown as PrismaService
 
+    kvStorage = { write: jest.fn().mockResolvedValue(undefined), writeBulk: jest.fn(), delete: jest.fn() }
+
     handler = new CreateEventHandler(
       writeRepo,
       operatorRepo,
       userRepo,
       tenantRepo,
       payoutRepo,
+      kvStorage,
       locationValidator,
       configService,
       prisma,
@@ -294,5 +298,58 @@ describe('CreateEventHandler', () => {
       undefined,
     )
     expect(payoutRepo.replaceForEvent).toHaveBeenCalled()
+  })
+
+  it('registers the frozen watermark in KV under the event id', async () => {
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+    )
+
+    writeRepo.save.mockImplementation(async (event: Event) => event)
+
+    configService.materialise.mockResolvedValue({
+      brand: {
+        publicName: 'Foto Andes',
+        watermarkStorageKey: 'tenants/t-1/watermark/uuid-logo.png',
+        whatsappNumber: '+593987654321',
+      },
+      payoutMethods: [],
+    })
+
+    const result = await handler.execute(command)
+
+    expect(kvStorage.write).toHaveBeenCalledWith(
+      `wm-${result.id}`,
+      'tenants/t-1/watermark/uuid-logo.png',
+    )
+  })
+
+  it('writes no KV entry when the event froze no watermark', async () => {
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+    )
+
+    writeRepo.save.mockImplementation(async (event: Event) => event)
+
+    configService.materialise.mockResolvedValue({
+      brand: { publicName: null, watermarkStorageKey: null, whatsappNumber: null },
+      payoutMethods: [],
+    })
+
+    await handler.execute(command)
+
+    expect(kvStorage.write).not.toHaveBeenCalled()
   })
 })

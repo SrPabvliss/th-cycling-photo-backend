@@ -81,10 +81,17 @@ describe('UpdateEventConfigurationHandler', () => {
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
     } as unknown as PrismaService
 
+    const kvStorage = {
+      write: jest.fn().mockResolvedValue(undefined),
+      writeBulk: jest.fn(),
+      delete: jest.fn(),
+    }
+
     handler = new UpdateEventConfigurationHandler(
       readRepo,
       writeRepo,
       payoutRepo,
+      kvStorage,
       authz,
       configService,
       prisma,
