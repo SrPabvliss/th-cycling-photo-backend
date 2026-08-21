@@ -19,6 +19,9 @@ describe('public owner legend', () => {
   let tenant: any
   let event: any
   let asset: any
+  let platformTenant: any
+  let platformEvent: any
+  let platformAsset: any
 
   beforeAll(async () => {
     module = await Test.createTestingModule({
@@ -53,6 +56,7 @@ describe('public owner legend', () => {
     tenant = await prisma.tenant.create({
       data: { name: 'Foto Andes Studio', is_platform: false, public_name: 'Foto Andes' },
     })
+    platformTenant = await prisma.tenant.findFirstOrThrow({ where: { is_platform: true } })
 
     const evtType = await prisma.eventType.findFirstOrThrow()
 
@@ -78,12 +82,39 @@ describe('public owner legend', () => {
         file_size: 100,
       },
     })
+
+    platformEvent = await prisma.event.create({
+      data: {
+        name: 'Ruta Platform',
+        slug: `ruta-platform-${uuid()}`,
+        start_date: new Date(),
+        end_date: new Date(),
+        tenant_id: platformTenant.id,
+        event_type_id: evtType.id,
+        status: 'active',
+        snap_public_name: platformTenant.public_name,
+      },
+    })
+
+    platformAsset = await prisma.eventAsset.create({
+      data: {
+        event_id: platformEvent.id,
+        asset_type: 'cover_image',
+        storage_key: `cover-${uuid()}`,
+        public_slug: uuid().substring(0, 20),
+        file_size: 100,
+      },
+    })
   })
 
   afterAll(async () => {
     if (prisma) {
-      await prisma.eventAsset.deleteMany({ where: { id: asset?.id } })
-      await prisma.event.deleteMany({ where: { id: event?.id } })
+      await prisma.eventAsset.deleteMany({
+        where: { id: { in: [asset?.id, platformAsset?.id].filter(Boolean) } },
+      })
+      await prisma.event.deleteMany({
+        where: { id: { in: [event?.id, platformEvent?.id].filter(Boolean) } },
+      })
       await prisma.tenant.deleteMany({ where: { id: tenant?.id } })
       await prisma.$disconnect()
     }
@@ -96,8 +127,11 @@ describe('public owner legend', () => {
     const pagination = new Pagination(1, 50)
     const result = await handler.execute(new GetPublicEventsListQuery(pagination))
     const item = result.items.find((i) => i.slug === event.slug)
+    const platformItem = result.items.find((i) => i.slug === platformEvent.slug)
 
     expect(item?.ownerName).toBe('Foto Andes')
-    expect(item?.ownerName).not.toBe('TITAN TV')
+    expect(item?.ownerName).not.toBe(platformTenant.public_name)
+    expect(platformItem?.ownerName).toBe(platformTenant.public_name)
+    expect(platformItem?.ownerName).not.toBe(item?.ownerName)
   })
 })
