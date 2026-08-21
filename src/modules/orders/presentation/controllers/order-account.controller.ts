@@ -17,6 +17,7 @@ import {
 } from '@orders/application/queries'
 import { EntityIdProjection, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('My Orders')
@@ -28,6 +29,7 @@ export class OrderAccountController {
     private readonly queryBus: QueryBus,
   ) {}
 
+  @Authenticated()
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List my own orders' })
@@ -42,6 +44,7 @@ export class OrderAccountController {
     return this.queryBus.execute(new GetMyOrdersListQuery(user.userId, pagination))
   }
 
+  @Authenticated()
   @Get('summary')
   @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Get aggregate figures over all of my orders' })
@@ -54,6 +57,7 @@ export class OrderAccountController {
     return this.queryBus.execute(new GetMyOrdersSummaryQuery(user.userId))
   }
 
+  @Authenticated()
   @Get(':id')
   @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Get one of my orders' })
@@ -68,6 +72,7 @@ export class OrderAccountController {
     return this.queryBus.execute(new GetMyOrderDetailQuery(user.userId, id))
   }
 
+  @Authenticated()
   @Get(':id/downloads')
   @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Get presigned download URLs for one of my orders' })
@@ -83,6 +88,7 @@ export class OrderAccountController {
     return this.queryBus.execute(new GetMyOrderDownloadsQuery(user.userId, id))
   }
 
+  @Authenticated()
   @Patch(':id/cancel')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Cancel one of my orders while it is still in process' })
