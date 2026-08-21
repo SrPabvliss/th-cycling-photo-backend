@@ -211,7 +211,8 @@ async function fetchWatermarked(slug, env) {
 
 // ─── Main router ───────────────────────────────────────────────────────────
 
-const ROUTE_REGEX = /^\/(gallery|internal|assets)\/(?:([a-z0-9-]+)\/)?([a-zA-Z0-9_-]+)\.(?:jpg|png)$/
+const ROUTE_REGEX =
+  /^\/(gallery|internal|assets)\/(?:([a-z0-9-]+)\/)?([a-zA-Z0-9_-]+)\.(?:jpg|png)$/
 
 /**
  * Validates the Referer header to prevent hotlinking from unauthorized domains.
