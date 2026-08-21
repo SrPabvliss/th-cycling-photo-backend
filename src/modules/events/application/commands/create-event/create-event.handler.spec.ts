@@ -5,6 +5,7 @@ import type { IEventOperatorRepository } from '@events/domain/ports/event-operat
 import { LocationValidator } from '@locations/application/services'
 import { AuditContext } from '@shared/application'
 import { AppException } from '@shared/domain'
+import type { PrismaService } from '@shared/infrastructure'
 import type { IUserReadRepository } from '@users/domain/ports'
 import type { ITenantRepository } from '../../../../tenants/domain/ports/tenant-repository.port'
 import { CreateEventCommand } from './create-event.command'
@@ -77,6 +78,10 @@ describe('CreateEventHandler', () => {
       }),
     } as unknown as jest.Mocked<EventConfigurationService>
 
+    const prisma = {
+      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
+    } as unknown as PrismaService
+
     handler = new CreateEventHandler(
       writeRepo,
       operatorRepo,
@@ -85,6 +90,7 @@ describe('CreateEventHandler', () => {
       payoutRepo,
       locationValidator,
       configService,
+      prisma,
     )
   })
 
@@ -112,6 +118,7 @@ describe('CreateEventHandler', () => {
         name: 'Test Event',
         status: 'active',
       }),
+      expect.anything(),
     )
   })
 
@@ -133,6 +140,7 @@ describe('CreateEventHandler', () => {
     expect(userRepo.findTenantId).toHaveBeenCalledWith(creatorId)
     expect(writeRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({ tenantId: creatorTenantId }),
+      expect.anything(),
     )
   })
 

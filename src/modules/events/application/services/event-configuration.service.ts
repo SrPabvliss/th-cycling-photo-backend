@@ -32,6 +32,20 @@ export interface MaterialisedConfiguration {
   payoutMethods: EventPayoutMethod[]
 }
 
+export interface RematerialisedConfiguration {
+  brand: EventBrandSnapshot
+  /** `null` means the selection omitted `payoutMethodIds`: keep the event's existing copies. */
+  payoutMethods: EventPayoutMethod[] | null
+}
+
+export interface EventConfigurationBasis {
+  id: string
+  tenantId: string
+  snapPublicName: string | null
+  snapWatermarkStorageKey: string | null
+  snapWhatsappNumber: string | null
+}
+
 @Injectable()
 export class EventConfigurationService {
   constructor(
@@ -80,18 +94,47 @@ export class EventConfigurationService {
       this.payoutRepo.findByTenantId(tenantId),
     ])
 
-    const brand: EventBrandSnapshot = {
-      publicName:
-        selection?.publicName !== undefined ? selection.publicName : (profile?.publicName ?? null),
-      watermarkStorageKey:
-        selection?.watermarkStorageKey !== undefined
-          ? selection.watermarkStorageKey
-          : (profile?.watermarkStorageKey ?? null),
-      whatsappNumber:
-        selection?.whatsappNumber !== undefined
-          ? selection.whatsappNumber
-          : (profile?.whatsappNumber ?? null),
+    return this.build(eventId, selection, methods, {
+      publicName: profile?.publicName ?? null,
+      watermarkStorageKey: profile?.watermarkStorageKey ?? null,
+      whatsappNumber: profile?.whatsappNumber ?? null,
+    })
+  }
+
+  /** Update path: omitted fields keep the event's frozen copy instead of re-syncing to the profile. */
+  async rematerialise(
+    event: EventConfigurationBasis,
+    selection: ConfigurationSelection,
+    existingMethods: EventPayoutMethod[],
+  ): Promise<RematerialisedConfiguration> {
+    if (selection.payoutMethodIds === undefined) {
+      const brand = this.resolveBrand(selection, {
+        publicName: event.snapPublicName,
+        watermarkStorageKey: event.snapWatermarkStorageKey,
+        whatsappNumber: event.snapWhatsappNumber,
+      })
+      if (!existingMethods.some((method) => method.isActive)) {
+        throw AppException.businessRule('event.payout_method_required')
+      }
+      return { brand, payoutMethods: null }
     }
+
+    const methods = await this.payoutRepo.findByTenantId(event.tenantId)
+
+    return this.build(event.id, selection, methods, {
+      publicName: event.snapPublicName,
+      watermarkStorageKey: event.snapWatermarkStorageKey,
+      whatsappNumber: event.snapWhatsappNumber,
+    })
+  }
+
+  private build(
+    eventId: string,
+    selection: ConfigurationSelection | undefined,
+    methods: TenantPayoutMethod[],
+    fallback: EventBrandSnapshot,
+  ): MaterialisedConfiguration {
+    const brand = this.resolveBrand(selection, fallback)
 
     const chosen = this.resolveSelectedMethods(methods, selection?.payoutMethodIds)
     if (!chosen.some((method) => method.isActive)) {
@@ -99,6 +142,23 @@ export class EventConfigurationService {
     }
 
     return { brand, payoutMethods: chosen.map((m) => EventPayoutMethod.copyFrom(eventId, m)) }
+  }
+
+  private resolveBrand(
+    selection: ConfigurationSelection | undefined,
+    fallback: EventBrandSnapshot,
+  ): EventBrandSnapshot {
+    return {
+      publicName: selection?.publicName !== undefined ? selection.publicName : fallback.publicName,
+      watermarkStorageKey:
+        selection?.watermarkStorageKey !== undefined
+          ? selection.watermarkStorageKey
+          : fallback.watermarkStorageKey,
+      whatsappNumber:
+        selection?.whatsappNumber !== undefined
+          ? selection.whatsappNumber
+          : fallback.whatsappNumber,
+    }
   }
 
   private resolveSelectedMethods(

@@ -1,5 +1,7 @@
 import { CreateEventCommand } from '@events/application/commands/create-event/create-event.command'
 import { CreateEventHandler } from '@events/application/commands/create-event/create-event.handler'
+import { UpdateEventConfigurationCommand } from '@events/application/commands/update-event-configuration/update-event-configuration.command'
+import { UpdateEventConfigurationHandler } from '@events/application/commands/update-event-configuration/update-event-configuration.handler'
 import { GetEventConfigurationHandler } from '@events/application/queries/get-event-configuration/get-event-configuration.handler'
 import { GetEventConfigurationQuery } from '@events/application/queries/get-event-configuration/get-event-configuration.query'
 import { EventConfigurationService } from '@events/application/services/event-configuration.service'
@@ -51,6 +53,7 @@ describe('event configuration', () => {
   let prisma: PrismaService
   let createEvent: CreateEventHandler
   let getConfiguration: GetEventConfigurationHandler
+  let updateConfiguration: UpdateEventConfigurationHandler
   let updateProfile: UpdateMyTenantProfileHandler
   let updatePayoutMethod: UpdatePayoutMethodHandler
   let payoutRepo: ITenantPayoutMethodRepository
@@ -117,6 +120,7 @@ describe('event configuration', () => {
         LocationValidator,
         CreateEventHandler,
         GetEventConfigurationHandler,
+        UpdateEventConfigurationHandler,
         UpdateMyTenantProfileHandler,
         UpdatePayoutMethodHandler,
       ],
@@ -125,6 +129,7 @@ describe('event configuration', () => {
     prisma = module.get(PrismaService)
     createEvent = module.get(CreateEventHandler)
     getConfiguration = module.get(GetEventConfigurationHandler)
+    updateConfiguration = module.get(UpdateEventConfigurationHandler)
     updateProfile = module.get(UpdateMyTenantProfileHandler)
     updatePayoutMethod = module.get(UpdatePayoutMethodHandler)
     payoutRepo = module.get(TENANT_PAYOUT_METHOD_REPOSITORY)
@@ -301,6 +306,65 @@ describe('event configuration', () => {
     )
 
     expect(after).toEqual(before)
+  })
+
+  it('leaves untouched fields frozen when a partial update follows a profile rebrand', async () => {
+    const { id: eventId } = await createEvent.execute(
+      new CreateEventCommand(
+        'Vuelta Parcial',
+        new Date('2026-10-01'),
+        new Date('2026-10-02'),
+        null,
+        null,
+        eventType.id,
+        new AuditContext(completeUser.id),
+      ),
+    )
+    createdEventIds.push(eventId)
+
+    const before = await getConfiguration.execute(
+      new GetEventConfigurationQuery(eventId, completeUser.id),
+    )
+
+    await updateProfile.execute(
+      new UpdateMyTenantProfileCommand(
+        completeUser.id,
+        'Andes Pro',
+        'watermarks/andes-pro.png',
+        undefined,
+      ),
+    )
+    await updatePayoutMethod.execute(
+      new UpdatePayoutMethodCommand(
+        completeUser.id,
+        bankMethod.id,
+        undefined,
+        {
+          bankName: 'Banco Pichincha',
+          accountNumber: '8888888888',
+          accountType: 'savings',
+          accountHolder: 'Complete Tenant',
+          holderIdentification: '1710000000',
+        },
+        undefined,
+        undefined,
+      ),
+    )
+
+    await updateConfiguration.execute(
+      new UpdateEventConfigurationCommand(eventId, completeUser.id, {
+        whatsappNumber: '0977777777',
+      }),
+    )
+
+    const after = await getConfiguration.execute(
+      new GetEventConfigurationQuery(eventId, completeUser.id),
+    )
+
+    expect(after.whatsappNumber).toBe('0977777777')
+    expect(after.publicName).toBe(before.publicName)
+    expect(after.watermarkStorageKey).toBe(before.watermarkStorageKey)
+    expect(after.payoutMethods).toEqual(before.payoutMethods)
   })
 
   it('hides another tenant payout method behind notFound, never forbidden', async () => {

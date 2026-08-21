@@ -15,6 +15,7 @@ import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
 import { type IUserReadRepository, USER_READ_REPOSITORY } from '@users/domain/ports'
 import {
   type ITenantRepository,
@@ -35,6 +36,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     private readonly payoutRepo: IEventPayoutMethodRepository,
     private readonly locationValidator: LocationValidator,
     private readonly configService: EventConfigurationService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /** Creates a new event entity and persists it. */
@@ -70,8 +72,11 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     const config = await this.configService.materialise(tenantId, event.id, command.configuration)
     event.applyBrandSnapshot(config.brand)
 
-    const saved = await this.writeRepo.save(event)
-    await this.payoutRepo.replaceForEvent(saved.id, config.payoutMethods)
+    const saved = await this.prisma.$transaction(async (tx) => {
+      const persisted = await this.writeRepo.save(event, tx)
+      await this.payoutRepo.replaceForEvent(persisted.id, config.payoutMethods, tx)
+      return persisted
+    })
 
     // Auto-assign first available operator
     const operatorId = await this.operatorRepo.findFirstOperatorId()

@@ -1,3 +1,4 @@
+import { EventPayoutMethod } from '@events/domain/entities'
 import { TenantPayoutMethod } from '@tenants/domain/entities/tenant-payout-method.entity'
 import { TenantProfile } from '@tenants/domain/entities/tenant-profile.entity'
 import { EventConfigurationService } from './event-configuration.service'
@@ -141,6 +142,43 @@ describe('EventConfigurationService', () => {
       await expect(
         service.materialise(tenantId, eventId, { payoutMethodIds: [] }),
       ).rejects.toMatchObject({ code: 'BUSINESS_RULE' })
+    })
+  })
+
+  describe('rematerialise', () => {
+    // The profile has since been rebranded; a partial edit must not drag those values in.
+    const rebrandedProfile = () =>
+      TenantProfile.fromPersistence({
+        id: tenantId,
+        name: 'Foto Andes',
+        publicName: 'Andes Pro',
+        watermarkStorageKey: 'tenants/andes-pro/watermark.png',
+        whatsappNumber: '0988888888',
+        whatsappVerifiedAt: null,
+      })
+
+    const frozenEvent = () => ({
+      id: crypto.randomUUID(),
+      tenantId,
+      snapPublicName: 'Foto Andes',
+      snapWatermarkStorageKey: 'tenants/foto-andes/watermark.png',
+      snapWhatsappNumber: '0991234567',
+    })
+
+    it('keeps omitted brand fields at the event snapshot, not the current profile', async () => {
+      const service = buildService(rebrandedProfile(), [payphone(), bank()])
+      const event = frozenEvent()
+
+      const result = await service.rematerialise(event, { whatsappNumber: '0999999999' }, [
+        EventPayoutMethod.copyFrom(event.id, bank()),
+      ])
+
+      expect(result.brand).toEqual({
+        publicName: 'Foto Andes',
+        watermarkStorageKey: 'tenants/foto-andes/watermark.png',
+        whatsappNumber: '0999999999',
+      })
+      expect(result.payoutMethods).toBeNull()
     })
   })
 })

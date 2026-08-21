@@ -1,5 +1,6 @@
 import type { EventPayoutMethod } from '@events/domain/entities'
 import type { IEventPayoutMethodRepository } from '@events/domain/ports'
+import type { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
 import * as EventPayoutMethodMapper from '../mappers/event-payout-method.mapper'
@@ -16,12 +17,19 @@ export class EventPayoutMethodRepository implements IEventPayoutMethodRepository
     return records.map(EventPayoutMethodMapper.toEntity)
   }
 
-  async replaceForEvent(eventId: string, methods: EventPayoutMethod[]): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.eventPayoutMethod.deleteMany({ where: { event_id: eventId } }),
-      this.prisma.eventPayoutMethod.createMany({
+  async replaceForEvent(
+    eventId: string,
+    methods: EventPayoutMethod[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    const run = async (client: Prisma.TransactionClient) => {
+      await client.eventPayoutMethod.deleteMany({ where: { event_id: eventId } })
+      await client.eventPayoutMethod.createMany({
         data: methods.map(EventPayoutMethodMapper.toPersistence),
-      }),
-    ])
+      })
+    }
+
+    if (tx) return run(tx)
+    await this.prisma.$transaction(run)
   }
 }

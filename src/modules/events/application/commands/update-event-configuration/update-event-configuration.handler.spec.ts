@@ -7,6 +7,7 @@ import type {
 } from '@events/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
+import type { PrismaService } from '@shared/infrastructure'
 import { UpdateEventConfigurationCommand } from './update-event-configuration.command'
 import { UpdateEventConfigurationHandler } from './update-event-configuration.handler'
 
@@ -60,6 +61,7 @@ describe('UpdateEventConfigurationHandler', () => {
     } as unknown as jest.Mocked<IEventWriteRepository>
 
     payoutRepo = {
+      findByEventId: jest.fn().mockResolvedValue([]),
       replaceForEvent: jest.fn(),
     } as unknown as jest.Mocked<IEventPayoutMethodRepository>
 
@@ -69,11 +71,15 @@ describe('UpdateEventConfigurationHandler', () => {
     } as unknown as jest.Mocked<IAuthorizationService>
 
     configService = {
-      materialise: jest.fn().mockResolvedValue({
+      rematerialise: jest.fn().mockResolvedValue({
         brand: { publicName: 'New Public Name', watermarkStorageKey: null, whatsappNumber: null },
         payoutMethods: [],
       }),
     } as unknown as jest.Mocked<EventConfigurationService>
+
+    const prisma = {
+      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
+    } as unknown as PrismaService
 
     handler = new UpdateEventConfigurationHandler(
       readRepo,
@@ -81,6 +87,7 @@ describe('UpdateEventConfigurationHandler', () => {
       payoutRepo,
       authz,
       configService,
+      prisma,
     )
   })
 
@@ -98,6 +105,10 @@ describe('UpdateEventConfigurationHandler', () => {
 
     await handler.execute(command)
 
-    expect(payoutRepo.replaceForEvent).toHaveBeenCalledWith(activeEvent.id, expect.any(Array))
+    expect(payoutRepo.replaceForEvent).toHaveBeenCalledWith(
+      activeEvent.id,
+      expect.any(Array),
+      expect.anything(),
+    )
   })
 })

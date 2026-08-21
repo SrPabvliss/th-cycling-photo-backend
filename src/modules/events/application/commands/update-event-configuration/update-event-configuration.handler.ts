@@ -15,6 +15,7 @@ import {
   type IAuthorizationService,
 } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
 import { UpdateEventConfigurationCommand } from './update-event-configuration.command'
 
 @CommandHandler(UpdateEventConfigurationCommand)
@@ -28,6 +29,7 @@ export class UpdateEventConfigurationHandler
     private readonly payoutRepo: IEventPayoutMethodRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly configService: EventConfigurationService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(command: UpdateEventConfigurationCommand): Promise<EntityIdProjection> {
@@ -38,12 +40,16 @@ export class UpdateEventConfigurationHandler
 
     event.assertConfigurable()
 
-    const config = await this.configService.materialise(event.tenantId, event.id, command.selection)
+    const existingMethods = await this.payoutRepo.findByEventId(event.id)
+    const config = await this.configService.rematerialise(event, command.selection, existingMethods)
     event.applyBrandSnapshot(config.brand)
     event.audit.setUpdatedBy(command.actorUserId)
 
-    await this.writeRepo.save(event)
-    await this.payoutRepo.replaceForEvent(event.id, config.payoutMethods)
+    const methods = config.payoutMethods
+    await this.prisma.$transaction(async (tx) => {
+      await this.writeRepo.save(event, tx)
+      if (methods) await this.payoutRepo.replaceForEvent(event.id, methods, tx)
+    })
 
     return { id: event.id }
   }
