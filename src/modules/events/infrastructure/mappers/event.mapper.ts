@@ -145,6 +145,8 @@ export function toEntity(record: PrismaEvent): Event {
     snapWatermarkStorageKey: record.snap_watermark_storage_key,
     snapWhatsappNumber: record.snap_whatsapp_number,
     photoQuota: record.photo_quota,
+    // read-only: the counter is mutated only via claimPhotoQuota's raw UPDATE, never through this write path
+    photosUploaded: record.photos_uploaded,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
     deletedAt: record.deleted_at,
