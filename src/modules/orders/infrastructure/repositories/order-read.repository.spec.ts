@@ -9,19 +9,25 @@ function buildRepository() {
   const groupBy = jest.fn().mockResolvedValue([])
   const orderItemCount = jest.fn().mockResolvedValue(0)
   const orderItemFindMany = jest.fn().mockResolvedValue([])
+  const paymentTransactionOrderCount = jest.fn().mockResolvedValue(0)
+  const cdn = { galleryUrl: jest.fn((slug: string) => `https://cdn.test/gallery/${slug}.jpg`) }
 
   const prisma = {
     order: { findMany, findFirst, count, groupBy },
     orderItem: { count: orderItemCount, findMany: orderItemFindMany },
+    paymentTransactionOrder: { count: paymentTransactionOrderCount },
   }
 
   return {
-    repository: new OrderReadRepository(prisma as never, {} as never),
+    repository: new OrderReadRepository(prisma as never, cdn as never),
     findMany,
     findFirst,
+    count,
     groupBy,
     orderItemCount,
     orderItemFindMany,
+    paymentTransactionOrderCount,
+    cdn,
   }
 }
 
@@ -98,5 +104,189 @@ describe('OrderReadRepository.getPhotoIdsByOrderIds', () => {
 
     expect(photoIds).toEqual([])
     expect(orderItemFindMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('OrderReadRepository customer scoping', () => {
+  it('scopes the customer list to the caller and hides drafts', async () => {
+    const { repository, findMany } = buildRepository()
+
+    await repository.getMyList('user-1', { page: 1, limit: 20, skip: 0, take: 20 } as never)
+
+    const { where } = findMany.mock.calls[0][0]
+    expect(where.user_id).toBe('user-1')
+    expect(where.status).toEqual({ not: OrderStatus.DRAFT })
+  })
+
+  it('scopes the customer detail to the caller and hides drafts', async () => {
+    const { repository, findFirst } = buildRepository()
+
+    await repository.getMyDetail('user-1', 'order-1')
+
+    const { where } = findFirst.mock.calls[0][0]
+    expect(where).toMatchObject({
+      id: 'order-1',
+      user_id: 'user-1',
+      status: { not: OrderStatus.DRAFT },
+    })
+  })
+
+  it('builds watermarked gallery URLs for customer-facing detail photos', async () => {
+    const { repository, findFirst, cdn } = buildRepository()
+    findFirst.mockResolvedValue({
+      id: 'order-1',
+      status: OrderStatus.PAID,
+      created_at: new Date('2026-01-01'),
+      subtotal: null,
+      snap_currency: 'USD',
+      event: { name: 'Event 1' },
+      items: [
+        { photo: { id: 'photo-1', public_slug: 'slug-1' } },
+        { photo: { id: 'photo-2', public_slug: 'slug-2' } },
+      ],
+    })
+
+    const detail = await repository.getMyDetail('user-1', 'order-1')
+
+    expect(cdn.galleryUrl).toHaveBeenCalledWith('slug-1')
+    expect(cdn.galleryUrl).toHaveBeenCalledWith('slug-2')
+    expect(detail?.photos).toEqual([
+      { id: 'photo-1', galleryUrl: 'https://cdn.test/gallery/slug-1.jpg' },
+      { id: 'photo-2', galleryUrl: 'https://cdn.test/gallery/slug-2.jpg' },
+    ])
+  })
+
+  it('restricts download files to the caller and to ready statuses', async () => {
+    const { repository, findFirst } = buildRepository()
+
+    await repository.getMyDownloadFiles('user-1', 'order-1')
+
+    const { where } = findFirst.mock.calls[0][0]
+    expect(where.user_id).toBe('user-1')
+    expect(where.status).toEqual({
+      in: [OrderStatus.PAID, OrderStatus.DELIVERED, OrderStatus.GIFTED],
+    })
+  })
+
+  it('maps a gifted order to its own state while keeping it downloadable', async () => {
+    const { repository, findFirst } = buildRepository()
+    findFirst.mockResolvedValue({
+      id: 'order-1',
+      status: OrderStatus.GIFTED,
+      created_at: new Date('2026-01-01'),
+      subtotal: null,
+      snap_currency: 'USD',
+      event: { name: 'Event 1' },
+      items: [],
+    })
+
+    const detail = await repository.getMyDetail('user-1', 'order-1')
+
+    expect(detail?.state).toBe('gifted')
+    expect(detail?.canDownload).toBe(true)
+  })
+
+  it('scopes the summary to the caller and excludes gifted orders from spend', async () => {
+    const { repository, findMany, count, orderItemCount, groupBy } = buildRepository()
+    count.mockResolvedValue(4)
+    orderItemCount.mockResolvedValue(9)
+    findMany.mockResolvedValue([{ event_id: 'event-1' }, { event_id: 'event-2' }])
+    groupBy.mockResolvedValue([
+      { snap_currency: 'USD', _sum: { subtotal: { toString: () => '50.00' } } },
+    ])
+
+    const summary = await repository.getMySummary('user-1')
+
+    expect(count.mock.calls[0][0].where.user_id).toBe('user-1')
+    expect(orderItemCount.mock.calls[0][0].where.order.user_id).toBe('user-1')
+    expect(orderItemCount.mock.calls[0][0].where.order.status).toEqual({
+      in: [OrderStatus.PAID, OrderStatus.DELIVERED, OrderStatus.GIFTED],
+    })
+    expect(findMany.mock.calls[0][0].where.user_id).toBe('user-1')
+    expect(groupBy.mock.calls[0][0].where.user_id).toBe('user-1')
+    expect(groupBy.mock.calls[0][0].where.status).toEqual({
+      in: [OrderStatus.PAID, OrderStatus.DELIVERED],
+    })
+    expect(summary).toEqual({
+      orderCount: 4,
+      photoCount: 9,
+      eventCount: 2,
+      spent: [{ currency: 'USD', amount: '50.00' }],
+    })
+  })
+
+  it('returns an empty spend list when nothing was spent', async () => {
+    const { repository, groupBy } = buildRepository()
+    groupBy.mockResolvedValue([])
+
+    const summary = await repository.getMySummary('user-1')
+
+    expect(summary.spent).toEqual([])
+  })
+
+  it('reports a payment in flight only for initiated and confirming transactions', async () => {
+    const { repository, paymentTransactionOrderCount } = buildRepository()
+    paymentTransactionOrderCount.mockResolvedValue(1)
+
+    await expect(repository.hasPaymentInFlight('order-1')).resolves.toBe(true)
+
+    const { where } = paymentTransactionOrderCount.mock.calls[0][0]
+    expect(where.order_id).toBe('order-1')
+    expect(where.payment_transaction.status).toEqual({ in: ['initiated', 'confirming'] })
+  })
+})
+
+describe('OrderReadRepository buyer queries are deliberately ownership-scoped, not tenant-scoped', () => {
+  const assertOwnershipNotTenantScoped = (where: Record<string, unknown>) => {
+    expect(where.user_id).toBe('user-1')
+    expect(JSON.stringify(where)).not.toContain('tenant_id')
+    expect(JSON.stringify(where)).not.toContain('event_id')
+  }
+
+  it('scopes getMyList to the buyer by user_id, with no tenant_id/event_id fragment from EventScope', async () => {
+    const { repository, findMany } = buildRepository()
+
+    await repository.getMyList('user-1', { page: 1, limit: 20, skip: 0, take: 20 } as never)
+
+    assertOwnershipNotTenantScoped(findMany.mock.calls[0][0].where)
+  })
+
+  it('scopes getMyDetail to the buyer by user_id, with no tenant_id/event_id fragment from EventScope', async () => {
+    const { repository, findFirst } = buildRepository()
+
+    await repository.getMyDetail('user-1', 'order-1')
+
+    assertOwnershipNotTenantScoped(findFirst.mock.calls[0][0].where)
+  })
+
+  it('scopes getMyDownloadFiles to the buyer by user_id, with no tenant_id/event_id fragment from EventScope', async () => {
+    const { repository, findFirst } = buildRepository()
+
+    await repository.getMyDownloadFiles('user-1', 'order-1')
+
+    assertOwnershipNotTenantScoped(findFirst.mock.calls[0][0].where)
+  })
+
+  it("scopes getMySummary's queries to the buyer by user_id, with no tenant_id/event_id fragment from EventScope", async () => {
+    const { repository, findMany, count, orderItemCount, groupBy } = buildRepository()
+
+    await repository.getMySummary('user-1')
+
+    assertOwnershipNotTenantScoped(count.mock.calls[0][0].where)
+    assertOwnershipNotTenantScoped(findMany.mock.calls[0][0].where)
+    assertOwnershipNotTenantScoped(groupBy.mock.calls[0][0].where)
+
+    const orderItemWhere = orderItemCount.mock.calls[0][0].where
+    expect(orderItemWhere.order.user_id).toBe('user-1')
+    expect(JSON.stringify(orderItemWhere)).not.toContain('tenant_id')
+    expect(JSON.stringify(orderItemWhere)).not.toContain('event_id')
+  })
+
+  it('would silently break /orders/me for every buyer if it were ever scoped through EventScope: a buyer has no tenant_id, so resolveEventScope resolves to an empty scope, whose toPrisma() matches nothing', () => {
+    const scope = EventScope.empty()
+
+    expect(scope.toPrisma()).toEqual({
+      OR: [{ tenant_id: { in: [] } }, { id: { in: [] } }],
+    })
   })
 })

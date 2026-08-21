@@ -1,3 +1,8 @@
+export { GetMyOrderDetailQuery } from './get-my-order-detail/get-my-order-detail.query'
+export { GetMyOrderDownloadsQuery } from './get-my-order-downloads/get-my-order-downloads.query'
+export { GetMyOrdersListDto } from './get-my-orders-list/get-my-orders-list.dto'
+export { GetMyOrdersListQuery } from './get-my-orders-list/get-my-orders-list.query'
+export { GetMyOrdersSummaryQuery } from './get-my-orders-summary/get-my-orders-summary.query'
 export { GetOrderDetailQuery } from './get-order-detail/get-order-detail.query'
 export { GetOrdersListDto } from './get-orders-list/get-orders-list.dto'
 export { GetOrdersListQuery } from './get-orders-list/get-orders-list.query'

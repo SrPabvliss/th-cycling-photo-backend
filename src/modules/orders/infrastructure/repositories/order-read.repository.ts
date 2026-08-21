@@ -1,12 +1,18 @@
 import type { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import type {
+  MyOrderCustomerState,
+  MyOrderDetailProjection,
+  MyOrderDownloadRaw,
+  MyOrderListProjection,
+  MyOrdersSummaryProjection,
   OrderDetailProjection,
   OrderListProjection,
   RetouchCompletedOrderProjection,
 } from '@orders/application/projections'
 import type { Order } from '@orders/domain/entities'
 import type { IOrderReadRepository, OrderListFilters } from '@orders/domain/ports'
+import { resolveDeliveredFile } from '@orders/domain/services'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import type { PendingRetouchOrderProjection } from '@photos/application/projections'
 import { PaginatedResult, type Pagination } from '@shared/application'
@@ -52,6 +58,28 @@ const ORDER_LIST_SELECT = {
     },
   },
 } as const
+
+const DOWNLOADABLE_STATUSES: string[] = [
+  OrderStatus.PAID,
+  OrderStatus.DELIVERED,
+  OrderStatus.GIFTED,
+]
+const IN_PROCESS_STATUSES: string[] = [OrderStatus.PENDING, OrderStatus.PAYMENT_INFO_SENT]
+const MY_ORDER_STATUSES: string[] = [
+  OrderStatus.PENDING,
+  OrderStatus.PAYMENT_INFO_SENT,
+  OrderStatus.PAID,
+  OrderStatus.DELIVERED,
+  OrderStatus.GIFTED,
+]
+const SPENT_STATUSES: string[] = [OrderStatus.PAID, OrderStatus.DELIVERED]
+
+function toCustomerState(status: string): MyOrderCustomerState {
+  if (status === OrderStatus.GIFTED) return 'gifted'
+  if (status === OrderStatus.PAID || status === OrderStatus.DELIVERED) return 'ready'
+  if (status === OrderStatus.CANCELLED) return 'cancelled'
+  return 'in_process'
+}
 
 @Injectable()
 export class OrderReadRepository implements IOrderReadRepository {
@@ -373,5 +401,193 @@ export class OrderReadRepository implements IOrderReadRepository {
     })
 
     return items.map((i) => i.photo_id)
+  }
+
+  async getMyList(
+    userId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<MyOrderListProjection>> {
+    const where: Prisma.OrderWhereInput = {
+      user_id: userId,
+      status: { not: OrderStatus.DRAFT },
+    }
+
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        select: {
+          id: true,
+          status: true,
+          created_at: true,
+          subtotal: true,
+          snap_currency: true,
+          event: { select: { name: true } },
+          _count: { select: { items: true } },
+          items: {
+            take: 3,
+            orderBy: { photo: { id: 'asc' } },
+            select: { photo: { select: { id: true, public_slug: true } } },
+          },
+        },
+        orderBy: { created_at: 'desc' },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+      this.prisma.order.count({ where }),
+    ])
+
+    return new PaginatedResult(
+      orders.map((order) => ({
+        id: order.id,
+        state: toCustomerState(order.status),
+        eventName: order.event.name,
+        createdAt: order.created_at,
+        photoCount: order._count.items,
+        subtotal: order.subtotal?.toString() ?? null,
+        snapCurrency: order.snap_currency,
+        previewPhotos: order.items.map((item) => ({
+          photoId: item.photo.id,
+          galleryUrl: this.cdn.galleryUrl(item.photo.public_slug),
+        })),
+      })),
+      total,
+      pagination,
+    )
+  }
+
+  async getMyDetail(userId: string, orderId: string): Promise<MyOrderDetailProjection | null> {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, user_id: userId, status: { not: OrderStatus.DRAFT } },
+      select: {
+        id: true,
+        status: true,
+        created_at: true,
+        subtotal: true,
+        snap_currency: true,
+        event: { select: { name: true } },
+        items: {
+          orderBy: { photo: { id: 'asc' } },
+          select: { photo: { select: { id: true, public_slug: true } } },
+        },
+      },
+    })
+
+    if (!order) return null
+
+    return {
+      id: order.id,
+      state: toCustomerState(order.status),
+      eventName: order.event.name,
+      createdAt: order.created_at,
+      subtotal: order.subtotal?.toString() ?? null,
+      snapCurrency: order.snap_currency,
+      canDownload: DOWNLOADABLE_STATUSES.includes(order.status),
+      canCancel: IN_PROCESS_STATUSES.includes(order.status),
+      photos: order.items.map((item) => ({
+        id: item.photo.id,
+        galleryUrl: this.cdn.galleryUrl(item.photo.public_slug),
+      })),
+    }
+  }
+
+  async getMyDownloadFiles(userId: string, orderId: string): Promise<MyOrderDownloadRaw[] | null> {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        user_id: userId,
+        status: { in: DOWNLOADABLE_STATUSES } as Prisma.EnumOrderStatusFilter,
+      },
+      select: {
+        items: {
+          orderBy: { photo: { id: 'asc' } },
+          select: {
+            delivered_as: true,
+            photo: {
+              select: {
+                id: true,
+                storage_key: true,
+                file_size: true,
+                retouched_storage_key: true,
+                retouched_file_size: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!order) return null
+
+    return order.items.map((item) => {
+      const file = resolveDeliveredFile({
+        deliveredAs: item.delivered_as,
+        storageKey: item.photo.storage_key,
+        retouchedStorageKey: item.photo.retouched_storage_key,
+        fileSize: item.photo.file_size,
+        retouchedFileSize: item.photo.retouched_file_size,
+      })
+      return { id: item.photo.id, storageKey: file.storageKey, fileSize: file.fileSize }
+    })
+  }
+
+  async getMySummary(userId: string): Promise<MyOrdersSummaryProjection> {
+    const [orderCount, photoCount, events, spentGroups] = await Promise.all([
+      this.prisma.order.count({
+        where: {
+          user_id: userId,
+          status: { in: MY_ORDER_STATUSES } as Prisma.EnumOrderStatusFilter,
+        },
+      }),
+      this.prisma.orderItem.count({
+        where: {
+          order: {
+            user_id: userId,
+            status: { in: DOWNLOADABLE_STATUSES } as Prisma.EnumOrderStatusFilter,
+          },
+        },
+      }),
+      this.prisma.order.findMany({
+        where: {
+          user_id: userId,
+          status: { in: MY_ORDER_STATUSES } as Prisma.EnumOrderStatusFilter,
+        },
+        distinct: ['event_id'],
+        select: { event_id: true },
+      }),
+      this.prisma.order.groupBy({
+        by: ['snap_currency'],
+        where: {
+          user_id: userId,
+          status: { in: SPENT_STATUSES } as Prisma.EnumOrderStatusFilter,
+          subtotal: { not: null },
+          snap_currency: { not: null },
+        },
+        _sum: { subtotal: true },
+      }),
+    ])
+
+    return {
+      orderCount,
+      photoCount,
+      eventCount: events.length,
+      spent: spentGroups
+        .filter((group) => group.snap_currency !== null && group._sum.subtotal !== null)
+        .map((group) => ({
+          currency: group.snap_currency as string,
+          amount: (
+            group._sum.subtotal as NonNullable<(typeof group)['_sum']['subtotal']>
+          ).toString(),
+        })),
+    }
+  }
+
+  async hasPaymentInFlight(orderId: string): Promise<boolean> {
+    const count = await this.prisma.paymentTransactionOrder.count({
+      where: {
+        order_id: orderId,
+        payment_transaction: { status: { in: ['initiated', 'confirming'] } },
+      },
+    })
+    return count > 0
   }
 }

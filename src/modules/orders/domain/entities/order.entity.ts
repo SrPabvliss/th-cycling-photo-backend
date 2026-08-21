@@ -240,6 +240,14 @@ export class Order {
     this.cancelledAt = new Date()
   }
 
+  cancelByOwner(): void {
+    if (this.status !== OrderStatus.PENDING && this.status !== OrderStatus.PAYMENT_INFO_SENT) {
+      throw AppException.businessRule('order.not_cancellable_by_owner')
+    }
+    this.status = OrderStatus.CANCELLED
+    this.cancelledAt = new Date()
+  }
+
   convertToSale(actorId: string): void {
     if (this.status !== OrderStatus.GIFTED) {
       throw AppException.businessRule('order.not_correctable')

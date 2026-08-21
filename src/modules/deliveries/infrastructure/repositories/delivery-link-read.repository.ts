@@ -3,6 +3,7 @@ import type { DeliveryLink } from '@deliveries/domain/entities'
 import type { IDeliveryLinkReadRepository } from '@deliveries/domain/ports'
 import { DeliveryLinkStatus } from '@deliveries/domain/value-objects/delivery-link-status.vo'
 import { Injectable } from '@nestjs/common'
+import { resolveDeliveredFile } from '@orders/domain/services'
 import { PrismaService } from '@shared/infrastructure'
 import * as DeliveryLinkMapper from '../mappers/delivery-link.mapper'
 
@@ -33,7 +34,9 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
             snap_first_name: true,
             snap_last_name: true,
             items: {
+              orderBy: { photo: { id: 'asc' } },
               select: {
+                delivered_as: true,
                 photo: {
                   select: {
                     id: true,
@@ -61,16 +64,21 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
       status: record.status,
       expiresAt: record.expires_at,
       downloadCount: record.download_count,
-      photos: record.order.items.map((oi) => ({
-        id: oi.photo.id,
-        filename: oi.photo.filename,
-        storageKey: oi.photo.retouched_storage_key ?? oi.photo.storage_key,
-        fileSize: Number(
-          oi.photo.retouched_storage_key
-            ? (oi.photo.retouched_file_size ?? oi.photo.file_size)
-            : oi.photo.file_size,
-        ),
-      })),
+      photos: record.order.items.map((item) => {
+        const file = resolveDeliveredFile({
+          deliveredAs: item.delivered_as,
+          storageKey: item.photo.storage_key,
+          retouchedStorageKey: item.photo.retouched_storage_key,
+          fileSize: item.photo.file_size,
+          retouchedFileSize: item.photo.retouched_file_size,
+        })
+        return {
+          id: item.photo.id,
+          filename: item.photo.filename,
+          storageKey: file.storageKey,
+          fileSize: file.fileSize,
+        }
+      }),
     }
   }
 

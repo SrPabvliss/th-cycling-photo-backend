@@ -1,4 +1,22 @@
 export {
+  MyOrderDetailProjection,
+  MyOrderPhotoProjection,
+} from './my-order-detail.projection'
+export {
+  MyOrderDownloadPhotoProjection,
+  type MyOrderDownloadRaw,
+  MyOrderDownloadsProjection,
+} from './my-order-downloads.projection'
+export {
+  type MyOrderCustomerState,
+  MyOrderListProjection,
+  MyOrderPreviewPhotoProjection,
+} from './my-order-list.projection'
+export {
+  MyOrdersSpentProjection,
+  MyOrdersSummaryProjection,
+} from './my-orders-summary.projection'
+export {
   OrderDeliveryLinkProjection,
   OrderDetailProjection,
   OrderPhotoProjection,
