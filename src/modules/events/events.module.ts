@@ -12,12 +12,15 @@ import { GetEventsStatsHandler } from '@events/application/queries/get-events-st
 import { GetPublicEventDetailHandler } from '@events/application/queries/get-public-event-detail/get-public-event-detail.handler'
 import { GetPublicEventPhotosHandler } from '@events/application/queries/get-public-event-photos/get-public-event-photos.handler'
 import { GetPublicEventsListHandler } from '@events/application/queries/get-public-events-list/get-public-events-list.handler'
+import { EventConfigurationService } from '@events/application/services/event-configuration.service'
 import {
   EVENT_OPERATOR_REPOSITORY,
+  EVENT_PAYOUT_METHOD_REPOSITORY,
   EVENT_READ_REPOSITORY,
   EVENT_WRITE_REPOSITORY,
 } from '@events/domain/ports'
 import { EventOperatorRepository } from '@events/infrastructure/repositories/event-operator.repository'
+import { EventPayoutMethodRepository } from '@events/infrastructure/repositories/event-payout-method.repository'
 import { EventReadRepository } from '@events/infrastructure/repositories/event-read.repository'
 import { EventWriteRepository } from '@events/infrastructure/repositories/event-write.repository'
 import { EventsController } from '@events/presentation/controllers/events.controller'
@@ -61,9 +64,11 @@ import { TenantsModule } from '../tenants/tenants.module'
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
+    EventConfigurationService,
     { provide: EVENT_READ_REPOSITORY, useClass: EventReadRepository },
     { provide: EVENT_WRITE_REPOSITORY, useClass: EventWriteRepository },
     { provide: EVENT_OPERATOR_REPOSITORY, useClass: EventOperatorRepository },
+    { provide: EVENT_PAYOUT_METHOD_REPOSITORY, useClass: EventPayoutMethodRepository },
   ],
   exports: [EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY, EVENT_OPERATOR_REPOSITORY],
 })

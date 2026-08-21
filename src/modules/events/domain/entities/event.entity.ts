@@ -1,5 +1,6 @@
 import { AppException, AuditFields } from '@shared/domain'
 import slugify from 'slugify'
+import type { EventBrandSnapshot } from '../value-objects/event-brand-snapshot.vo'
 import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo'
 
 export class Event {
@@ -14,6 +15,9 @@ export class Event {
     public cantonId: number | null,
     public eventTypeId: number,
     public status: EventStatusType,
+    public snapPublicName: string | null,
+    public snapWatermarkStorageKey: string | null,
+    public snapWhatsappNumber: string | null,
     public readonly audit: AuditFields,
   ) {}
 
@@ -40,6 +44,9 @@ export class Event {
       data.cantonId,
       data.eventTypeId,
       EventStatus.ACTIVE,
+      null,
+      null,
+      null,
       AuditFields.initialize(),
     )
   }
@@ -95,6 +102,13 @@ export class Event {
     }
   }
 
+  applyBrandSnapshot(brand: EventBrandSnapshot): void {
+    this.snapPublicName = brand.publicName
+    this.snapWatermarkStorageKey = brand.watermarkStorageKey
+    this.snapWhatsappNumber = brand.whatsappNumber
+    this.audit.markUpdated()
+  }
+
   static generateSlug(name: string): string {
     return slugify(name, { lower: true, strict: true, locale: 'es' })
   }
@@ -122,6 +136,9 @@ export class Event {
     cantonId: number | null
     eventTypeId: number
     status: EventStatusType
+    snapPublicName: string | null
+    snapWatermarkStorageKey: string | null
+    snapWhatsappNumber: string | null
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
@@ -139,6 +156,9 @@ export class Event {
       data.cantonId,
       data.eventTypeId,
       data.status,
+      data.snapPublicName,
+      data.snapWatermarkStorageKey,
+      data.snapWhatsappNumber,
       AuditFields.fromPersistence({
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
