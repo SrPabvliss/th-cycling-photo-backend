@@ -374,6 +374,8 @@ model Event {
   province_id    Int?
   canton_id      Int?
   status         EventStatus @default(active)
+  photo_quota     Int?
+  photos_uploaded Int @default(0)
   pricing_config Json?
   created_at     DateTime    @default(now()) @db.Timestamptz
   updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz
@@ -904,6 +906,7 @@ model Tenant {
   name        String   @db.VarChar(200)
   is_platform Boolean  @default(false)
   event_quota Int      @default(0)
+  default_event_photo_quota Int?
   created_at  DateTime @default(now()) @db.Timestamptz
 
   public_name           String?   @db.VarChar(200)
