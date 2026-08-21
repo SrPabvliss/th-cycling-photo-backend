@@ -305,5 +305,17 @@ describe('Event Entity', () => {
     it('passes when the event is not frozen', () => {
       expect(() => buildEvent(false).assertNotFrozen()).not.toThrow()
     })
+
+    it('setFrozen toggles the flag and timestamp', () => {
+      const event = buildEvent(false)
+
+      event.setFrozen(true)
+      expect(event.isFrozen).toBe(true)
+      expect(event.frozenAt).toBeInstanceOf(Date)
+
+      event.setFrozen(false)
+      expect(event.isFrozen).toBe(false)
+      expect(event.frozenAt).toBeNull()
+    })
   })
 })

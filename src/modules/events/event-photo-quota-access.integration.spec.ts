@@ -1,5 +1,6 @@
 import { GetEventDetailHandler } from '@events/application/queries/get-event-detail/get-event-detail.handler'
 import { GetEventDetailQuery } from '@events/application/queries/get-event-detail/get-event-detail.query'
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { EVENT_READ_REPOSITORY } from '@events/domain/ports'
 import { EventReadRepository } from '@events/infrastructure/repositories/event-read.repository'
 import { getQueueToken } from '@nestjs/bullmq'
@@ -76,6 +77,7 @@ describe('event photo quota access', () => {
         },
         { provide: getQueueToken('embedding-generation'), useValue: { addBulk: async () => [] } },
         { provide: getQueueToken('photo-classification'), useValue: { addBulk: async () => [] } },
+        FreezeStateService,
         ConfirmPhotoBatchHandler,
         GetEventDetailHandler,
       ],
