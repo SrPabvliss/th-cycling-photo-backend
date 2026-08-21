@@ -39,6 +39,8 @@ export const eventDetailSelectConfig = {
   ...eventListSelectConfig,
   province_id: true,
   canton_id: true,
+  photo_quota: true,
+  photos_uploaded: true,
   created_at: true,
   updated_at: true,
 } satisfies Prisma.EventSelect
@@ -222,6 +224,8 @@ export function toDetailProjection(
     coverImageSlug: coverSlug,
     status: record.status,
     photoCount: record._count.photos,
+    photoQuota: record.photo_quota,
+    photosUploaded: record.photos_uploaded,
     classifiedCount: 0,
     totalFileSize: 0,
     createdAt: record.created_at,
