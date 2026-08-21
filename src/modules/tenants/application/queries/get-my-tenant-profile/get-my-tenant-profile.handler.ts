@@ -1,5 +1,6 @@
 import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import { AppException } from '@shared/domain'
 import { type IUserReadRepository, USER_READ_REPOSITORY } from '@users/domain/ports'
 import {
@@ -14,6 +15,7 @@ export class GetMyTenantProfileHandler implements IQueryHandler<GetMyTenantProfi
   constructor(
     @Inject(TENANT_PROFILE_REPOSITORY) private readonly repo: ITenantProfileRepository,
     @Inject(USER_READ_REPOSITORY) private readonly userRepo: IUserReadRepository,
+    private readonly cdn: CdnUrlBuilder,
   ) {}
 
   async execute(query: GetMyTenantProfileQuery): Promise<TenantProfileProjection> {
@@ -28,6 +30,9 @@ export class GetMyTenantProfileHandler implements IQueryHandler<GetMyTenantProfi
       name: profile.name,
       publicName: profile.publicName,
       watermarkStorageKey: profile.watermarkStorageKey,
+      watermarkUrl: profile.watermarkStorageKey
+        ? this.cdn.watermarkUrl(profile.id, profile.watermarkStorageKey)
+        : null,
       whatsappNumber: profile.whatsappNumber,
       whatsappPendingVerification:
         profile.whatsappNumber !== null && profile.whatsappVerifiedAt === null,

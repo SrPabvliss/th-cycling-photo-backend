@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { UsersModule } from '@users/users.module'
+import { ConfirmWatermarkUploadHandler } from './application/commands/confirm-watermark-upload/confirm-watermark-upload.handler'
 import { CreatePayoutMethodHandler } from './application/commands/create-payout-method/create-payout-method.handler'
 import { CreateTenantHandler } from './application/commands/create-tenant/create-tenant.handler'
 import { DeletePayoutMethodHandler } from './application/commands/delete-payout-method/delete-payout-method.handler'
+import { GenerateWatermarkPresignedUrlHandler } from './application/commands/generate-watermark-presigned-url/generate-watermark-presigned-url.handler'
 import { UpdateMyTenantProfileHandler } from './application/commands/update-my-tenant-profile/update-my-tenant-profile.handler'
 import { UpdatePayoutMethodHandler } from './application/commands/update-payout-method/update-payout-method.handler'
 import { UpdateTenantPhotoQuotaDefaultHandler } from './application/commands/update-tenant-photo-quota-default/update-tenant-photo-quota-default.handler'
@@ -31,6 +33,8 @@ const handlers = [
   CreatePayoutMethodHandler,
   UpdatePayoutMethodHandler,
   DeletePayoutMethodHandler,
+  GenerateWatermarkPresignedUrlHandler,
+  ConfirmWatermarkUploadHandler,
 ]
 
 @Module({

@@ -32,7 +32,6 @@ import { PublicEventsController } from '@events/presentation/controllers/public-
 import { LocationsModule } from '@locations/locations.module'
 import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
-import { CloudflareModule } from '@shared/cloudflare/cloudflare.module'
 import { UsersModule } from '@users/users.module'
 import { PhotosModule } from '../photos/photos.module'
 
@@ -67,7 +66,6 @@ import { TenantsModule } from '../tenants/tenants.module'
     LocationsModule,
     UsersModule,
     TenantsModule,
-    CloudflareModule,
     forwardRef(() => PhotosModule),
   ],
   controllers: [EventsController, PublicEventsController],
