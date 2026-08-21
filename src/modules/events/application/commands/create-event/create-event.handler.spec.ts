@@ -57,7 +57,9 @@ describe('CreateEventHandler', () => {
       getTenantsList: jest.fn(),
       updateEventQuota: jest.fn(),
       createTenantWithAdmin: jest.fn(),
-      checkQuota: jest.fn().mockResolvedValue({ quota: 10, used: 0, isPlatform: false }),
+      checkQuota: jest
+        .fn()
+        .mockResolvedValue({ quota: 10, used: 0, isPlatform: false, defaultEventPhotoQuota: null }),
     } as jest.Mocked<ITenantRepository>
 
     payoutRepo = {
@@ -161,7 +163,12 @@ describe('CreateEventHandler', () => {
   })
 
   it('rejects creation when the tenant has exhausted its event quota', async () => {
-    tenantRepo.checkQuota.mockResolvedValue({ quota: 5, used: 5, isPlatform: false })
+    tenantRepo.checkQuota.mockResolvedValue({
+      quota: 5,
+      used: 5,
+      isPlatform: false,
+      defaultEventPhotoQuota: null,
+    })
     const command = new CreateEventCommand(
       'Test Event',
       futureStart,
@@ -177,7 +184,12 @@ describe('CreateEventHandler', () => {
   })
 
   it('lets the platform tenant exceed its quota', async () => {
-    tenantRepo.checkQuota.mockResolvedValue({ quota: 1, used: 99, isPlatform: true })
+    tenantRepo.checkQuota.mockResolvedValue({
+      quota: 1,
+      used: 99,
+      isPlatform: true,
+      defaultEventPhotoQuota: null,
+    })
     const command = new CreateEventCommand(
       'Test Event',
       futureStart,

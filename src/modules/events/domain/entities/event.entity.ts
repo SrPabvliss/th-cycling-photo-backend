@@ -18,6 +18,7 @@ export class Event {
     public snapPublicName: string | null,
     public snapWatermarkStorageKey: string | null,
     public snapWhatsappNumber: string | null,
+    public readonly photoQuota: number | null,
     public readonly audit: AuditFields,
   ) {}
 
@@ -29,6 +30,7 @@ export class Event {
     cantonId: number | null
     eventTypeId: number
     tenantId: string
+    photoQuota?: number | null
   }): Event {
     Event.validateName(data.name)
     Event.validateDateRange(data.startDate, data.endDate)
@@ -47,6 +49,8 @@ export class Event {
       null,
       null,
       null,
+      // copied at creation, not referenced, so raising the tenant default never re-caps existing events
+      data.photoQuota ?? null,
       AuditFields.initialize(),
     )
   }
@@ -139,6 +143,7 @@ export class Event {
     snapPublicName: string | null
     snapWatermarkStorageKey: string | null
     snapWhatsappNumber: string | null
+    photoQuota?: number | null
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
@@ -159,6 +164,7 @@ export class Event {
       data.snapPublicName,
       data.snapWatermarkStorageKey,
       data.snapWhatsappNumber,
+      data.photoQuota ?? null,
       AuditFields.fromPersistence({
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,

@@ -68,9 +68,12 @@ export class TenantRepository implements ITenantRepository {
     return tenant.id
   }
 
-  async checkQuota(
-    tenantId: string,
-  ): Promise<{ quota: number; used: number; isPlatform: boolean }> {
+  async checkQuota(tenantId: string): Promise<{
+    quota: number
+    used: number
+    isPlatform: boolean
+    defaultEventPhotoQuota: number | null
+  }> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       include: {
@@ -90,6 +93,7 @@ export class TenantRepository implements ITenantRepository {
       quota: tenant.event_quota,
       used: tenant._count.events,
       isPlatform: tenant.is_platform,
+      defaultEventPhotoQuota: tenant.default_event_photo_quota,
     }
   }
 }

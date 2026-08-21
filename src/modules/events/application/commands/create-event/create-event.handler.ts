@@ -52,7 +52,8 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
 
     await this.configService.assertProfileComplete(tenantId)
 
-    const { quota, used, isPlatform } = await this.tenantRepo.checkQuota(tenantId)
+    const { quota, used, isPlatform, defaultEventPhotoQuota } =
+      await this.tenantRepo.checkQuota(tenantId)
     if (!isPlatform && used >= quota) {
       throw AppException.businessRule('tenant.quota_exceeded')
     }
@@ -65,6 +66,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       cantonId: command.cantonId,
       eventTypeId: command.eventTypeId,
       tenantId,
+      photoQuota: defaultEventPhotoQuota,
     })
 
     event.audit.setCreatedBy(command.audit.userId)

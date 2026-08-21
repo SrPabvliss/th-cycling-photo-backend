@@ -22,5 +22,10 @@ export interface ITenantRepository {
   getTenantsList(): Promise<TenantListProjection[]>
   updateEventQuota(tenantId: string, quota: number): Promise<void>
   createTenantWithAdmin(data: CreateTenantPayload): Promise<string>
-  checkQuota(tenantId: string): Promise<{ quota: number; used: number; isPlatform: boolean }>
+  checkQuota(tenantId: string): Promise<{
+    quota: number
+    used: number
+    isPlatform: boolean
+    defaultEventPhotoQuota: number | null
+  }>
 }
