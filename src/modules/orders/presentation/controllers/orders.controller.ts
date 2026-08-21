@@ -25,6 +25,7 @@ import {
 } from '@orders/application/queries'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { AllowedWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
@@ -91,6 +92,7 @@ export class OrdersController {
   }
 
   @RequirePermission('order.notify_payment')
+  @AllowedWhenFrozen()
   @Patch(':id/notify-payment-info')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -110,6 +112,7 @@ export class OrdersController {
   }
 
   @RequirePermission('order.confirm_payment')
+  @AllowedWhenFrozen()
   @Patch(':id/confirm-payment')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Confirm payment (pending → paid)' })
@@ -127,6 +130,7 @@ export class OrdersController {
   }
 
   @RequirePermission('order.gift')
+  @AllowedWhenFrozen()
   @Patch(':id/gift')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -146,6 +150,7 @@ export class OrdersController {
   }
 
   @RequirePermission('order.convert_to_sale')
+  @AllowedWhenFrozen()
   @Patch(':id/convert-to-sale')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -165,6 +170,7 @@ export class OrdersController {
   }
 
   @RequirePermission('order.convert_to_gift')
+  @AllowedWhenFrozen()
   @Patch(':id/convert-to-gift')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -184,6 +190,7 @@ export class OrdersController {
   }
 
   @RequirePermission('order.deliver')
+  @AllowedWhenFrozen()
   @Patch(':id/send-delivery')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -203,6 +210,7 @@ export class OrdersController {
   }
 
   @RequirePermission('order.delivery.regenerate')
+  @AllowedWhenFrozen()
   @Post(':id/regenerate-delivery')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Regenerate expired delivery link' })
@@ -219,6 +227,7 @@ export class OrdersController {
   }
 
   @RequirePermission('order.cancel')
+  @AllowedWhenFrozen()
   @Patch(':id/cancel')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({

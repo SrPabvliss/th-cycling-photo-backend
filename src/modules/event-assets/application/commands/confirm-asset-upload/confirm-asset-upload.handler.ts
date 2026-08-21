@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
@@ -29,6 +30,7 @@ export class ConfirmAssetUploadHandler implements ICommandHandler<ConfirmAssetUp
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
     @Inject(KV_STORAGE_ADAPTER) private readonly kvStorage: IKvStorageAdapter,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   async execute(command: ConfirmAssetUploadCommand): Promise<EntityIdProjection> {
@@ -40,6 +42,7 @@ export class ConfirmAssetUploadHandler implements ICommandHandler<ConfirmAssetUp
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)
     await this.authz.assert(command.userId, 'event_asset.confirm', event.id)
+    await this.freeze.assertNotFrozen(command.eventId)
 
     const expectedPrefix = `events/${command.eventId}/assets/${command.assetType}/`
     if (!command.storageKey.startsWith(expectedPrefix)) {

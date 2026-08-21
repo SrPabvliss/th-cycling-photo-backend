@@ -3,6 +3,7 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { EntityIdProjection } from '@shared/application'
 import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
+import { BlocksWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import {
@@ -41,6 +42,7 @@ export class EventAssetsController {
   }
 
   @RequirePermission('event_asset.presign')
+  @BlocksWhenFrozen()
   @Post(':assetType/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate presigned URL for asset upload' })
@@ -73,6 +75,7 @@ export class EventAssetsController {
   }
 
   @RequirePermission('event_asset.confirm')
+  @BlocksWhenFrozen()
   @Post(':assetType/confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event_asset' })
   @ApiOperation({ summary: 'Confirm asset upload after presigned URL flow' })
@@ -107,6 +110,7 @@ export class EventAssetsController {
   }
 
   @RequirePermission('event_asset.delete')
+  @BlocksWhenFrozen()
   @Delete(':assetType')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an event asset' })

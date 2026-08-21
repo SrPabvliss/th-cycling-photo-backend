@@ -1,3 +1,4 @@
+import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
@@ -31,7 +32,11 @@ describe('GenerateAssetPresignedUrlHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as jest.Mocked<IAuthorizationService>
 
-    handler = new GenerateAssetPresignedUrlHandler(eventReadRepo, storage, authz)
+    const freeze = {
+      assertNotFrozen: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<FreezeStateService>
+
+    handler = new GenerateAssetPresignedUrlHandler(eventReadRepo, storage, authz, freeze)
   })
 
   it('rejects asset types other than cover_image', async () => {

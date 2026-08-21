@@ -1,3 +1,4 @@
+import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
@@ -55,7 +56,11 @@ describe('UnassignCategoryFromEventHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(EventScope.unrestricted()),
     } as unknown as jest.Mocked<IAuthorizationService>
 
-    handler = new UnassignCategoryFromEventHandler(writeRepo, eventReadRepo, authz)
+    const freeze = {
+      assertNotFrozen: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<FreezeStateService>
+
+    handler = new UnassignCategoryFromEventHandler(writeRepo, eventReadRepo, authz, freeze)
   })
 
   it('throws NOT_FOUND when the event does not exist', async () => {

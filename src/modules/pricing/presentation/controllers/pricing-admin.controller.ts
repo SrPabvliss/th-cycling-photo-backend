@@ -5,6 +5,7 @@ import { ClearEventPricingConfigCommand } from '@pricing/application/commands/cl
 import { SetEventPricingConfigCommand } from '@pricing/application/commands/set-event-pricing-config/set-event-pricing-config.command'
 import { SetEventPricingConfigDto } from '@pricing/application/commands/set-event-pricing-config/set-event-pricing-config.dto'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { BlocksWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 
 /**
@@ -24,6 +25,7 @@ export class PricingAdminController {
   constructor(private readonly commandBus: CommandBus) {}
 
   @RequirePermission('pricing.config.set')
+  @BlocksWhenFrozen()
   @Put(':eventId/pricing-config')
   set(
     @Param('eventId', ParseUUIDPipe) eventId: string,
@@ -40,6 +42,7 @@ export class PricingAdminController {
   }
 
   @RequirePermission('pricing.config.clear')
+  @BlocksWhenFrozen()
   @Delete(':eventId/pricing-config')
   clear(@Param('eventId', ParseUUIDPipe) eventId: string, @CurrentUser() user: ICurrentUser) {
     return this.commandBus.execute(new ClearEventPricingConfigCommand(eventId, user.userId))

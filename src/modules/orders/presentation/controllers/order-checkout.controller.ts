@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { ChoosePaymentMethodCommand, ChoosePaymentMethodDto } from '@orders/application/commands'
 import { OrderPaymentMethodProjection } from '@orders/application/projections'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { AllowedWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
@@ -14,6 +15,7 @@ export class OrderCheckoutController {
   constructor(private readonly commandBus: CommandBus) {}
 
   @RequirePermission('order.payment_method.set')
+  @AllowedWhenFrozen()
   @Patch('payment-method')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Record the payment method the buyer chose for a group of orders' })

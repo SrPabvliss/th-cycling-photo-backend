@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
@@ -25,6 +26,7 @@ export class ClearEventPricingConfigHandler
     private readonly repo: IEventPricingWriteRepository,
     @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   async execute(cmd: ClearEventPricingConfigCommand): Promise<void> {
@@ -34,6 +36,7 @@ export class ClearEventPricingConfigHandler
     if (!event) throw AppException.notFound('Event', cmd.eventId)
 
     await this.authz.assert(cmd.clearedById, 'pricing.config.clear', event.id)
+    await this.freeze.assertNotFrozen(event.id)
 
     await this.repo.deleteConfig(event.id)
   }

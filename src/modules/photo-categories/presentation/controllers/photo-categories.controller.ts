@@ -14,6 +14,10 @@ import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
 import { EntityIdProjection } from '@shared/application'
 import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
+import {
+  AllowedWhenFrozen,
+  BlocksWhenFrozen,
+} from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import {
@@ -53,6 +57,7 @@ export class PhotoCategoriesController {
   }
 
   @RequirePermission('photo_category.create')
+  @AllowedWhenFrozen()
   @Post('photo-categories')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo_category' })
   @ApiOperation({ summary: 'Create a global photo category' })
@@ -81,6 +86,7 @@ export class PhotoCategoriesController {
   }
 
   @RequirePermission('photo_category.event.assign')
+  @BlocksWhenFrozen()
   @Post('events/:eventId/photo-categories')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo_category' })
   @ApiOperation({ summary: 'Assign a global category to an event' })
@@ -98,6 +104,7 @@ export class PhotoCategoriesController {
   }
 
   @RequirePermission('photo_category.event.remove')
+  @BlocksWhenFrozen()
   @Delete('events/:eventId/photo-categories/:photoCategoryId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Unassign a category from an event' })
