@@ -31,7 +31,8 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     @Inject(EVENT_OPERATOR_REPOSITORY) private readonly operatorRepo: IEventOperatorRepository,
     @Inject(USER_READ_REPOSITORY) private readonly userRepo: IUserReadRepository,
     @Inject(TENANT_REPOSITORY) private readonly tenantRepo: ITenantRepository,
-    @Inject(EVENT_PAYOUT_METHOD_REPOSITORY) private readonly payoutRepo: IEventPayoutMethodRepository,
+    @Inject(EVENT_PAYOUT_METHOD_REPOSITORY)
+    private readonly payoutRepo: IEventPayoutMethodRepository,
     private readonly locationValidator: LocationValidator,
     private readonly configService: EventConfigurationService,
   ) {}
