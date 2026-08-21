@@ -136,7 +136,7 @@ export class CreatePaymentIntentHandler implements ICommandHandler<CreatePayment
       clientTransactionId,
       amounts,
       commissionCents,
-      mode: account.mode as PaymentModeType, // payphone accounts always carry a mode
+      mode: account.mode as PaymentModeType, // repository guarantees non-null mode for active payphone rows
       receiver: receiverIdentifier,
       storeId: (credentials.storeId as string | null) ?? null,
       transferToCents: transferableCents,

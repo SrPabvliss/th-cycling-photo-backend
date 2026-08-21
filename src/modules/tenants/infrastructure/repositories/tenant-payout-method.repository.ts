@@ -30,6 +30,7 @@ export class TenantPayoutMethodRepository implements ITenantPayoutMethodReposito
         provider: PayoutProvider.PAYPHONE,
         is_active: true,
         status: PaymentAccountStatus.VERIFIED,
+        mode: { not: null },
       },
       orderBy: [{ sort_order: 'asc' }, { created_at: 'asc' }],
     })

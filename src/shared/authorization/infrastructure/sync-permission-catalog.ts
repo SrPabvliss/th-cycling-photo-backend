@@ -15,7 +15,7 @@ import {
  */
 export type PermissionCatalogClient = Pick<
   PrismaClient,
-  'permission' | 'permissionTemplate' | 'permissionTemplatePermission'
+  'permission' | 'permissionTemplate' | 'permissionTemplatePermission' | 'userPermissionGrant'
 >
 
 /** What `syncPermissionCatalog` itself needs: the above, plus `$transaction`. */
@@ -50,12 +50,15 @@ async function syncPermissions(prisma: PermissionCatalogClient): Promise<void> {
       },
     })
   }
-  // drift in the other direction: a key removed from the constant; prune its template links first, or the FK blocks the delete
+  // drift in the other direction: a key removed from the constant; prune its template links and grants first, or the FK blocks the delete
   const stale = await prisma.permission.findMany({
     where: { key: { notIn: ALL_PERMISSION_KEYS } },
     select: { id: true },
   })
   await prisma.permissionTemplatePermission.deleteMany({
+    where: { permission_id: { in: stale.map((p) => p.id) } },
+  })
+  await prisma.userPermissionGrant.deleteMany({
     where: { permission_id: { in: stale.map((p) => p.id) } },
   })
   await prisma.permission.deleteMany({ where: { key: { notIn: ALL_PERMISSION_KEYS } } })

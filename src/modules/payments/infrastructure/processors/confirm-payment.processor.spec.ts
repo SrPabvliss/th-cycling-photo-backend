@@ -3,14 +3,12 @@ import { ConfirmPaymentTransactionCommand } from '@payments/application/commands
 import { PaymentTransactionStatus } from '@payments/domain/value-objects/payment-transaction-status.vo'
 import { ConfirmPaymentProcessor } from './confirm-payment.processor'
 
-const SELLER = 'seller-1'
 const BUYER = 'buyer-1'
 
 type FixtureContext = {
   orderId: string
   status: string
   subtotalDollars: number | null
-  sellerUserId: string
   buyerUserId: string
 }
 
@@ -117,7 +115,6 @@ describe('ConfirmPaymentProcessor', () => {
           orderId: 'order-1',
           status: 'pending',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
           buyerUserId: BUYER,
         },
       ],
@@ -139,7 +136,6 @@ describe('ConfirmPaymentProcessor', () => {
           orderId: 'order-1',
           status: 'paid',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
           buyerUserId: BUYER,
         },
       ],
@@ -162,7 +158,6 @@ describe('ConfirmPaymentProcessor', () => {
           orderId: 'order-1',
           status: 'delivered',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
           buyerUserId: BUYER,
         },
       ],
@@ -181,7 +176,6 @@ describe('ConfirmPaymentProcessor', () => {
           orderId: 'order-1',
           status: 'payment_info_sent',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
           buyerUserId: BUYER,
         },
       ],
@@ -202,7 +196,6 @@ describe('ConfirmPaymentProcessor', () => {
           orderId: 'order-1',
           status: 'draft',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
           buyerUserId: BUYER,
         },
       ],
@@ -259,14 +252,12 @@ describe('ConfirmPaymentProcessor', () => {
           orderId: 'order-1',
           status: 'paid',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
           buyerUserId: BUYER,
         },
         {
           orderId: 'order-2',
           status: 'pending',
           subtotalDollars: 15,
-          sellerUserId: SELLER,
           buyerUserId: BUYER,
         },
       ],
@@ -289,7 +280,6 @@ describe('ConfirmPaymentProcessor', () => {
           orderId: 'order-1',
           status: 'paid',
           subtotalDollars: 10,
-          sellerUserId: SELLER,
           buyerUserId: BUYER,
         },
       ],
