@@ -73,6 +73,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       getAssignedEventIdsByStatus: jest.fn(),
       getAllAssignedEventIds: jest.fn().mockResolvedValue([]),
       getEventBriefsByIds: jest.fn(),
+      isFrozen: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoWriteRepo = {

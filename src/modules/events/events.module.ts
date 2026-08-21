@@ -18,6 +18,7 @@ import { GetPublicEventDetailHandler } from '@events/application/queries/get-pub
 import { GetPublicEventPhotosHandler } from '@events/application/queries/get-public-event-photos/get-public-event-photos.handler'
 import { GetPublicEventsListHandler } from '@events/application/queries/get-public-events-list/get-public-events-list.handler'
 import { EventConfigurationService } from '@events/application/services/event-configuration.service'
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import {
   EVENT_OPERATOR_REPOSITORY,
   EVENT_PAYOUT_METHOD_REPOSITORY,
@@ -75,11 +76,17 @@ import { TenantsModule } from '../tenants/tenants.module'
     ...CommandHandlers,
     ...QueryHandlers,
     EventConfigurationService,
+    FreezeStateService,
     { provide: EVENT_READ_REPOSITORY, useClass: EventReadRepository },
     { provide: EVENT_WRITE_REPOSITORY, useClass: EventWriteRepository },
     { provide: EVENT_OPERATOR_REPOSITORY, useClass: EventOperatorRepository },
     { provide: EVENT_PAYOUT_METHOD_REPOSITORY, useClass: EventPayoutMethodRepository },
   ],
-  exports: [EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY, EVENT_OPERATOR_REPOSITORY],
+  exports: [
+    EVENT_READ_REPOSITORY,
+    EVENT_WRITE_REPOSITORY,
+    EVENT_OPERATOR_REPOSITORY,
+    FreezeStateService,
+  ],
 })
 export class EventsModule {}

@@ -35,7 +35,10 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
-import { AllowedWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
+import {
+  AllowedWhenFrozen,
+  BlocksWhenFrozen,
+} from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import { SetEventFreezeDto } from '../dtos/set-event-freeze.dto'
@@ -51,6 +54,7 @@ export class EventsController {
   ) {}
 
   @RequirePermission('event.read')
+  @AllowedWhenFrozen()
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List events with pagination' })
@@ -72,6 +76,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.stats.read')
+  @AllowedWhenFrozen()
   @Get('stats')
   @SuccessMessage('success.FETCHED', { entity: 'entities.stats' })
   @ApiOperation({ summary: 'Get global event and photo statistics' })
@@ -85,6 +90,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.create')
+  @AllowedWhenFrozen()
   @Get('configuration/preset')
   @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Get the tenant configuration preset for a new event' })
@@ -98,6 +104,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.read')
+  @AllowedWhenFrozen()
   @Get(':slug')
   @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Get event details by slug' })
@@ -114,6 +121,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.create')
+  @AllowedWhenFrozen()
   @Post()
   @SuccessMessage('success.CREATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Create a new event' })
@@ -138,6 +146,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.update')
+  @BlocksWhenFrozen()
   @Patch(':id')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Update an existing event' })
@@ -168,6 +177,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.read')
+  @AllowedWhenFrozen()
   @Get(':id/configuration')
   @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
   @ApiOperation({ summary: "Get an event's configuration" })
@@ -183,6 +193,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.update')
+  @BlocksWhenFrozen()
   @Patch(':id/configuration')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: "Update an event's configuration" })
@@ -204,6 +215,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.archive')
+  @BlocksWhenFrozen()
   @Patch(':id/archive')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Archive an event' })
@@ -242,6 +254,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.photo_quota.set')
+  @BlocksWhenFrozen()
   @Patch(':id/photo-quota')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: "Override an event's photo quota" })
@@ -255,6 +268,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.restore')
+  @BlocksWhenFrozen()
   @Patch(':id/restore')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Restore an archived event' })
@@ -272,6 +286,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.delete')
+  @BlocksWhenFrozen()
   @Delete(':id')
   @SuccessMessage('success.DELETED', { entity: 'entities.event' })
   @ApiOperation({ summary: 'Delete an event' })
@@ -290,6 +305,7 @@ export class EventsController {
   // ─── Event Operator Assignment ──────────────────────────────────────────────
 
   @RequirePermission('event.collaborator.read')
+  @AllowedWhenFrozen()
   @Get(':id/operators')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List operators assigned to an event' })
@@ -299,6 +315,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.collaborator.assign')
+  @BlocksWhenFrozen()
   @Post(':id/operators')
   @SuccessMessage('success.CREATED', { entity: 'entities.event_operator' })
   @ApiOperation({ summary: 'Assign an operator to an event' })
@@ -313,6 +330,7 @@ export class EventsController {
   }
 
   @RequirePermission('event.collaborator.unassign')
+  @BlocksWhenFrozen()
   @Delete(':id/operators/:userId')
   @HttpCode(200)
   @SuccessMessage('success.DELETED', { entity: 'entities.event_operator' })

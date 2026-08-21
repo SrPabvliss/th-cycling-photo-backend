@@ -29,6 +29,7 @@ export class RestoreEventHandler implements ICommandHandler<RestoreEventCommand>
     if (!event) throw AppException.notFound('Event', command.id)
 
     await this.authz.assert(command.userId, 'event.restore', event.id)
+    event.assertNotFrozen()
 
     event.restore()
     await this.writeRepo.save(event)

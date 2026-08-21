@@ -34,6 +34,7 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
     const event = await this.readRepo.findByIdInScope(command.id, scope)
     if (!event) throw AppException.notFound('Event', command.id)
     await this.authz.assert(command.audit.userId, 'event.update', event.id)
+    event.assertNotFrozen()
 
     const provinceId = command.provinceId !== undefined ? command.provinceId : event.provinceId
     const cantonId = command.cantonId !== undefined ? command.cantonId : event.cantonId
