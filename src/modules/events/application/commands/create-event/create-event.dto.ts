@@ -11,6 +11,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator'
 
@@ -21,11 +22,11 @@ export class EventConfigurationSelectionDto {
   @IsOptional()
   publicName?: string | null
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional()
   @IsString()
   @MaxLength(500)
-  @IsOptional()
-  watermarkStorageKey?: string | null
+  @ValidateIf((_, v) => v !== undefined)
+  watermarkStorageKey?: string
 
   @ApiPropertyOptional({ nullable: true })
   @IsString()

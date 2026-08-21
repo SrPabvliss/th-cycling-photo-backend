@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { IsArray, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator'
+import { IsArray, IsOptional, IsString, IsUUID, MaxLength, ValidateIf } from 'class-validator'
 
 export class UpdateEventConfigurationDto {
   @ApiPropertyOptional({ nullable: true })
@@ -8,11 +8,11 @@ export class UpdateEventConfigurationDto {
   @IsOptional()
   publicName?: string | null
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional()
   @IsString()
   @MaxLength(500)
-  @IsOptional()
-  watermarkStorageKey?: string | null
+  @ValidateIf((_, v) => v !== undefined)
+  watermarkStorageKey?: string
 
   @ApiPropertyOptional({ nullable: true })
   @IsString()

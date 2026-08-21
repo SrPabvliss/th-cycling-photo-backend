@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import type { EntityIdProjection } from '@shared/application'
@@ -6,8 +17,10 @@ import { CurrentUser, type ICurrentUser } from '@shared/auth'
 import { PermissionGuard } from '@shared/authorization/infrastructure/guards/permission.guard'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { AppException } from '@shared/domain'
+import { ConfirmWatermarkUploadCommand } from '../../application/commands/confirm-watermark-upload/confirm-watermark-upload.command'
 import { CreatePayoutMethodCommand } from '../../application/commands/create-payout-method/create-payout-method.command'
 import { DeletePayoutMethodCommand } from '../../application/commands/delete-payout-method/delete-payout-method.command'
+import { GenerateWatermarkPresignedUrlCommand } from '../../application/commands/generate-watermark-presigned-url/generate-watermark-presigned-url.command'
 import { UpdateMyTenantProfileCommand } from '../../application/commands/update-my-tenant-profile/update-my-tenant-profile.command'
 import { UpdatePayoutMethodCommand } from '../../application/commands/update-payout-method/update-payout-method.command'
 import type { PayoutMethodProjection } from '../../application/projections/payout-method.projection'
@@ -15,8 +28,12 @@ import type { TenantProfileProjection } from '../../application/projections/tena
 import { GetMyPayoutMethodsQuery } from '../../application/queries/get-my-payout-methods/get-my-payout-methods.query'
 import { GetMyTenantProfileQuery } from '../../application/queries/get-my-tenant-profile/get-my-tenant-profile.query'
 import type { BankTransferDetails } from '../../domain/entities/tenant-payout-method.entity'
-import type { CreatePayoutMethodDto, UpdatePayoutMethodDto } from '../dtos/payout-method.dto'
-import type { UpdateTenantProfileDto } from '../dtos/update-tenant-profile.dto'
+import { CreatePayoutMethodDto, UpdatePayoutMethodDto } from '../dtos/payout-method.dto'
+import { UpdateTenantProfileDto } from '../dtos/update-tenant-profile.dto'
+import {
+  ConfirmWatermarkUploadDto,
+  GenerateWatermarkPresignedUrlDto,
+} from '../dtos/watermark-upload.dto'
 
 function toBankDetails(dto: {
   bankName?: string
@@ -85,13 +102,29 @@ export class TenantProfileController {
     @CurrentUser() user: ICurrentUser,
   ): Promise<void> {
     await this.commandBus.execute(
-      new UpdateMyTenantProfileCommand(
-        user.userId,
-        dto.publicName,
-        dto.watermarkStorageKey,
-        dto.whatsappNumber,
-      ),
+      new UpdateMyTenantProfileCommand(user.userId, dto.publicName, dto.whatsappNumber),
     )
+  }
+
+  @Post('watermark/presigned-url')
+  @RequirePermission('tenant.profile.update')
+  async presignWatermark(
+    @Body() dto: GenerateWatermarkPresignedUrlDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new GenerateWatermarkPresignedUrlCommand(user.userId, dto.fileName, dto.contentType),
+    )
+  }
+
+  @Post('watermark/confirm')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermission('tenant.profile.update')
+  async confirmWatermark(
+    @Body() dto: ConfirmWatermarkUploadDto,
+    @CurrentUser() user: ICurrentUser,
+  ): Promise<void> {
+    await this.commandBus.execute(new ConfirmWatermarkUploadCommand(user.userId, dto.storageKey))
   }
 
   @Get('payout-methods')

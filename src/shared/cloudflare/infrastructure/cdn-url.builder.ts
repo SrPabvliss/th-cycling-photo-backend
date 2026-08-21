@@ -33,6 +33,11 @@ export class CdnUrlBuilder {
     return `${this.baseUrl}/assets/${presetSegment}${slug}.jpg`
   }
 
+  watermarkUrl(tenantId: string, storageKey: string): string {
+    const version = encodeURIComponent(storageKey.split('/').pop() ?? '')
+    return `${this.baseUrl}/assets/wm-tenant-${tenantId}.png?v=${version}`
+  }
+
   /**
    * Generates HMAC token: ?token={expiration}-{hexHmac}.
    * Internal-URL TTL kept short on purpose: frontend queries holding these
