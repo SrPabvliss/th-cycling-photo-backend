@@ -6,17 +6,17 @@ export class UpdateTenantProfileDto {
   @IsString()
   @IsOptional()
   @MaxLength(200)
-  publicName?: string
+  publicName?: string | null
 
   @ApiPropertyOptional({ example: 'watermarks/tenant-123.png' })
   @IsString()
   @IsOptional()
   @MaxLength(500)
-  watermarkStorageKey?: string
+  watermarkStorageKey?: string | null
 
   @ApiPropertyOptional({ example: '+593987654321' })
   @IsString()
   @IsOptional()
   @MaxLength(20)
-  whatsappNumber?: string
+  whatsappNumber?: string | null
 }

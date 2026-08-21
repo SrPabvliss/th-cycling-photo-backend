@@ -35,7 +35,8 @@ export class CreatePayoutMethodHandler implements ICommandHandler<CreatePayoutMe
         : this.buildBankTransfer(command, tenantId)
 
     const existing = await this.repo.findByTenantId(tenantId)
-    method.reorder(existing.length)
+    const nextSortOrder = existing.reduce((max, m) => Math.max(max, m.sortOrder), -1) + 1
+    method.reorder(nextSortOrder)
     await this.repo.save(method)
 
     return { id: method.id }
