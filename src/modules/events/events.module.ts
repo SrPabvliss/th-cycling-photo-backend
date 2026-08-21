@@ -25,6 +25,7 @@ import { PublicEventsController } from '@events/presentation/controllers/public-
 import { LocationsModule } from '@locations/locations.module'
 import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
+import { UsersModule } from '@users/users.module'
 import { PhotosModule } from '../photos/photos.module'
 
 const CommandHandlers = [
@@ -46,8 +47,16 @@ const QueryHandlers = [
   GetPublicEventPhotosHandler,
 ]
 
+import { TenantsModule } from '../tenants/tenants.module'
+
 @Module({
-  imports: [CqrsModule, LocationsModule, forwardRef(() => PhotosModule)],
+  imports: [
+    CqrsModule,
+    LocationsModule,
+    UsersModule,
+    TenantsModule,
+    forwardRef(() => PhotosModule),
+  ],
   controllers: [EventsController, PublicEventsController],
   providers: [
     ...CommandHandlers,

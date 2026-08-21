@@ -2,6 +2,10 @@ import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
@@ -24,6 +28,7 @@ export class ConfirmAssetUploadHandler implements ICommandHandler<ConfirmAssetUp
     @Inject(EVENT_ASSET_WRITE_REPOSITORY) private readonly writeRepo: IEventAssetWriteRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
     @Inject(KV_STORAGE_ADAPTER) private readonly kvStorage: IKvStorageAdapter,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(command: ConfirmAssetUploadCommand): Promise<EntityIdProjection> {
@@ -31,8 +36,10 @@ export class ConfirmAssetUploadHandler implements ICommandHandler<ConfirmAssetUp
       throw AppException.businessRule('event_asset.unsupported_type')
     }
 
-    const event = await this.eventReadRepo.findById(command.eventId)
+    const scope = await this.authz.resolveEventScope(command.userId)
+    const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)
+    await this.authz.assert(command.userId, 'event_asset.confirm', event.id)
 
     const expectedPrefix = `events/${command.eventId}/assets/${command.assetType}/`
     if (!command.storageKey.startsWith(expectedPrefix)) {

@@ -6,6 +6,7 @@ import type {
 import type { PreviewLink } from '@previews/domain/entities'
 import type { IPreviewLinkReadRepository } from '@previews/domain/ports'
 import { PaginatedResult, type Pagination } from '@shared/application'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { PrismaService } from '@shared/infrastructure'
 import * as PreviewLinkMapper from '../mappers/preview-link.mapper'
 
@@ -29,12 +30,13 @@ export class PreviewLinkReadRepository implements IPreviewLinkReadRepository {
     return count > 0
   }
 
-  /** Retrieves a paginated list of preview links for an event. */
+  /** Retrieves a paginated list of preview links for an event, scoped to the caller. */
   async getListByEvent(
     eventId: string,
     pagination: Pagination,
+    scope: EventScope,
   ): Promise<PaginatedResult<PreviewLinkListProjection>> {
-    const where = { event_id: eventId }
+    const where = { event_id: eventId, event: scope.toPrisma() }
 
     const [previewLinks, total] = await Promise.all([
       this.prisma.previewLink.findMany({

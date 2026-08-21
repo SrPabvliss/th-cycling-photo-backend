@@ -3,6 +3,7 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { EntityIdProjection } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import {
   ConfirmAvatarUploadCommand,
@@ -24,6 +25,7 @@ export class UserProfileController {
     private readonly queryBus: QueryBus,
   ) {}
 
+  @Authenticated()
   @Get()
   @SuccessMessage('success.FETCHED', { entity: 'entities.user' })
   @ApiOperation({ summary: 'Get my profile' })
@@ -37,6 +39,7 @@ export class UserProfileController {
     return this.queryBus.execute(new GetMyProfileQuery(user.userId))
   }
 
+  @Authenticated()
   @Patch()
   @SuccessMessage('success.UPDATED', { entity: 'entities.user' })
   @ApiOperation({ summary: 'Update my profile' })
@@ -51,6 +54,7 @@ export class UserProfileController {
     return this.commandBus.execute(new UpdateMyProfileCommand(user.userId, dto))
   }
 
+  @Authenticated()
   @Post('avatar/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate a presigned URL for avatar upload' })
@@ -66,6 +70,7 @@ export class UserProfileController {
     )
   }
 
+  @Authenticated()
   @Post('avatar/confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.avatar' })
   @ApiOperation({ summary: 'Confirm avatar upload after presigned URL flow' })

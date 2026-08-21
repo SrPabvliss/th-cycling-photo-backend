@@ -1,5 +1,7 @@
 import { BibReadingStatus } from '@generated/prisma/client'
 import { Photo } from '@photos/domain/entities'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { AddPhotoBibCommand } from './add-photo-bib.command'
 import { AddPhotoBibHandler } from './add-photo-bib.handler'
@@ -31,28 +33,45 @@ describe('AddPhotoBibHandler', () => {
   let photoReadRepo: any
   let bibRepo: any
 
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'assert'>>
+  const scope = EventScope.unrestricted()
+
   beforeEach(() => {
-    photoReadRepo = { findById: jest.fn() }
+    photoReadRepo = { findById: jest.fn(), findByIdInScope: jest.fn() }
     bibRepo = { findById: jest.fn(), save: jest.fn() }
-    handler = new AddPhotoBibHandler(photoReadRepo, bibRepo)
+    authz = {
+      resolveEventScope: jest.fn().mockResolvedValue(scope),
+      assert: jest.fn().mockResolvedValue(undefined),
+    }
+    handler = new AddPhotoBibHandler(photoReadRepo, bibRepo, authz as never)
   })
 
-  it('throws when photo missing', async () => {
-    photoReadRepo.findById.mockResolvedValue(null)
+  it('throws when photo missing (including out-of-scope)', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValue(null)
     await expect(
       handler.execute(new AddPhotoBibCommand('p-x', '42', undefined, 'r-1')),
     ).rejects.toBeInstanceOf(AppException)
+    expect(authz.assert).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the caller lacks photo.bib.create for this event', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValue(buildPhoto())
+    authz.assert.mockRejectedValueOnce(new Error('Insufficient permissions'))
+    await expect(
+      handler.execute(new AddPhotoBibCommand('p-1', '42', undefined, 'r-1')),
+    ).rejects.toThrow('Insufficient permissions')
+    expect(bibRepo.save).not.toHaveBeenCalled()
   })
 
   it('throws when status=processing', async () => {
-    photoReadRepo.findById.mockResolvedValue(buildPhoto('processing'))
+    photoReadRepo.findByIdInScope.mockResolvedValue(buildPhoto('processing'))
     await expect(
       handler.execute(new AddPhotoBibCommand('p-1', '42', undefined, 'r-1')),
     ).rejects.toBeInstanceOf(AppException)
   })
 
   it('throws when digits fail regex', async () => {
-    photoReadRepo.findById.mockResolvedValue(buildPhoto())
+    photoReadRepo.findByIdInScope.mockResolvedValue(buildPhoto())
     await expect(
       handler.execute(new AddPhotoBibCommand('p-1', 'abc', undefined, 'r-1')),
     ).rejects.toBeInstanceOf(AppException)
@@ -62,7 +81,7 @@ describe('AddPhotoBibHandler', () => {
     const photo = buildPhoto('processed', null)
     const initialStatus = photo.status
     const initialReviewedAt = photo.reviewedAt
-    photoReadRepo.findById.mockResolvedValue(photo)
+    photoReadRepo.findByIdInScope.mockResolvedValue(photo)
     bibRepo.save.mockImplementation((b: any) => Promise.resolve(b))
 
     const result = await handler.execute(

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import type { Photo } from '@photos/domain/entities'
 import type { IPhotoWriteRepository } from '@photos/domain/ports'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { PrismaService } from '@shared/infrastructure'
 import * as PhotoMapper from '../mappers/photo.mapper'
 
@@ -37,9 +38,13 @@ export class PhotoWriteRepository implements IPhotoWriteRepository {
   }
 
   /** Bulk-updates photo_category_id on multiple photos. Returns count of updated records. */
-  async bulkUpdateCategory(photoIds: string[], photoCategoryId: number | null): Promise<number> {
+  async bulkUpdateCategory(
+    photoIds: string[],
+    photoCategoryId: number | null,
+    scope: EventScope,
+  ): Promise<number> {
     const result = await this.prisma.photo.updateMany({
-      where: { id: { in: photoIds } },
+      where: { id: { in: photoIds }, event: scope.toPrisma() },
       data: { photo_category_id: photoCategoryId },
     })
     return result.count

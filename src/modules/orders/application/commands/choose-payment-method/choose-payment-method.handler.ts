@@ -13,6 +13,7 @@ import {
   type IPaymentTransactionWriteRepository,
   PAYMENT_TRANSACTION_WRITE_REPOSITORY,
 } from '@payments/domain/ports'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { AppException } from '@shared/domain'
 import { ChoosePaymentMethodCommand } from './choose-payment-method.command'
 
@@ -52,7 +53,9 @@ export class ChoosePaymentMethodHandler implements ICommandHandler<ChoosePayment
       promoted.map(async (order) => {
         await this.transactionWriteRepo.expireOpenByOrderId(order.id)
 
-        const detail = await this.readRepo.getDetail(order.id)
+        // Ownership, not tenant scope, is the boundary here: the buyer was verified against
+        // `order.userId` above, and a customer's own EventScope is empty so it would match nothing.
+        const detail = await this.readRepo.getDetail(order.id, EventScope.unrestricted())
         if (!detail) return
 
         this.notifications.emitOrderCreated({

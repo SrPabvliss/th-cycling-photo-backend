@@ -56,7 +56,8 @@ import { GetDownloadManifestQuery } from '@photos/application/queries/get-downlo
 import { GetPhotoViewQuery } from '@photos/application/queries/get-photo-view/get-photo-view.query'
 import { GetResumePointQuery } from '@photos/application/queries/get-resume-point/get-resume-point.query'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Photos')
@@ -69,26 +70,32 @@ export class PhotosController {
   ) {}
 
   /** Returns the resume point (first unclassified photo) for the classification workspace. */
+  @RequirePermission('photo.read')
   @Get('events/:eventId/photos/resume-point')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get resume point for classification workspace' })
   @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  async getResumePoint(@Param('eventId') eventId: string, @Query('limit') limit?: number) {
-    return this.queryBus.execute(new GetResumePointQuery(eventId, Number(limit) || 50))
+  async getResumePoint(
+    @Param('eventId') eventId: string,
+    @Query('limit') limit: number | undefined,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.queryBus.execute(new GetResumePointQuery(eventId, Number(limit) || 50, user.userId))
   }
 
   /** Returns a download manifest with presigned URLs for all event photos. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.download')
   @Get('events/:eventId/photos/download-manifest')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download manifest for all event photos' })
   @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
-  async getDownloadManifest(@Param('eventId') eventId: string) {
-    return this.queryBus.execute(new GetDownloadManifestQuery(eventId))
+  async getDownloadManifest(@Param('eventId') eventId: string, @CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetDownloadManifestQuery(eventId, user.userId))
   }
 
   /** Lists photos for a given event with pagination. */
+  @RequirePermission('photo.read')
   @Get('events/:eventId/photos')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List photos for an event with pagination' })
@@ -99,13 +106,24 @@ export class PhotosController {
     type: PhotoListProjection,
     isArray: true,
   })
-  async findAll(@Param('eventId') eventId: string, @Query() dto: GetPhotosListDto) {
+  async findAll(
+    @Param('eventId') eventId: string,
+    @Query() dto: GetPhotosListDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetPhotosListQuery(eventId, pagination, dto.classified, dto.photoCategoryId)
+    const query = new GetPhotosListQuery(
+      eventId,
+      pagination,
+      dto.classified,
+      dto.photoCategoryId,
+      user.userId,
+    )
     return this.queryBus.execute(query)
   }
 
   /** Searches photos across events with multi-criteria filtering. */
+  @RequirePermission('photo.search')
   @Get('photos/search')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Search photos with multi-criteria filters' })
@@ -115,15 +133,15 @@ export class PhotosController {
     type: PhotoListProjection,
     isArray: true,
   })
-  async search(@Query() dto: SearchPhotosDto) {
+  async search(@Query() dto: SearchPhotosDto, @CurrentUser() user: ICurrentUser) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     const { page, limit, ...filters } = dto
-    const query = new SearchPhotosQuery(filters, pagination)
+    const query = new SearchPhotosQuery(filters, pagination, user.userId)
     return this.queryBus.execute(query)
   }
 
-  /** Returns paid orders with photos pending retouching, ordered FIFO. */
-  @Roles('admin', 'operator')
+  /** Paid orders with photos pending retouching, FIFO, scoped to the caller's tenant. */
+  @RequirePermission('photo.retouch.read')
   @Get('photos/pending-retouch')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Get photos pending retouching grouped by order' })
@@ -133,11 +151,12 @@ export class PhotosController {
     type: PendingRetouchOrderProjection,
     isArray: true,
   })
-  async getPendingRetouch() {
-    return this.queryBus.execute(new GetPendingRetouchQuery())
+  async getPendingRetouch(@CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetPendingRetouchQuery(user.userId))
   }
 
   /** Finds visually similar photos within the same event using vector embeddings. */
+  @RequirePermission('photo.read')
   @Get('photos/:id/similar')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Find visually similar photos within the same event' })
@@ -150,12 +169,17 @@ export class PhotosController {
     isArray: true,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
-  async findSimilar(@Param('id') id: string, @Query('limit') limit?: number) {
-    const query = new FindSimilarPhotosQuery(id, limit ? Number(limit) : 10)
+  async findSimilar(
+    @Param('id') id: string,
+    @Query('limit') limit: number | undefined,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    const query = new FindSimilarPhotosQuery(id, limit ? Number(limit) : 10, user.userId)
     return this.queryBus.execute(query)
   }
 
   /** Retrieves a lightweight photo view by public slug. */
+  @RequirePermission('photo.read')
   @Get('photos/view/:slug')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get lightweight photo view by slug' })
@@ -166,12 +190,12 @@ export class PhotosController {
     type: PhotoViewProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
-  async findBySlug(@Param('slug') slug: string) {
-    return this.queryBus.execute(new GetPhotoViewQuery(slug))
+  async findBySlug(@Param('slug') slug: string, @CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetPhotoViewQuery(slug, user.userId))
   }
 
   /** Retrieves a single photo's full detail (admin/operator) by public slug. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.read')
   @Get('photos/detail/:slug')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get photo full detail by slug (admin/operator)' })
@@ -182,12 +206,12 @@ export class PhotosController {
     type: PhotoDetailProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
-  async findDetailBySlug(@Param('slug') slug: string) {
-    return this.queryBus.execute(new GetPhotoDetailBySlugQuery(slug))
+  async findDetailBySlug(@Param('slug') slug: string, @CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetPhotoDetailBySlugQuery(slug, user.userId))
   }
 
   /** Apply a digits correction to a specific bib (admin/operator). */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.bib.correct')
   @Post('photos/:photoId/bibs/:bibId/corrections')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Apply bib digits correction' })
@@ -212,7 +236,7 @@ export class PhotosController {
   }
 
   /** Apply a primary or secondary color correction to a specific color attribute (admin/operator). */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.color.correct')
   @Post('photos/:photoId/colors/:colorId/corrections')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Apply color correction (primary or secondary)' })
@@ -236,7 +260,7 @@ export class PhotosController {
   }
 
   /** Mark a photo as reviewed (idempotente set-only — never reverts) (admin/operator). */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.review')
   @Post('photos/:photoId/reviewed')
   @HttpCode(200)
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
@@ -253,7 +277,7 @@ export class PhotosController {
   }
 
   /** Add a manual reviewer-sourced bib to a photo (admin/operator). */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.bib.create')
   @Post('photos/:photoId/bibs')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Add manual bib (reviewer-sourced)' })
@@ -270,7 +294,7 @@ export class PhotosController {
   }
 
   /** Soft-delete a bib (admin/operator). Marks `deleted_at`; crop file is retained as tech debt. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.bib.delete')
   @Delete('photos/:photoId/bibs/:bibId')
   @HttpCode(200)
   @SuccessMessage('success.DELETED', { entity: 'entities.photo' })
@@ -287,7 +311,7 @@ export class PhotosController {
   }
 
   /** Hard-delete a photo (admin/operator). Removes the record, bucket objects and CDN slugs. Blocked if the photo was sold or is in a preview link. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.delete')
   @Delete('photos/:id')
   @HttpCode(200)
   @SuccessMessage('success.DELETED', { entity: 'entities.photo' })
@@ -300,7 +324,7 @@ export class PhotosController {
   }
 
   /** Add a manual reviewer-sourced color to a photo (admin/operator). */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.color.create')
   @Post('photos/:photoId/colors')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Add manual color (reviewer-sourced)' })
@@ -327,7 +351,7 @@ export class PhotosController {
   }
 
   /** Soft-delete a color (admin/operator). Marks `deleted_at`. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.color.delete')
   @Delete('photos/:photoId/colors/:colorId')
   @HttpCode(200)
   @SuccessMessage('success.DELETED', { entity: 'entities.photo' })
@@ -344,7 +368,7 @@ export class PhotosController {
   }
 
   /** Paginated review queue for an event, ordered by min(bib confidence) ASC NULLS FIRST (admin/operator). */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.review')
   @Get('events/:eventSlug/review-queue')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Review queue ordered by min(bib confidence) ASC NULLS FIRST' })
@@ -355,13 +379,20 @@ export class PhotosController {
     type: ReviewQueueItemProjection,
     isArray: true,
   })
-  async getReviewQueue(@Param('eventSlug') eventSlug: string, @Query() dto: GetReviewQueueDto) {
+  async getReviewQueue(
+    @Param('eventSlug') eventSlug: string,
+    @Query() dto: GetReviewQueueDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 50)
     const status = dto.status ?? 'all'
-    return this.queryBus.execute(new GetReviewQueueQuery(eventSlug, pagination, status))
+    return this.queryBus.execute(
+      new GetReviewQueueQuery(eventSlug, pagination, status, user.userId),
+    )
   }
 
   /** Retrieves a single photo's full detail (used by workspace). */
+  @RequirePermission('photo.read')
   @Get('photos/:id')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get photo details by ID' })
@@ -372,13 +403,13 @@ export class PhotosController {
     type: PhotoDetailProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
-  async findOne(@Param('id') id: string) {
-    const query = new GetPhotoDetailQuery(id)
+  async findOne(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    const query = new GetPhotoDetailQuery(id, user.userId)
     return this.queryBus.execute(query)
   }
 
   /** Generates a presigned URL for direct upload to B2. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.upload')
   @Post('events/:eventId/photos/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate a presigned URL for direct photo upload' })
@@ -393,13 +424,19 @@ export class PhotosController {
   async generatePresignedUrl(
     @Param('eventId') eventId: string,
     @Body() dto: GeneratePresignedUrlDto,
+    @CurrentUser() user: ICurrentUser,
   ) {
-    const command = new GeneratePresignedUrlCommand(eventId, dto.fileName, dto.contentType)
+    const command = new GeneratePresignedUrlCommand(
+      eventId,
+      dto.fileName,
+      dto.contentType,
+      user.userId,
+    )
     return this.commandBus.execute(command)
   }
 
   /** Confirms a batch of photos uploaded directly to B2. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.upload')
   @Post('events/:eventId/photos/confirm-batch')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Confirm a batch of photos uploaded via presigned URLs' })
@@ -434,7 +471,7 @@ export class PhotosController {
   }
 
   /** Generates a presigned URL for retouched photo upload. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.retouch.upload')
   @Post('photos/:id/retouched/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate presigned URL for retouched photo upload' })
@@ -448,13 +485,19 @@ export class PhotosController {
   async generateRetouchedPresignedUrl(
     @Param('id') id: string,
     @Body() dto: GenerateRetouchedPresignedUrlDto,
+    @CurrentUser() user: ICurrentUser,
   ) {
-    const command = new GenerateRetouchedPresignedUrlCommand(id, dto.fileName, dto.contentType)
+    const command = new GenerateRetouchedPresignedUrlCommand(
+      id,
+      dto.fileName,
+      dto.contentType,
+      user.userId,
+    )
     return this.commandBus.execute(command)
   }
 
   /** Confirms a retouched photo upload. Replaces previous retouched if exists. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.retouch.upload')
   @Post('photos/:id/retouched/confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Confirm retouched photo upload' })
@@ -476,7 +519,7 @@ export class PhotosController {
   }
 
   /** Returns a download URL for the original or retouched photo. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.download')
   @Get('photos/:id/download')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download URL for a photo' })
@@ -488,12 +531,20 @@ export class PhotosController {
     type: DownloadUrlProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo or retouched version not found' })
-  async getDownloadUrl(@Param('id') id: string, @Query('type') type?: string) {
-    const query = new GetPhotoDownloadUrlQuery(id, (type ?? 'original') as 'original' | 'retouched')
+  async getDownloadUrl(
+    @Param('id') id: string,
+    @Query('type') type: string | undefined,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    const query = new GetPhotoDownloadUrlQuery(
+      id,
+      (type ?? 'original') as 'original' | 'retouched',
+      user.userId,
+    )
     return this.queryBus.execute(query)
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.category.assign')
   @Patch('photos/bulk-category')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Bulk assign or remove category from multiple photos' })
@@ -502,19 +553,29 @@ export class PhotosController {
     description: 'Photos updated',
     type: BulkCategoryResultProjection,
   })
-  async bulkAssignCategory(@Body() dto: BulkAssignCategoryDto) {
-    const command = new BulkAssignCategoryCommand(dto.photoIds, dto.photoCategoryId ?? null)
+  async bulkAssignCategory(@Body() dto: BulkAssignCategoryDto, @CurrentUser() user: ICurrentUser) {
+    const command = new BulkAssignCategoryCommand(
+      dto.photoIds,
+      dto.photoCategoryId ?? null,
+      user.userId,
+    )
     return this.commandBus.execute(command)
   }
 
   /** Sets the requires_retouch flag on a photo. Used to flag a photo
    *  back into the retouch queue or dismiss a wrongly-flagged photo. */
-  @Roles('admin', 'operator')
+  @RequirePermission('photo.retouch.flag')
   @Patch('photos/:id/retouch-flag')
   @HttpCode(204)
   @ApiOperation({ summary: 'Marcar o desmarcar foto para retoque' })
   @ApiParam({ name: 'id', description: 'UUID de la foto', format: 'uuid' })
-  async setRetouchFlag(@Param('id') id: string, @Body() dto: SetPhotoRetouchFlagDto) {
-    await this.commandBus.execute(new SetPhotoRetouchFlagCommand(id, dto.requiresRetouch))
+  async setRetouchFlag(
+    @Param('id') id: string,
+    @Body() dto: SetPhotoRetouchFlagDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    await this.commandBus.execute(
+      new SetPhotoRetouchFlagCommand(id, dto.requiresRetouch, user.userId),
+    )
   }
 }

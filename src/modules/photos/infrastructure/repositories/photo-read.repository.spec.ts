@@ -1,5 +1,6 @@
 import type { ICorrectionRepository } from '@photos/domain/ports'
 import { Pagination } from '@shared/application'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import type { PrismaService } from '@shared/infrastructure'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
@@ -16,6 +17,7 @@ describe('PhotoReadRepository.searchPhotos (correction-aware filters)', () => {
   const correctionRepo: Partial<ICorrectionRepository> = {}
 
   const pagination = new Pagination(1, 20)
+  const scope = EventScope.unrestricted()
 
   beforeEach(() => {
     prisma = {
@@ -34,7 +36,7 @@ describe('PhotoReadRepository.searchPhotos (correction-aware filters)', () => {
   })
 
   it('skips the pre-query when no attribute filter is provided', async () => {
-    await repo.searchPhotos({ eventId: 'e-1' }, pagination)
+    await repo.searchPhotos({ eventId: 'e-1' }, pagination, scope)
     expect(prisma.$queryRaw).not.toHaveBeenCalled()
     expect(prisma.photo.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.not.objectContaining({ id: expect.anything() }) }),
@@ -45,7 +47,7 @@ describe('PhotoReadRepository.searchPhotos (correction-aware filters)', () => {
     // simulating: bib originally '45' corrected to '15'; searching '15' finds the photo
     prisma.$queryRaw.mockResolvedValueOnce([{ photo_id: 'p-corrected' }])
 
-    await repo.searchPhotos({ plateNumber: '15', bibMatch: 'exact' }, pagination)
+    await repo.searchPhotos({ plateNumber: '15', bibMatch: 'exact' }, pagination, scope)
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1)
     expect(prisma.photo.findMany).toHaveBeenCalledWith(
@@ -56,7 +58,11 @@ describe('PhotoReadRepository.searchPhotos (correction-aware filters)', () => {
   it('short-circuits with empty result when bib pre-query returns no ids', async () => {
     prisma.$queryRaw.mockResolvedValueOnce([])
 
-    const result = await repo.searchPhotos({ plateNumber: '45', bibMatch: 'exact' }, pagination)
+    const result = await repo.searchPhotos(
+      { plateNumber: '45', bibMatch: 'exact' },
+      pagination,
+      scope,
+    )
 
     expect(result.total).toBe(0)
     expect(result.items).toEqual([])
@@ -72,6 +78,7 @@ describe('PhotoReadRepository.searchPhotos (correction-aware filters)', () => {
     await repo.searchPhotos(
       { plateNumber: '15', bibMatch: 'exact', helmetColor: 'blue' },
       pagination,
+      scope,
     )
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(2)
@@ -85,7 +92,7 @@ describe('PhotoReadRepository.searchPhotos (correction-aware filters)', () => {
       .mockResolvedValueOnce([{ photo_id: 'p-1' }])
       .mockResolvedValueOnce([{ photo_id: 'p-1' }])
 
-    await repo.searchPhotos({ clothingColor: 'red', bikeColor: 'black' }, pagination)
+    await repo.searchPhotos({ clothingColor: 'red', bikeColor: 'black' }, pagination, scope)
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(2)
   })

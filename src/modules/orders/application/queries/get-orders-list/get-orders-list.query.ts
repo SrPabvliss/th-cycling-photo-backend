@@ -5,5 +5,6 @@ export class GetOrdersListQuery {
   constructor(
     public readonly pagination: Pagination,
     public readonly filters: OrderListFilters,
+    public readonly userId: string,
   ) {}
 }

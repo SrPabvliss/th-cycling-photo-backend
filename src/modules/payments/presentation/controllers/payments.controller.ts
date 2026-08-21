@@ -13,7 +13,8 @@ import {
   PaymentTransactionProjection,
 } from '@payments/application/projections'
 import { GetPaymentTransactionQuery } from '@payments/application/queries'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Payments')
@@ -25,7 +26,7 @@ export class PaymentsController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Roles('customer')
+  @RequirePermission('payment.intent.create')
   @Post('intent')
   @SuccessMessage('success.CREATED', { entity: 'entities.payment' })
   @ApiOperation({ summary: 'Prepare one payment box session covering a group of orders' })
@@ -40,7 +41,7 @@ export class PaymentsController {
     return this.commandBus.execute(new CreatePaymentIntentCommand(dto.orderIds, user.userId))
   }
 
-  @Roles('customer')
+  @RequirePermission('payment.confirm')
   @Post('confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.payment' })
   @ApiOperation({ summary: 'Confirm a payment within the five minute window' })
@@ -59,7 +60,7 @@ export class PaymentsController {
     )
   }
 
-  @Roles('customer')
+  @RequirePermission('payment.transaction.read')
   @Get('transactions/:clientTransactionId')
   @ApiOperation({ summary: 'Read a payment attempt the buyer started' })
   @ApiParam({ name: 'clientTransactionId', description: 'Identifier this platform generated' })

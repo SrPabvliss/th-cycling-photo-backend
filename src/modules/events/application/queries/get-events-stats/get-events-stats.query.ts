@@ -1,1 +1,3 @@
-export class GetEventsStatsQuery {}
+export class GetEventsStatsQuery {
+  constructor(public readonly userId: string) {}
+}

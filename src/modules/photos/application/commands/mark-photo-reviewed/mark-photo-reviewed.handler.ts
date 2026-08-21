@@ -6,6 +6,10 @@ import {
   PHOTO_READ_REPOSITORY,
   PHOTO_WRITE_REPOSITORY,
 } from '@photos/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { MarkPhotoReviewedCommand } from './mark-photo-reviewed.command'
 
@@ -16,11 +20,14 @@ export class MarkPhotoReviewedHandler implements ICommandHandler<MarkPhotoReview
   constructor(
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(PHOTO_WRITE_REPOSITORY) private readonly photoWriteRepo: IPhotoWriteRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(cmd: MarkPhotoReviewedCommand): Promise<{ photoId: string; reviewedAt: Date }> {
-    const photo = await this.photoReadRepo.findById(cmd.photoId)
+    const scope = await this.authz.resolveEventScope(cmd.reviewerId)
+    const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', cmd.photoId)
+    await this.authz.assert(cmd.reviewerId, 'photo.review', photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')
     }

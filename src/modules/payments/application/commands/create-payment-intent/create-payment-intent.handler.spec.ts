@@ -12,7 +12,7 @@ const CONTEXT = {
   orderId: 'order-1',
   status: 'pending',
   subtotalDollars: 20,
-  sellerUserId: 'seller-1',
+  sellerTenantId: 'tenant-1',
   buyerUserId: BUYER,
 }
 
@@ -24,14 +24,14 @@ const merchantAccount = {
   isUsable: true,
   credentialsEncrypted: 'cipher',
   receiverIdentifier: null,
-  disable: jest.fn(),
+  deactivate: jest.fn(),
 }
 
 type FixtureContext = {
   orderId: string
   status: string
   subtotalDollars: number | null
-  sellerUserId: string | null
+  sellerTenantId: string | null
   buyerUserId: string
 }
 
@@ -64,8 +64,10 @@ function buildGateway() {
 
 function buildHandler({ contexts }: { contexts: FixtureContext[] }) {
   const contextRepo = { findByOrderIds: jest.fn().mockResolvedValue(contexts) }
-  const accountRepo = { findByUserId: jest.fn().mockResolvedValue(merchantAccount) }
-  const accountWriteRepo = { save: jest.fn().mockImplementation((a) => Promise.resolve(a)) }
+  const payoutRepo = {
+    findActivePayphoneForTenant: jest.fn().mockResolvedValue(merchantAccount),
+    save: jest.fn().mockImplementation((a) => Promise.resolve(a)),
+  }
   const transactionRepo = { save: jest.fn().mockImplementation((t) => Promise.resolve(t)) }
   const gateway = buildGateway()
   const registry = { get: jest.fn().mockReturnValue(gateway) }
@@ -77,23 +79,22 @@ function buildHandler({ contexts }: { contexts: FixtureContext[] }) {
   const scheduler = { schedule: jest.fn() }
   const handler = new CreatePaymentIntentHandler(
     contextRepo as never,
-    accountRepo as never,
+    payoutRepo as never,
     transactionRepo as never,
     registry as never,
     new PaymentAmountCalculator(),
     cipher as never,
     config as never,
     scheduler as never,
-    new SellerAccountSuspension(accountRepo as never, accountWriteRepo as never),
+    new SellerAccountSuspension(payoutRepo as never),
   )
 
-  return { handler, transactionRepo, contextRepo, accountRepo, gateway, scheduler }
+  return { handler, transactionRepo, contextRepo, payoutRepo, gateway, scheduler }
 }
 
 describe('CreatePaymentIntentHandler', () => {
   let contextRepo: { findByOrderIds: jest.Mock }
-  let accountRepo: { findByUserId: jest.Mock }
-  let accountWriteRepo: { save: jest.Mock }
+  let payoutRepo: { findActivePayphoneForTenant: jest.Mock; save: jest.Mock }
   let transactionRepo: { save: jest.Mock }
   let gateway: {
     provider: string
@@ -118,10 +119,12 @@ describe('CreatePaymentIntentHandler', () => {
   }
 
   beforeEach(() => {
-    merchantAccount.disable.mockClear()
+    merchantAccount.deactivate.mockClear()
     contextRepo = { findByOrderIds: jest.fn().mockResolvedValue([CONTEXT]) }
-    accountRepo = { findByUserId: jest.fn().mockResolvedValue(merchantAccount) }
-    accountWriteRepo = { save: jest.fn().mockImplementation((a) => Promise.resolve(a)) }
+    payoutRepo = {
+      findActivePayphoneForTenant: jest.fn().mockResolvedValue(merchantAccount),
+      save: jest.fn().mockImplementation((a) => Promise.resolve(a)),
+    }
     transactionRepo = { save: jest.fn().mockImplementation((t) => Promise.resolve(t)) }
     gateway = buildGateway()
     registry = { get: jest.fn().mockReturnValue(gateway) }
@@ -133,14 +136,14 @@ describe('CreatePaymentIntentHandler', () => {
     scheduler = { schedule: jest.fn() }
     handler = new CreatePaymentIntentHandler(
       contextRepo as never,
-      accountRepo as never,
+      payoutRepo as never,
       transactionRepo as never,
       registry as never,
       new PaymentAmountCalculator(),
       cipher as never,
       config as never,
       scheduler as never,
-      new SellerAccountSuspension(accountRepo as never, accountWriteRepo as never),
+      new SellerAccountSuspension(payoutRepo as never),
     )
   })
 
@@ -197,7 +200,7 @@ describe('CreatePaymentIntentHandler', () => {
   })
 
   it('refuses when the seller has no account', async () => {
-    accountRepo.findByUserId.mockResolvedValue(null)
+    payoutRepo.findActivePayphoneForTenant.mockResolvedValue(null)
 
     await expect(
       handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER)),
@@ -205,7 +208,10 @@ describe('CreatePaymentIntentHandler', () => {
   })
 
   it('refuses when the seller account is not verified', async () => {
-    accountRepo.findByUserId.mockResolvedValue({ ...merchantAccount, isUsable: false })
+    payoutRepo.findActivePayphoneForTenant.mockResolvedValue({
+      ...merchantAccount,
+      isUsable: false,
+    })
 
     await expect(
       handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER)),
@@ -213,7 +219,7 @@ describe('CreatePaymentIntentHandler', () => {
   })
 
   it('propagates a gateway refusal', async () => {
-    accountRepo.findByUserId.mockResolvedValue(splitAccount)
+    payoutRepo.findActivePayphoneForTenant.mockResolvedValue(splitAccount)
     gateway.buildCheckoutIntent.mockImplementation(() => {
       throw AppException.businessRule('payment.split_not_enabled')
     })
@@ -224,7 +230,7 @@ describe('CreatePaymentIntentHandler', () => {
   })
 
   it('does not persist a transaction or schedule a sweep when the gateway rejects the intent', async () => {
-    accountRepo.findByUserId.mockResolvedValue(splitAccount)
+    payoutRepo.findActivePayphoneForTenant.mockResolvedValue(splitAccount)
     gateway.buildCheckoutIntent.mockImplementation(() => {
       throw AppException.businessRule('payment.split_not_enabled')
     })
@@ -238,7 +244,7 @@ describe('CreatePaymentIntentHandler', () => {
   })
 
   it('attaches an encrypted split instruction in split mode', async () => {
-    accountRepo.findByUserId.mockResolvedValue(splitAccount)
+    payoutRepo.findActivePayphoneForTenant.mockResolvedValue(splitAccount)
 
     const intent = await handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER))
 
@@ -250,7 +256,7 @@ describe('CreatePaymentIntentHandler', () => {
   })
 
   it('records the transferable amount on the transaction in split mode', async () => {
-    accountRepo.findByUserId.mockResolvedValue(splitAccount)
+    payoutRepo.findActivePayphoneForTenant.mockResolvedValue(splitAccount)
 
     await handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER))
 
@@ -295,8 +301,8 @@ describe('CreatePaymentIntentHandler', () => {
       handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER)),
     ).rejects.toMatchObject({ messageKey: 'payment.invalid_credentials' })
 
-    expect(merchantAccount.disable).toHaveBeenCalled()
-    expect(accountWriteRepo.save).toHaveBeenCalledWith(merchantAccount)
+    expect(merchantAccount.deactivate).toHaveBeenCalled()
+    expect(payoutRepo.save).toHaveBeenCalledWith(merchantAccount)
   })
 
   it('rejects the ownership mismatch before checking status, subtotal, or the account', async () => {
@@ -307,7 +313,7 @@ describe('CreatePaymentIntentHandler', () => {
     await expect(
       handler.execute(new CreatePaymentIntentCommand(['order-1'], 'someone-else')),
     ).rejects.toMatchObject({ messageKey: 'payment.order_not_yours' })
-    expect(accountRepo.findByUserId).not.toHaveBeenCalled()
+    expect(payoutRepo.findActivePayphoneForTenant).not.toHaveBeenCalled()
   })
 
   it('charges the sum of every order in the group', async () => {
@@ -317,14 +323,14 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-1',
           status: 'pending',
           subtotalDollars: 10,
-          sellerUserId: 'seller-1',
+          sellerTenantId: 'tenant-1',
           buyerUserId: BUYER,
         },
         {
           orderId: 'order-2',
           status: 'pending',
           subtotalDollars: 15,
-          sellerUserId: 'seller-1',
+          sellerTenantId: 'tenant-1',
           buyerUserId: BUYER,
         },
       ],
@@ -344,7 +350,7 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-1',
           status: 'draft',
           subtotalDollars: 10,
-          sellerUserId: null,
+          sellerTenantId: null,
           buyerUserId: BUYER,
         },
       ],
@@ -362,14 +368,14 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-1',
           status: 'pending',
           subtotalDollars: 10,
-          sellerUserId: 'seller-1',
+          sellerTenantId: 'tenant-1',
           buyerUserId: BUYER,
         },
         {
           orderId: 'order-2',
           status: 'pending',
           subtotalDollars: 15,
-          sellerUserId: 'seller-2',
+          sellerTenantId: 'tenant-2',
           buyerUserId: BUYER,
         },
       ],
@@ -387,7 +393,7 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-1',
           status: 'draft',
           subtotalDollars: 10,
-          sellerUserId: 'seller-1',
+          sellerTenantId: 'tenant-1',
           buyerUserId: BUYER,
         },
       ],
@@ -405,7 +411,7 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-1',
           status: 'pending',
           subtotalDollars: 10,
-          sellerUserId: 'seller-1',
+          sellerTenantId: 'tenant-1',
           buyerUserId: BUYER,
         },
       ],

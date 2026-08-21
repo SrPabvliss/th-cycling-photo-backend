@@ -14,7 +14,7 @@ export class OrderPaymentContextRepository implements IOrderPaymentContextReposi
         status: true,
         subtotal: true,
         user_id: true,
-        event: { select: { created_by_id: true } },
+        event: { select: { tenant_id: true } },
       },
     })
 
@@ -22,7 +22,7 @@ export class OrderPaymentContextRepository implements IOrderPaymentContextReposi
       orderId: record.id,
       status: record.status,
       subtotalDollars: record.subtotal === null ? null : Number(record.subtotal),
-      sellerUserId: record.event.created_by_id,
+      sellerTenantId: record.event.tenant_id,
       buyerUserId: record.user_id,
     }))
   }

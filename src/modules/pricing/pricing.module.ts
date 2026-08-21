@@ -1,3 +1,4 @@
+import { EventsModule } from '@events/events.module'
 import { Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { PrismaModule } from '@shared/infrastructure'
@@ -13,7 +14,7 @@ import { PricingController } from './presentation/controllers/pricing.controller
 import { PricingAdminController } from './presentation/controllers/pricing-admin.controller'
 
 @Module({
-  imports: [CqrsModule, PrismaModule],
+  imports: [CqrsModule, PrismaModule, EventsModule],
   controllers: [PricingController, PricingAdminController],
   providers: [
     EventPricingResolver,

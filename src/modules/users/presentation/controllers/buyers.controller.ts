@@ -2,18 +2,18 @@ import { Controller, Get, Query } from '@nestjs/common'
 import { QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Pagination } from '@shared/application'
-import { Roles } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import { BuyerListProjection } from '@users/application/projections'
 import { GetBuyersListDto, GetBuyersListQuery } from '@users/application/queries'
 
 @ApiTags('Buyers')
 @ApiBearerAuth()
-@Roles('admin')
 @Controller('buyers')
 export class BuyersController {
   constructor(private readonly queryBus: QueryBus) {}
 
+  @RequirePermission('buyer.read')
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List users with customer role' })

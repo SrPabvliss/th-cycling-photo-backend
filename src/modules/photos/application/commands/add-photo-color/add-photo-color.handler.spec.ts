@@ -1,5 +1,7 @@
 import { ColorRegion } from '@generated/prisma/client'
 import { Photo } from '@photos/domain/entities'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { AddPhotoColorCommand } from './add-photo-color.command'
 import { AddPhotoColorHandler } from './add-photo-color.handler'
@@ -31,21 +33,38 @@ describe('AddPhotoColorHandler', () => {
   let photoReadRepo: any
   let colorRepo: any
 
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'assert'>>
+  const scope = EventScope.unrestricted()
+
   beforeEach(() => {
-    photoReadRepo = { findById: jest.fn() }
+    photoReadRepo = { findById: jest.fn(), findByIdInScope: jest.fn() }
     colorRepo = { findById: jest.fn(), save: jest.fn() }
-    handler = new AddPhotoColorHandler(photoReadRepo, colorRepo)
+    authz = {
+      resolveEventScope: jest.fn().mockResolvedValue(scope),
+      assert: jest.fn().mockResolvedValue(undefined),
+    }
+    handler = new AddPhotoColorHandler(photoReadRepo, colorRepo, authz as never)
   })
 
-  it('throws when photo missing', async () => {
-    photoReadRepo.findById.mockResolvedValue(null)
+  it('throws when photo missing (including out-of-scope)', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValue(null)
     await expect(
       handler.execute(new AddPhotoColorCommand('p-x', ColorRegion.helmet, 'rojo', null, 'r-1')),
     ).rejects.toBeInstanceOf(AppException)
+    expect(authz.assert).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the caller lacks photo.color.create for this event', async () => {
+    photoReadRepo.findByIdInScope.mockResolvedValue(buildPhoto())
+    authz.assert.mockRejectedValueOnce(new Error('Insufficient permissions'))
+    await expect(
+      handler.execute(new AddPhotoColorCommand('p-1', ColorRegion.helmet, 'rojo', null, 'r-1')),
+    ).rejects.toThrow('Insufficient permissions')
+    expect(colorRepo.save).not.toHaveBeenCalled()
   })
 
   it('throws when status=processing', async () => {
-    photoReadRepo.findById.mockResolvedValue(buildPhoto('processing'))
+    photoReadRepo.findByIdInScope.mockResolvedValue(buildPhoto('processing'))
     await expect(
       handler.execute(new AddPhotoColorCommand('p-1', ColorRegion.helmet, 'rojo', null, 'r-1')),
     ).rejects.toBeInstanceOf(AppException)
@@ -55,7 +74,7 @@ describe('AddPhotoColorHandler', () => {
     const photo = buildPhoto('processed', null)
     const initialStatus = photo.status
     const initialReviewedAt = photo.reviewedAt
-    photoReadRepo.findById.mockResolvedValue(photo)
+    photoReadRepo.findByIdInScope.mockResolvedValue(photo)
     colorRepo.save.mockImplementation((c: any) => Promise.resolve(c))
 
     const result = await handler.execute(

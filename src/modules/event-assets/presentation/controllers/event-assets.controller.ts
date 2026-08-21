@@ -2,7 +2,8 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { EntityIdProjection } from '@shared/application'
-import { Public, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import {
   ConfirmAssetUploadCommand,
@@ -39,7 +40,7 @@ export class EventAssetsController {
     return this.queryBus.execute(new GetEventAssetsQuery(eventId))
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('event_asset.presign')
   @Post(':assetType/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate presigned URL for asset upload' })
@@ -59,17 +60,19 @@ export class EventAssetsController {
     @Param('eventId') eventId: string,
     @Param('assetType') assetType: EventAssetType,
     @Body() dto: GenerateAssetPresignedUrlDto,
+    @CurrentUser() user: ICurrentUser,
   ) {
     const command = new GenerateAssetPresignedUrlCommand(
       eventId,
       assetType,
       dto.fileName,
       dto.contentType,
+      user.userId,
     )
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('event_asset.confirm')
   @Post(':assetType/confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event_asset' })
   @ApiOperation({ summary: 'Confirm asset upload after presigned URL flow' })
@@ -90,6 +93,7 @@ export class EventAssetsController {
     @Param('eventId') eventId: string,
     @Param('assetType') assetType: EventAssetType,
     @Body() dto: ConfirmAssetUploadDto,
+    @CurrentUser() user: ICurrentUser,
   ) {
     const command = new ConfirmAssetUploadCommand(
       eventId,
@@ -97,11 +101,12 @@ export class EventAssetsController {
       dto.storageKey,
       dto.fileSize ? BigInt(dto.fileSize) : null,
       dto.mimeType ?? null,
+      user.userId,
     )
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('event_asset.delete')
   @Delete(':assetType')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an event asset' })
@@ -115,7 +120,8 @@ export class EventAssetsController {
   async deleteAsset(
     @Param('eventId') eventId: string,
     @Param('assetType') assetType: EventAssetType,
+    @CurrentUser() user: ICurrentUser,
   ) {
-    await this.commandBus.execute(new DeleteEventAssetCommand(eventId, assetType))
+    await this.commandBus.execute(new DeleteEventAssetCommand(eventId, assetType, user.userId))
   }
 }

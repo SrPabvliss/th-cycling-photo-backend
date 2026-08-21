@@ -1,4 +1,5 @@
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { OrderReadRepository } from './order-read.repository'
 
 function buildRepository() {
@@ -34,7 +35,11 @@ describe('OrderReadRepository draft visibility', () => {
   it('keeps drafts out of the operator list', async () => {
     const { repository, findMany } = buildRepository()
 
-    await repository.getList({ page: 1, limit: 20, skip: 0, take: 20 } as never, {})
+    await repository.getList(
+      { page: 1, limit: 20, skip: 0, take: 20 } as never,
+      {},
+      EventScope.unrestricted(),
+    )
 
     const { where } = findMany.mock.calls[0][0]
     expect(JSON.stringify(where)).toContain(OrderStatus.DRAFT)
@@ -43,7 +48,7 @@ describe('OrderReadRepository draft visibility', () => {
   it('keeps drafts out of the status counters', async () => {
     const { repository, groupBy } = buildRepository()
 
-    await repository.countByStatus()
+    await repository.countByStatus(undefined, EventScope.unrestricted())
 
     const { where } = groupBy.mock.calls[0][0]
     expect(JSON.stringify(where)).toContain(OrderStatus.DRAFT)
@@ -61,7 +66,7 @@ describe('OrderReadRepository draft visibility', () => {
   it('keeps a draft out of order detail lookups', async () => {
     const { repository, findFirst } = buildRepository()
 
-    await repository.getDetail('order-1')
+    await repository.getDetail('order-1', EventScope.unrestricted())
 
     const { where } = findFirst.mock.calls[0][0]
     expect(JSON.stringify(where)).toContain(OrderStatus.DRAFT)
