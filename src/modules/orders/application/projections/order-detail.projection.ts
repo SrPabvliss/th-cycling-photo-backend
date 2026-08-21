@@ -1,3 +1,17 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+
+export class OrderPayoutMethodProjection {
+  @ApiProperty() provider: string
+  @ApiProperty() isActive: boolean
+  @ApiProperty() sortOrder: number
+  @ApiPropertyOptional({ nullable: true }) receiverIdentifier: string | null
+  @ApiPropertyOptional({ nullable: true }) bankName: string | null
+  @ApiPropertyOptional({ nullable: true }) accountNumber: string | null
+  @ApiPropertyOptional({ nullable: true }) accountType: string | null
+  @ApiPropertyOptional({ nullable: true }) accountHolder: string | null
+  @ApiPropertyOptional({ nullable: true }) holderIdentification: string | null
+}
+
 export class OrderPhotoProjection {
   id: string
   filename: string
@@ -48,6 +62,8 @@ export class OrderDetailProjection {
   /** Currency code snapshot at time of order (e.g. USD) */
   snapCurrency: string | null
   paymentMethod: string | null
+  @ApiPropertyOptional({ type: [OrderPayoutMethodProjection] })
+  payoutMethods?: OrderPayoutMethodProjection[]
   /** Preview link token that originated this order (nullable) */
   previewLinkToken: string | null
   /** Retouch progress for the order */
