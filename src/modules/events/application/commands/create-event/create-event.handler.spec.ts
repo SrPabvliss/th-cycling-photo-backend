@@ -87,7 +87,11 @@ describe('CreateEventHandler', () => {
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
     } as unknown as PrismaService
 
-    kvStorage = { write: jest.fn().mockResolvedValue(undefined), writeBulk: jest.fn(), delete: jest.fn() }
+    kvStorage = {
+      write: jest.fn().mockResolvedValue(undefined),
+      writeBulk: jest.fn(),
+      delete: jest.fn(),
+    }
 
     handler = new CreateEventHandler(
       writeRepo,

@@ -22,7 +22,7 @@ export class UpdateMyTenantProfileHandler implements ICommandHandler<UpdateMyTen
     const profile = await this.repo.findByTenantId(tenantId)
     if (!profile) throw AppException.notFound('entities.tenant', tenantId)
 
-    profile.changeBrand(command.publicName, command.watermarkStorageKey)
+    profile.changeBrand(command.publicName, undefined)
     profile.changeWhatsapp(command.whatsappNumber)
 
     await this.repo.save(profile)

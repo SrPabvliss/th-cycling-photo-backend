@@ -8,7 +8,10 @@ import type {
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import type { PrismaService } from '@shared/infrastructure'
+import { plainToInstance } from 'class-transformer'
+import { validate } from 'class-validator'
 import { UpdateEventConfigurationCommand } from './update-event-configuration.command'
+import { UpdateEventConfigurationDto } from './update-event-configuration.dto'
 import { UpdateEventConfigurationHandler } from './update-event-configuration.handler'
 
 describe('UpdateEventConfigurationHandler', () => {
@@ -117,5 +120,11 @@ describe('UpdateEventConfigurationHandler', () => {
       expect.any(Array),
       expect.anything(),
     )
+  })
+
+  it('rejects an explicit null watermark key', async () => {
+    const dto = plainToInstance(UpdateEventConfigurationDto, { watermarkStorageKey: null })
+    const errors = await validate(dto)
+    expect(errors).toHaveLength(1)
   })
 })

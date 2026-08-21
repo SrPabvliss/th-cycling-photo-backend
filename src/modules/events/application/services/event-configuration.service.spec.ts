@@ -143,6 +143,16 @@ describe('EventConfigurationService', () => {
         service.materialise(tenantId, eventId, { payoutMethodIds: [] }),
       ).rejects.toMatchObject({ code: 'BUSINESS_RULE' })
     })
+
+    it('rejects a watermark key the tenant does not own', async () => {
+      const service = buildService(completeProfile(), [payphone(), bank()])
+
+      await expect(
+        service.materialise(tenantId, eventId, {
+          watermarkStorageKey: 'tenants/other-tenant/watermark/theirs.png',
+        }),
+      ).rejects.toThrow('event.watermark_not_owned')
+    })
   })
 
   describe('rematerialise', () => {

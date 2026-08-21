@@ -26,9 +26,13 @@ import { PERMISSION_REPOSITORY } from '@shared/authorization/domain/ports/permis
 import { AuthorizationService } from '@shared/authorization/infrastructure/authorization.service'
 import { RequestScopedAuthorizationCache } from '@shared/authorization/infrastructure/cache/request-scoped-authorization.cache'
 import { PermissionRepository } from '@shared/authorization/infrastructure/repositories/permission.repository'
+import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import { PAYMENT_GATEWAY_REGISTRY } from '@shared/payment-gateways'
+import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
+import { ConfirmWatermarkUploadCommand } from '@tenants/application/commands/confirm-watermark-upload/confirm-watermark-upload.command'
+import { ConfirmWatermarkUploadHandler } from '@tenants/application/commands/confirm-watermark-upload/confirm-watermark-upload.handler'
 import { UpdateMyTenantProfileCommand } from '@tenants/application/commands/update-my-tenant-profile/update-my-tenant-profile.command'
 import { UpdateMyTenantProfileHandler } from '@tenants/application/commands/update-my-tenant-profile/update-my-tenant-profile.handler'
 import { UpdatePayoutMethodCommand } from '@tenants/application/commands/update-payout-method/update-payout-method.command'
@@ -56,7 +60,9 @@ describe('event configuration', () => {
   let updateConfiguration: UpdateEventConfigurationHandler
   let updateProfile: UpdateMyTenantProfileHandler
   let updatePayoutMethod: UpdatePayoutMethodHandler
+  let confirmWatermarkUpload: ConfirmWatermarkUploadHandler
   let payoutRepo: ITenantPayoutMethodRepository
+  let kv: jest.Mocked<IKvStorageAdapter>
 
   let completeTenant: { id: string }
   let incompleteTenant: { id: string }
@@ -116,6 +122,20 @@ describe('event configuration', () => {
             internalUrl: () => 'http://fake',
           },
         },
+        {
+          provide: KV_STORAGE_ADAPTER,
+          useValue: {
+            write: jest.fn().mockResolvedValue(undefined),
+            writeBulk: jest.fn().mockResolvedValue(undefined),
+            delete: jest.fn().mockResolvedValue(undefined),
+          } satisfies IKvStorageAdapter,
+        },
+        {
+          provide: STORAGE_ADAPTER,
+          useValue: {
+            delete: jest.fn().mockResolvedValue(undefined),
+          } satisfies Partial<IStorageAdapter>,
+        },
         EventConfigurationService,
         LocationValidator,
         CreateEventHandler,
@@ -123,6 +143,7 @@ describe('event configuration', () => {
         UpdateEventConfigurationHandler,
         UpdateMyTenantProfileHandler,
         UpdatePayoutMethodHandler,
+        ConfirmWatermarkUploadHandler,
       ],
     }).compile()
 
@@ -132,7 +153,9 @@ describe('event configuration', () => {
     updateConfiguration = module.get(UpdateEventConfigurationHandler)
     updateProfile = module.get(UpdateMyTenantProfileHandler)
     updatePayoutMethod = module.get(UpdatePayoutMethodHandler)
+    confirmWatermarkUpload = module.get(ConfirmWatermarkUploadHandler)
     payoutRepo = module.get(TENANT_PAYOUT_METHOD_REPOSITORY)
+    kv = module.get(KV_STORAGE_ADAPTER)
 
     completeTenant = await prisma.tenant.create({
       data: {
@@ -282,7 +305,7 @@ describe('event configuration', () => {
     )
 
     await updateProfile.execute(
-      new UpdateMyTenantProfileCommand(completeUser.id, 'Nombre Nuevo', undefined, undefined),
+      new UpdateMyTenantProfileCommand(completeUser.id, 'Nombre Nuevo', undefined),
     )
     await updatePayoutMethod.execute(
       new UpdatePayoutMethodCommand(
@@ -327,11 +350,12 @@ describe('event configuration', () => {
     )
 
     await updateProfile.execute(
-      new UpdateMyTenantProfileCommand(
+      new UpdateMyTenantProfileCommand(completeUser.id, 'Andes Pro', undefined),
+    )
+    await confirmWatermarkUpload.execute(
+      new ConfirmWatermarkUploadCommand(
         completeUser.id,
-        'Andes Pro',
-        'watermarks/andes-pro.png',
-        undefined,
+        `tenants/${completeTenant.id}/watermark/andes-pro.png`,
       ),
     )
     await updatePayoutMethod.execute(
@@ -365,6 +389,40 @@ describe('event configuration', () => {
     expect(after.publicName).toBe(before.publicName)
     expect(after.watermarkStorageKey).toBe(before.watermarkStorageKey)
     expect(after.payoutMethods).toEqual(before.payoutMethods)
+  })
+
+  it('a profile watermark replacement does not touch an existing event', async () => {
+    const { id: eventId } = await createEvent.execute(
+      new CreateEventCommand(
+        'Vuelta Watermark Freeze',
+        new Date('2026-11-05'),
+        new Date('2026-11-06'),
+        null,
+        null,
+        eventType.id,
+        new AuditContext(completeUser.id),
+      ),
+    )
+    createdEventIds.push(eventId)
+
+    const before = await getConfiguration.execute(
+      new GetEventConfigurationQuery(eventId, completeUser.id),
+    )
+    kv.write.mockClear()
+
+    await confirmWatermarkUpload.execute(
+      new ConfirmWatermarkUploadCommand(
+        completeUser.id,
+        `tenants/${completeTenant.id}/watermark/rebrand.png`,
+      ),
+    )
+
+    const after = await getConfiguration.execute(
+      new GetEventConfigurationQuery(eventId, completeUser.id),
+    )
+
+    expect(after.watermarkStorageKey).toBe(before.watermarkStorageKey)
+    expect(kv.write).not.toHaveBeenCalledWith(`wm-${eventId}`, expect.anything())
   })
 
   it('hides another tenant payout method behind notFound, never forbidden', async () => {

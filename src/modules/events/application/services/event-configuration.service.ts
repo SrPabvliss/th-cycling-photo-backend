@@ -94,6 +94,8 @@ export class EventConfigurationService {
       this.payoutRepo.findByTenantId(tenantId),
     ])
 
+    this.assertWatermarkOwned(selection, profile?.watermarkStorageKey ?? null)
+
     return this.build(eventId, selection, methods, {
       publicName: profile?.publicName ?? null,
       watermarkStorageKey: profile?.watermarkStorageKey ?? null,
@@ -107,6 +109,11 @@ export class EventConfigurationService {
     selection: ConfigurationSelection,
     existingMethods: EventPayoutMethod[],
   ): Promise<RematerialisedConfiguration> {
+    if (selection.watermarkStorageKey !== undefined) {
+      const profile = await this.profileRepo.findByTenantId(event.tenantId)
+      this.assertWatermarkOwned(selection, profile?.watermarkStorageKey ?? null)
+    }
+
     if (selection.payoutMethodIds === undefined) {
       const brand = this.resolveBrand(selection, {
         publicName: event.snapPublicName,
@@ -158,6 +165,16 @@ export class EventConfigurationService {
         selection?.whatsappNumber !== undefined
           ? selection.whatsappNumber
           : fallback.whatsappNumber,
+    }
+  }
+
+  private assertWatermarkOwned(
+    selection: ConfigurationSelection | undefined,
+    ownedKey: string | null,
+  ): void {
+    if (selection?.watermarkStorageKey === undefined) return
+    if (selection.watermarkStorageKey !== ownedKey) {
+      throw AppException.businessRule('event.watermark_not_owned')
     }
   }
 

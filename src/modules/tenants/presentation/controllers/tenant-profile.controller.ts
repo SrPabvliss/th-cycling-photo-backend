@@ -102,12 +102,7 @@ export class TenantProfileController {
     @CurrentUser() user: ICurrentUser,
   ): Promise<void> {
     await this.commandBus.execute(
-      new UpdateMyTenantProfileCommand(
-        user.userId,
-        dto.publicName,
-        dto.watermarkStorageKey,
-        dto.whatsappNumber,
-      ),
+      new UpdateMyTenantProfileCommand(user.userId, dto.publicName, dto.whatsappNumber),
     )
   }
 
