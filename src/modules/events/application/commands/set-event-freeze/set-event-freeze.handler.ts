@@ -1,0 +1,37 @@
+import {
+  EVENT_READ_REPOSITORY,
+  EVENT_WRITE_REPOSITORY,
+  type IEventReadRepository,
+  type IEventWriteRepository,
+} from '@events/domain/ports'
+import { Inject } from '@nestjs/common'
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import type { EntityIdProjection } from '@shared/application'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
+import { AppException } from '@shared/domain'
+import { SetEventFreezeCommand } from './set-event-freeze.command'
+
+@CommandHandler(SetEventFreezeCommand)
+export class SetEventFreezeHandler implements ICommandHandler<SetEventFreezeCommand> {
+  constructor(
+    @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
+    @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+  ) {}
+
+  async execute(command: SetEventFreezeCommand): Promise<EntityIdProjection> {
+    const scope = await this.authz.resolveEventScope(command.userId)
+    const event = await this.readRepo.findByIdInScope(command.id, scope)
+    if (!event) throw AppException.notFound('Event', command.id)
+
+    await this.authz.assert(command.userId, 'event.freeze', event.id)
+
+    event.setFrozen(command.frozen)
+    await this.writeRepo.save(event)
+
+    return { id: event.id }
+  }
+}

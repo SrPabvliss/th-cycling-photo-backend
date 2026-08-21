@@ -6,6 +6,7 @@ import {
   CreateEventDto,
   DeleteEventCommand,
   RestoreEventCommand,
+  SetEventFreezeCommand,
   UnassignOperatorCommand,
   UpdateEventCommand,
   UpdateEventConfigurationCommand,
@@ -34,8 +35,10 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { AllowedWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
+import { SetEventFreezeDto } from '../dtos/set-event-freeze.dto'
 import { UpdateEventPhotoQuotaDto } from '../dtos/update-event-photo-quota.dto'
 
 @ApiTags('Events')
@@ -215,6 +218,27 @@ export class EventsController {
   async archive(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
     const command = new ArchiveEventCommand(id, user.userId)
     return this.commandBus.execute(command)
+  }
+
+  @RequirePermission('event.freeze')
+  // Allowed while frozen, otherwise freezing would be a one-way door and unfreeze could never run.
+  @AllowedWhenFrozen()
+  @Patch(':id/freeze')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.event' })
+  @ApiOperation({ summary: 'Congelar o descongelar un evento' })
+  @ApiParam({ name: 'id', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Event freeze state updated successfully',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
+  async setFreeze(
+    @Param('id') id: string,
+    @Body() dto: SetEventFreezeDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(new SetEventFreezeCommand(id, dto.frozen, user.userId))
   }
 
   @RequirePermission('event.photo_quota.set')

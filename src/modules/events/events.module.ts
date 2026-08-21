@@ -3,6 +3,7 @@ import { AssignOperatorHandler } from '@events/application/commands/assign-opera
 import { CreateEventHandler } from '@events/application/commands/create-event/create-event.handler'
 import { DeleteEventHandler } from '@events/application/commands/delete-event/delete-event.handler'
 import { RestoreEventHandler } from '@events/application/commands/restore-event/restore-event.handler'
+import { SetEventFreezeHandler } from '@events/application/commands/set-event-freeze/set-event-freeze.handler'
 import { UnassignOperatorHandler } from '@events/application/commands/unassign-operator/unassign-operator.handler'
 import { UpdateEventHandler } from '@events/application/commands/update-event/update-event.handler'
 import { UpdateEventConfigurationHandler } from '@events/application/commands/update-event-configuration/update-event-configuration.handler'
@@ -41,6 +42,7 @@ const CommandHandlers = [
   CreateEventHandler,
   DeleteEventHandler,
   RestoreEventHandler,
+  SetEventFreezeHandler,
   UnassignOperatorHandler,
   UpdateEventHandler,
   UpdateEventConfigurationHandler,
