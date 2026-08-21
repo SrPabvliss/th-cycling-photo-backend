@@ -96,6 +96,9 @@ export class PayphoneHttpClient {
     return {
       Authorization: `Bearer ${credentials.token}`,
       'Content-Type': 'application/json',
+      // Node's fetch defaults to `Accept-Language: *`, which Payphone answers with a redirect
+      // to an ASP.NET error page. Any concrete language makes it respond normally.
+      'Accept-Language': 'es-EC',
     }
   }
 
