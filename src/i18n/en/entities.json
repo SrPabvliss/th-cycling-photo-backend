@@ -26,5 +26,6 @@
   "event_operator": "Event operator",
   "dashboard": "Dashboard",
   "payphone_account": "payment account",
-  "payment": "payment"
+  "payment": "payment",
+  "email_verification": "Email verification"
 }
