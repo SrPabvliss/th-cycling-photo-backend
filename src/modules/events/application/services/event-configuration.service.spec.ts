@@ -81,4 +81,57 @@ describe('EventConfigurationService', () => {
 
     await expect(service.findMissingRequirements(tenantId)).resolves.toEqual(['bankTransfer'])
   })
+
+  describe('materialise', () => {
+    const eventId = crypto.randomUUID()
+
+    it('copies the whole profile when no selection is given', async () => {
+      const service = buildService(completeProfile(), [payphone(), bank()])
+
+      const result = await service.materialise(tenantId, eventId)
+
+      expect(result.brand.publicName).toBe('Foto Andes')
+      expect(result.payoutMethods).toHaveLength(2)
+    })
+
+    it('applies brand overrides without touching the profile', async () => {
+      const profile = completeProfile()
+      const service = buildService(profile, [payphone(), bank()])
+
+      const result = await service.materialise(tenantId, eventId, {
+        publicName: 'Foto Andes — Cotopaxi',
+      })
+
+      expect(result.brand.publicName).toBe('Foto Andes — Cotopaxi')
+      expect(profile.publicName).toBe('Foto Andes')
+    })
+
+    it('copies only the selected payout methods', async () => {
+      const chosen = payphone()
+      const service = buildService(completeProfile(), [chosen, bank()])
+
+      const result = await service.materialise(tenantId, eventId, {
+        payoutMethodIds: [chosen.id],
+      })
+
+      expect(result.payoutMethods).toHaveLength(1)
+      expect(result.payoutMethods[0].sourcePayoutMethodId).toBe(chosen.id)
+    })
+
+    it('rejects a payout method id belonging to another tenant', async () => {
+      const service = buildService(completeProfile(), [payphone(), bank()])
+
+      await expect(
+        service.materialise(tenantId, eventId, { payoutMethodIds: [crypto.randomUUID()] }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    })
+
+    it('rejects a selection that resolves to no active methods', async () => {
+      const service = buildService(completeProfile(), [payphone(), bank()])
+
+      await expect(
+        service.materialise(tenantId, eventId, { payoutMethodIds: [] }),
+      ).rejects.toMatchObject({ code: 'BUSINESS_RULE' })
+    })
+  })
 })

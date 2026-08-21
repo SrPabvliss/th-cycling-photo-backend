@@ -26,5 +26,6 @@
   "event_operator": "Operador de evento",
   "dashboard": "Panel de control",
   "payphone_account": "cuenta de cobros",
-  "payment": "pago"
+  "payment": "pago",
+  "payoutMethod": "Método de cobro"
 }

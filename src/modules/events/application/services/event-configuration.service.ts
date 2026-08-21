@@ -1,5 +1,8 @@
+import { EventPayoutMethod } from '@events/domain/entities'
+import type { EventBrandSnapshot } from '@events/domain/value-objects/event-brand-snapshot.vo'
 import { Inject, Injectable } from '@nestjs/common'
 import { AppException } from '@shared/domain'
+import type { TenantPayoutMethod } from '@tenants/domain/entities/tenant-payout-method.entity'
 import {
   type ITenantPayoutMethodRepository,
   TENANT_PAYOUT_METHOD_REPOSITORY,
@@ -16,6 +19,18 @@ export type ConfigurationRequirement =
   | 'whatsapp'
   | 'payphone'
   | 'bankTransfer'
+
+export interface ConfigurationSelection {
+  publicName?: string | null
+  watermarkStorageKey?: string | null
+  whatsappNumber?: string | null
+  payoutMethodIds?: string[]
+}
+
+export interface MaterialisedConfiguration {
+  brand: EventBrandSnapshot
+  payoutMethods: EventPayoutMethod[]
+}
 
 @Injectable()
 export class EventConfigurationService {
@@ -53,5 +68,49 @@ export class EventConfigurationService {
         missing: missing.join(', '),
       })
     }
+  }
+
+  async materialise(
+    tenantId: string,
+    eventId: string,
+    selection?: ConfigurationSelection,
+  ): Promise<MaterialisedConfiguration> {
+    const [profile, methods] = await Promise.all([
+      this.profileRepo.findByTenantId(tenantId),
+      this.payoutRepo.findByTenantId(tenantId),
+    ])
+
+    const brand: EventBrandSnapshot = {
+      publicName:
+        selection?.publicName !== undefined ? selection.publicName : (profile?.publicName ?? null),
+      watermarkStorageKey:
+        selection?.watermarkStorageKey !== undefined
+          ? selection.watermarkStorageKey
+          : (profile?.watermarkStorageKey ?? null),
+      whatsappNumber:
+        selection?.whatsappNumber !== undefined
+          ? selection.whatsappNumber
+          : (profile?.whatsappNumber ?? null),
+    }
+
+    const chosen = this.resolveSelectedMethods(methods, selection?.payoutMethodIds)
+    if (!chosen.some((method) => method.isActive)) {
+      throw AppException.businessRule('event.payout_method_required')
+    }
+
+    return { brand, payoutMethods: chosen.map((m) => EventPayoutMethod.copyFrom(eventId, m)) }
+  }
+
+  private resolveSelectedMethods(
+    available: TenantPayoutMethod[],
+    selectedIds?: string[],
+  ): TenantPayoutMethod[] {
+    if (selectedIds === undefined) return available
+
+    return selectedIds.map((id) => {
+      const match = available.find((method) => method.id === id)
+      if (!match) throw AppException.notFound('entities.payoutMethod', id)
+      return match
+    })
   }
 }

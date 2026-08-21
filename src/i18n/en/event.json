@@ -10,5 +10,6 @@
   "operator_already_assigned": "This operator is already assigned to the event",
   "creator_tenant_required": "The event creator must belong to a tenant",
   "frozen_not_configurable": "A frozen event's configuration cannot be edited",
-  "configuration_incomplete": "Complete the profile before creating an event. Missing: {missing}"
+  "configuration_incomplete": "Complete the profile before creating an event. Missing: {missing}",
+  "payout_method_required": "The event must have at least one active payout method"
 }
