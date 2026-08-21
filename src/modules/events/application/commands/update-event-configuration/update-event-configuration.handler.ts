@@ -17,6 +17,7 @@ import {
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
+import { isSafeStorageKey } from '@shared/storage/domain/storage-key'
 import { UpdateEventConfigurationCommand } from './update-event-configuration.command'
 
 @CommandHandler(UpdateEventConfigurationCommand)
@@ -56,7 +57,9 @@ export class UpdateEventConfigurationHandler
     })
 
     const watermarkKey = config.brand.watermarkStorageKey
-    if (watermarkKey) {
+    if (watermarkKey && !isSafeStorageKey(watermarkKey)) {
+      this.logger.error(`Refusing to publish unsafe watermark key for event ${event.id}`)
+    } else if (watermarkKey) {
       await this.kv.write(`wm-${event.id}`, watermarkKey).catch((err) => {
         this.logger.error(`Failed to update watermark KV entry for event ${event.id}`, err)
       })

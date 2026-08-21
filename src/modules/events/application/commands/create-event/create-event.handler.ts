@@ -17,6 +17,7 @@ import type { EntityIdProjection } from '@shared/application'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
+import { isSafeStorageKey } from '@shared/storage/domain/storage-key'
 import { type IUserReadRepository, USER_READ_REPOSITORY } from '@users/domain/ports'
 import {
   type ITenantRepository,
@@ -82,8 +83,11 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       return persisted
     })
 
-    if (config.brand.watermarkStorageKey) {
-      await this.kv.write(`wm-${saved.id}`, config.brand.watermarkStorageKey).catch((err) => {
+    const watermarkKey = config.brand.watermarkStorageKey
+    if (watermarkKey && !isSafeStorageKey(watermarkKey)) {
+      this.logger.error(`Refusing to publish unsafe watermark key for event ${saved.id}`)
+    } else if (watermarkKey) {
+      await this.kv.write(`wm-${saved.id}`, watermarkKey).catch((err) => {
         this.logger.error(`Failed to register watermark KV entry for event ${saved.id}`, err)
       })
     }
