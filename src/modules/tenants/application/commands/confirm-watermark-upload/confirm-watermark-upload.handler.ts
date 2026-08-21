@@ -27,7 +27,9 @@ export class ConfirmWatermarkUploadHandler
     const tenantId = await this.userRepo.findTenantId(command.actorUserId)
     if (!tenantId) throw AppException.forbidden('tenant.not_a_tenant_member')
 
-    if (!command.storageKey.startsWith(`tenants/${tenantId}/watermark/`)) {
+    const escapedTenantId = tenantId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const allowedKey = new RegExp(`^tenants/${escapedTenantId}/watermark/[a-zA-Z0-9._-]+$`)
+    if (!allowedKey.test(command.storageKey)) {
       throw AppException.businessRule('tenant.invalid_storage_key')
     }
 

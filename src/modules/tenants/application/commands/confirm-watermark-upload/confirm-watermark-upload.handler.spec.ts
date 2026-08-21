@@ -47,6 +47,19 @@ describe('ConfirmWatermarkUploadHandler', () => {
     expect(kv.write).not.toHaveBeenCalled()
   })
 
+  it('rejects a path-traversal key that lexically starts with the caller tenant prefix', async () => {
+    profileRepo.findByTenantId.mockResolvedValue(profileWith(null))
+
+    await expect(
+      handler.execute(
+        new ConfirmWatermarkUploadCommand('u-1', 'tenants/t-1/watermark/../../other/photos/x.jpg'),
+      ),
+    ).rejects.toThrow(AppException)
+
+    expect(profileRepo.save).not.toHaveBeenCalled()
+    expect(kv.write).not.toHaveBeenCalled()
+  })
+
   it('stores the key, publishes it to KV and deletes the replaced object', async () => {
     profileRepo.findByTenantId.mockResolvedValue(profileWith('tenants/t-1/watermark/old-logo.png'))
 
