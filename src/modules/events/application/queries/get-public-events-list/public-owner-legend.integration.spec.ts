@@ -115,7 +115,7 @@ describe('public owner legend', () => {
       await prisma.event.deleteMany({
         where: { id: { in: [event?.id, platformEvent?.id].filter(Boolean) } },
       })
-      await prisma.tenant.deleteMany({ where: { id: tenant?.id } })
+      await prisma.tenant.deleteMany({ where: { id: { in: [tenant?.id].filter(Boolean) } } })
       await prisma.$disconnect()
     }
     if (module) {
