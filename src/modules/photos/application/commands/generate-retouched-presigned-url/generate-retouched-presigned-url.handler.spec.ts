@@ -1,3 +1,4 @@
+import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
@@ -62,7 +63,11 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
     } as jest.Mocked<IAuthorizationService>
 
-    handler = new GenerateRetouchedPresignedUrlHandler(photoReadRepo, storageAdapter, authz)
+    const freeze = {
+      assertNotFrozen: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<FreezeStateService>
+
+    handler = new GenerateRetouchedPresignedUrlHandler(photoReadRepo, storageAdapter, authz, freeze)
   })
 
   it('should throw NOT_FOUND when photo does not exist (including out-of-scope)', async () => {

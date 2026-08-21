@@ -42,10 +42,12 @@ describe('SetPhotoRetouchFlagHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
+    const freeze = { assertNotFrozen: jest.fn().mockResolvedValue(undefined) }
     handler = new SetPhotoRetouchFlagHandler(
       photoRead as never,
       photoWrite as never,
       authz as never,
+      freeze as never,
     )
   })
 

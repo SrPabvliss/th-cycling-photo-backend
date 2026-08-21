@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { PresignedUrlProjection } from '@photos/application/projections'
@@ -20,6 +21,7 @@ export class GenerateRetouchedPresignedUrlHandler
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   async execute(command: GenerateRetouchedPresignedUrlCommand): Promise<PresignedUrlProjection> {
@@ -27,6 +29,7 @@ export class GenerateRetouchedPresignedUrlHandler
     const photo = await this.photoReadRepo.findByIdInScope(command.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', command.photoId)
     await this.authz.assert(command.userId, 'photo.retouch.upload', photo.eventId)
+    await this.freeze.assertNotFrozen(photo.eventId)
 
     const sanitizedFileName = command.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
     const objectKey = `events/${photo.eventId}/retouched/${crypto.randomUUID()}-${sanitizedFileName}`

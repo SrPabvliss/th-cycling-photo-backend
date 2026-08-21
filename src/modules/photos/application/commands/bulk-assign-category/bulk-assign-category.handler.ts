@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import {
@@ -18,6 +19,7 @@ export class BulkAssignCategoryHandler implements ICommandHandler<BulkAssignCate
     @Inject(PHOTO_READ_REPOSITORY) private readonly readRepo: IPhotoReadRepository,
     @Inject(PHOTO_WRITE_REPOSITORY) private readonly writeRepo: IPhotoWriteRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   /**
@@ -29,9 +31,10 @@ export class BulkAssignCategoryHandler implements ICommandHandler<BulkAssignCate
     const scope = await this.authz.resolveEventScope(command.userId)
     const eventIds = await this.readRepo.getDistinctEventIdsForPhotoIds(command.photoIds, scope)
     await Promise.all(
-      eventIds.map((eventId) =>
-        this.authz.assert(command.userId, 'photo.category.assign', eventId),
-      ),
+      eventIds.map(async (eventId) => {
+        await this.authz.assert(command.userId, 'photo.category.assign', eventId)
+        await this.freeze.assertNotFrozen(eventId)
+      }),
     )
 
     const updated = await this.writeRepo.bulkUpdateCategory(

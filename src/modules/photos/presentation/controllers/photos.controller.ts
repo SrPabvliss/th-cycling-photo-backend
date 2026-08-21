@@ -57,6 +57,10 @@ import { GetPhotoViewQuery } from '@photos/application/queries/get-photo-view/ge
 import { GetResumePointQuery } from '@photos/application/queries/get-resume-point/get-resume-point.query'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import {
+  AllowedWhenFrozen,
+  BlocksWhenFrozen,
+} from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
@@ -71,6 +75,7 @@ export class PhotosController {
 
   /** Returns the resume point (first unclassified photo) for the classification workspace. */
   @RequirePermission('photo.read')
+  @AllowedWhenFrozen()
   @Get('events/:eventId/photos/resume-point')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get resume point for classification workspace' })
@@ -86,6 +91,7 @@ export class PhotosController {
 
   /** Returns a download manifest with presigned URLs for all event photos. */
   @RequirePermission('photo.download')
+  @AllowedWhenFrozen()
   @Get('events/:eventId/photos/download-manifest')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download manifest for all event photos' })
@@ -96,6 +102,7 @@ export class PhotosController {
 
   /** Lists photos for a given event with pagination. */
   @RequirePermission('photo.read')
+  @AllowedWhenFrozen()
   @Get('events/:eventId/photos')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List photos for an event with pagination' })
@@ -124,6 +131,7 @@ export class PhotosController {
 
   /** Searches photos across events with multi-criteria filtering. */
   @RequirePermission('photo.search')
+  @AllowedWhenFrozen()
   @Get('photos/search')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Search photos with multi-criteria filters' })
@@ -142,6 +150,7 @@ export class PhotosController {
 
   /** Paid orders with photos pending retouching, FIFO, scoped to the caller's tenant. */
   @RequirePermission('photo.retouch.read')
+  @AllowedWhenFrozen()
   @Get('photos/pending-retouch')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Get photos pending retouching grouped by order' })
@@ -157,6 +166,7 @@ export class PhotosController {
 
   /** Finds visually similar photos within the same event using vector embeddings. */
   @RequirePermission('photo.read')
+  @AllowedWhenFrozen()
   @Get('photos/:id/similar')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Find visually similar photos within the same event' })
@@ -180,6 +190,7 @@ export class PhotosController {
 
   /** Retrieves a lightweight photo view by public slug. */
   @RequirePermission('photo.read')
+  @AllowedWhenFrozen()
   @Get('photos/view/:slug')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get lightweight photo view by slug' })
@@ -196,6 +207,7 @@ export class PhotosController {
 
   /** Retrieves a single photo's full detail (admin/operator) by public slug. */
   @RequirePermission('photo.read')
+  @AllowedWhenFrozen()
   @Get('photos/detail/:slug')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get photo full detail by slug (admin/operator)' })
@@ -212,6 +224,7 @@ export class PhotosController {
 
   /** Apply a digits correction to a specific bib (admin/operator). */
   @RequirePermission('photo.bib.correct')
+  @AllowedWhenFrozen()
   @Post('photos/:photoId/bibs/:bibId/corrections')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Apply bib digits correction' })
@@ -237,6 +250,7 @@ export class PhotosController {
 
   /** Apply a primary or secondary color correction to a specific color attribute (admin/operator). */
   @RequirePermission('photo.color.correct')
+  @BlocksWhenFrozen()
   @Post('photos/:photoId/colors/:colorId/corrections')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Apply color correction (primary or secondary)' })
@@ -261,6 +275,7 @@ export class PhotosController {
 
   /** Mark a photo as reviewed (idempotente set-only — never reverts) (admin/operator). */
   @RequirePermission('photo.review')
+  @AllowedWhenFrozen()
   @Post('photos/:photoId/reviewed')
   @HttpCode(200)
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
@@ -278,6 +293,7 @@ export class PhotosController {
 
   /** Add a manual reviewer-sourced bib to a photo (admin/operator). */
   @RequirePermission('photo.bib.create')
+  @AllowedWhenFrozen()
   @Post('photos/:photoId/bibs')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Add manual bib (reviewer-sourced)' })
@@ -295,6 +311,7 @@ export class PhotosController {
 
   /** Soft-delete a bib (admin/operator). Marks `deleted_at`; crop file is retained as tech debt. */
   @RequirePermission('photo.bib.delete')
+  @AllowedWhenFrozen()
   @Delete('photos/:photoId/bibs/:bibId')
   @HttpCode(200)
   @SuccessMessage('success.DELETED', { entity: 'entities.photo' })
@@ -312,6 +329,7 @@ export class PhotosController {
 
   /** Hard-delete a photo (admin/operator). Removes the record, bucket objects and CDN slugs. Blocked if the photo was sold or is in a preview link. */
   @RequirePermission('photo.delete')
+  @BlocksWhenFrozen()
   @Delete('photos/:id')
   @HttpCode(200)
   @SuccessMessage('success.DELETED', { entity: 'entities.photo' })
@@ -325,6 +343,7 @@ export class PhotosController {
 
   /** Add a manual reviewer-sourced color to a photo (admin/operator). */
   @RequirePermission('photo.color.create')
+  @BlocksWhenFrozen()
   @Post('photos/:photoId/colors')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Add manual color (reviewer-sourced)' })
@@ -352,6 +371,7 @@ export class PhotosController {
 
   /** Soft-delete a color (admin/operator). Marks `deleted_at`. */
   @RequirePermission('photo.color.delete')
+  @BlocksWhenFrozen()
   @Delete('photos/:photoId/colors/:colorId')
   @HttpCode(200)
   @SuccessMessage('success.DELETED', { entity: 'entities.photo' })
@@ -369,6 +389,7 @@ export class PhotosController {
 
   /** Paginated review queue for an event, ordered by min(bib confidence) ASC NULLS FIRST (admin/operator). */
   @RequirePermission('photo.review')
+  @AllowedWhenFrozen()
   @Get('events/:eventSlug/review-queue')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'Review queue ordered by min(bib confidence) ASC NULLS FIRST' })
@@ -393,6 +414,7 @@ export class PhotosController {
 
   /** Retrieves a single photo's full detail (used by workspace). */
   @RequirePermission('photo.read')
+  @AllowedWhenFrozen()
   @Get('photos/:id')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get photo details by ID' })
@@ -410,6 +432,7 @@ export class PhotosController {
 
   /** Generates a presigned URL for direct upload to B2. */
   @RequirePermission('photo.upload')
+  @BlocksWhenFrozen()
   @Post('events/:eventId/photos/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate a presigned URL for direct photo upload' })
@@ -437,6 +460,7 @@ export class PhotosController {
 
   /** Confirms a batch of photos uploaded directly to B2. */
   @RequirePermission('photo.upload')
+  @BlocksWhenFrozen()
   @Post('events/:eventId/photos/confirm-batch')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Confirm a batch of photos uploaded via presigned URLs' })
@@ -472,6 +496,7 @@ export class PhotosController {
 
   /** Generates a presigned URL for retouched photo upload. */
   @RequirePermission('photo.retouch.upload')
+  @BlocksWhenFrozen()
   @Post('photos/:id/retouched/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate presigned URL for retouched photo upload' })
@@ -498,6 +523,7 @@ export class PhotosController {
 
   /** Confirms a retouched photo upload. Replaces previous retouched if exists. */
   @RequirePermission('photo.retouch.upload')
+  @BlocksWhenFrozen()
   @Post('photos/:id/retouched/confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Confirm retouched photo upload' })
@@ -520,6 +546,7 @@ export class PhotosController {
 
   /** Returns a download URL for the original or retouched photo. */
   @RequirePermission('photo.download')
+  @AllowedWhenFrozen()
   @Get('photos/:id/download')
   @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Get download URL for a photo' })
@@ -545,6 +572,7 @@ export class PhotosController {
   }
 
   @RequirePermission('photo.category.assign')
+  @BlocksWhenFrozen()
   @Patch('photos/bulk-category')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Bulk assign or remove category from multiple photos' })
@@ -565,6 +593,7 @@ export class PhotosController {
   /** Sets the requires_retouch flag on a photo. Used to flag a photo
    *  back into the retouch queue or dismiss a wrongly-flagged photo. */
   @RequirePermission('photo.retouch.flag')
+  @BlocksWhenFrozen()
   @Patch('photos/:id/retouch-flag')
   @HttpCode(204)
   @ApiOperation({ summary: 'Marcar o desmarcar foto para retoque' })

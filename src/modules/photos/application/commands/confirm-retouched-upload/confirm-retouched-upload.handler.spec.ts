@@ -1,3 +1,4 @@
+import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import type { IOrderReadRepository } from '@orders/domain/ports'
 import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository, IPhotoWriteRepository } from '@photos/domain/ports'
@@ -104,6 +105,10 @@ describe('ConfirmRetouchedUploadHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
     } as jest.Mocked<IAuthorizationService>
 
+    const freeze = {
+      assertNotFrozen: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<FreezeStateService>
+
     handler = new ConfirmRetouchedUploadHandler(
       photoReadRepo,
       photoWriteRepo,
@@ -112,6 +117,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
       orderReadRepo as unknown as jest.Mocked<IOrderReadRepository>,
       eventEmitter as any,
       authz,
+      freeze,
     )
   })
 

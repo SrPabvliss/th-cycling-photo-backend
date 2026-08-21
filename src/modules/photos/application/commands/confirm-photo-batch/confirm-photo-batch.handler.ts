@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Inject, Logger } from '@nestjs/common'
@@ -27,6 +28,7 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     @InjectQueue('photo-classification') private readonly classificationQueue: Queue,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly prisma: PrismaService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   /**
@@ -43,6 +45,7 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
       throw AppException.notFound('Event', command.eventId)
     }
     await this.authz.assert(command.audit.userId, 'photo.upload', event.id)
+    await this.freeze.assertNotFrozen(command.eventId)
 
     const expectedPrefix = `events/${command.eventId}/`
     for (const item of command.photos) {
