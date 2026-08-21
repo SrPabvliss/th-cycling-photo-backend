@@ -1,5 +1,5 @@
 import { AppException } from '@shared/domain'
-import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo'
+import { EventStatus } from '../value-objects/event-status.vo'
 import { Event } from './event.entity'
 
 describe('Event Entity', () => {
@@ -276,8 +276,8 @@ describe('Event Entity', () => {
     })
   })
 
-  describe('assertConfigurable', () => {
-    const buildEvent = (status: EventStatusType) =>
+  describe('assertNotFrozen', () => {
+    const buildEvent = (isFrozen: boolean) =>
       Event.fromPersistence({
         id: crypto.randomUUID(),
         tenantId: crypto.randomUUID(),
@@ -288,21 +288,22 @@ describe('Event Entity', () => {
         provinceId: null,
         cantonId: null,
         eventTypeId: 1,
-        status,
+        status: EventStatus.ACTIVE,
         snapPublicName: null,
         snapWatermarkStorageKey: null,
         snapWhatsappNumber: null,
+        isFrozen,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
       })
 
     it('throws when the event is frozen', () => {
-      expect(() => buildEvent(EventStatus.FROZEN).assertConfigurable()).toThrow(AppException)
+      expect(() => buildEvent(true).assertNotFrozen()).toThrow(AppException)
     })
 
-    it('passes when the event is active', () => {
-      expect(() => buildEvent(EventStatus.ACTIVE).assertConfigurable()).not.toThrow()
+    it('passes when the event is not frozen', () => {
+      expect(() => buildEvent(false).assertNotFrozen()).not.toThrow()
     })
   })
 })

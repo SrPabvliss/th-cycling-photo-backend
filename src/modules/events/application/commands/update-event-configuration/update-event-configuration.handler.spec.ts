@@ -31,7 +31,7 @@ describe('UpdateEventConfigurationHandler', () => {
     },
   )
 
-  const makeEvent = (status: 'active' | 'frozen'): Event =>
+  const makeEvent = (isFrozen: boolean): Event =>
     Event.fromPersistence({
       slug: 'test-event',
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -42,17 +42,18 @@ describe('UpdateEventConfigurationHandler', () => {
       provinceId: null,
       cantonId: null,
       eventTypeId: 1,
-      status,
+      status: 'active',
       snapPublicName: null,
       snapWatermarkStorageKey: null,
       snapWhatsappNumber: null,
+      isFrozen,
       createdAt: new Date(),
       updatedAt: new Date(),
       deletedAt: null,
     })
 
-  const frozenEvent = makeEvent('frozen')
-  const activeEvent = makeEvent('active')
+  const frozenEvent = makeEvent(true)
+  const activeEvent = makeEvent(false)
 
   beforeEach(() => {
     readRepo = {
@@ -105,7 +106,7 @@ describe('UpdateEventConfigurationHandler', () => {
     readRepo.findByIdInScope.mockResolvedValue(frozenEvent)
 
     await expect(handler.execute(command)).rejects.toMatchObject({
-      messageKey: 'event.frozen_not_configurable',
+      messageKey: 'event.frozen_not_editable',
     })
     expect(payoutRepo.replaceForEvent).not.toHaveBeenCalled()
   })

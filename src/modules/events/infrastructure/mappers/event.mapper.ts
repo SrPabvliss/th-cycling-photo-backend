@@ -122,6 +122,8 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
     snap_watermark_storage_key: entity.snapWatermarkStorageKey,
     snap_whatsapp_number: entity.snapWhatsappNumber,
     photo_quota: entity.photoQuota,
+    is_frozen: entity.isFrozen,
+    frozen_at: entity.frozenAt,
     created_at: entity.audit.createdAt,
     updated_at: entity.audit.updatedAt,
     deleted_at: entity.audit.deletedAt,
@@ -149,6 +151,8 @@ export function toEntity(record: PrismaEvent): Event {
     photoQuota: record.photo_quota,
     // read-only: the counter is mutated only via claimPhotoQuota's raw UPDATE, never through this write path
     photosUploaded: record.photos_uploaded,
+    isFrozen: record.is_frozen,
+    frozenAt: record.frozen_at,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
     deletedAt: record.deleted_at,

@@ -410,6 +410,8 @@ model Event {
   status         EventStatus @default(active)
   photo_quota     Int?
   photos_uploaded Int @default(0)
+  is_frozen Boolean   @default(false)
+  frozen_at DateTime? @db.Timestamptz
   pricing_config Json?
   created_at     DateTime    @default(now()) @db.Timestamptz
   updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz
