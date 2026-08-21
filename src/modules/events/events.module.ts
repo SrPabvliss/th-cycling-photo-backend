@@ -78,6 +78,11 @@ import { TenantsModule } from '../tenants/tenants.module'
     { provide: EVENT_OPERATOR_REPOSITORY, useClass: EventOperatorRepository },
     { provide: EVENT_PAYOUT_METHOD_REPOSITORY, useClass: EventPayoutMethodRepository },
   ],
-  exports: [EVENT_READ_REPOSITORY, EVENT_WRITE_REPOSITORY, EVENT_OPERATOR_REPOSITORY],
+  exports: [
+    EVENT_READ_REPOSITORY,
+    EVENT_WRITE_REPOSITORY,
+    EVENT_OPERATOR_REPOSITORY,
+    EVENT_PAYOUT_METHOD_REPOSITORY,
+  ],
 })
 export class EventsModule {}
