@@ -50,7 +50,14 @@ async function syncPermissions(prisma: PermissionCatalogClient): Promise<void> {
       },
     })
   }
-  // drift in the other direction: a key removed from the constant
+  // drift in the other direction: a key removed from the constant; prune its template links first, or the FK blocks the delete
+  const stale = await prisma.permission.findMany({
+    where: { key: { notIn: ALL_PERMISSION_KEYS } },
+    select: { id: true },
+  })
+  await prisma.permissionTemplatePermission.deleteMany({
+    where: { permission_id: { in: stale.map((p) => p.id) } },
+  })
   await prisma.permission.deleteMany({ where: { key: { notIn: ALL_PERMISSION_KEYS } } })
   console.log(`Synced ${ALL_PERMISSION_KEYS.length} permissions`)
 }

@@ -38,8 +38,6 @@ const STAFF: PermissionKey[] = [
   'photo_category.event.remove',
   'dashboard.operator.read',
   'dashboard.review_queue.read',
-  'payment.account.read',
-  'payment.account.configure',
   'tenant.profile.read',
   'tenant.payout_method.read',
   'tenant.payout_method.manage',

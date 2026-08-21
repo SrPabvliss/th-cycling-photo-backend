@@ -2,7 +2,7 @@ export type OrderPaymentContext = {
   orderId: string
   status: string
   subtotalDollars: number | null
-  sellerUserId: string | null
+  sellerTenantId: string | null
   buyerUserId: string
 }
 

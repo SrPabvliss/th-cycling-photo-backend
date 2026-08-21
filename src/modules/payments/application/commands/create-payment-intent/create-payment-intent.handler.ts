@@ -9,18 +9,20 @@ import { PaymentTransaction } from '@payments/domain/entities'
 import {
   type IOrderPaymentContextRepository,
   type IPaymentTransactionWriteRepository,
-  type ISellerPaymentAccountReadRepository,
   ORDER_PAYMENT_CONTEXT_REPOSITORY,
   type OrderPaymentContext,
   PAYMENT_TRANSACTION_WRITE_REPOSITORY,
-  SELLER_PAYMENT_ACCOUNT_READ_REPOSITORY,
 } from '@payments/domain/ports'
 import { PaymentAmountCalculator } from '@payments/domain/services/payment-amount-calculator.service'
-import { PaymentMode } from '@payments/domain/value-objects/payment-mode.vo'
+import { PaymentMode, type PaymentModeType } from '@payments/domain/value-objects/payment-mode.vo'
 import { CredentialCipher } from '@shared/crypto'
 import { AppException } from '@shared/domain'
 import { PAYMENT_GATEWAY_REGISTRY, type PaymentGatewayRegistry } from '@shared/payment-gateways'
 import { nanoid } from 'nanoid'
+import {
+  type ITenantPayoutMethodRepository,
+  TENANT_PAYOUT_METHOD_REPOSITORY,
+} from '../../../../tenants/domain/ports/tenant-payout-method-repository.port'
 import { CreatePaymentIntentCommand } from './create-payment-intent.command'
 
 const PAYABLE_STATUSES: string[] = [
@@ -35,8 +37,8 @@ export class CreatePaymentIntentHandler implements ICommandHandler<CreatePayment
   constructor(
     @Inject(ORDER_PAYMENT_CONTEXT_REPOSITORY)
     private readonly contextRepo: IOrderPaymentContextRepository,
-    @Inject(SELLER_PAYMENT_ACCOUNT_READ_REPOSITORY)
-    private readonly accountRepo: ISellerPaymentAccountReadRepository,
+    @Inject(TENANT_PAYOUT_METHOD_REPOSITORY)
+    private readonly payoutRepo: ITenantPayoutMethodRepository,
     @Inject(PAYMENT_TRANSACTION_WRITE_REPOSITORY)
     private readonly transactionRepo: IPaymentTransactionWriteRepository,
     @Inject(PAYMENT_GATEWAY_REGISTRY)
@@ -57,26 +59,26 @@ export class CreatePaymentIntentHandler implements ICommandHandler<CreatePayment
       throw AppException.forbidden('payment.order_not_yours')
     }
 
-    if (contexts.some((context) => context.sellerUserId === null)) {
+    if (contexts.some((context) => context.sellerTenantId === null)) {
       throw AppException.businessRule('payment.account_not_found')
     }
 
-    const sellerUserIds = new Set(contexts.map((context) => context.sellerUserId))
-    if (sellerUserIds.size > 1) throw AppException.businessRule('payment.mixed_sellers')
+    const sellerTenantIds = new Set(contexts.map((context) => context.sellerTenantId))
+    if (sellerTenantIds.size > 1) throw AppException.businessRule('payment.mixed_sellers')
 
-    const sellerUserId = contexts[0].sellerUserId as string
+    const sellerTenantId = contexts[0].sellerTenantId as string
 
     try {
-      return await this.buildIntent(contexts, sellerUserId)
+      return await this.buildIntent(contexts, sellerTenantId)
     } catch (error) {
-      await this.accountSuspension.disableOnInvalidCredentials(error, sellerUserId)
+      await this.accountSuspension.disableOnInvalidCredentials(error, sellerTenantId)
       throw error
     }
   }
 
   private async buildIntent(
     contexts: OrderPaymentContext[],
-    sellerUserId: string,
+    sellerTenantId: string,
   ): Promise<PaymentIntentProjection> {
     if (contexts.some((context) => !PAYABLE_STATUSES.includes(context.status))) {
       throw AppException.businessRule('payment.order_not_payable')
@@ -85,7 +87,7 @@ export class CreatePaymentIntentHandler implements ICommandHandler<CreatePayment
       throw AppException.businessRule('payment.order_not_payable')
     }
 
-    const account = await this.accountRepo.findByUserId(sellerUserId)
+    const account = await this.payoutRepo.findActivePayphoneForTenant(sellerTenantId)
     if (!account) throw AppException.businessRule('payment.account_not_found')
     if (!account.isUsable) throw AppException.businessRule('payment.account_not_verified')
 
@@ -134,7 +136,7 @@ export class CreatePaymentIntentHandler implements ICommandHandler<CreatePayment
       clientTransactionId,
       amounts,
       commissionCents,
-      mode: account.mode,
+      mode: account.mode as PaymentModeType, // payphone accounts always carry a mode
       receiver: receiverIdentifier,
       storeId: (credentials.storeId as string | null) ?? null,
       transferToCents: transferableCents,

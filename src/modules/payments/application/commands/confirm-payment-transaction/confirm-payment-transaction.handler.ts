@@ -14,10 +14,8 @@ import type { PaymentTransaction } from '@payments/domain/entities'
 import {
   type IOrderPaymentContextRepository,
   type IPaymentTransactionWriteRepository,
-  type ISellerPaymentAccountReadRepository,
   ORDER_PAYMENT_CONTEXT_REPOSITORY,
   PAYMENT_TRANSACTION_WRITE_REPOSITORY,
-  SELLER_PAYMENT_ACCOUNT_READ_REPOSITORY,
 } from '@payments/domain/ports'
 import {
   decideOrderSettlement,
@@ -34,6 +32,10 @@ import {
   PAYMENT_GATEWAY_REGISTRY,
   type PaymentGatewayRegistry,
 } from '@shared/payment-gateways'
+import {
+  type ITenantPayoutMethodRepository,
+  TENANT_PAYOUT_METHOD_REPOSITORY,
+} from '../../../../tenants/domain/ports/tenant-payout-method-repository.port'
 import { ConfirmPaymentTransactionCommand } from './confirm-payment-transaction.command'
 
 type ConfirmationOutcome = Omit<PaymentResultProjection, 'deliveries'>
@@ -48,8 +50,8 @@ export class ConfirmPaymentTransactionHandler
   constructor(
     @Inject(PAYMENT_TRANSACTION_WRITE_REPOSITORY)
     private readonly transactionRepo: IPaymentTransactionWriteRepository,
-    @Inject(SELLER_PAYMENT_ACCOUNT_READ_REPOSITORY)
-    private readonly accountRepo: ISellerPaymentAccountReadRepository,
+    @Inject(TENANT_PAYOUT_METHOD_REPOSITORY)
+    private readonly payoutRepo: ITenantPayoutMethodRepository,
     @Inject(ORDER_PAYMENT_CONTEXT_REPOSITORY)
     private readonly contextRepo: IOrderPaymentContextRepository,
     @Inject(PAYMENT_GATEWAY_REGISTRY)
@@ -63,7 +65,7 @@ export class ConfirmPaymentTransactionHandler
   }
 
   async execute(command: ConfirmPaymentTransactionCommand): Promise<PaymentResultProjection> {
-    let sellerUserId: string | null | undefined
+    let sellerTenantId: string | null | undefined
 
     const runConfirmation = () =>
       this.transactionRepo.runLocked(command.clientTransactionId, async (transaction) => {
@@ -82,7 +84,7 @@ export class ConfirmPaymentTransactionHandler
           throw AppException.forbidden('payment.order_not_yours')
         }
 
-        sellerUserId = contexts[0].sellerUserId
+        sellerTenantId = contexts[0].sellerTenantId
 
         const wasExpired = transaction.status === PaymentTransactionStatus.EXPIRED
 
@@ -131,7 +133,7 @@ export class ConfirmPaymentTransactionHandler
     try {
       outcome = await runConfirmation()
     } catch (error) {
-      await this.accountSuspension.disableOnInvalidCredentials(error, sellerUserId)
+      await this.accountSuspension.disableOnInvalidCredentials(error, sellerTenantId)
       throw error
     }
 
@@ -268,10 +270,10 @@ export class ConfirmPaymentTransactionHandler
     const contexts = await this.contextRepo.findByOrderIds(transaction.orderIds)
     if (contexts.length === 0) throw AppException.businessRule('payment.order_context_missing')
 
-    const sellerUserId = contexts[0].sellerUserId
-    if (!sellerUserId) throw AppException.businessRule('payment.account_not_found')
+    const sellerTenantId = contexts[0].sellerTenantId
+    if (!sellerTenantId) throw AppException.businessRule('payment.account_not_found')
 
-    const account = await this.accountRepo.findByUserId(sellerUserId)
+    const account = await this.payoutRepo.findActivePayphoneForTenant(sellerTenantId)
     if (!account?.credentialsEncrypted) {
       throw AppException.businessRule('payment.invalid_credentials')
     }
