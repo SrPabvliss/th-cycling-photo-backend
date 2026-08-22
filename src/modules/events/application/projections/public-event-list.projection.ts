@@ -33,6 +33,9 @@ export class PublicEventListProjection {
   @ApiProperty({ description: 'Number of photos' })
   photoCount: number
 
+  @ApiProperty({ description: 'Public name of the tenant that owns the event' })
+  ownerName: string
+
   @ApiPropertyOptional({ description: 'Cover image slug for CDN transform URLs' })
   coverSlug: string | null
 }
