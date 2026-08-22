@@ -9,7 +9,7 @@
   "invalid_cover_storage_key": "La clave de almacenamiento no corresponde a la ruta de imagen de portada de este evento",
   "operator_already_assigned": "Este operador ya está asignado al evento",
   "creator_tenant_required": "El creador del evento debe pertenecer a un tenant",
-  "frozen_not_configurable": "No se puede editar la configuración de un evento congelado",
+  "frozen_not_editable": "No se puede modificar un evento congelado",
   "configuration_incomplete": "Complete el perfil antes de crear un evento. Falta: {missing}",
   "payout_method_required": "El evento debe tener al menos un método de cobro activo",
   "photo_quota_exceeded": "Este evento permite {quota} fotos y ya se usaron {used}. Puedes subir {remaining} más.",

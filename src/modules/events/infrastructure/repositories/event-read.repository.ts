@@ -346,6 +346,14 @@ export class EventReadRepository implements IEventReadRepository {
     })
   }
 
+  async isFrozen(eventId: string): Promise<boolean> {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { is_frozen: true },
+    })
+    return event?.is_frozen ?? false
+  }
+
   /**
    * Returns photo ids for the given event whose effective (latest-correction)
    * bib digits match. Skips soft-deleted bibs. A correction with `new_value = NULL`

@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { type IOrderReadRepository, ORDER_READ_REPOSITORY } from '@orders/domain/ports'
@@ -32,6 +33,7 @@ export class DeletePhotoHandler implements ICommandHandler<DeletePhotoCommand> {
     @Inject(ORDER_READ_REPOSITORY) private readonly orderRead: IOrderReadRepository,
     @Inject(PREVIEW_LINK_READ_REPOSITORY) private readonly previewRead: IPreviewLinkReadRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   async execute(command: DeletePhotoCommand): Promise<void> {
@@ -39,6 +41,7 @@ export class DeletePhotoHandler implements ICommandHandler<DeletePhotoCommand> {
     const photo = await this.photoRead.findByIdInScope(command.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', command.photoId)
     await this.authz.assert(command.userId, 'photo.delete', photo.eventId)
+    await this.freeze.assertNotFrozen(photo.eventId)
 
     const [inOrder, inPreview] = await Promise.all([
       this.orderRead.existsByPhotoId(command.photoId),

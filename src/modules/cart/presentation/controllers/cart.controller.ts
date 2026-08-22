@@ -21,6 +21,7 @@ import { JwtService } from '@nestjs/jwt'
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
 import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
+import { AllowedWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import type { Request } from 'express'
@@ -119,6 +120,7 @@ export class CartController {
   }
 
   @RequirePermission('cart.checkout')
+  @AllowedWhenFrozen()
   @Post('checkout')
   @SuccessMessage('success.CREATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Checkout the cart — creates orders per event' })

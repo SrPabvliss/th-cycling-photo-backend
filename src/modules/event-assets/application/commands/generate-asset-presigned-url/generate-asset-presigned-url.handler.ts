@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
@@ -20,6 +21,7 @@ export class GenerateAssetPresignedUrlHandler
     @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   async execute(command: GenerateAssetPresignedUrlCommand): Promise<AssetPresignedUrlProjection> {
@@ -34,6 +36,7 @@ export class GenerateAssetPresignedUrlHandler
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)
     await this.authz.assert(command.userId, 'event_asset.presign', event.id)
+    await this.freeze.assertNotFrozen(command.eventId)
 
     const sanitizedFileName = command.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
     const objectKey = `events/${command.eventId}/assets/${command.assetType}/${crypto.randomUUID()}-${sanitizedFileName}`

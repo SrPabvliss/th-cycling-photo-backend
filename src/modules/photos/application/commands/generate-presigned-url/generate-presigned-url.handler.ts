@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
@@ -20,6 +21,7 @@ export class GeneratePresignedUrlHandler implements ICommandHandler<GeneratePres
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   /**
@@ -36,6 +38,7 @@ export class GeneratePresignedUrlHandler implements ICommandHandler<GeneratePres
       throw AppException.notFound('Event', command.eventId)
     }
     await this.authz.assert(command.userId, 'photo.upload', event.id)
+    await this.freeze.assertNotFrozen(event.id)
 
     if (event.photoQuota !== null && event.photosUploaded >= event.photoQuota) {
       throw AppException.businessRule('event.photo_quota_exceeded', false, {

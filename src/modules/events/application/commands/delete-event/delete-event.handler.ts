@@ -29,6 +29,7 @@ export class DeleteEventHandler implements ICommandHandler<DeleteEventCommand> {
     if (!event) throw AppException.notFound('Event', command.id)
 
     await this.authz.assert(command.userId, 'event.delete', event.id)
+    event.assertNotFrozen()
 
     event.archive()
     await this.writeRepo.save(event)

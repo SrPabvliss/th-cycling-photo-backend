@@ -18,7 +18,13 @@ describe('BulkAssignCategoryHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    handler = new BulkAssignCategoryHandler(readRepo as never, writeRepo as never, authz as never)
+    const freeze = { assertNotFrozen: jest.fn().mockResolvedValue(undefined) }
+    handler = new BulkAssignCategoryHandler(
+      readRepo as never,
+      writeRepo as never,
+      authz as never,
+      freeze as never,
+    )
   })
 
   it('resolves the caller scope, asserts per affected event, then updates within scope', async () => {

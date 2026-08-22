@@ -9,7 +9,7 @@
   "invalid_cover_storage_key": "The storage key does not match the expected cover image path for this event",
   "operator_already_assigned": "This operator is already assigned to the event",
   "creator_tenant_required": "The event creator must belong to a tenant",
-  "frozen_not_configurable": "A frozen event's configuration cannot be edited",
+  "frozen_not_editable": "A frozen event cannot be modified",
   "configuration_incomplete": "Complete the profile before creating an event. Missing: {missing}",
   "payout_method_required": "The event must have at least one active payout method",
   "photo_quota_exceeded": "This event allows {quota} photos and {used} are already used. You can upload {remaining} more.",

@@ -59,6 +59,7 @@ describe('DeleteEventHandler', () => {
       getAssignedEventIdsByStatus: jest.fn(),
       getAllAssignedEventIds: jest.fn(),
       getEventBriefsByIds: jest.fn(),
+      isFrozen: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     authz = {

@@ -3,6 +3,7 @@ import { AssignOperatorHandler } from '@events/application/commands/assign-opera
 import { CreateEventHandler } from '@events/application/commands/create-event/create-event.handler'
 import { DeleteEventHandler } from '@events/application/commands/delete-event/delete-event.handler'
 import { RestoreEventHandler } from '@events/application/commands/restore-event/restore-event.handler'
+import { SetEventFreezeHandler } from '@events/application/commands/set-event-freeze/set-event-freeze.handler'
 import { UnassignOperatorHandler } from '@events/application/commands/unassign-operator/unassign-operator.handler'
 import { UpdateEventHandler } from '@events/application/commands/update-event/update-event.handler'
 import { UpdateEventConfigurationHandler } from '@events/application/commands/update-event-configuration/update-event-configuration.handler'
@@ -17,6 +18,7 @@ import { GetPublicEventDetailHandler } from '@events/application/queries/get-pub
 import { GetPublicEventPhotosHandler } from '@events/application/queries/get-public-event-photos/get-public-event-photos.handler'
 import { GetPublicEventsListHandler } from '@events/application/queries/get-public-events-list/get-public-events-list.handler'
 import { EventConfigurationService } from '@events/application/services/event-configuration.service'
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import {
   EVENT_OPERATOR_REPOSITORY,
   EVENT_PAYOUT_METHOD_REPOSITORY,
@@ -41,6 +43,7 @@ const CommandHandlers = [
   CreateEventHandler,
   DeleteEventHandler,
   RestoreEventHandler,
+  SetEventFreezeHandler,
   UnassignOperatorHandler,
   UpdateEventHandler,
   UpdateEventConfigurationHandler,
@@ -73,6 +76,7 @@ import { TenantsModule } from '../tenants/tenants.module'
     ...CommandHandlers,
     ...QueryHandlers,
     EventConfigurationService,
+    FreezeStateService,
     { provide: EVENT_READ_REPOSITORY, useClass: EventReadRepository },
     { provide: EVENT_WRITE_REPOSITORY, useClass: EventWriteRepository },
     { provide: EVENT_OPERATOR_REPOSITORY, useClass: EventOperatorRepository },
@@ -83,6 +87,7 @@ import { TenantsModule } from '../tenants/tenants.module'
     EVENT_WRITE_REPOSITORY,
     EVENT_OPERATOR_REPOSITORY,
     EVENT_PAYOUT_METHOD_REPOSITORY,
+    FreezeStateService,
   ],
 })
 export class EventsModule {}

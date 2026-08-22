@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
@@ -21,6 +22,7 @@ export class UnassignCategoryFromEventHandler
     private readonly writeRepo: IPhotoCategoryWriteRepository,
     @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   async execute(command: UnassignCategoryFromEventCommand): Promise<void> {
@@ -34,6 +36,7 @@ export class UnassignCategoryFromEventHandler
     if (!event) throw AppException.notFound('Event', command.eventId)
 
     await this.authz.assert(command.unassignedById, 'photo_category.event.remove', event.id)
+    await this.freeze.assertNotFrozen(event.id)
 
     await this.writeRepo.unassignFromEvent(event.id, command.photoCategoryId)
   }

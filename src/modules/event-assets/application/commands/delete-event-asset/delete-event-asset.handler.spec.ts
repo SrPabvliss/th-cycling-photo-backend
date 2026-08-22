@@ -1,3 +1,4 @@
+import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
@@ -80,6 +81,10 @@ describe('DeleteEventAssetHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as jest.Mocked<IAuthorizationService>
 
+    const freeze = {
+      assertNotFrozen: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<FreezeStateService>
+
     handler = new DeleteEventAssetHandler(
       eventReadRepo,
       readRepo,
@@ -87,6 +92,7 @@ describe('DeleteEventAssetHandler', () => {
       storage,
       kvStorage,
       authz,
+      freeze,
     )
   })
 

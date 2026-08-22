@@ -31,6 +31,7 @@ export class UnassignOperatorHandler implements ICommandHandler<UnassignOperator
     if (!event) throw AppException.notFound('Event', command.eventId)
 
     await this.authz.assert(command.unassignedById, 'event.collaborator.unassign', event.id)
+    event.assertNotFrozen()
 
     const isAssigned = await this.operatorRepo.isAssigned(command.eventId, command.userId)
     if (!isAssigned) {

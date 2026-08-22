@@ -4,7 +4,6 @@ import {
   type IEventPayoutMethodRepository,
   type IEventReadRepository,
 } from '@events/domain/ports'
-import { EventStatus } from '@events/domain/value-objects/event-status.vo'
 import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import {
@@ -48,7 +47,7 @@ export class GetEventConfigurationHandler implements IQueryHandler<GetEventConfi
         holderIdentification: method.holderIdentification,
         sourcePayoutMethodId: method.sourcePayoutMethodId,
       })),
-      isEditable: event.status !== EventStatus.FROZEN,
+      isEditable: !event.isFrozen,
     }
   }
 }

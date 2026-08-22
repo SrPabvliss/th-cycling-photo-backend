@@ -52,6 +52,7 @@ export interface IEventReadRepository {
   ): Promise<PaginatedResult<PublicPhotoProjection>>
   existsActiveEvent(eventId: string): Promise<{ id: string; name: string } | null>
   existsActiveEventBySlug(slug: string): Promise<{ id: string; name: string } | null>
+  isFrozen(eventId: string): Promise<boolean>
 }
 
 export const EVENT_READ_REPOSITORY = Symbol('EVENT_READ_REPOSITORY')

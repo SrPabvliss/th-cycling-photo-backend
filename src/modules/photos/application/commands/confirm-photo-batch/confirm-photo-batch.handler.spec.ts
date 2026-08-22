@@ -1,3 +1,4 @@
+import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
 import type { IPhotoWriteRepository } from '@photos/domain/ports'
@@ -18,6 +19,7 @@ describe('ConfirmPhotoBatchHandler', () => {
   let classificationQueue: { add: jest.Mock; addBulk: jest.Mock }
   let authz: jest.Mocked<IAuthorizationService>
   let prisma: { $transaction: jest.Mock; event: { findUniqueOrThrow: jest.Mock } }
+  let freeze: jest.Mocked<FreezeStateService>
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
   const audit = new AuditContext('u1')
@@ -73,6 +75,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       getAssignedEventIdsByStatus: jest.fn(),
       getAllAssignedEventIds: jest.fn().mockResolvedValue([]),
       getEventBriefsByIds: jest.fn(),
+      isFrozen: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoWriteRepo = {
@@ -99,6 +102,10 @@ describe('ConfirmPhotoBatchHandler', () => {
       event: { findUniqueOrThrow: jest.fn() },
     }
 
+    freeze = {
+      assertNotFrozen: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<FreezeStateService>
+
     handler = new ConfirmPhotoBatchHandler(
       eventReadRepo,
       photoWriteRepo,
@@ -107,6 +114,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       classificationQueue as unknown as import('bullmq').Queue,
       authz,
       prisma as any,
+      freeze,
     )
   })
 

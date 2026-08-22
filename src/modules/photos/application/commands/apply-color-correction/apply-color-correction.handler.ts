@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { CorrectionTargetType } from '@generated/prisma/client'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
@@ -25,6 +26,7 @@ export class ApplyColorCorrectionHandler implements ICommandHandler<ApplyColorCo
     @Inject(PHOTO_COLOR_WRITE_REPOSITORY) private readonly colorRepo: IPhotoColorWriteRepository,
     @Inject(CORRECTION_REPOSITORY) private readonly correctionRepo: ICorrectionRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   async execute(
@@ -34,6 +36,7 @@ export class ApplyColorCorrectionHandler implements ICommandHandler<ApplyColorCo
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.color.correct', photo.eventId)
+    await this.freeze.assertNotFrozen(photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')
     }

@@ -20,6 +20,8 @@ export class Event {
     public snapWhatsappNumber: string | null,
     public readonly photoQuota: number | null,
     public readonly photosUploaded: number,
+    public isFrozen: boolean,
+    public frozenAt: Date | null,
     public readonly audit: AuditFields,
   ) {}
 
@@ -54,6 +56,8 @@ export class Event {
       // copied at creation, not referenced, so raising the tenant default never re-caps existing events
       data.photoQuota ?? null,
       data.photosUploaded ?? 0,
+      false,
+      null,
       AuditFields.initialize(),
     )
   }
@@ -103,9 +107,15 @@ export class Event {
     this.audit.markUpdated()
   }
 
-  assertConfigurable(): void {
-    if (this.status === EventStatus.FROZEN) {
-      throw AppException.businessRule('event.frozen_not_configurable')
+  setFrozen(frozen: boolean): void {
+    this.isFrozen = frozen
+    this.frozenAt = frozen ? new Date() : null
+    this.audit.markUpdated()
+  }
+
+  assertNotFrozen(): void {
+    if (this.isFrozen) {
+      throw AppException.businessRule('event.frozen_not_editable')
     }
   }
 
@@ -148,6 +158,8 @@ export class Event {
     snapWhatsappNumber: string | null
     photoQuota?: number | null
     photosUploaded?: number
+    isFrozen?: boolean
+    frozenAt?: Date | null
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
@@ -170,6 +182,8 @@ export class Event {
       data.snapWhatsappNumber,
       data.photoQuota ?? null,
       data.photosUploaded ?? 0,
+      data.isFrozen ?? false,
+      data.frozenAt ?? null,
       AuditFields.fromPersistence({
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,

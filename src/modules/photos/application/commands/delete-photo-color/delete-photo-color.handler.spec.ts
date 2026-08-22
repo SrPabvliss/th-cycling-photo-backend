@@ -52,7 +52,8 @@ describe('DeletePhotoColorHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    handler = new DeletePhotoColorHandler(photoReadRepo, colorRepo, authz as never)
+    const freeze = { assertNotFrozen: jest.fn().mockResolvedValue(undefined) }
+    handler = new DeletePhotoColorHandler(photoReadRepo, colorRepo, authz as never, freeze as never)
     loggerSpy = jest.spyOn((handler as any).logger, 'log').mockImplementation(() => undefined)
   })
 

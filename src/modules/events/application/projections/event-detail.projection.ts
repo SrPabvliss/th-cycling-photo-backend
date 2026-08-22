@@ -33,6 +33,7 @@ export class EventDetailProjection {
   classifiedCount: number
   /** Total file size of all photos in bytes (computed) */
   totalFileSize: number
+  isFrozen: boolean
   /** When the event record was created */
   createdAt: Date
   /** When the event record was last updated */

@@ -43,7 +43,7 @@ export class UpdateEventConfigurationHandler
     if (!event) throw AppException.notFound('Event', command.id)
     await this.authz.assert(command.actorUserId, 'event.update', event.id)
 
-    event.assertConfigurable()
+    event.assertNotFrozen()
 
     const existingMethods = await this.payoutRepo.findByEventId(event.id)
     const config = await this.configService.rematerialise(event, command.selection, existingMethods)

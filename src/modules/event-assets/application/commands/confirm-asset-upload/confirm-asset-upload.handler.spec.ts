@@ -1,3 +1,4 @@
+import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
@@ -68,6 +69,10 @@ describe('ConfirmAssetUploadHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as jest.Mocked<IAuthorizationService>
 
+    const freeze = {
+      assertNotFrozen: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<FreezeStateService>
+
     handler = new ConfirmAssetUploadHandler(
       eventReadRepo,
       readRepo,
@@ -75,6 +80,7 @@ describe('ConfirmAssetUploadHandler', () => {
       storage,
       kvStorage,
       authz,
+      freeze,
     )
   })
 

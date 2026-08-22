@@ -1,3 +1,4 @@
+import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import type { IOrderReadRepository } from '@orders/domain/ports'
 import { Photo } from '@photos/domain/entities'
 import type { IPhotoReadRepository, IPhotoWriteRepository } from '@photos/domain/ports'
@@ -73,6 +74,10 @@ describe('DeletePhotoHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as jest.Mocked<IAuthorizationService>
 
+    const freeze = {
+      assertNotFrozen: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<FreezeStateService>
+
     handler = new DeletePhotoHandler(
       photoRead,
       photoWrite,
@@ -81,6 +86,7 @@ describe('DeletePhotoHandler', () => {
       orderRead,
       previewRead,
       authz,
+      freeze,
     )
   })
 

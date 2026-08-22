@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { EVENT_READ_REPOSITORY } from '@events/domain/ports'
 import { EventReadRepository } from '@events/infrastructure/repositories/event-read.repository'
 import { getQueueToken } from '@nestjs/bullmq'
@@ -66,6 +67,7 @@ describe('photo quota', () => {
         },
         { provide: getQueueToken('embedding-generation'), useValue: { addBulk: async () => [] } },
         { provide: getQueueToken('photo-classification'), useValue: { addBulk: async () => [] } },
+        FreezeStateService,
         ConfirmPhotoBatchHandler,
       ],
     }).compile()

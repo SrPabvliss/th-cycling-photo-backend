@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { EventEmitter2 } from '@nestjs/event-emitter'
@@ -36,6 +37,7 @@ export class ConfirmRetouchedUploadHandler
     @Inject(ORDER_READ_REPOSITORY) private readonly orderReadRepo: IOrderReadRepository,
     private readonly eventEmitter: EventEmitter2,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   async execute(command: ConfirmRetouchedUploadCommand): Promise<{ confirmed: boolean }> {
@@ -43,6 +45,7 @@ export class ConfirmRetouchedUploadHandler
     const photo = await this.photoReadRepo.findByIdInScope(command.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', command.photoId)
     await this.authz.assert(command.retouchedById, 'photo.retouch.upload', photo.eventId)
+    await this.freeze.assertNotFrozen(photo.eventId)
 
     const expectedPrefix = `events/${photo.eventId}/retouched/`
     if (!command.objectKey.startsWith(expectedPrefix)) {

@@ -1,3 +1,4 @@
+import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
@@ -14,6 +15,7 @@ describe('GeneratePresignedUrlHandler', () => {
   let photoReadRepo: jest.Mocked<IPhotoReadRepository>
   let storageAdapter: jest.Mocked<IStorageAdapter>
   let authz: jest.Mocked<IAuthorizationService>
+  let freeze: jest.Mocked<FreezeStateService>
   const unrestrictedScope = EventScope.unrestricted()
 
   const futureDate = new Date()
@@ -57,6 +59,7 @@ describe('GeneratePresignedUrlHandler', () => {
       getAssignedEventIdsByStatus: jest.fn(),
       getAllAssignedEventIds: jest.fn().mockResolvedValue([]),
       getEventBriefsByIds: jest.fn(),
+      isFrozen: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoReadRepo = {
@@ -98,7 +101,17 @@ describe('GeneratePresignedUrlHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as jest.Mocked<IAuthorizationService>
 
-    handler = new GeneratePresignedUrlHandler(eventReadRepo, photoReadRepo, storageAdapter, authz)
+    freeze = {
+      assertNotFrozen: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<FreezeStateService>
+
+    handler = new GeneratePresignedUrlHandler(
+      eventReadRepo,
+      photoReadRepo,
+      storageAdapter,
+      authz,
+      freeze,
+    )
   })
 
   it('should throw NOT_FOUND when event does not exist', async () => {

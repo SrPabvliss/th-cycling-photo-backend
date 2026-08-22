@@ -1,3 +1,4 @@
+import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
 import type { IEventPricingWriteRepository } from '@pricing/domain/ports'
@@ -56,7 +57,11 @@ describe('ClearEventPricingConfigHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(EventScope.unrestricted()),
     } as unknown as jest.Mocked<IAuthorizationService>
 
-    handler = new ClearEventPricingConfigHandler(repo, eventReadRepo, authz)
+    const freeze = {
+      assertNotFrozen: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<FreezeStateService>
+
+    handler = new ClearEventPricingConfigHandler(repo, eventReadRepo, authz, freeze)
   })
 
   it('throws NOT_FOUND when the event does not exist', async () => {

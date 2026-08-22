@@ -12,26 +12,24 @@ import {
   type IAuthorizationService,
 } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
-import { RestoreEventCommand } from './restore-event.command'
+import { SetEventFreezeCommand } from './set-event-freeze.command'
 
-@CommandHandler(RestoreEventCommand)
-export class RestoreEventHandler implements ICommandHandler<RestoreEventCommand> {
+@CommandHandler(SetEventFreezeCommand)
+export class SetEventFreezeHandler implements ICommandHandler<SetEventFreezeCommand> {
   constructor(
     @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
     @Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
-  /** Restores an archived event back to active status. */
-  async execute(command: RestoreEventCommand): Promise<EntityIdProjection> {
+  async execute(command: SetEventFreezeCommand): Promise<EntityIdProjection> {
     const scope = await this.authz.resolveEventScope(command.userId)
-    const event = await this.readRepo.findByIdInScope(command.id, scope, true)
+    const event = await this.readRepo.findByIdInScope(command.id, scope)
     if (!event) throw AppException.notFound('Event', command.id)
 
-    await this.authz.assert(command.userId, 'event.restore', event.id)
-    event.assertNotFrozen()
+    await this.authz.assert(command.userId, 'event.freeze', event.id)
 
-    event.restore()
+    event.setFrozen(command.frozen)
     await this.writeRepo.save(event)
 
     return { id: event.id }

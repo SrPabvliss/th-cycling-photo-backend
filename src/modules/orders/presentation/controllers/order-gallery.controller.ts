@@ -7,6 +7,7 @@ import {
 } from '@orders/application/commands'
 import { EntityIdProjection } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { AllowedWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
@@ -18,6 +19,7 @@ export class OrderGalleryController {
 
   @Post()
   @RequirePermission('order.create')
+  @AllowedWhenFrozen()
   @SuccessMessage('success.CREATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Create an order from the public gallery (requires authentication)' })
   @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })

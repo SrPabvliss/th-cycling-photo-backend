@@ -29,6 +29,7 @@ export class ArchiveEventHandler implements ICommandHandler<ArchiveEventCommand>
     if (!event) throw AppException.notFound('Event', command.id)
 
     await this.authz.assert(command.userId, 'event.archive', event.id)
+    event.assertNotFrozen()
 
     event.archive()
     await this.writeRepo.save(event)

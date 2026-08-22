@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import {
@@ -21,6 +22,7 @@ export class SetPhotoRetouchFlagHandler implements ICommandHandler<SetPhotoRetou
     @Inject(PHOTO_WRITE_REPOSITORY)
     private readonly photoWrite: IPhotoWriteRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
   ) {}
 
   async execute(command: SetPhotoRetouchFlagCommand): Promise<void> {
@@ -30,6 +32,7 @@ export class SetPhotoRetouchFlagHandler implements ICommandHandler<SetPhotoRetou
       throw AppException.notFound('Photo', command.photoId)
     }
     await this.authz.assert(command.userId, 'photo.retouch.flag', photo.eventId)
+    await this.freeze.assertNotFrozen(photo.eventId)
 
     await this.photoWrite.setRequiresRetouch(command.photoId, command.value)
   }

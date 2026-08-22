@@ -26,6 +26,7 @@ export class AssignOperatorHandler implements ICommandHandler<AssignOperatorComm
     if (!event) throw AppException.notFound('Event', command.eventId)
 
     await this.authz.assert(command.assignedById, 'event.collaborator.assign', event.id)
+    event.assertNotFrozen()
 
     const alreadyAssigned = await this.operatorRepo.isAssigned(command.eventId, command.userId)
     if (alreadyAssigned) {
