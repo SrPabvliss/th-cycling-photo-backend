@@ -1,6 +1,10 @@
+import {
+  EVENT_PAYOUT_METHOD_REPOSITORY,
+  type IEventPayoutMethodRepository,
+} from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
-import type { OrderDetailProjection } from '@orders/application/projections'
+import { type OrderDetailProjection, toOrderPayoutMethod } from '@orders/application/projections'
 import { type IOrderReadRepository, ORDER_READ_REPOSITORY } from '@orders/domain/ports'
 import {
   AUTHORIZATION_SERVICE,
@@ -14,6 +18,8 @@ export class GetOrderDetailHandler implements IQueryHandler<GetOrderDetailQuery>
   constructor(
     @Inject(ORDER_READ_REPOSITORY) private readonly readRepo: IOrderReadRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    @Inject(EVENT_PAYOUT_METHOD_REPOSITORY)
+    private readonly payoutRepo: IEventPayoutMethodRepository,
   ) {}
 
   /**
@@ -25,6 +31,15 @@ export class GetOrderDetailHandler implements IQueryHandler<GetOrderDetailQuery>
     const scope = await this.authz.resolveEventScope(query.userId)
     const detail = await this.readRepo.getDetail(query.orderId, scope)
     if (!detail) throw AppException.notFound('entities.order', query.orderId)
-    return detail
+
+    const canSeePayout = await this.authz.can(query.userId, 'order.notify_payment', detail.eventId)
+    if (!canSeePayout) return detail
+
+    // the event snapshot, never the live tenant: editing the profile must not change an issued order
+    const methods = await this.payoutRepo.findByEventId(detail.eventId)
+    return {
+      ...detail,
+      payoutMethods: methods.filter((m) => m.isActive).map(toOrderPayoutMethod),
+    }
   }
 }

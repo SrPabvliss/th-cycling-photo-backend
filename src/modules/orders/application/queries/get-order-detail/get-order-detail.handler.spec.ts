@@ -1,3 +1,5 @@
+import { EventPayoutMethod } from '@events/domain/entities'
+import type { IEventPayoutMethodRepository } from '@events/domain/ports'
 import type { OrderDetailProjection } from '@orders/application/projections'
 import type { IOrderReadRepository } from '@orders/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
@@ -6,15 +8,49 @@ import { AppException } from '@shared/domain'
 import { GetOrderDetailHandler } from './get-order-detail.handler'
 import { GetOrderDetailQuery } from './get-order-detail.query'
 
+const activeBankMethod = EventPayoutMethod.fromPersistence({
+  id: 'method-1',
+  eventId: 'event-1',
+  provider: 'bank_transfer',
+  isActive: true,
+  sortOrder: 0,
+  mode: null,
+  receiverIdentifier: null,
+  bankName: 'Banco Pichincha',
+  accountNumber: '1234567890',
+  accountType: 'savings',
+  accountHolder: 'Tenant Holder',
+  holderIdentification: '1710000000',
+  sourcePayoutMethodId: 'source-1',
+})
+
+const inactivePayphoneMethod = EventPayoutMethod.fromPersistence({
+  id: 'method-2',
+  eventId: 'event-1',
+  provider: 'payphone',
+  isActive: false,
+  sortOrder: 1,
+  mode: 'split_receiver',
+  receiverIdentifier: '0991234567',
+  bankName: null,
+  accountNumber: null,
+  accountType: null,
+  accountHolder: null,
+  holderIdentification: null,
+  sourcePayoutMethodId: 'source-2',
+})
+
 describe('GetOrderDetailHandler', () => {
   let readRepo: jest.Mocked<Pick<IOrderReadRepository, 'getDetail'>>
-  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope'>>
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'can'>>
+  let payoutRepo: jest.Mocked<Pick<IEventPayoutMethodRepository, 'findByEventId'>>
   let handler: GetOrderDetailHandler
 
   beforeEach(() => {
     readRepo = { getDetail: jest.fn() }
-    authz = { resolveEventScope: jest.fn() }
-    handler = new GetOrderDetailHandler(readRepo as never, authz as never)
+    authz = { resolveEventScope: jest.fn(), can: jest.fn().mockResolvedValue(false) }
+    payoutRepo = { findByEventId: jest.fn() }
+    handler = new GetOrderDetailHandler(readRepo as never, authz as never, payoutRepo as never)
   })
 
   it('returns the order detail when it is within the caller scope', async () => {
@@ -55,5 +91,37 @@ describe('GetOrderDetailHandler', () => {
     expect(error).toBeInstanceOf(AppException)
     expect(error.code).toBe('NOT_FOUND')
     expect(readRepo.getDetail).toHaveBeenCalledWith('other-tenant-order', restrictedScope)
+  })
+
+  describe('payout methods', () => {
+    const query = new GetOrderDetailQuery('order-1', 'u1')
+
+    beforeEach(() => {
+      authz.resolveEventScope.mockResolvedValue(EventScope.unrestricted())
+      const detail = { id: 'order-1', eventId: 'event-1' } as unknown as OrderDetailProjection
+      readRepo.getDetail.mockResolvedValue(detail)
+    })
+
+    it('includes them when the caller may notify payment, omits them otherwise', async () => {
+      authz.can.mockResolvedValue(true)
+      payoutRepo.findByEventId.mockResolvedValue([activeBankMethod])
+
+      const allowed = await handler.execute(query)
+      expect(allowed.payoutMethods).toHaveLength(1)
+
+      authz.can.mockResolvedValue(false)
+      const denied = await handler.execute(query)
+      expect(denied.payoutMethods).toBeUndefined()
+    })
+
+    it('excludes inactive methods', async () => {
+      authz.can.mockResolvedValue(true)
+      payoutRepo.findByEventId.mockResolvedValue([activeBankMethod, inactivePayphoneMethod])
+
+      const result = await handler.execute(query)
+
+      expect(result.payoutMethods).toHaveLength(1)
+      expect(result.payoutMethods?.[0].provider).toBe('bank_transfer')
+    })
   })
 })

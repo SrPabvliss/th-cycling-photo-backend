@@ -36,6 +36,7 @@ function buildHandler(orders: Order[]) {
     findById: jest.fn((id: string) => Promise.resolve(orders.find((o) => o.id === id) ?? null)),
     getDetail: jest.fn((id: string) =>
       Promise.resolve({
+        eventId: 'event-1',
         eventName: 'Vuelta al Valle',
         userName: 'Juan Perez',
         subtotal: '10',
