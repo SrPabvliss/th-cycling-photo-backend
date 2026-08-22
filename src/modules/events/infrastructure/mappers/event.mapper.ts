@@ -71,6 +71,7 @@ export const publicEventListSelectConfig = {
   name: true,
   start_date: true,
   end_date: true,
+  snap_public_name: true,
   province: { select: { name: true } },
   canton: { select: { name: true } },
   _count: { select: { photos: true } },
@@ -90,6 +91,7 @@ export const publicEventDetailSelectConfig = {
   slug: true,
   start_date: true,
   end_date: true,
+  snap_public_name: true,
   province: { select: { name: true } },
   canton: { select: { name: true } },
   _count: { select: { photos: true } },
@@ -249,6 +251,7 @@ export function toPublicListProjection(record: PublicEventListSelect): PublicEve
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
     photoCount: record._count.photos,
+    ownerName: record.snap_public_name ?? '',
     coverSlug: record.assets[0]?.public_slug ?? null,
   }
 }
@@ -266,6 +269,7 @@ export function toPublicDetailProjection(
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
     photoCount: record._count.photos,
+    ownerName: record.snap_public_name ?? '',
     assets: record.assets.map((a) => ({
       assetType: a.asset_type,
       url: cdn.assetUrl(a.public_slug),

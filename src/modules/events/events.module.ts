@@ -86,6 +86,7 @@ import { TenantsModule } from '../tenants/tenants.module'
     EVENT_READ_REPOSITORY,
     EVENT_WRITE_REPOSITORY,
     EVENT_OPERATOR_REPOSITORY,
+    EVENT_PAYOUT_METHOD_REPOSITORY,
     FreezeStateService,
   ],
 })

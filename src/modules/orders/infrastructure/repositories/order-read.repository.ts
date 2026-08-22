@@ -201,7 +201,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         snap_currency: true,
         payment_method: true,
         user: { select: { first_name: true, last_name: true } },
-        event: { select: { name: true } },
+        event: { select: { id: true, name: true } },
         preview_link: { select: { token: true } },
         items: {
           select: {
@@ -242,6 +242,7 @@ export class OrderReadRepository implements IOrderReadRepository {
       snapLastName: record.snap_last_name,
       snapWhatsapp: record.snap_phone,
       snapEmail: record.snap_email,
+      eventId: record.event.id,
       eventName: record.event.name,
       subtotal: record.subtotal !== null ? record.subtotal.toString() : null,
       snapCurrency: record.snap_currency,
