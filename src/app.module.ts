@@ -14,6 +14,7 @@ import { AuthModule } from './modules/auth/auth.module'
 import { JwtAuthGuard } from './modules/auth/infrastructure/guards/jwt-auth.guard'
 import { CartModule } from './modules/cart/cart.module'
 import { ClassificationsModule } from './modules/classifications/classifications.module'
+import { ContractsModule } from './modules/contracts/contracts.module'
 import { DeliveriesModule } from './modules/deliveries/deliveries.module'
 import { EventAssetsModule } from './modules/event-assets/event-assets.module'
 import { EventTypesModule } from './modules/event-types/event-types.module'
@@ -94,6 +95,7 @@ import { StorageModule } from './shared/storage/storage.module'
     AiPipelineModule,
     CartModule,
     ClassificationsModule,
+    ContractsModule,
     DeliveriesModule,
     EventAssetsModule,
     EventTypesModule,

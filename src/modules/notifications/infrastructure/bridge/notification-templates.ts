@@ -4,6 +4,7 @@ import type {
   OrderPaidPayload,
   OrderRetouchCompletedPayload,
   PreviewViewedPayload,
+  TenantContractAcceptedPayload,
 } from '@notifications/application/services/notification-events'
 import { NotificationEvent } from '@notifications/application/services/notification-events'
 
@@ -46,6 +47,13 @@ export const NOTIFICATION_TEMPLATES: Record<string, TemplateConfig> = {
     message: (p) => {
       const payload = p as OrderRetouchCompletedPayload
       return `Todas las ${payload.photoCount} fotos del pedido de ${payload.customerName} (${payload.eventName}) están retocadas`
+    },
+  },
+  [NotificationEvent.TENANT_CONTRACT_ACCEPTED]: {
+    title: 'Contrato aceptado',
+    message: (p) => {
+      const payload = p as TenantContractAcceptedPayload
+      return `${payload.commercialName} aceptó el contrato de organizador`
     },
   },
 }

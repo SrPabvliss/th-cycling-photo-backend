@@ -28,5 +28,8 @@
   "payphone_account": "payment account",
   "payment": "payment",
   "email_verification": "Email verification",
-  "payoutMethod": "Payout method"
+  "payoutMethod": "Payout method",
+  "tenant": "Tenant",
+  "tenant_contract": "Organizer contract",
+  "payout_method": "Payout method"
 }

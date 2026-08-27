@@ -94,13 +94,16 @@ export const PERMISSIONS = {
   'user.avatar.manage': E(true, false, 'users'),
   // tenants and administration
   'tenant.read': E(true, false, 'tenants'),
-  'tenant.create': E(true, false, 'tenants'),
   'tenant.quota.set': E(true, false, 'tenants'),
   'tenant.profile.read': E(false, false, 'tenants'),
   'tenant.profile.update': E(false, false, 'tenants'),
   'tenant.payout_method.read': E(false, false, 'tenants'),
   'tenant.payout_method.manage': E(false, false, 'tenants'),
   'permission.grant': E(true, false, 'admin'),
+  // tenant contracts
+  'contract.read': E(true, false, 'contracts'),
+  'contract.issue': E(true, false, 'contracts'),
+  'contract.revoke': E(true, false, 'contracts'),
 } as const satisfies Record<string, PermissionMeta>
 
 export type PermissionKey = keyof typeof PERMISSIONS

@@ -4,6 +4,7 @@ export type MailTemplate =
   | 'order-delivered'
   | 'email-verification-code'
   | 'email-changed-notice'
+  | 'tenant-contract-invitation'
 
 export interface RenderedTemplate {
   html: string

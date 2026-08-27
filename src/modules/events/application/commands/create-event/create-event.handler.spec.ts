@@ -56,10 +56,7 @@ describe('CreateEventHandler', () => {
     } as jest.Mocked<IUserReadRepository>
 
     tenantRepo = {
-      getTenantsList: jest.fn(),
-      updateEventQuota: jest.fn(),
       updateEventPhotoQuotaDefault: jest.fn(),
-      createTenantWithAdmin: jest.fn(),
       checkQuota: jest
         .fn()
         .mockResolvedValue({ quota: 10, used: 0, isPlatform: false, defaultEventPhotoQuota: null }),
