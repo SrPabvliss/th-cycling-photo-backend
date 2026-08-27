@@ -1,0 +1,12 @@
+{
+  "owner_not_found": "No existe una cuenta con ese correo electrónico",
+  "owner_inactive": "Esta cuenta está desactivada",
+  "owner_has_pending_contract": "Esta persona ya tiene un contrato pendiente sin aceptar",
+  "not_yours": "Este contrato no está dirigido a tu cuenta",
+  "email_not_verified": "Debes verificar tu correo electrónico antes de aceptar el contrato",
+  "expired": "Este contrato ya venció",
+  "already_accepted": "Este contrato ya fue aceptado",
+  "revoked": "Este contrato fue revocado",
+  "not_pending": "Este contrato ya no está pendiente",
+  "resend_lapsed": "No se puede reenviar un contrato vencido"
+}

@@ -1,0 +1,12 @@
+{
+  "owner_not_found": "No account exists with that email address",
+  "owner_inactive": "This account is deactivated",
+  "owner_has_pending_contract": "This person already has an unaccepted pending contract",
+  "not_yours": "This contract is not addressed to your account",
+  "email_not_verified": "You must verify your email address before accepting the contract",
+  "expired": "This contract has expired",
+  "already_accepted": "This contract has already been accepted",
+  "revoked": "This contract was revoked",
+  "not_pending": "This contract is no longer pending",
+  "resend_lapsed": "Cannot resend a lapsed contract"
+}

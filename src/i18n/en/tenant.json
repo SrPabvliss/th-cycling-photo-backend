@@ -1,6 +1,7 @@
 {
   "not_a_tenant_member": "Your user does not belong to any organisation",
-  "user_email_in_use": "A user with that email already exists",
+  "owner_not_found": "No account exists with that email",
+  "owner_already_tenant": "That account already belongs to a tenant",
   "invalid_storage_key": "The storage key does not belong to your organisation",
   "watermark_must_be_png": "The watermark must be a PNG file with a transparent background"
 }

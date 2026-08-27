@@ -1,81 +1,17 @@
 import { Injectable } from '@nestjs/common'
+import { EVENT_SLOT_CONSUMED_FILTER } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
-import type {
-  CreateTenantPayload,
-  ITenantRepository,
-  TenantListProjection,
-} from '../../domain/ports/tenant-repository.port'
-
-// A deleted event still holds its slot if it was ever used, closing the delete-refund loophole.
-const SLOT_CONSUMED_FILTER = { OR: [{ deleted_at: null }, { photos_uploaded: { gt: 0 } }] }
+import type { ITenantRepository } from '../../domain/ports/tenant-repository.port'
 
 @Injectable()
 export class TenantRepository implements ITenantRepository {
   constructor(private readonly prisma: PrismaService) {}
-
-  async getTenantsList(): Promise<TenantListProjection[]> {
-    const tenants = await this.prisma.tenant.findMany({
-      where: { is_platform: false },
-      include: {
-        _count: {
-          select: {
-            events: {
-              where: SLOT_CONSUMED_FILTER,
-            },
-          },
-        },
-      },
-      orderBy: { created_at: 'desc' },
-    })
-
-    return tenants.map((t) => ({
-      id: t.id,
-      name: t.name,
-      eventQuota: t.event_quota,
-      eventsUsed: t._count.events,
-      createdAt: t.created_at,
-    }))
-  }
-
-  async updateEventQuota(tenantId: string, quota: number): Promise<void> {
-    await this.prisma.tenant.update({
-      where: { id: tenantId },
-      data: { event_quota: quota },
-    })
-  }
 
   async updateEventPhotoQuotaDefault(tenantId: string, quota: number | null): Promise<void> {
     await this.prisma.tenant.update({
       where: { id: tenantId },
       data: { default_event_photo_quota: quota },
     })
-  }
-
-  async createTenantWithAdmin(data: CreateTenantPayload): Promise<string> {
-    const tenant = await this.prisma.$transaction(async (tx) => {
-      const newTenant = await tx.tenant.create({
-        data: {
-          name: data.name,
-          event_quota: data.eventQuota,
-          is_platform: false,
-        },
-      })
-
-      await tx.user.create({
-        data: {
-          email: data.adminEmail,
-          password_hash: data.adminPasswordHash,
-          first_name: data.adminFirstName,
-          last_name: data.adminLastName,
-          tenant_id: newTenant.id,
-          permission_template_id: data.tenantTemplateId,
-        },
-      })
-
-      return newTenant
-    })
-
-    return tenant.id
   }
 
   async checkQuota(tenantId: string): Promise<{
@@ -90,7 +26,7 @@ export class TenantRepository implements ITenantRepository {
         _count: {
           select: {
             events: {
-              where: SLOT_CONSUMED_FILTER,
+              where: EVENT_SLOT_CONSUMED_FILTER,
             },
           },
         },

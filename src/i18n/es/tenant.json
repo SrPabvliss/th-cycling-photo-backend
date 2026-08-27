@@ -1,6 +1,7 @@
 {
   "not_a_tenant_member": "Tu usuario no pertenece a ninguna organización",
-  "user_email_in_use": "Ya existe un usuario registrado con ese correo",
+  "owner_not_found": "No existe ninguna cuenta con ese correo",
+  "owner_already_tenant": "Esa cuenta ya pertenece a una organización",
   "invalid_storage_key": "La clave de almacenamiento no corresponde a tu organización",
   "watermark_must_be_png": "La marca de agua debe ser un archivo PNG con fondo transparente"
 }

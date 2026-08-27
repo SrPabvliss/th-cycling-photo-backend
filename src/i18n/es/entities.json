@@ -28,5 +28,8 @@
   "payphone_account": "cuenta de cobros",
   "payment": "pago",
   "email_verification": "Verificación de correo",
-  "payoutMethod": "Método de cobro"
+  "payoutMethod": "Método de cobro",
+  "tenant": "Tenant",
+  "tenant_contract": "Contrato de organizador",
+  "payout_method": "Método de cobro"
 }
