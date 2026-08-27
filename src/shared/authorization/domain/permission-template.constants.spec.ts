@@ -50,4 +50,31 @@ describe('permission templates', () => {
     expect(staff).not.toContain('buyer.read')
     expect(staff).not.toContain('order.gift')
   })
+
+  it('lets a tenant buy photos, like platform_admin already can', () => {
+    const tenant = TEMPLATE_PERMISSIONS[TEMPLATE_KEYS.TENANT]
+    expect(tenant).toEqual(
+      expect.arrayContaining([
+        'cart.checkout',
+        'order.create',
+        'order.payment_method.set',
+        'payment.intent.create',
+        'payment.confirm',
+        'payment.transaction.read',
+      ]),
+    )
+  })
+
+  it('keeps the customer template untouched by that widening', () => {
+    expect([...TEMPLATE_PERMISSIONS[TEMPLATE_KEYS.CUSTOMER]].sort()).toEqual(
+      [
+        'cart.checkout',
+        'order.create',
+        'order.payment_method.set',
+        'payment.confirm',
+        'payment.intent.create',
+        'payment.transaction.read',
+      ].sort(),
+    )
+  })
 })

@@ -1,6 +1,6 @@
 import type { IPermissionRepository } from '@shared/authorization/domain/ports/permission-repository.port'
 import { EMPTY_PRINCIPAL_PERMISSIONS } from '@shared/authorization/domain/principal'
-import { CONSENT_TYPE, POLICY_VERSION } from '../../../domain/constants/consent.constants'
+import { CONSENT_TYPE, POLICY_VERSIONS } from '../../../domain/constants/consent.constants'
 import { PROMPT_KEY } from '../../../domain/constants/user-prompt.constants'
 import type {
   IAuthUserRepository,
@@ -36,6 +36,7 @@ describe('GetMeHandler', () => {
         role: 'customer',
         emailVerified: true,
         isProtected: false,
+        hasPersonalProfile: true,
       }),
     } as unknown as jest.Mocked<IAuthUserRepository>
 
@@ -56,7 +57,10 @@ describe('GetMeHandler', () => {
   it('reports the terms consent as pending when it was never accepted', async () => {
     const me = await handler.execute(query)
 
-    expect(consentRepo.findAcceptedTypes).toHaveBeenCalledWith('user-1', POLICY_VERSION)
+    expect(consentRepo.findAcceptedTypes).toHaveBeenCalledWith(
+      'user-1',
+      POLICY_VERSIONS[CONSENT_TYPE.TERMS_PRIVACY],
+    )
     expect(me.pendingConsents).toEqual([CONSENT_TYPE.TERMS_PRIVACY])
   })
 
@@ -84,6 +88,14 @@ describe('GetMeHandler', () => {
     expect(me.email).toBe('rider@example.com')
     expect(me.pendingConsents).toEqual([])
   })
+
+  it('never asks a buyer for the tenant terms', async () => {
+    consentRepo.findAcceptedTypes.mockResolvedValue([])
+
+    const me = await handler.execute(query)
+
+    expect(me.pendingConsents).not.toContain('terms_tenant')
+  })
 })
 
 describe('GetMeHandler — pendingPrompts', () => {
@@ -103,6 +115,7 @@ describe('GetMeHandler — pendingPrompts', () => {
     role: 'customer',
     emailVerified: false,
     isProtected: false,
+    hasPersonalProfile: true,
     ...overrides,
   })
 
@@ -134,12 +147,26 @@ describe('GetMeHandler — pendingPrompts', () => {
     expect(me.pendingPrompts).toEqual([])
   })
 
-  it('still prompts a protected account: verifying an address is harmless, changing it is not', async () => {
+  it('excludes a protected account from every non-legal prompt', async () => {
     authUserRepo.getMe.mockResolvedValue(meRecord({ isProtected: true }))
 
     const me = await handler.execute(query)
 
-    expect(me.pendingPrompts).toEqual([PROMPT_KEY.EMAIL_VERIFICATION])
+    expect(me.pendingPrompts).toEqual([])
+  })
+
+  it('excludes a platform principal from every non-legal prompt', async () => {
+    authUserRepo.getMe.mockResolvedValue(
+      meRecord({ emailVerified: true, hasPersonalProfile: false }),
+    )
+    permissionRepo.load.mockResolvedValue({
+      ...EMPTY_PRINCIPAL_PERMISSIONS(),
+      isPlatform: true,
+    })
+
+    const me = await handler.execute(query)
+
+    expect(me.pendingPrompts).toEqual([])
   })
 
   it('returns nothing during the 24h global cooldown after the last snooze', async () => {
@@ -181,6 +208,26 @@ describe('GetMeHandler — pendingPrompts', () => {
     const me = await handler.execute(query)
 
     expect(me.pendingPrompts).toEqual([])
+  })
+
+  it('asks an account with no personal profile to complete it', async () => {
+    authUserRepo.getMe.mockResolvedValue(
+      meRecord({ emailVerified: true, hasPersonalProfile: false }),
+    )
+
+    const me = await handler.execute(query)
+
+    expect(me.pendingPrompts).toContain(PROMPT_KEY.PERSONAL_PROFILE)
+  })
+
+  it('does not ask when the personal profile is there', async () => {
+    authUserRepo.getMe.mockResolvedValue(
+      meRecord({ emailVerified: true, hasPersonalProfile: true }),
+    )
+
+    const me = await handler.execute(query)
+
+    expect(me.pendingPrompts).not.toContain(PROMPT_KEY.PERSONAL_PROFILE)
   })
 
   it('keeps /auth/me working with an empty list when the prompt repository fails', async () => {

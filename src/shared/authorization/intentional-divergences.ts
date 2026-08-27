@@ -62,4 +62,9 @@ export const ROLE_INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   'admin PUT /payphone-account',
   'operator GET /payphone-account',
   'operator PUT /payphone-account',
+
+  // Event detail redesign: the money row is unconditional, so TitanTV staff need to read orders.
+  'operator GET /orders',
+  'operator GET /orders/stats',
+  'operator GET /orders/:id',
 ])

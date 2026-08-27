@@ -6,7 +6,11 @@ import {
   PERMISSION_REPOSITORY,
 } from '@shared/authorization/domain/ports/permission-repository.port'
 import { AppException } from '@shared/domain'
-import { POLICY_VERSION, REQUIRED_CONSENT_TYPES } from '../../../domain/constants/consent.constants'
+import {
+  CONSENT_TYPE,
+  POLICY_VERSIONS,
+  REQUIRED_CONSENT_TYPES,
+} from '../../../domain/constants/consent.constants'
 import {
   PROMPT_GLOBAL_COOLDOWN_MS,
   PROMPT_PRIORITY,
@@ -25,6 +29,7 @@ import { GetMeQuery } from './get-me.query'
 
 const PROMPT_CONDITIONS: Record<PromptKey, (me: MeProjection) => boolean> = {
   email_verification: (me) => !me.emailVerified,
+  personal_profile: (me) => !me.hasPersonalProfile,
 }
 
 @QueryHandler(GetMeQuery)
@@ -46,7 +51,6 @@ export class GetMeHandler implements IQueryHandler<GetMeQuery> {
     if (!me.role) me.role = query.role
 
     me.pendingConsents = await this.findPendingConsents(query.userId)
-    me.pendingPrompts = await this.findPendingPrompts(query.userId, me)
 
     const p = await this.permissionRepo.load(query.userId)
     const effective = new Set<string>()
@@ -64,12 +68,17 @@ export class GetMeHandler implements IQueryHandler<GetMeQuery> {
     me.tenantId = p.tenantId
     me.isPlatform = p.isPlatform
 
+    me.pendingPrompts = await this.findPendingPrompts(query.userId, me)
+
     return me
   }
 
   private async findPendingConsents(userId: string): Promise<string[]> {
     try {
-      const accepted = await this.consentRepo.findAcceptedTypes(userId, POLICY_VERSION)
+      const accepted = await this.consentRepo.findAcceptedTypes(
+        userId,
+        POLICY_VERSIONS[CONSENT_TYPE.TERMS_PRIVACY],
+      )
       return REQUIRED_CONSENT_TYPES.filter((type) => !accepted.includes(type))
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
@@ -81,6 +90,7 @@ export class GetMeHandler implements IQueryHandler<GetMeQuery> {
   private async findPendingPrompts(userId: string, me: MeProjection): Promise<string[]> {
     try {
       if ((me.pendingConsents ?? []).length > 0) return []
+      if (me.isProtected || me.isPlatform) return []
 
       const lastSnoozedAt = await this.promptSnoozeRepo.lastSnoozedAt(userId)
       if (lastSnoozedAt && Date.now() - lastSnoozedAt.getTime() < PROMPT_GLOBAL_COOLDOWN_MS) {
