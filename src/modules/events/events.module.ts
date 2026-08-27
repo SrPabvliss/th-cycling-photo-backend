@@ -10,6 +10,7 @@ import { UpdateEventConfigurationHandler } from '@events/application/commands/up
 import { UpdateEventPhotoQuotaHandler } from '@events/application/commands/update-event-photo-quota/update-event-photo-quota.handler'
 import { GetEventConfigurationHandler } from '@events/application/queries/get-event-configuration/get-event-configuration.handler'
 import { GetEventConfigurationPresetHandler } from '@events/application/queries/get-event-configuration-preset/get-event-configuration-preset.handler'
+import { GetEventCreationContextHandler } from '@events/application/queries/get-event-creation-context/get-event-creation-context.handler'
 import { GetEventDetailHandler } from '@events/application/queries/get-event-detail/get-event-detail.handler'
 import { GetEventOperatorsHandler } from '@events/application/queries/get-event-operators/get-event-operators.handler'
 import { GetEventsListHandler } from '@events/application/queries/get-events-list/get-events-list.handler'
@@ -54,6 +55,7 @@ const QueryHandlers = [
   GetEventDetailHandler,
   GetEventConfigurationHandler,
   GetEventConfigurationPresetHandler,
+  GetEventCreationContextHandler,
   GetEventOperatorsHandler,
   GetEventsStatsHandler,
   GetPublicEventsListHandler,
@@ -61,6 +63,7 @@ const QueryHandlers = [
   GetPublicEventPhotosHandler,
 ]
 
+import { ContractsModule } from '../contracts/contracts.module'
 import { TenantsModule } from '../tenants/tenants.module'
 
 @Module({
@@ -69,6 +72,7 @@ import { TenantsModule } from '../tenants/tenants.module'
     LocationsModule,
     UsersModule,
     TenantsModule,
+    forwardRef(() => ContractsModule),
     forwardRef(() => PhotosModule),
   ],
   controllers: [EventsController, PublicEventsController],

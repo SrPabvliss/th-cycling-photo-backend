@@ -1,3 +1,4 @@
+import type { EventCreatedProjection } from '@events/application/projections'
 import { EventConfigurationService } from '@events/application/services/event-configuration.service'
 import { Event } from '@events/domain/entities'
 import {
@@ -13,12 +14,15 @@ import {
 import { LocationValidator } from '@locations/application/services'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import type { EntityIdProjection } from '@shared/application'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
 import { isSafeStorageKey } from '@shared/storage/domain/storage-key'
 import { type IUserReadRepository, USER_READ_REPOSITORY } from '@users/domain/ports'
+import {
+  CONTRACT_REPOSITORY,
+  type IContractRepository,
+} from '../../../../contracts/domain/ports/contract-repository.port'
 import {
   type ITenantRepository,
   TENANT_REPOSITORY,
@@ -34,6 +38,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     @Inject(EVENT_OPERATOR_REPOSITORY) private readonly operatorRepo: IEventOperatorRepository,
     @Inject(USER_READ_REPOSITORY) private readonly userRepo: IUserReadRepository,
     @Inject(TENANT_REPOSITORY) private readonly tenantRepo: ITenantRepository,
+    @Inject(CONTRACT_REPOSITORY) private readonly contractRepo: IContractRepository,
     @Inject(EVENT_PAYOUT_METHOD_REPOSITORY)
     private readonly payoutRepo: IEventPayoutMethodRepository,
     @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
@@ -43,7 +48,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
   ) {}
 
   /** Creates a new event entity and persists it. */
-  async execute(command: CreateEventCommand): Promise<EntityIdProjection> {
+  async execute(command: CreateEventCommand): Promise<EventCreatedProjection> {
     await this.locationValidator.validate(command.provinceId, command.cantonId)
 
     // An event always belongs to its creator's tenant. Buyers and other
@@ -55,29 +60,41 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
 
     await this.configService.assertProfileComplete(tenantId)
 
-    const { quota, used, isPlatform, defaultEventPhotoQuota } =
-      await this.tenantRepo.checkQuota(tenantId)
-    if (!isPlatform && used >= quota) {
-      throw AppException.businessRule('event.tenant_quota_exceeded', false, { quota, used })
-    }
+    const { isPlatform, defaultEventPhotoQuota } = await this.tenantRepo.checkQuota(tenantId)
 
-    const event = Event.create({
-      name: command.name,
-      startDate: command.startDate,
-      endDate: command.endDate,
-      provinceId: command.provinceId,
-      cantonId: command.cantonId,
-      eventTypeId: command.eventTypeId,
-      tenantId,
-      photoQuota: defaultEventPhotoQuota,
-    })
-
-    event.audit.setCreatedBy(command.audit.userId)
-
-    const config = await this.configService.materialise(tenantId, event.id, command.configuration)
-    event.applyBrandSnapshot(config.brand)
+    // Stable id so configuration can materialise before the slot-consuming write.
+    const eventId = crypto.randomUUID()
+    const config = await this.configService.materialise(tenantId, eventId, command.configuration)
 
     const saved = await this.prisma.$transaction(async (tx) => {
+      let contractId: string | null = null
+      let photoQuota = defaultEventPhotoQuota
+
+      if (!isPlatform) {
+        const contract = await this.contractRepo.consumeSlot(tenantId, tx)
+        if (!contract) {
+          throw AppException.businessRule('event.no_contract_available')
+        }
+        contractId = contract.id
+        photoQuota = contract.photosPerEvent
+      }
+
+      const event = Event.create({
+        id: eventId,
+        name: command.name,
+        startDate: command.startDate,
+        endDate: command.endDate,
+        provinceId: command.provinceId,
+        cantonId: command.cantonId,
+        eventTypeId: command.eventTypeId,
+        tenantId,
+        photoQuota,
+        contractId,
+      })
+
+      event.audit.setCreatedBy(command.audit.userId)
+      event.applyBrandSnapshot(config.brand)
+
       const persisted = await this.writeRepo.save(event, tx)
       await this.payoutRepo.replaceForEvent(persisted.id, config.payoutMethods, tx)
       return persisted
@@ -100,6 +117,6 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       this.logger.log(`Auto-assigned operator ${operatorId} to event ${saved.id}`)
     }
 
-    return { id: saved.id }
+    return { id: saved.id, slug: saved.slug }
   }
 }

@@ -100,6 +100,12 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
   { method: 'GET', path: '/event-types', legacyMarker: 'NONE', permission: 'event_type.read' },
   { method: 'GET', path: '/events', legacyMarker: 'NONE', permission: 'event.read' },
   { method: 'GET', path: '/events/stats', legacyMarker: 'NONE', permission: 'event.stats.read' },
+  {
+    method: 'GET',
+    path: '/events/creation-context',
+    legacyMarker: 'NONE',
+    permission: 'event.create',
+  },
   { method: 'GET', path: '/events/:slug', legacyMarker: 'NONE', permission: 'event.read' },
   { method: 'POST', path: '/events', legacyMarker: 'admin,operator', permission: 'event.create' },
   {

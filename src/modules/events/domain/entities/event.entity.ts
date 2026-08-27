@@ -23,9 +23,11 @@ export class Event {
     public isFrozen: boolean,
     public frozenAt: Date | null,
     public readonly audit: AuditFields,
+    public readonly contractId: string | null = null,
   ) {}
 
   static create(data: {
+    id?: string
     name: string
     startDate: Date
     endDate: Date
@@ -35,12 +37,13 @@ export class Event {
     tenantId: string
     photoQuota?: number | null
     photosUploaded?: number
+    contractId?: string | null
   }): Event {
     Event.validateName(data.name)
     Event.validateDateRange(data.startDate, data.endDate)
 
     return new Event(
-      crypto.randomUUID(),
+      data.id ?? crypto.randomUUID(),
       data.tenantId,
       data.name,
       Event.generateSlug(data.name),
@@ -59,6 +62,7 @@ export class Event {
       false,
       null,
       AuditFields.initialize(),
+      data.contractId ?? null,
     )
   }
 
@@ -165,6 +169,7 @@ export class Event {
     deletedAt: Date | null
     createdById?: string | null
     updatedById?: string | null
+    contractId?: string | null
   }): Event {
     return new Event(
       data.id,
@@ -191,6 +196,7 @@ export class Event {
         createdById: data.createdById,
         updatedById: data.updatedById,
       }),
+      data.contractId ?? null,
     )
   }
 }
