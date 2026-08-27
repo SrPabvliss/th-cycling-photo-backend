@@ -4,5 +4,6 @@
   "no_active_cart": "No active cart found",
   "cart_empty": "Cart is empty",
   "event_not_in_cart": "Event not found in cart",
-  "checkout_failed": "Checkout failed"
+  "checkout_failed": "Checkout failed",
+  "single_event_only": "Each purchase covers a single event"
 }

@@ -24,7 +24,24 @@ function buildExistingDraft(): Order {
   return Object.assign(order, { id: 'draft-1' })
 }
 
-function buildHandler(options: { openDraft?: Order | null } = {}) {
+const OTHER_EVENT = 'event-2'
+
+const DEFAULT_CART_EVENTS = [
+  { eventId: EVENT, eventName: 'Event One', eventTypeId: 1, photoIds: ['photo-1'] },
+]
+
+const TWO_EVENT_CART = [
+  { eventId: EVENT, eventName: 'Event One', eventTypeId: 1, photoIds: ['photo-1', 'photo-2'] },
+  { eventId: OTHER_EVENT, eventName: 'Event Two', eventTypeId: 1, photoIds: ['photo-3'] },
+]
+
+function buildHandler(
+  options: {
+    openDraft?: Order | null
+    cartEvents?: typeof DEFAULT_CART_EVENTS
+    remainingItemCount?: number
+  } = {},
+) {
   const savedOrders: Order[] = []
   const notifications = { emitOrderCreated: jest.fn() }
 
@@ -32,15 +49,15 @@ function buildHandler(options: { openDraft?: Order | null } = {}) {
     findActiveByUserId: jest.fn(() =>
       Promise.resolve({ id: CART_ID, userId: BUYER, sessionId: null }),
     ),
-    getCartItemsByEvent: jest.fn(() =>
-      Promise.resolve([
-        { eventId: EVENT, eventName: 'Event One', eventTypeId: 1, photoIds: ['photo-1'] },
-      ]),
+    getCartItemsByEvent: jest.fn(() => Promise.resolve(options.cartEvents ?? DEFAULT_CART_EVENTS)),
+    getCartSummary: jest.fn(() =>
+      Promise.resolve({ itemCount: options.remainingItemCount ?? 0, eventCount: 0 }),
     ),
   }
 
   const cartWriteRepo = {
     markConverted: jest.fn(() => Promise.resolve()),
+    removeItems: jest.fn(() => Promise.resolve()),
   }
 
   const replaceItems = jest.fn((_orderId: string, _items: unknown[]) => Promise.resolve())
@@ -93,6 +110,7 @@ function buildHandler(options: { openDraft?: Order | null } = {}) {
     handler,
     savedOrders,
     notifications,
+    cartReadRepo,
     cartWriteRepo,
     orderWriteRepo,
     transactionWriteRepo,
@@ -237,5 +255,55 @@ describe('CheckoutCartHandler', () => {
     )
 
     expect(transactionWriteRepo.expireOpenByOrderId.mock.calls[0][1]).toBe(fakeTx)
+  })
+
+  it('rejects a checkout that spans more than one event', async () => {
+    const { handler } = buildHandler()
+
+    await expect(
+      handler.execute(
+        new CheckoutCartCommand(
+          BUYER,
+          [
+            { eventId: EVENT, bibNumber: null, snapCategoryName: null },
+            { eventId: 'event-2', bibNumber: null, snapCategoryName: null },
+          ],
+          PaymentMethod.CARD,
+        ),
+      ),
+    ).rejects.toMatchObject({ messageKey: 'cart.single_event_only' })
+  })
+
+  it('leaves the other events in the cart when a transfer checkout covers one of them', async () => {
+    const { handler, cartWriteRepo } = buildHandler({
+      cartEvents: TWO_EVENT_CART,
+      remainingItemCount: 1,
+    })
+
+    await handler.execute(
+      new CheckoutCartCommand(
+        BUYER,
+        [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
+        PaymentMethod.TRANSFER,
+      ),
+    )
+
+    expect(cartWriteRepo.removeItems).toHaveBeenCalledWith(CART_ID, ['photo-1', 'photo-2'])
+    expect(cartWriteRepo.markConverted).not.toHaveBeenCalled()
+  })
+
+  it('converts the cart when the transfer checkout empties it', async () => {
+    const { handler, cartWriteRepo } = buildHandler({ remainingItemCount: 0 })
+
+    await handler.execute(
+      new CheckoutCartCommand(
+        BUYER,
+        [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
+        PaymentMethod.TRANSFER,
+      ),
+    )
+
+    expect(cartWriteRepo.removeItems).toHaveBeenCalledWith(CART_ID, ['photo-1'])
+    expect(cartWriteRepo.markConverted).toHaveBeenCalledWith(CART_ID)
   })
 })

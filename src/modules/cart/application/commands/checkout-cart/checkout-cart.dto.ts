@@ -5,6 +5,7 @@ import {
 } from '@orders/domain/value-objects/payment-method.vo'
 import { Type } from 'class-transformer'
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsIn,
@@ -34,9 +35,10 @@ export class CheckoutCartItemDto {
 }
 
 export class CheckoutCartDto {
-  @ApiProperty({ description: 'Checkout items per event', type: [CheckoutCartItemDto] })
+  @ApiProperty({ description: 'Checkout items for a single event', type: [CheckoutCartItemDto] })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(1)
   @ValidateNested({ each: true })
   @Type(() => CheckoutCartItemDto)
   items: CheckoutCartItemDto[]

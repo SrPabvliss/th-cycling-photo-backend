@@ -41,6 +41,10 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
   ) {}
 
   async execute(command: CheckoutCartCommand): Promise<CheckoutResultProjection> {
+    if (command.items.length > 1) {
+      throw AppException.businessRule('cart.single_event_only')
+    }
+
     // 1. Find active user cart
     const cart = await this.cartReadRepo.findActiveByUserId(command.userId)
     if (!cart) throw AppException.businessRule('cart.no_active_cart')
@@ -202,7 +206,15 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
     }
 
     if (command.method === PaymentMethod.TRANSFER) {
-      await this.cartWriteRepo.markConverted(cart.id)
+      const checkedOutPhotoIds = command.items.flatMap(
+        (item) => cartEventMap.get(item.eventId)?.photoIds ?? [],
+      )
+      await this.cartWriteRepo.removeItems(cart.id, checkedOutPhotoIds)
+
+      const summary = await this.cartReadRepo.getCartSummary(cart.id)
+      if (summary.itemCount === 0) {
+        await this.cartWriteRepo.markConverted(cart.id)
+      }
     }
 
     return { orders: orderResults }
