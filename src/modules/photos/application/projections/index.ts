@@ -1,11 +1,12 @@
 export { ConfirmBatchProjection } from './confirm-batch.projection'
 export { DownloadUrlProjection } from './download-url.projection'
+export { GalleryFacetCategory, GalleryFacetsProjection } from './gallery-facets.projection'
 export {
   PendingRetouchOrderProjection,
   PendingRetouchPhotoProjection,
 } from './pending-retouch.projection'
-export { PhotoDetailProjection } from './photo-detail.projection'
-export { PhotoListProjection } from './photo-list.projection'
+export { PhotoDetailProjection, PhotoOrderProjection } from './photo-detail.projection'
+export { PhotoListBib, PhotoListProjection } from './photo-list.projection'
 export { PhotoViewProjection } from './photo-view.projection'
 export { PresignedUrlProjection } from './presigned-url.projection'
 export { ReviewQueueItemProjection } from './review-queue-item.projection'

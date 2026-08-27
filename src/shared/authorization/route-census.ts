@@ -338,6 +338,12 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
   },
   {
     method: 'GET',
+    path: '/events/:eventId/photos/facets',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.read',
+  },
+  {
+    method: 'GET',
     path: '/events/:eventId/photos',
     legacyMarker: 'NONE',
     permission: 'photo.read',

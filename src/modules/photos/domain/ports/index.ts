@@ -8,6 +8,10 @@ export {
   PHOTO_COLOR_WRITE_REPOSITORY,
 } from './photo-color-write-repository.port'
 export {
+  type GalleryBibFilter,
+  type GallerySaleFilter,
+  type GallerySort,
+  type IGalleryFilters,
   type IPhotoReadRepository,
   PHOTO_READ_REPOSITORY,
   REVIEW_QUEUE_STATUS_FILTERS,

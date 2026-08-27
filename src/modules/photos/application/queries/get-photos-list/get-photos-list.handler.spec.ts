@@ -17,17 +17,9 @@ describe('GetPhotosListHandler', () => {
     } as unknown as jest.Mocked<IAuthorizationService>
     const handler = new GetPhotosListHandler(readRepo, authz)
 
-    await handler.execute(
-      new GetPhotosListQuery('event-99', new Pagination(1, 20), undefined, undefined, 'u1'),
-    )
+    await handler.execute(new GetPhotosListQuery('event-99', new Pagination(1, 20), {}, 'u1'))
 
     expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
-    expect(readRepo.getPhotosList).toHaveBeenCalledWith(
-      'event-99',
-      expect.anything(),
-      undefined,
-      undefined,
-      scope,
-    )
+    expect(readRepo.getPhotosList).toHaveBeenCalledWith('event-99', expect.anything(), {}, scope)
   })
 })

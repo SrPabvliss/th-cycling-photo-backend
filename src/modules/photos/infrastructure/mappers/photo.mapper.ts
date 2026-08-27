@@ -1,6 +1,7 @@
 import { CorrectionTargetType, Prisma, type Photo as PrismaPhoto } from '@generated/prisma/client'
 import type {
   PhotoDetailProjection,
+  PhotoListBib,
   PhotoListProjection,
   PhotoViewProjection,
 } from '@photos/application/projections'
@@ -19,6 +20,8 @@ export const photoListSelectConfig = {
   status: true,
   uploaded_at: true,
   reviewed_at: true,
+  photo_category_id: true,
+  photo_category: { select: { name: true } },
 } satisfies Prisma.PhotoSelect
 
 export type PhotoListSelect = Prisma.PhotoGetPayload<{ select: typeof photoListSelectConfig }>
@@ -41,6 +44,8 @@ export const photoDetailSelectConfig = {
   uploaded_at: true,
   processed_at: true,
   reviewed_at: true,
+  photo_category_id: true,
+  photo_category: { select: { name: true } },
   bibs: {
     where: { deleted_at: null },
     select: {
@@ -142,7 +147,12 @@ export function toEntity(record: PrismaPhoto): Photo {
 // --- Projection mappers ---
 
 /** Converts a Prisma selected record to a list projection. */
-export function toListProjection(record: PhotoListSelect, cdn: CdnUrlBuilder): PhotoListProjection {
+export function toListProjection(
+  record: PhotoListSelect,
+  cdn: CdnUrlBuilder,
+  bibs: PhotoListBib[],
+  sold: boolean,
+): PhotoListProjection {
   return {
     id: record.id,
     publicSlug: record.public_slug,
@@ -151,6 +161,10 @@ export function toListProjection(record: PhotoListSelect, cdn: CdnUrlBuilder): P
     status: record.status,
     uploadedAt: record.uploaded_at,
     reviewedAt: record.reviewed_at,
+    bibs,
+    photoCategoryId: record.photo_category_id,
+    photoCategoryName: record.photo_category?.name ?? null,
+    sold,
   }
 }
 
@@ -214,6 +228,13 @@ export async function toDetailProjection(
     uploadedAt: record.uploaded_at,
     processedAt: record.processed_at,
     reviewedAt: record.reviewed_at,
+    photoCategoryId: record.photo_category_id,
+    photoCategoryName: record.photo_category?.name ?? null,
+    orders: [],
+    position: 1,
+    eventPhotoCount: 1,
+    previousSlug: null,
+    nextSlug: null,
     bibs: record.bibs.map((b) => {
       const c = corrections.get(`photo_bib:${b.id}:digits`)
       return {
@@ -226,6 +247,7 @@ export async function toDetailProjection(
         confidence: b.confidence === null ? null : Number(b.confidence),
         source: b.source,
         cropUrl: b.crop_path ? (signedByPath.get(b.crop_path) ?? null) : null,
+        correctedByName: null,
       }
     }),
     colors: record.colors.map((c) => {
