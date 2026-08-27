@@ -102,7 +102,6 @@ export class PhotosController {
     return this.queryBus.execute(new GetDownloadManifestQuery(eventId, user.userId))
   }
 
-
   /** Event-wide counts for the gallery's filter panel. */
   @RequirePermission('photo.read')
   @AllowedWhenFrozen()

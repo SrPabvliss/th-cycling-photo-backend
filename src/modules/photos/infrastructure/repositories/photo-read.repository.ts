@@ -939,9 +939,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     const escaped = value.replace(/[\\%_]/g, (c) => `\\${c}`)
     const pattern =
       match === 'starts' ? `${escaped}%` : match === 'contains' ? `%${escaped}%` : escaped
-    const eventFilter = eventId
-      ? Prisma.sql`AND p.event_id = ${eventId}::uuid`
-      : Prisma.empty
+    const eventFilter = eventId ? Prisma.sql`AND p.event_id = ${eventId}::uuid` : Prisma.empty
 
     const sql =
       match === 'exact'
