@@ -1,5 +1,5 @@
 import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
-import { ForbiddenException, Inject } from '@nestjs/common'
+import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import { PaginatedResult } from '@shared/application'
 import {
@@ -7,6 +7,7 @@ import {
   type IAuthorizationService,
 } from '@shared/authorization/domain/ports/authorization.service.port'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import { AppException } from '@shared/domain'
 import {
   type IOperatorRetouchReadRepository,
   OPERATOR_RETOUCH_READ_REPOSITORY,
@@ -37,7 +38,7 @@ export class GetOperatorRetouchOrdersHandler
     if (isAdmin) {
       if (query.eventSlug) {
         const event = await this.eventRead.existsActiveEventBySlug(query.eventSlug)
-        if (!event) throw new ForbiddenException('event.not_found')
+        if (!event) throw AppException.notFound('Event', query.eventSlug)
         eventIdsForQuery = [event.id]
       }
     } else {
@@ -49,7 +50,7 @@ export class GetOperatorRetouchOrdersHandler
       if (query.eventSlug) {
         const event = await this.eventRead.existsActiveEventBySlug(query.eventSlug)
         if (!event || !assignedIds.includes(event.id)) {
-          throw new ForbiddenException('operator.not_assigned_to_event')
+          throw AppException.forbidden('operator.not_assigned_to_event')
         }
         eventIdsForQuery = [event.id]
       }

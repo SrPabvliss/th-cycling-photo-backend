@@ -1,7 +1,7 @@
 import type { IEventReadRepository } from '@events/domain/ports'
-import { ForbiddenException } from '@nestjs/common'
 import { PaginatedResult, Pagination } from '@shared/application'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import { AppException } from '@shared/domain'
 import type { IOperatorRetouchReadRepository, OperatorRetouchOrderRow } from '../../../domain/ports'
 import { GetOperatorRetouchOrdersHandler } from './get-operator-retouch-orders.handler'
 import { GetOperatorRetouchOrdersQuery } from './get-operator-retouch-orders.query'
@@ -91,9 +91,7 @@ describe('GetOperatorRetouchOrdersHandler', () => {
     eventRead.getAllAssignedEventIds.mockResolvedValue(['e-1'])
     eventRead.existsActiveEventBySlug.mockResolvedValue({ id: 'e-9', name: 'Other' })
 
-    await expect(handler.execute(baseQuery({ eventSlug: 'other' }))).rejects.toThrow(
-      ForbiddenException,
-    )
+    await expect(handler.execute(baseQuery({ eventSlug: 'other' }))).rejects.toThrow(AppException)
   })
 
   it('passes scope=completed to the repository', async () => {

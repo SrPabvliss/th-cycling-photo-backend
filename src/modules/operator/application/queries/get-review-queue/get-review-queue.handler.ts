@@ -1,9 +1,10 @@
 import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
-import { ForbiddenException, Inject } from '@nestjs/common'
+import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain/ports'
 import { PaginatedResult } from '@shared/application'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import { AppException } from '@shared/domain'
 import { toOperatorReviewQueueItemProjection } from '../../../infrastructure/mappers/operator-review-queue-item.mapper'
 import type { OperatorReviewQueueItemProjection } from '../../projections'
 import { GetOperatorReviewQueueQuery } from './get-review-queue.query'
@@ -31,7 +32,7 @@ export class GetOperatorReviewQueueHandler implements IQueryHandler<GetOperatorR
     if (query.eventSlug) {
       const event = await this.eventRead.existsActiveEventBySlug(query.eventSlug)
       if (!event || !assignedIds.includes(event.id)) {
-        throw new ForbiddenException('operator.not_assigned_to_event')
+        throw AppException.forbidden('operator.not_assigned_to_event')
       }
       eventIdsForQuery = [event.id]
     }
