@@ -103,7 +103,8 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
   {
     method: 'GET',
     path: '/events/creation-context',
-    legacyMarker: 'NONE',
+    // Same gate as POST /events — not open to any authenticated buyer.
+    legacyMarker: 'admin,operator',
     permission: 'event.create',
   },
   { method: 'GET', path: '/events/:slug', legacyMarker: 'NONE', permission: 'event.read' },
