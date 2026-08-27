@@ -11,6 +11,8 @@ export class MeProjection {
   role: string
   /** Whether the account's current email address has been verified */
   emailVerified: boolean
+  /** Whether the account has the personal profile row every buyer gets at registration */
+  hasPersonalProfile: boolean
   /** Whether this is a protected account, excluded from non-legal prompts */
   isProtected: boolean
   /** Consent types still pending for the current policy version */

@@ -54,6 +54,7 @@ export class AuthUserRepository implements IAuthUserRepository {
         email_verified_at: true,
         is_protected: true,
         user_roles: { select: { role: { select: { name: true } } } },
+        customer_profile: { select: { id: true } },
       },
     })
 
@@ -67,6 +68,7 @@ export class AuthUserRepository implements IAuthUserRepository {
       role: user.user_roles[0]?.role.name ?? 'customer',
       emailVerified: user.email_verified_at !== null,
       isProtected: user.is_protected,
+      hasPersonalProfile: user.customer_profile !== null,
     }
   }
 

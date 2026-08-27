@@ -38,6 +38,8 @@ const STAFF: PermissionKey[] = [
   'photo_category.event.remove',
   'dashboard.operator.read',
   'dashboard.review_queue.read',
+  'order.read',
+  'order.stats.read',
   'tenant.profile.read',
   'tenant.payout_method.read',
   'tenant.payout_method.manage',
@@ -48,6 +50,10 @@ const STAFF: PermissionKey[] = [
 /**
  * A tenant runs its own events end to end but never reaches retouch, buyers,
  * or the gift actions (TIT-39). Collaborator management stays with TitanTV.
+ *
+ * The purchase keys at the end are not an oversight: a tenant is a person who
+ * also buys photos, and withholding them is what forced those people into a
+ * second account. Same reasoning as the `PLATFORM_ADMIN` decision recorded below.
  */
 const TENANT: PermissionKey[] = [
   'event.read',
@@ -86,6 +92,12 @@ const TENANT: PermissionKey[] = [
   'tenant.profile.update',
   'tenant.payout_method.read',
   'tenant.payout_method.manage',
+  'cart.checkout',
+  'order.create',
+  'order.payment_method.set',
+  'payment.intent.create',
+  'payment.confirm',
+  'payment.transaction.read',
 ]
 
 const CUSTOMER: PermissionKey[] = [
