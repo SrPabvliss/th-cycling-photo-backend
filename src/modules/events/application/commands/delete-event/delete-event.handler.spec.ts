@@ -48,7 +48,9 @@ describe('DeleteEventHandler', () => {
       findByIdInScope: jest.fn(),
       getEventsList: jest.fn(),
       getEventDetailBySlug: jest.fn(),
+      getAggregateByEvent: jest.fn(),
       countAll: jest.fn(),
+      countPendingReview: jest.fn(),
       getPublicEventsList: jest.fn(),
       getPublicEventDetail: jest.fn(),
       getPublicPhotos: jest.fn(),
@@ -60,6 +62,7 @@ describe('DeleteEventHandler', () => {
       getAllAssignedEventIds: jest.fn(),
       getEventBriefsByIds: jest.fn(),
       isFrozen: jest.fn(),
+      getEventsStats: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     authz = {

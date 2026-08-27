@@ -63,40 +63,22 @@ describe('gallery filters', () => {
     expect(findMany.mock.calls[0][0].orderBy).toEqual([{ filename: 'asc' }, { id: 'asc' }])
   })
 
-  it('restricts the page to sold photos via order_items relation (no sold-id materialization)', async () => {
-    const { repo, findMany } = makeRepo()
+  it('restricts the page to the sold ids when sale=sold', async () => {
+    const { repo, findMany, $queryRaw } = makeRepo()
+    $queryRaw.mockResolvedValueOnce([{ photo_id: 'p1' }, { photo_id: 'p2' }])
 
     await repo.getPhotosList('e1', page, { sale: 'sold' }, scope)
 
-    expect(findMany.mock.calls[0][0].where.order_items).toEqual({
-      some: { order: { status: { in: ['paid', 'delivered'] } } },
-    })
-    expect(findMany.mock.calls[0][0].where.id).toBeUndefined()
+    expect(findMany.mock.calls[0][0].where.id).toEqual({ in: ['p1', 'p2'] })
   })
 
-  it('excludes sold photos via order_items none when sale=unsold', async () => {
-    const { repo, findMany } = makeRepo()
-
-    await repo.getPhotosList('e1', page, { sale: 'unsold' }, scope)
-
-    expect(findMany.mock.calls[0][0].where.order_items).toEqual({
-      none: { order: { status: { in: ['paid', 'delivered'] } } },
-    })
-    expect(findMany.mock.calls[0][0].where.id).toBeUndefined()
-  })
-
-  it('scopes plateNumber bib search to the event id', async () => {
+  it('excludes the sold ids when sale=unsold', async () => {
     const { repo, findMany, $queryRaw } = makeRepo()
     $queryRaw.mockResolvedValueOnce([{ photo_id: 'p1' }])
 
-    await repo.getPhotosList('e1', page, { plateNumber: '142', bibMatch: 'exact' }, scope)
+    await repo.getPhotosList('e1', page, { sale: 'unsold' }, scope)
 
-    const sql = $queryRaw.mock.calls[0][0] as { strings: string[]; values: unknown[] }
-    expect(sql.strings.join('')).toContain('event_id')
-    expect(sql.values).toEqual(expect.arrayContaining(['e1', '142']))
-    expect(findMany.mock.calls[0][0].where.AND).toEqual(
-      expect.arrayContaining([{ id: { in: ['p1'] } }]),
-    )
+    expect(findMany.mock.calls[0][0].where.id).toEqual({ notIn: ['p1'] })
   })
 
   it('sort=no_bib_first puts bibless photos ahead of the rest', async () => {

@@ -1,6 +1,7 @@
 import { EventConfigurationService } from '@events/application/services/event-configuration.service'
 import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import { AppException } from '@shared/domain'
 import { PayoutMethodProjection } from '@tenants/application/projections/payout-method.projection'
 import {
@@ -25,6 +26,7 @@ export class GetEventConfigurationPresetHandler
     @Inject(TENANT_PAYOUT_METHOD_REPOSITORY)
     private readonly payoutRepo: ITenantPayoutMethodRepository,
     private readonly configService: EventConfigurationService,
+    private readonly cdn: CdnUrlBuilder,
   ) {}
 
   async execute(
@@ -35,11 +37,10 @@ export class GetEventConfigurationPresetHandler
       throw AppException.businessRule('event.creator_tenant_required')
     }
 
-    await this.configService.assertProfileComplete(tenantId)
-
-    const [profile, methods] = await Promise.all([
+    const [profile, methods, missing] = await Promise.all([
       this.profileRepo.findByTenantId(tenantId),
       this.payoutRepo.findByTenantId(tenantId),
+      this.configService.findMissingRequirements(tenantId),
     ])
 
     const availablePayoutMethods: PayoutMethodProjection[] = methods
@@ -56,13 +57,20 @@ export class GetEventConfigurationPresetHandler
         accountType: method.accountType,
         accountHolder: method.accountHolder,
         holderIdentification: method.holderIdentification,
+        verifiedAt: method.verifiedAt,
       }))
 
     return {
       publicName: profile?.publicName ?? null,
       watermarkStorageKey: profile?.watermarkStorageKey ?? null,
+      watermarkUrl: profile?.watermarkStorageKey
+        ? this.cdn.watermarkUrl(profile.id, profile.watermarkStorageKey)
+        : null,
       whatsappNumber: profile?.whatsappNumber ?? null,
+      whatsappPendingVerification:
+        profile !== null && profile.whatsappNumber !== null && profile.whatsappVerifiedAt === null,
       availablePayoutMethods,
+      missing,
     }
   }
 }

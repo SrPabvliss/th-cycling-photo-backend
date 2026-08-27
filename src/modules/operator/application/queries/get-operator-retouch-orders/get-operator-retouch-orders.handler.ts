@@ -7,7 +7,7 @@ import {
   type IAuthorizationService,
 } from '@shared/authorization/domain/ports/authorization.service.port'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
-import { AppException } from '@shared/domain'
+import { AppException } from '@shared/domain/exceptions/app.exception'
 import {
   type IOperatorRetouchReadRepository,
   OPERATOR_RETOUCH_READ_REPOSITORY,

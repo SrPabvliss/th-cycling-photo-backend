@@ -262,7 +262,7 @@ export class PhotosController {
 
   /** Apply a primary or secondary color correction to a specific color attribute (admin/operator). */
   @RequirePermission('photo.color.correct')
-  @BlocksWhenFrozen()
+  @AllowedWhenFrozen()
   @Post('photos/:photoId/colors/:colorId/corrections')
   @SuccessMessage('success.UPDATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Apply color correction (primary or secondary)' })
@@ -355,7 +355,7 @@ export class PhotosController {
 
   /** Add a manual reviewer-sourced color to a photo (admin/operator). */
   @RequirePermission('photo.color.create')
-  @BlocksWhenFrozen()
+  @AllowedWhenFrozen()
   @Post('photos/:photoId/colors')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo' })
   @ApiOperation({ summary: 'Add manual color (reviewer-sourced)' })
@@ -383,7 +383,7 @@ export class PhotosController {
 
   /** Soft-delete a color (admin/operator). Marks `deleted_at`. */
   @RequirePermission('photo.color.delete')
-  @BlocksWhenFrozen()
+  @AllowedWhenFrozen()
   @Delete('photos/:photoId/colors/:colorId')
   @HttpCode(200)
   @SuccessMessage('success.DELETED', { entity: 'entities.photo' })

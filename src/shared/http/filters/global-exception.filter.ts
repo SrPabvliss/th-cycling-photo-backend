@@ -60,6 +60,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           error: {
             code: exception.code,
             message: translatedMessage,
+            messageKey: exception.messageKey,
             shouldThrow: exception.shouldThrow,
             ...(exception.fields && { fields: exception.fields }),
             ...(isDevelopment && {
@@ -84,6 +85,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           error: {
             code: appException.code,
             message: translatedMessage,
+            messageKey: appException.messageKey,
             shouldThrow: false,
             ...(isDevelopment && {
               details: {

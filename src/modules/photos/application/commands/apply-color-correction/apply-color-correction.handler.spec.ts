@@ -49,13 +49,11 @@ describe('ApplyColorCorrectionHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    const freeze = { assertNotFrozen: jest.fn().mockResolvedValue(undefined) }
     handler = new ApplyColorCorrectionHandler(
       photoReadRepo,
       colorRepo,
       correctionRepo,
       authz as never,
-      freeze as never,
     )
   })
 

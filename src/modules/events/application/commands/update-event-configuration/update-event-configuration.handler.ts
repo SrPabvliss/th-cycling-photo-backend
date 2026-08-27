@@ -45,6 +45,8 @@ export class UpdateEventConfigurationHandler
 
     event.assertNotFrozen()
 
+    await this.configService.verifyNewPayphones(command.selection.payoutMethods)
+
     const existingMethods = await this.payoutRepo.findByEventId(event.id)
     const config = await this.configService.rematerialise(event, command.selection, existingMethods)
     event.applyBrandSnapshot(config.brand)

@@ -21,20 +21,15 @@ export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
   async execute(query: GetEventsListQuery): Promise<PaginatedResult<EventListProjection>> {
     const scope = await this.authz.resolveEventScope(query.userId)
 
-    const result = await this.readRepo.getEventsList(
-      query.pagination,
-      query.includeArchived,
-      query.search,
-      scope,
-    )
+    const result = await this.readRepo.getEventsList(query.pagination, query.filters, scope)
     if (result.items.length === 0) return result
 
     const allEventIds = result.items.map((e) => e.id)
     const fileSizes = await this.photoReadRepo.getTotalFileSizesByEventIds(allEventIds)
 
-    for (const event of result.items) {
+    result.items.forEach((event) => {
       event.totalFileSize = fileSizes.get(event.id) ?? 0
-    }
+    })
 
     return result
   }

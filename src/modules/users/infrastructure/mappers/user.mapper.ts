@@ -16,7 +16,9 @@ export const userListSelectConfig = {
   avatar_url: true,
   is_active: true,
   created_at: true,
+  email_verified_at: true,
   user_roles: { include: { role: true } },
+  tenant: { select: { id: true, name: true, is_platform: true } },
 } satisfies Prisma.UserSelect
 
 export type UserListSelect = Prisma.UserGetPayload<{ select: typeof userListSelectConfig }>
@@ -78,6 +80,8 @@ export function toEntityFromRaw(record: PrismaUser): User {
 }
 
 export function toListProjection(record: UserListSelect): UserListProjection {
+  const organizerTenant = record.tenant && !record.tenant.is_platform ? record.tenant : null
+
   return {
     id: record.id,
     email: record.email,
@@ -87,6 +91,9 @@ export function toListProjection(record: UserListSelect): UserListProjection {
     isActive: record.is_active,
     roles: record.user_roles.map((ur) => ur.role.name),
     createdAt: record.created_at,
+    emailVerified: record.email_verified_at !== null,
+    organizerId: organizerTenant?.id ?? null,
+    organizerName: organizerTenant?.name ?? null,
   }
 }
 

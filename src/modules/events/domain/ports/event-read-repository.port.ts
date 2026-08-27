@@ -3,13 +3,16 @@ import type {
   EventDetailProjection,
   EventListProjection,
   EventSummaryProjection,
+  EventsStatsProjection,
   PublicEventDetailProjection,
   PublicEventListProjection,
   PublicPhotoProjection,
 } from '@events/application/projections'
+import type { EventListFilters } from '@events/application/queries/get-events-list/get-events-list.dto'
 import type { PaginatedResult, Pagination } from '@shared/application'
 import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { Event } from '../entities'
+import type { EventAggregate } from './event-aggregate'
 
 export type AssignedEventStatus = 'active' | 'completed'
 
@@ -23,11 +26,17 @@ export interface IEventReadRepository {
   findByIdInScope(id: string, scope: EventScope, includeArchived?: boolean): Promise<Event | null>
   getEventsList(
     pagination: Pagination,
-    includeArchived: boolean,
-    search: string | undefined,
+    filters: EventListFilters,
     scope: EventScope,
   ): Promise<PaginatedResult<EventListProjection>>
   getEventDetailBySlug(slug: string, scope: EventScope): Promise<EventDetailProjection | null>
+  getAggregateByEvent(eventId: string): Promise<EventAggregate>
+  /**
+   * Aggregates in the database, scoped by `scope` and narrowed by `filters.search` /
+   * `filters.organizerId`. `filters.tab` is ignored — the tabs partition the same population
+   * these tiles summarize.
+   */
+  getEventsStats(filters: EventListFilters, scope: EventScope): Promise<EventsStatsProjection>
   getAssignedEventsByStatus(
     operatorId: string,
     status: AssignedEventStatus,

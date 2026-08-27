@@ -1,5 +1,6 @@
 export type OrderPaymentContext = {
   orderId: string
+  eventId: string
   status: string
   subtotalDollars: number | null
   sellerTenantId: string | null

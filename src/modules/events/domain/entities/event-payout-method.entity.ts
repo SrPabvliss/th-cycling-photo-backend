@@ -1,6 +1,17 @@
-import type { PaymentModeType } from '@payments/domain/value-objects/payment-mode.vo'
+import { PaymentMode, type PaymentModeType } from '@payments/domain/value-objects/payment-mode.vo'
 import type { TenantPayoutMethod } from '@tenants/domain/entities/tenant-payout-method.entity'
-import type { PayoutProviderType } from '@tenants/domain/value-objects/payout-provider.vo'
+import {
+  PayoutProvider,
+  type PayoutProviderType,
+} from '@tenants/domain/value-objects/payout-provider.vo'
+
+export interface EventBankTransferDetails {
+  bankName: string
+  accountNumber: string
+  accountType: string
+  accountHolder: string
+  holderIdentification: string
+}
 
 export interface EventPayoutMethodState {
   id: string
@@ -41,6 +52,42 @@ export class EventPayoutMethod {
 
   static fromPersistence(state: EventPayoutMethodState): EventPayoutMethod {
     return new EventPayoutMethod(state)
+  }
+
+  static createPayphoneSplit(eventId: string, receiverIdentifier: string): EventPayoutMethod {
+    return new EventPayoutMethod({
+      id: crypto.randomUUID(),
+      eventId,
+      provider: PayoutProvider.PAYPHONE,
+      isActive: true,
+      sortOrder: 0,
+      mode: PaymentMode.SPLIT_RECEIVER,
+      receiverIdentifier,
+      bankName: null,
+      accountNumber: null,
+      accountType: null,
+      accountHolder: null,
+      holderIdentification: null,
+      sourcePayoutMethodId: null,
+    })
+  }
+
+  static createBankTransfer(eventId: string, details: EventBankTransferDetails): EventPayoutMethod {
+    return new EventPayoutMethod({
+      id: crypto.randomUUID(),
+      eventId,
+      provider: PayoutProvider.BANK_TRANSFER,
+      isActive: true,
+      sortOrder: 0,
+      mode: null,
+      receiverIdentifier: null,
+      bankName: details.bankName,
+      accountNumber: details.accountNumber,
+      accountType: details.accountType,
+      accountHolder: details.accountHolder,
+      holderIdentification: details.holderIdentification,
+      sourcePayoutMethodId: null,
+    })
   }
 
   get id(): string {

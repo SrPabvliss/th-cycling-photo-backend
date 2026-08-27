@@ -48,6 +48,7 @@ describe('GlobalExceptionFilter', () => {
         error: {
           code: ErrorCode.NOT_FOUND,
           message: 'errors.NOT_FOUND',
+          messageKey: 'errors.NOT_FOUND',
           shouldThrow: false,
         },
         meta: {
@@ -90,6 +91,20 @@ describe('GlobalExceptionFilter', () => {
       const body = mockJson.mock.calls[0][0]
       expect(body.error.details).toBeUndefined()
       expect(body.error.stack).toBeUndefined()
+    })
+
+    it('should carry the untranslated messageKey alongside the translated message', () => {
+      const mockI18n = { t: jest.fn().mockReturnValue('Evento no encontrado') }
+      ;(I18nContext.current as jest.Mock).mockReturnValue(mockI18n)
+
+      const exception = AppException.notFound('event', '123')
+      filter.catch(exception, mockHost)
+
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.messageKey).toBe('errors.NOT_FOUND')
+      expect(body.error.message).toBe('Evento no encontrado')
+      expect(body.error.code).toBe(ErrorCode.NOT_FOUND)
+      expect(body.error.shouldThrow).toBe(false)
     })
 
     it('should translate messages when i18n is available', () => {
@@ -274,6 +289,15 @@ describe('GlobalExceptionFilter', () => {
       expect(body.error.code).toBe('INTERNAL')
       expect(body.error.message).toBe('An unexpected error occurred')
       expect(body.error.shouldThrow).toBe(false)
+    })
+
+    it('should NOT include a messageKey for a generic non-AppException error', () => {
+      const exception = new Error('Something went wrong')
+
+      filter.catch(exception, mockHost)
+
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.messageKey).toBeUndefined()
     })
 
     it('should handle non-Error exceptions', () => {

@@ -1,5 +1,30 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, MaxLength } from 'class-validator'
+import {
+  ACCOUNT_NUMBER_PATTERN,
+  ACCOUNT_TYPES,
+  HOLDER_IDENTIFICATION_PATTERN,
+  MAX_ACCOUNT_HOLDER_LENGTH,
+  MAX_ACCOUNT_NUMBER_LENGTH,
+  MAX_ACCOUNT_TYPE_LENGTH,
+  MAX_BANK_NAME_LENGTH,
+  MAX_HOLDER_IDENTIFICATION_LENGTH,
+  MIN_ACCOUNT_HOLDER_LENGTH,
+  MIN_BANK_NAME_LENGTH,
+  normalizeAccountType,
+} from '@shared/constants/payout.constants'
+import { Transform } from 'class-transformer'
+import {
+  IsBoolean,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator'
 import {
   PayoutProvider,
   type PayoutProviderType,
@@ -19,32 +44,44 @@ export class CreatePayoutMethodDto {
   @ApiPropertyOptional({ example: 'Banco Pichincha' })
   @IsString()
   @IsOptional()
-  @MaxLength(100)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @MinLength(MIN_BANK_NAME_LENGTH)
+  @MaxLength(MAX_BANK_NAME_LENGTH)
   bankName?: string
 
   @ApiPropertyOptional({ example: '2201234567' })
   @IsString()
   @IsOptional()
-  @MaxLength(50)
+  @Matches(ACCOUNT_NUMBER_PATTERN)
+  @MaxLength(MAX_ACCOUNT_NUMBER_LENGTH)
   accountNumber?: string
 
-  @ApiPropertyOptional({ example: 'Ahorros' })
-  @IsString()
+  @ApiPropertyOptional({ enum: ACCOUNT_TYPES })
   @IsOptional()
-  @MaxLength(20)
+  @Transform(({ value }: { value: unknown }) => normalizeAccountType(value))
+  @IsIn(ACCOUNT_TYPES)
+  @MaxLength(MAX_ACCOUNT_TYPE_LENGTH)
   accountType?: string
 
   @ApiPropertyOptional({ example: 'Juan Perez' })
   @IsString()
   @IsOptional()
-  @MaxLength(200)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @MinLength(MIN_ACCOUNT_HOLDER_LENGTH)
+  @MaxLength(MAX_ACCOUNT_HOLDER_LENGTH)
   accountHolder?: string
 
   @ApiPropertyOptional({ example: '1801234567' })
   @IsString()
   @IsOptional()
-  @MaxLength(20)
+  @Matches(HOLDER_IDENTIFICATION_PATTERN)
+  @MaxLength(MAX_HOLDER_IDENTIFICATION_LENGTH)
   holderIdentification?: string
+
+  @ApiProperty({ description: 'Account password, re-entered to confirm a payout change' })
+  @IsString()
+  @MaxLength(200)
+  password: string
 }
 
 export class UpdatePayoutMethodDto {
@@ -57,31 +94,38 @@ export class UpdatePayoutMethodDto {
   @ApiPropertyOptional({ example: 'Banco Pichincha' })
   @IsString()
   @IsOptional()
-  @MaxLength(100)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @MinLength(MIN_BANK_NAME_LENGTH)
+  @MaxLength(MAX_BANK_NAME_LENGTH)
   bankName?: string
 
   @ApiPropertyOptional({ example: '2201234567' })
   @IsString()
   @IsOptional()
-  @MaxLength(50)
+  @Matches(ACCOUNT_NUMBER_PATTERN)
+  @MaxLength(MAX_ACCOUNT_NUMBER_LENGTH)
   accountNumber?: string
 
-  @ApiPropertyOptional({ example: 'Ahorros' })
-  @IsString()
+  @ApiPropertyOptional({ enum: ACCOUNT_TYPES })
   @IsOptional()
-  @MaxLength(20)
+  @Transform(({ value }: { value: unknown }) => normalizeAccountType(value))
+  @IsIn(ACCOUNT_TYPES)
+  @MaxLength(MAX_ACCOUNT_TYPE_LENGTH)
   accountType?: string
 
   @ApiPropertyOptional({ example: 'Juan Perez' })
   @IsString()
   @IsOptional()
-  @MaxLength(200)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @MinLength(MIN_ACCOUNT_HOLDER_LENGTH)
+  @MaxLength(MAX_ACCOUNT_HOLDER_LENGTH)
   accountHolder?: string
 
   @ApiPropertyOptional({ example: '1801234567' })
   @IsString()
   @IsOptional()
-  @MaxLength(20)
+  @Matches(HOLDER_IDENTIFICATION_PATTERN)
+  @MaxLength(MAX_HOLDER_IDENTIFICATION_LENGTH)
   holderIdentification?: string
 
   @ApiPropertyOptional({ example: true })
@@ -89,8 +133,33 @@ export class UpdatePayoutMethodDto {
   @IsOptional()
   isActive?: boolean
 
-  @ApiPropertyOptional({ example: 0 })
+  @ApiProperty({ description: 'Account password, re-entered to confirm a payout change' })
+  @IsString()
+  @MaxLength(200)
+  password: string
+}
+
+export class UpdatePayoutMethodSortOrderDto {
+  @ApiProperty({ example: 0 })
   @IsInt()
-  @IsOptional()
-  sortOrder?: number
+  sortOrder: number
+}
+
+export class ConfirmPasswordDto {
+  @ApiProperty({ description: 'Account password, re-entered to confirm a payout change' })
+  @IsString()
+  @MaxLength(200)
+  password: string
+}
+
+export class VerifyReceiverDto {
+  @ApiProperty({ example: '+593987654321' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  phone: string
+}
+
+export class VerifyReceiverProjection {
+  @ApiProperty() registered: boolean
 }

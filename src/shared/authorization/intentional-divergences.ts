@@ -23,6 +23,7 @@ export const INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   'GET /events/stats',
   'GET /events/:slug',
   'GET /events/:eventId/photos',
+  'GET /events/:eventId/photos/facets',
   'GET /events/:eventId/photos/resume-point',
   'GET /photos/search',
   'GET /photos/:id',

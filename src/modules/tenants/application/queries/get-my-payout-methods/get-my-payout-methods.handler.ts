@@ -34,6 +34,7 @@ export class GetMyPayoutMethodsHandler implements IQueryHandler<GetMyPayoutMetho
       accountType: method.accountType,
       accountHolder: method.accountHolder,
       holderIdentification: method.holderIdentification,
+      verifiedAt: method.verifiedAt,
     }))
   }
 }

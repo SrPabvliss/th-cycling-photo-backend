@@ -31,10 +31,19 @@ export class EventDetailProjection {
   photosUploaded: number
   /** Number of classified photos (computed) */
   classifiedCount: number
+  /** Number of photos assigned to a category (computed) */
+  categorizedCount: number
   /** Total file size of all photos in bytes (computed) */
   totalFileSize: number
+  reviewedCount: number
+  lastUploadAt: Date | null
+  revenue: string
+  ordersCount: number
+  soldPhotoCount: number
   isFrozen: boolean
-  /** Commercial name of the contract that consumed the event slot, if any. */
+  frozenAt: Date | null
+  organizerName: string
+  eventTypeName: string
   contractName: string | null
   /** When the event record was created */
   createdAt: Date

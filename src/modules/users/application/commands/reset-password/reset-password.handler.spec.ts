@@ -31,6 +31,8 @@ describe('ResetPasswordHandler', () => {
       getUserDetail: jest.fn(),
       findActiveAdminIds: jest.fn(),
       getBuyersList: jest.fn(),
+      getBuyersStats: jest.fn(),
+      getBuyerDetail: jest.fn(),
       getMyProfile: jest.fn(),
     } as jest.Mocked<IUserReadRepository>
 

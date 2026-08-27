@@ -23,15 +23,15 @@ export class OrdersStatsProjection {
   openAmount: string
   /** Orders paid or gifted with no delivery timestamp yet */
   awaitingDeliveryCount: number
-  /** Tab counts for the in-scope non-draft population; `all` matches default Todos (excludes cancelled) */
+  /** The seven tab counts partitioning the same in-scope, non-draft population */
   tabs: OrdersStatsTabsProjection
 }
 
 export class OrdersStatsTabsProjection {
-  /** Non-draft, non-cancelled orders in scope (matches default "Todos" list) */
+  /** Every non-draft order in scope */
   all: number
   pending: number
-  paymentInfoSent: number
+  payment_info_sent: number
   paid: number
   delivered: number
   gifted: number

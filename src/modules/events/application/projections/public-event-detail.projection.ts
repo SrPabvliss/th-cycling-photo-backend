@@ -10,6 +10,9 @@ export class PublicPhotoCategoryProjection {
 }
 
 export class PublicEventDetailProjection {
+  @ApiProperty({ description: 'Event ID' })
+  id: string
+
   @ApiProperty({ description: 'URL-friendly slug for public navigation' })
   slug: string
 

@@ -20,6 +20,7 @@
     "prisma:seed": "prisma db seed",
     "prisma:studio": "prisma studio",
     "prisma:reset": "prisma migrate reset",
+    "db:refresh-from-prod": "./scripts/refresh-dev-from-prod.sh",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "biome lint --write .",

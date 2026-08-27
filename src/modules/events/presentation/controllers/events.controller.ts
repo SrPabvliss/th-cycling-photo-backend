@@ -7,6 +7,7 @@ import {
   DeleteEventCommand,
   RestoreEventCommand,
   SetEventFreezeCommand,
+  toConfigurationSelection,
   UnassignOperatorCommand,
   UpdateEventCommand,
   UpdateEventConfigurationCommand,
@@ -33,6 +34,7 @@ import {
   GetEventsListQuery,
   GetEventsStatsQuery,
 } from '@events/application/queries'
+import type { EventListFilters } from '@events/application/queries/get-events-list/get-events-list.dto'
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
@@ -69,12 +71,7 @@ export class EventsController {
   })
   async findAll(@Query() dto: GetEventsListDto, @CurrentUser() user: ICurrentUser) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetEventsListQuery(
-      pagination,
-      dto.includeArchived ?? false,
-      dto.search,
-      user.userId,
-    )
+    const query = new GetEventsListQuery(pagination, toEventListFilters(dto), user.userId)
     return this.queryBus.execute(query)
   }
 
@@ -88,8 +85,8 @@ export class EventsController {
     description: 'Global statistics retrieved',
     type: EventsStatsProjection,
   })
-  async getStats(@CurrentUser() user: ICurrentUser) {
-    return this.queryBus.execute(new GetEventsStatsQuery(user.userId))
+  async getStats(@Query() dto: GetEventsListDto, @CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetEventsStatsQuery(toEventListFilters(dto), user.userId))
   }
 
   @RequirePermission('event.create')
@@ -157,7 +154,7 @@ export class EventsController {
       dto.cantonId ?? null,
       dto.eventTypeId,
       new AuditContext(user.userId),
-      dto.configuration,
+      dto.configuration ? toConfigurationSelection(dto.configuration) : undefined,
     )
     return this.commandBus.execute(command)
   }
@@ -227,7 +224,11 @@ export class EventsController {
     @Body() dto: UpdateEventConfigurationDto,
     @CurrentUser() user: ICurrentUser,
   ) {
-    const command = new UpdateEventConfigurationCommand(id, user.userId, dto)
+    const command = new UpdateEventConfigurationCommand(
+      id,
+      user.userId,
+      toConfigurationSelection(dto),
+    )
     return this.commandBus.execute(command)
   }
 
@@ -361,5 +362,14 @@ export class EventsController {
   ) {
     const command = new UnassignOperatorCommand(id, userId, user.userId)
     await this.commandBus.execute(command)
+  }
+}
+
+function toEventListFilters(dto: GetEventsListDto): EventListFilters {
+  return {
+    search: dto.search,
+    tab: dto.tab,
+    organizerId: dto.organizerId,
+    sort: dto.sort,
   }
 }

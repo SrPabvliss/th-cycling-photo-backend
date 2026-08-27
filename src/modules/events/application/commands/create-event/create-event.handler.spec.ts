@@ -106,9 +106,24 @@ describe('CreateEventHandler', () => {
     configService = {
       findMissingRequirements: jest.fn(),
       assertProfileComplete: jest.fn().mockResolvedValue(undefined),
+      assertConfigurationComplete: jest.fn(),
+      verifyNewPayphones: jest.fn().mockResolvedValue(undefined),
       materialise: jest.fn().mockResolvedValue({
-        brand: { publicName: null, watermarkStorageKey: null, whatsappNumber: null },
-        payoutMethods: [],
+        brand: {
+          publicName: 'Foto Andes',
+          watermarkStorageKey: 'tenants/t-1/watermark/uuid-logo.png',
+          whatsappNumber: '+593987654321',
+        },
+        payoutMethods: [
+          {
+            provider: 'payphone',
+            isActive: true,
+          },
+          {
+            provider: 'bank_transfer',
+            isActive: true,
+          },
+        ],
       }),
     } as unknown as jest.Mocked<EventConfigurationService>
 
@@ -136,7 +151,7 @@ describe('CreateEventHandler', () => {
     )
   })
 
-  it('should create and save event, returning id and slug', async () => {
+  it('should create and save event, returning id', async () => {
     const command = new CreateEventCommand(
       'Test Event',
       futureStart,
@@ -277,6 +292,22 @@ describe('CreateEventHandler', () => {
     expect(writeRepo.save).not.toHaveBeenCalled()
   })
 
+  it('rejects creation when the tenant only has an expired contract', async () => {
+    contractRepo.consumeSlot.mockResolvedValue(null)
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+    )
+
+    await expect(handler.execute(command)).rejects.toThrow('event.no_contract_available')
+    expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
   it('lets the platform tenant create without any contract at all', async () => {
     tenantRepo.checkQuota.mockResolvedValue({
       quota: 1,
@@ -296,10 +327,7 @@ describe('CreateEventHandler', () => {
 
     writeRepo.save.mockImplementation(async (event: Event) => event)
 
-    await expect(handler.execute(command)).resolves.toEqual({
-      id: expect.any(String),
-      slug: expect.any(String),
-    })
+    await expect(handler.execute(command)).resolves.toHaveProperty('id')
     expect(contractRepo.consumeSlot).not.toHaveBeenCalled()
     expect(writeRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({ contractId: null, photoQuota: 42 }),
@@ -352,7 +380,7 @@ describe('CreateEventHandler', () => {
     expect(writeRepo.save).not.toHaveBeenCalled()
   })
 
-  it('refuses to create when the profile is incomplete', async () => {
+  it('refuses to create when the effective configuration is incomplete', async () => {
     const command = new CreateEventCommand(
       'Test Event',
       futureStart,
@@ -363,13 +391,160 @@ describe('CreateEventHandler', () => {
       audit,
     )
 
-    configService.assertProfileComplete.mockRejectedValue(
-      AppException.businessRule('event.configuration_incomplete', false, { missing: 'watermark' }),
-    )
+    configService.assertConfigurationComplete.mockImplementation(() => {
+      throw AppException.businessRule('event.configuration_incomplete', false, {
+        missing: 'watermark',
+      })
+    })
 
     await expect(handler.execute(command)).rejects.toMatchObject({
       messageKey: 'event.configuration_incomplete',
     })
+    expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('creates the event when the profile is empty but the selection supplies everything', async () => {
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+      {
+        publicName: 'Foto Andes',
+        watermarkStorageKey: 'tenants/t-1/watermark/uuid-logo.png',
+        whatsappNumber: '+593987654321',
+        payoutMethods: [
+          { source: 'new', provider: 'payphone', phone: '+593912345678' },
+          {
+            source: 'new',
+            provider: 'bank_transfer',
+            bankName: 'Pichincha',
+            accountNumber: '2100112233',
+            accountType: 'savings',
+            accountHolder: 'Ana Perez',
+            holderIdentification: '1804567890',
+          },
+        ],
+      },
+    )
+
+    writeRepo.save.mockImplementation(async (event: Event) => event)
+
+    await expect(handler.execute(command)).resolves.toEqual({
+      id: expect.any(String),
+      slug: expect.any(String),
+    })
+    expect(configService.verifyNewPayphones).toHaveBeenCalledWith(
+      command.configuration?.payoutMethods,
+    )
+  })
+
+  it('propagates an unverified payphone number and never saves the event', async () => {
+    configService.verifyNewPayphones.mockRejectedValue(
+      AppException.businessRule('payment.phone_not_registered', false, {
+        rule: 'phone_not_registered',
+      }),
+    )
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+      {
+        publicName: 'Foto Andes',
+        watermarkStorageKey: 'tenants/t-1/watermark/uuid-logo.png',
+        whatsappNumber: '+593987654321',
+        payoutMethods: [{ source: 'new', provider: 'payphone', phone: '+593912345678' }],
+      },
+    )
+
+    await expect(handler.execute(command)).rejects.toMatchObject({
+      messageKey: 'payment.phone_not_registered',
+    })
+    expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the effective configuration has no bank transfer, even though the profile has one', async () => {
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+      {
+        payoutMethods: [{ source: 'profile', id: 'profile-payphone-id' }],
+      },
+    )
+
+    configService.materialise.mockResolvedValue({
+      brand: {
+        publicName: 'Foto Andes',
+        watermarkStorageKey: 'tenants/t-1/watermark/uuid-logo.png',
+        whatsappNumber: '+593987654321',
+      },
+      payoutMethods: [{ provider: 'payphone', isActive: true } as never],
+    })
+    configService.assertConfigurationComplete.mockImplementation(() => {
+      throw AppException.businessRule('event.configuration_incomplete', false, {
+        missing: 'bankTransfer',
+      })
+    })
+
+    await expect(handler.execute(command)).rejects.toThrow()
+    expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the effective configuration has no public name', async () => {
+    const command = new CreateEventCommand(
+      'Test Event',
+      futureStart,
+      futureEnd,
+      null,
+      null,
+      1,
+      audit,
+      {
+        payoutMethods: [
+          { source: 'new', provider: 'payphone', phone: '+593912345678' },
+          {
+            source: 'new',
+            provider: 'bank_transfer',
+            bankName: 'Pichincha',
+            accountNumber: '2100112233',
+            accountType: 'savings',
+            accountHolder: 'Ana Perez',
+            holderIdentification: '1804567890',
+          },
+        ],
+      },
+    )
+
+    configService.materialise.mockResolvedValue({
+      brand: {
+        publicName: null,
+        watermarkStorageKey: 'tenants/t-1/watermark/uuid-logo.png',
+        whatsappNumber: '+593987654321',
+      },
+      payoutMethods: [
+        { provider: 'payphone', isActive: true } as never,
+        { provider: 'bank_transfer', isActive: true } as never,
+      ],
+    })
+    configService.assertConfigurationComplete.mockImplementation(() => {
+      throw AppException.businessRule('event.configuration_incomplete', false, {
+        missing: 'publicName',
+      })
+    })
+
+    await expect(handler.execute(command)).rejects.toThrow()
     expect(writeRepo.save).not.toHaveBeenCalled()
   })
 

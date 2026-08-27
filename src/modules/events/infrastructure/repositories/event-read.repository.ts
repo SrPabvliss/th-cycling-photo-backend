@@ -1,3 +1,4 @@
+import { NEAR_QUOTA_PERCENT } from '@events/domain/event-alert'
 import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { PaginatedResult, type Pagination } from '@shared/application'
@@ -9,13 +10,42 @@ import type {
   EventDetailProjection,
   EventListProjection,
   EventSummaryProjection,
+  EventsStatsProjection,
   PublicEventDetailProjection,
   PublicEventListProjection,
   PublicPhotoProjection,
 } from '../../application/projections'
+import type { EventListFilters } from '../../application/queries/get-events-list/get-events-list.dto'
 import type { Event } from '../../domain/entities'
 import type { AssignedEventStatus, IEventReadRepository } from '../../domain/ports'
 import * as EventMapper from '../mappers/event.mapper'
+import { buildEventAggregates, type EventAggregate } from './event-aggregates'
+import {
+  eventListWhereSql,
+  eventSortLateralSql,
+  eventSortSql,
+  eventTabConditionSql,
+  resolveEventSort,
+  resolveEventTab,
+} from './event-list-sql'
+
+type EventsStatsRow = {
+  total_events: number
+  active_events: number
+  visible_events: number
+  near_or_over_quota: number
+  tab_all: number
+  tab_active: number
+  tab_no_cover: number
+  tab_frozen: number
+  tab_archived: number
+  events_pending_review: number
+  photos_online: number
+  pending_review: number
+  revenue: Prisma.Decimal | string | null
+  orders: number
+  unpaid_orders: number
+}
 
 @Injectable()
 export class EventReadRepository implements IEventReadRepository {
@@ -46,32 +76,78 @@ export class EventReadRepository implements IEventReadRepository {
 
   async getEventsList(
     pagination: Pagination,
-    includeArchived: boolean,
-    search: string | undefined,
+    filters: EventListFilters,
     scope: EventScope,
   ): Promise<PaginatedResult<EventListProjection>> {
-    const where: Prisma.EventWhereInput = {
-      ...scope.toPrisma(),
-      ...(includeArchived ? {} : { deleted_at: null }),
-      ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
-    }
+    const { rows, total } = await this.getEventsPage(filters, pagination, scope)
 
-    const [events, total] = await Promise.all([
-      this.prisma.event.findMany({
-        where,
-        select: EventMapper.eventListSelectConfig,
-        orderBy: { start_date: 'desc' },
-        skip: pagination.skip,
-        take: pagination.take,
-      }),
-      this.prisma.event.count({ where }),
-    ])
-
-    return new PaginatedResult(
-      events.map((e) => EventMapper.toListProjection(e, this.cdn)),
-      total,
-      pagination,
+    const aggregates = await buildEventAggregates(
+      this.prisma,
+      rows.map((row) => row.id),
     )
+
+    const items = rows.map((row) =>
+      EventMapper.toListProjection(row, this.cdn, aggregates.get(row.id) as EventAggregate),
+    )
+
+    return new PaginatedResult(items, total, pagination)
+  }
+
+  /**
+   * Filters, sorts and paginates in the database, then hydrates only the page's own ids. Every sort
+   * resolves in SQL — a page reordered in Node would shuffle rows as the reader scrolls — and the
+   * aggregates the last three sorts need hang off a lateral over the already-filtered candidate set,
+   * so neither `photos` nor `orders` is ever scanned whole. `COUNT(*) OVER ()` carries the total
+   * beside the page.
+   */
+  private async getEventsPage(
+    filters: EventListFilters,
+    pagination: Pagination,
+    scope: EventScope,
+  ): Promise<{ rows: EventMapper.EventListRowSelect[]; total: number }> {
+    const tab = resolveEventTab(filters.tab)
+    const sort = resolveEventSort(filters.sort)
+    const whereSql = eventListWhereSql(filters, scope, tab)
+
+    const page = await this.prisma.$queryRaw<Array<{ id: string; total_count: bigint }>>(Prisma.sql`
+      WITH candidates AS (
+        SELECT e.id, e.name, e.start_date, e.created_at, e.photos_uploaded, e.photo_quota
+        FROM events e
+        WHERE ${whereSql}
+      )
+      SELECT c.id, COUNT(*) OVER () AS total_count
+      FROM candidates c
+      ${eventSortLateralSql(sort)}
+      ORDER BY ${eventSortSql(sort)}, c.id ASC
+      LIMIT ${pagination.take} OFFSET ${pagination.skip}
+    `)
+
+    const pageIds = page.map((row) => row.id)
+    const total =
+      page.length > 0 ? Number(page[0].total_count) : await this.countEventsMatching(whereSql)
+
+    if (pageIds.length === 0) return { rows: [], total }
+
+    const rows = await this.prisma.event.findMany({
+      where: { id: { in: pageIds } },
+      select: EventMapper.eventListRowSelectConfig,
+    })
+    const rowsById = new Map(rows.map((row) => [row.id, row]))
+
+    return {
+      rows: pageIds
+        .map((id) => rowsById.get(id))
+        .filter((row): row is EventMapper.EventListRowSelect => row !== undefined),
+      total,
+    }
+  }
+
+  /** Only reached when the requested page is past the last row, so `total` still comes back right. */
+  private async countEventsMatching(whereSql: Prisma.Sql): Promise<number> {
+    const [row] = await this.prisma.$queryRaw<Array<{ count: bigint }>>(
+      Prisma.sql`SELECT COUNT(*)::bigint AS count FROM events e WHERE ${whereSql}`,
+    )
+    return Number(row?.count ?? 0)
   }
 
   async getEventDetailBySlug(
@@ -90,8 +166,100 @@ export class EventReadRepository implements IEventReadRepository {
     return EventMapper.toDetailProjection(record, this.cdn)
   }
 
+  async getAggregateByEvent(eventId: string): Promise<EventAggregate> {
+    const map = await buildEventAggregates(this.prisma, [eventId])
+    const aggregate = map.get(eventId)
+    if (!aggregate) throw new Error(`No aggregate built for event ${eventId}`)
+    return aggregate
+  }
+
   async countAll(scope: EventScope): Promise<number> {
     return this.prisma.event.count({ where: scope.toPrisma() })
+  }
+
+  /**
+   * `tab` is deliberately never read out of `filters` — `eventListWhereSql` is called with the
+   * literal `'all'` tab, whose predicate is `TRUE`, so the tiles and every tab's own count share
+   * the exact same scoped population and only `search`/`organizerId` can move them. Everything is
+   * aggregated in three grouped queries scoped to that population first, never over the whole
+   * `photos` or `orders` table.
+   */
+  async getEventsStats(
+    filters: EventListFilters,
+    scope: EventScope,
+  ): Promise<EventsStatsProjection> {
+    const whereSql = eventListWhereSql(filters, scope, 'all')
+
+    const [row] = await this.prisma.$queryRaw<EventsStatsRow[]>(Prisma.sql`
+      WITH scoped AS (
+        SELECT e.id, e.deleted_at, e.is_frozen, e.photo_quota, e.photos_uploaded
+        FROM events e
+        WHERE ${whereSql}
+      ),
+      event_stats AS (
+        SELECT
+          COUNT(*)::int AS total_events,
+          COUNT(*) FILTER (WHERE e.deleted_at IS NULL)::int AS active_events,
+          COUNT(*) FILTER (
+            WHERE e.deleted_at IS NULL AND EXISTS (
+              SELECT 1 FROM event_assets a WHERE a.event_id = e.id AND a.asset_type = 'cover_image'
+            )
+          )::int AS visible_events,
+          COUNT(*) FILTER (
+            WHERE e.deleted_at IS NULL
+              AND e.photo_quota IS NOT NULL
+              AND (
+                e.photos_uploaded >= e.photo_quota
+                OR e.photos_uploaded::float / NULLIF(e.photo_quota, 0) * 100 >= ${NEAR_QUOTA_PERCENT}
+              )
+          )::int AS near_or_over_quota,
+          COUNT(*) FILTER (WHERE ${eventTabConditionSql('all')})::int AS tab_all,
+          COUNT(*) FILTER (WHERE ${eventTabConditionSql('active')})::int AS tab_active,
+          COUNT(*) FILTER (WHERE ${eventTabConditionSql('no_cover')})::int AS tab_no_cover,
+          COUNT(*) FILTER (WHERE ${eventTabConditionSql('frozen')})::int AS tab_frozen,
+          COUNT(*) FILTER (WHERE ${eventTabConditionSql('archived')})::int AS tab_archived,
+          COUNT(*) FILTER (
+            WHERE EXISTS (SELECT 1 FROM photos p WHERE p.event_id = e.id AND p.reviewed_at IS NULL)
+          )::int AS events_pending_review
+        FROM scoped e
+      ),
+      photo_stats AS (
+        SELECT
+          COUNT(*)::int AS photos_online,
+          COUNT(*) FILTER (WHERE p.reviewed_at IS NULL)::int AS pending_review
+        FROM photos p
+        WHERE p.event_id IN (SELECT id FROM scoped)
+      ),
+      order_stats AS (
+        SELECT
+          COALESCE(SUM(o.subtotal) FILTER (WHERE o.status IN ('paid', 'delivered')), 0) AS revenue,
+          COUNT(*) FILTER (WHERE o.status <> 'draft')::int AS orders,
+          COUNT(*) FILTER (WHERE o.status IN ('pending', 'payment_info_sent'))::int AS unpaid_orders
+        FROM orders o
+        WHERE o.event_id IN (SELECT id FROM scoped)
+      )
+      SELECT * FROM event_stats, photo_stats, order_stats
+    `)
+
+    return {
+      totalEvents: row?.total_events ?? 0,
+      activeEvents: row?.active_events ?? 0,
+      visibleEvents: row?.visible_events ?? 0,
+      photosOnline: row?.photos_online ?? 0,
+      pendingReview: row?.pending_review ?? 0,
+      eventsPendingReview: row?.events_pending_review ?? 0,
+      nearOrOverQuota: row?.near_or_over_quota ?? 0,
+      revenue: new Prisma.Decimal(row?.revenue ?? 0).toFixed(2),
+      orders: row?.orders ?? 0,
+      unpaidOrders: row?.unpaid_orders ?? 0,
+      tabs: {
+        all: row?.tab_all ?? 0,
+        active: row?.tab_active ?? 0,
+        no_cover: row?.tab_no_cover ?? 0,
+        frozen: row?.tab_frozen ?? 0,
+        archived: row?.tab_archived ?? 0,
+      },
+    }
   }
 
   async getAssignedEventsByStatus(

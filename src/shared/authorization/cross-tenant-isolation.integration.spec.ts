@@ -250,27 +250,15 @@ describe('cross-tenant isolation', () => {
     expect(scopeA.tenantIds).not.toContain(tenantB.id)
 
     // Events
-    const events = await eventRepo.getEventsList({ skip: 0, take: 10 }, false, undefined, scopeA)
+    const events = await eventRepo.getEventsList({ skip: 0, take: 10 }, { tab: 'active' }, scopeA)
     expect(events.items.map((e) => e.id)).toContain(eventA.id)
     expect(events.items.map((e) => e.id)).not.toContain(eventB.id)
     expect(await eventRepo.getEventDetailBySlug(eventB.slug, scopeA)).toBeNull()
 
     // Photos
-    const photos = await photoRepo.getPhotosList(
-      eventA.id,
-      { skip: 0, take: 10 },
-      undefined,
-      undefined,
-      scopeA,
-    )
+    const photos = await photoRepo.getPhotosList(eventA.id, { skip: 0, take: 10 }, {}, scopeA)
     expect(photos.items.map((p) => p.id)).toContain(photoA.id)
-    const photosB = await photoRepo.getPhotosList(
-      eventB.id,
-      { skip: 0, take: 10 },
-      undefined,
-      undefined,
-      scopeA,
-    )
+    const photosB = await photoRepo.getPhotosList(eventB.id, { skip: 0, take: 10 }, {}, scopeA)
     expect(photosB.items).toHaveLength(0)
     expect(await photoRepo.getPhotoDetail(photoB.id, scopeA)).toBeNull()
 
@@ -287,7 +275,7 @@ describe('cross-tenant isolation', () => {
     expect(scopeB.all).toBe(false)
 
     // Events
-    const events = await eventRepo.getEventsList({ skip: 0, take: 10 }, false, undefined, scopeB)
+    const events = await eventRepo.getEventsList({ skip: 0, take: 10 }, { tab: 'active' }, scopeB)
     expect(events.items.map((e) => e.id)).toContain(eventB.id)
     expect(events.items.map((e) => e.id)).not.toContain(eventA.id)
     expect(await eventRepo.getEventDetailBySlug(eventA.slug, scopeB)).toBeNull()
@@ -304,7 +292,7 @@ describe('cross-tenant isolation', () => {
     expect(scopeP.all).toBe(true)
 
     // Events
-    const events = await eventRepo.getEventsList({ skip: 0, take: 10 }, false, undefined, scopeP)
+    const events = await eventRepo.getEventsList({ skip: 0, take: 10 }, { tab: 'active' }, scopeP)
     const ids = events.items.map((e) => e.id)
     expect(ids).toContain(eventA.id)
     expect(ids).toContain(eventB.id)

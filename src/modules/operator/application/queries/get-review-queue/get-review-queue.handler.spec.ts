@@ -3,7 +3,7 @@ import type { IEventReadRepository } from '@events/domain/ports'
 import type { IPhotoReadRepository } from '@photos/domain/ports'
 import { PaginatedResult, Pagination } from '@shared/application'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
-import { AppException } from '@shared/domain'
+import { AppException } from '@shared/domain/exceptions/app.exception'
 import { GetOperatorReviewQueueHandler } from './get-review-queue.handler'
 import { GetOperatorReviewQueueQuery } from './get-review-queue.query'
 

@@ -30,7 +30,20 @@ describe('EventConfigurationService', () => {
       null,
     )
 
-  const buildService = (profile: TenantProfile | null, methods: TenantPayoutMethod[]) =>
+  const buildGateway = (registered = true) => ({
+    provider: 'payphone',
+    verifyReceiver: jest.fn().mockResolvedValue(registered),
+    platformCredentials: jest.fn().mockReturnValue({}),
+    buildCheckoutIntent: jest.fn(),
+    confirm: jest.fn(),
+    commissionCents: jest.fn(),
+  })
+
+  const buildService = (
+    profile: TenantProfile | null,
+    methods: TenantPayoutMethod[],
+    gateway = buildGateway(),
+  ) =>
     new EventConfigurationService(
       { findByTenantId: jest.fn().mockResolvedValue(profile), save: jest.fn() },
       {
@@ -40,6 +53,7 @@ describe('EventConfigurationService', () => {
         save: jest.fn(),
         delete: jest.fn(),
       },
+      { get: jest.fn().mockReturnValue(gateway) } as never,
     )
 
   it('reports every missing requirement, not just the first', async () => {
@@ -121,7 +135,7 @@ describe('EventConfigurationService', () => {
       const service = buildService(completeProfile(), [chosen, bank()])
 
       const result = await service.materialise(tenantId, eventId, {
-        payoutMethodIds: [chosen.id],
+        payoutMethods: [{ source: 'profile', id: chosen.id }],
       })
 
       expect(result.payoutMethods).toHaveLength(1)
@@ -132,7 +146,9 @@ describe('EventConfigurationService', () => {
       const service = buildService(completeProfile(), [payphone(), bank()])
 
       await expect(
-        service.materialise(tenantId, eventId, { payoutMethodIds: [crypto.randomUUID()] }),
+        service.materialise(tenantId, eventId, {
+          payoutMethods: [{ source: 'profile', id: crypto.randomUUID() }],
+        }),
       ).rejects.toMatchObject({ code: 'NOT_FOUND' })
     })
 
@@ -140,7 +156,7 @@ describe('EventConfigurationService', () => {
       const service = buildService(completeProfile(), [payphone(), bank()])
 
       await expect(
-        service.materialise(tenantId, eventId, { payoutMethodIds: [] }),
+        service.materialise(tenantId, eventId, { payoutMethods: [] }),
       ).rejects.toMatchObject({ code: 'BUSINESS_RULE' })
     })
 
@@ -152,6 +168,99 @@ describe('EventConfigurationService', () => {
           watermarkStorageKey: 'tenants/other-tenant/watermark/theirs.png',
         }),
       ).rejects.toThrow('event.watermark_not_owned')
+    })
+  })
+
+  describe('mixed-origin payout selection', () => {
+    const eventId = crypto.randomUUID()
+
+    it('copies a profile method and builds a new one, preserving request order', async () => {
+      const chosen = payphone()
+      const service = buildService(completeProfile(), [chosen, bank()])
+
+      const result = await service.materialise(tenantId, eventId, {
+        payoutMethods: [
+          { source: 'profile', id: chosen.id },
+          {
+            source: 'new',
+            provider: 'bank_transfer',
+            bankName: 'Banco Pichincha',
+            accountNumber: '2100458899',
+            accountType: 'Ahorros',
+            accountHolder: 'Andres Cepeda Mora',
+            holderIdentification: '1712345678',
+          },
+        ],
+      })
+
+      expect(result.payoutMethods).toHaveLength(2)
+      expect(result.payoutMethods[0].sourcePayoutMethodId).toBe(chosen.id)
+      expect(result.payoutMethods[0].sortOrder).toBe(0)
+      expect(result.payoutMethods[1].sourcePayoutMethodId).toBeNull()
+      expect(result.payoutMethods[1].bankName).toBe('Banco Pichincha')
+      expect(result.payoutMethods[1].sortOrder).toBe(1)
+    })
+
+    it('normalizes a new payphone number to the same bare-subscriber format the tenant path stores', async () => {
+      const service = buildService(completeProfile(), [])
+
+      const result = await service.materialise(tenantId, eventId, {
+        payoutMethods: [{ source: 'new', provider: 'payphone', phone: '+593 99 123 4567' }],
+      })
+
+      expect(result.payoutMethods[0].receiverIdentifier).toBe('991234567')
+    })
+
+    it('throws when a profile method id does not belong to the tenant', async () => {
+      const service = buildService(completeProfile(), [payphone()])
+
+      await expect(
+        service.materialise(tenantId, eventId, {
+          payoutMethods: [{ source: 'profile', id: 'not-mine' }],
+        }),
+      ).rejects.toThrow()
+    })
+  })
+
+  describe('watermark ownership', () => {
+    const eventId = crypto.randomUUID()
+
+    it('accepts a key under the actor tenant watermark prefix even when it is not the profile key', async () => {
+      const service = buildService(completeProfile(), [payphone(), bank()])
+
+      const result = await service.materialise(tenantId, eventId, {
+        watermarkStorageKey: `tenants/${tenantId}/watermark/brand-new.png`,
+      })
+
+      expect(result.brand.watermarkStorageKey).toBe(`tenants/${tenantId}/watermark/brand-new.png`)
+    })
+
+    it('rejects a key under another tenant prefix', async () => {
+      const service = buildService(completeProfile(), [payphone(), bank()])
+
+      await expect(
+        service.materialise(tenantId, eventId, {
+          watermarkStorageKey: `tenants/${crypto.randomUUID()}/watermark/stolen.png`,
+        }),
+      ).rejects.toThrow()
+    })
+
+    it('rejects a traversal key', async () => {
+      const service = buildService(completeProfile(), [payphone(), bank()])
+
+      await expect(
+        service.materialise(tenantId, eventId, {
+          watermarkStorageKey: `tenants/${tenantId}/watermark/../../other/watermark/x.png`,
+        }),
+      ).rejects.toThrow()
+    })
+
+    it('accepts null, which clears the watermark', async () => {
+      const service = buildService(completeProfile(), [payphone(), bank()])
+
+      const result = await service.materialise(tenantId, eventId, { watermarkStorageKey: null })
+
+      expect(result.brand.watermarkStorageKey).toBeNull()
     })
   })
 
@@ -189,6 +298,110 @@ describe('EventConfigurationService', () => {
         whatsappNumber: '0999999999',
       })
       expect(result.payoutMethods).toBeNull()
+    })
+
+    it('keeps an event row byte for byte when the selection says source event', async () => {
+      const rebrandedBank = () =>
+        TenantPayoutMethod.createBankTransfer(
+          tenantId,
+          {
+            bankName: 'Pichincha Nuevo',
+            accountNumber: '9999999999',
+            accountType: 'corriente',
+            accountHolder: 'Andes Pro',
+            holderIdentification: '1804567890',
+          },
+          null,
+        )
+
+      const service = buildService(rebrandedProfile(), [rebrandedBank()])
+      const event = frozenEvent()
+      const frozenRow = EventPayoutMethod.copyFrom(event.id, bank())
+
+      const result = await service.rematerialise(
+        event,
+        { payoutMethods: [{ source: 'event', id: frozenRow.id }] },
+        [frozenRow],
+      )
+
+      expect(result.payoutMethods).toHaveLength(1)
+      const kept = result.payoutMethods?.[0]
+      expect(kept?.id).toBe(frozenRow.id)
+      expect(kept?.bankName).toBe('Pichincha')
+      expect(kept?.accountNumber).toBe('2100112233')
+      expect(kept?.sourcePayoutMethodId).toBe(frozenRow.sourcePayoutMethodId)
+    })
+
+    it('refreshes the row from live profile data when the selection says source profile', async () => {
+      const liveBank = bank()
+      const service = buildService(rebrandedProfile(), [liveBank])
+      const event = frozenEvent()
+      const frozenRow = EventPayoutMethod.copyFrom(event.id, bank())
+
+      const result = await service.rematerialise(
+        event,
+        { payoutMethods: [{ source: 'profile', id: liveBank.id }] },
+        [frozenRow],
+      )
+
+      expect(result.payoutMethods?.[0]?.id).not.toBe(frozenRow.id)
+    })
+
+    it('rejects an event row id that does not belong to the event', async () => {
+      const service = buildService(rebrandedProfile(), [bank()])
+      const event = frozenEvent()
+      const frozenRow = EventPayoutMethod.copyFrom(event.id, bank())
+
+      await expect(
+        service.rematerialise(
+          event,
+          { payoutMethods: [{ source: 'event', id: crypto.randomUUID() }] },
+          [frozenRow],
+        ),
+      ).rejects.toThrow()
+    })
+
+    it('never verifies a kept event payphone against the gateway', async () => {
+      const gateway = buildGateway()
+      const service = buildService(rebrandedProfile(), [payphone()], gateway)
+      const event = frozenEvent()
+      const frozenRow = EventPayoutMethod.copyFrom(event.id, payphone())
+
+      await service.verifyNewPayphones([{ source: 'event', id: frozenRow.id }])
+
+      expect(gateway.verifyReceiver).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('verifyNewPayphones', () => {
+    it('does nothing when there are no new payphone entries', async () => {
+      const gateway = buildGateway()
+      const service = buildService(completeProfile(), [], gateway)
+
+      await expect(
+        service.verifyNewPayphones([{ source: 'profile', id: 'x' }]),
+      ).resolves.toBeUndefined()
+      expect(gateway.verifyReceiver).not.toHaveBeenCalled()
+    })
+
+    it('verifies every new payphone number against the gateway', async () => {
+      const gateway = buildGateway()
+      const service = buildService(completeProfile(), [], gateway)
+
+      await service.verifyNewPayphones([
+        { source: 'new', provider: 'payphone', phone: '0991234567' },
+      ])
+
+      expect(gateway.verifyReceiver).toHaveBeenCalledWith('0991234567', {})
+    })
+
+    it('throws payment.phone_not_registered when the gateway cannot verify the number', async () => {
+      const gateway = buildGateway(false)
+      const service = buildService(completeProfile(), [], gateway)
+
+      await expect(
+        service.verifyNewPayphones([{ source: 'new', provider: 'payphone', phone: '0991234567' }]),
+      ).rejects.toMatchObject({ messageKey: 'payment.phone_not_registered' })
     })
   })
 })

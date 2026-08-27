@@ -12,8 +12,14 @@ import {
 } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import type { EntityIdProjection } from '@shared/application'
-import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import {
+  ConfirmPassword,
+  CurrentUser,
+  type ICurrentUser,
+  PasswordConfirmationGuard,
+} from '@shared/auth'
 import { PermissionGuard } from '@shared/authorization/infrastructure/guards/permission.guard'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { AppException } from '@shared/domain'
@@ -27,8 +33,16 @@ import type { PayoutMethodProjection } from '../../application/projections/payou
 import type { TenantProfileProjection } from '../../application/projections/tenant-profile.projection'
 import { GetMyPayoutMethodsQuery } from '../../application/queries/get-my-payout-methods/get-my-payout-methods.query'
 import { GetMyTenantProfileQuery } from '../../application/queries/get-my-tenant-profile/get-my-tenant-profile.query'
+import { VerifyPayoutReceiverQuery } from '../../application/queries/verify-payout-receiver/verify-payout-receiver.query'
 import type { BankTransferDetails } from '../../domain/entities/tenant-payout-method.entity'
-import { CreatePayoutMethodDto, UpdatePayoutMethodDto } from '../dtos/payout-method.dto'
+import {
+  ConfirmPasswordDto,
+  CreatePayoutMethodDto,
+  UpdatePayoutMethodDto,
+  UpdatePayoutMethodSortOrderDto,
+  VerifyReceiverDto,
+  VerifyReceiverProjection,
+} from '../dtos/payout-method.dto'
 import { UpdateTenantProfileDto } from '../dtos/update-tenant-profile.dto'
 import {
   ConfirmWatermarkUploadDto,
@@ -81,7 +95,7 @@ function toBankDetailsOrUndefined(dto: {
 
 @ApiTags('Tenant Profile')
 @ApiBearerAuth()
-@UseGuards(PermissionGuard)
+@UseGuards(PermissionGuard, PasswordConfirmationGuard)
 @Controller('tenants/me')
 export class TenantProfileController {
   constructor(
@@ -133,8 +147,19 @@ export class TenantProfileController {
     return this.queryBus.execute(new GetMyPayoutMethodsQuery(user.userId))
   }
 
+  @Post('payout-methods/verify-receiver')
+  @RequirePermission('tenant.payout_method.manage')
+  async verifyPayoutReceiver(
+    @Body() dto: VerifyReceiverDto,
+    @CurrentUser() user: ICurrentUser,
+  ): Promise<VerifyReceiverProjection> {
+    return this.queryBus.execute(new VerifyPayoutReceiverQuery(user.userId, dto.phone))
+  }
+
   @Post('payout-methods')
   @RequirePermission('tenant.payout_method.manage')
+  @ConfirmPassword()
+  @Throttle({ short: { limit: 10, ttl: 900000 } })
   async createPayoutMethod(
     @Body() dto: CreatePayoutMethodDto,
     @CurrentUser() user: ICurrentUser,
@@ -151,6 +176,8 @@ export class TenantProfileController {
 
   @Patch('payout-methods/:id')
   @RequirePermission('tenant.payout_method.manage')
+  @ConfirmPassword()
+  @Throttle({ short: { limit: 10, ttl: 900000 } })
   async updatePayoutMethod(
     @Param('id') id: string,
     @Body() dto: UpdatePayoutMethodDto,
@@ -163,6 +190,25 @@ export class TenantProfileController {
         dto.phone,
         toBankDetailsOrUndefined(dto),
         dto.isActive,
+        undefined,
+      ),
+    )
+  }
+
+  @Patch('payout-methods/:id/sort-order')
+  @RequirePermission('tenant.payout_method.manage')
+  async updatePayoutMethodSortOrder(
+    @Param('id') id: string,
+    @Body() dto: UpdatePayoutMethodSortOrderDto,
+    @CurrentUser() user: ICurrentUser,
+  ): Promise<void> {
+    await this.commandBus.execute(
+      new UpdatePayoutMethodCommand(
+        user.userId,
+        id,
+        undefined,
+        undefined,
+        undefined,
         dto.sortOrder,
       ),
     )
@@ -170,8 +216,11 @@ export class TenantProfileController {
 
   @Delete('payout-methods/:id')
   @RequirePermission('tenant.payout_method.manage')
+  @ConfirmPassword()
+  @Throttle({ short: { limit: 10, ttl: 900000 } })
   async deletePayoutMethod(
     @Param('id') id: string,
+    @Body() _dto: ConfirmPasswordDto,
     @CurrentUser() user: ICurrentUser,
   ): Promise<void> {
     await this.commandBus.execute(new DeletePayoutMethodCommand(user.userId, id))

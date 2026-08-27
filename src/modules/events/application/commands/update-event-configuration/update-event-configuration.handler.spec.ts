@@ -7,6 +7,7 @@ import type {
 } from '@events/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
+import { AppException } from '@shared/domain'
 import type { PrismaService } from '@shared/infrastructure'
 import { plainToInstance } from 'class-transformer'
 import { validate } from 'class-validator'
@@ -75,6 +76,7 @@ describe('UpdateEventConfigurationHandler', () => {
     } as unknown as jest.Mocked<IAuthorizationService>
 
     configService = {
+      verifyNewPayphones: jest.fn().mockResolvedValue(undefined),
       rematerialise: jest.fn().mockResolvedValue({
         brand: { publicName: 'New Public Name', watermarkStorageKey: null, whatsappNumber: null },
         payoutMethods: [],
@@ -121,6 +123,37 @@ describe('UpdateEventConfigurationHandler', () => {
       expect.any(Array),
       expect.anything(),
     )
+  })
+
+  it('verifies new payphone numbers before persisting the update', async () => {
+    readRepo.findByIdInScope.mockResolvedValue(activeEvent)
+    const selectionCommand = new UpdateEventConfigurationCommand(activeEvent.id, 'u1', {
+      payoutMethods: [{ source: 'new', provider: 'payphone', phone: '0991234567' }],
+    })
+
+    await handler.execute(selectionCommand)
+
+    expect(configService.verifyNewPayphones).toHaveBeenCalledWith(
+      selectionCommand.selection.payoutMethods,
+    )
+  })
+
+  it('propagates an unverified payphone number without touching the event', async () => {
+    readRepo.findByIdInScope.mockResolvedValue(activeEvent)
+    configService.verifyNewPayphones.mockRejectedValue(
+      AppException.businessRule('payment.phone_not_registered', false, {
+        rule: 'phone_not_registered',
+      }),
+    )
+    const selectionCommand = new UpdateEventConfigurationCommand(activeEvent.id, 'u1', {
+      payoutMethods: [{ source: 'new', provider: 'payphone', phone: '0991234567' }],
+    })
+
+    await expect(handler.execute(selectionCommand)).rejects.toMatchObject({
+      messageKey: 'payment.phone_not_registered',
+    })
+    expect(writeRepo.save).not.toHaveBeenCalled()
+    expect(payoutRepo.replaceForEvent).not.toHaveBeenCalled()
   })
 
   it('rejects an explicit null watermark key', async () => {
