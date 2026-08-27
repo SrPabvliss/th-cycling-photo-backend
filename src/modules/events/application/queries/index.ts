@@ -1,5 +1,6 @@
 export { GetEventConfigurationQuery } from './get-event-configuration/get-event-configuration.query'
 export { GetEventConfigurationPresetQuery } from './get-event-configuration-preset/get-event-configuration-preset.query'
+export { GetEventCreationContextQuery } from './get-event-creation-context/get-event-creation-context.query'
 export { GetEventDetailQuery } from './get-event-detail/get-event-detail.query'
 export { GetEventOperatorsQuery } from './get-event-operators/get-event-operators.query'
 export { GetEventsListDto } from './get-events-list/get-events-list.dto'

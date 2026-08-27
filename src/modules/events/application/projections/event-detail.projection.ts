@@ -34,6 +34,8 @@ export class EventDetailProjection {
   /** Total file size of all photos in bytes (computed) */
   totalFileSize: number
   isFrozen: boolean
+  /** Commercial name of the contract that consumed the event slot, if any. */
+  contractName: string | null
   /** When the event record was created */
   createdAt: Date
   /** When the event record was last updated */

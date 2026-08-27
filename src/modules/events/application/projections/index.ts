@@ -4,6 +4,11 @@ export {
   EventConfigurationProjection,
   EventPayoutMethodProjection,
 } from './event-configuration.projection'
+export { EventCreatedProjection } from './event-created.projection'
+export {
+  EventCreationContextContractProjection,
+  EventCreationContextProjection,
+} from './event-creation-context.projection'
 export { EventDetailProjection } from './event-detail.projection'
 export { EventListProjection } from './event-list.projection'
 export { EventSummaryProjection } from './event-summary.projection'

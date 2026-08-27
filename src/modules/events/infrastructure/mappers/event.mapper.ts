@@ -44,6 +44,7 @@ export const eventDetailSelectConfig = {
   is_frozen: true,
   created_at: true,
   updated_at: true,
+  contract: { select: { commercial_name: true } },
 } satisfies Prisma.EventSelect
 
 export type EventDetailSelect = Prisma.EventGetPayload<{ select: typeof eventDetailSelectConfig }>
@@ -125,6 +126,7 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
     snap_watermark_storage_key: entity.snapWatermarkStorageKey,
     snap_whatsapp_number: entity.snapWhatsappNumber,
     photo_quota: entity.photoQuota,
+    contract_id: entity.contractId,
     is_frozen: entity.isFrozen,
     frozen_at: entity.frozenAt,
     created_at: entity.audit.createdAt,
@@ -161,6 +163,7 @@ export function toEntity(record: PrismaEvent): Event {
     deletedAt: record.deleted_at,
     createdById: record.created_by_id,
     updatedById: record.updated_by_id,
+    contractId: record.contract_id,
   })
 }
 
@@ -236,6 +239,7 @@ export function toDetailProjection(
     isFrozen: record.is_frozen,
     classifiedCount: 0,
     totalFileSize: 0,
+    contractName: record.contract?.commercial_name ?? null,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
   }

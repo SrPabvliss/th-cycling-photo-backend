@@ -17,6 +17,8 @@ import {
 import {
   EventConfigurationPresetProjection,
   EventConfigurationProjection,
+  EventCreatedProjection,
+  EventCreationContextProjection,
   EventDetailProjection,
   EventListProjection,
   EventsStatsProjection,
@@ -24,6 +26,7 @@ import {
 import {
   GetEventConfigurationPresetQuery,
   GetEventConfigurationQuery,
+  GetEventCreationContextQuery,
   GetEventDetailQuery,
   GetEventOperatorsQuery,
   GetEventsListDto,
@@ -103,6 +106,20 @@ export class EventsController {
     return this.queryBus.execute(new GetEventConfigurationPresetQuery(user.userId))
   }
 
+  @RequirePermission('event.create')
+  @AllowedWhenFrozen()
+  @Get('creation-context')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
+  @ApiOperation({ summary: 'Get the contract and quota context for creating a new event' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Event creation context retrieved',
+    type: EventCreationContextProjection,
+  })
+  async getCreationContext(@CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetEventCreationContextQuery(user.userId))
+  }
+
   @RequirePermission('event.read')
   @AllowedWhenFrozen()
   @Get(':slug')
@@ -128,7 +145,7 @@ export class EventsController {
   @ApiEnvelopeResponse({
     status: 201,
     description: 'Event created successfully',
-    type: EntityIdProjection,
+    type: EventCreatedProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
   async create(@Body() dto: CreateEventDto, @CurrentUser() user: ICurrentUser) {
