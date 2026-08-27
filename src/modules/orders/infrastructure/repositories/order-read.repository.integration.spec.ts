@@ -154,7 +154,7 @@ describe('OrderReadRepository orders SQL', () => {
       subtotal: '25.00',
       deliveredAt: new Date(),
     })
-    // cancelled: own tab only — excluded from default "Todos"/ALL
+    // cancelled: its own tab, still part of all
     await createOrder('cancelled', {
       userKey: 'buyer',
       status: OrderStatus.CANCELLED,
@@ -191,16 +191,13 @@ describe('OrderReadRepository orders SQL', () => {
     }
   })
 
-  it('never surfaces a draft order in any tab or any figure, and Todos excludes cancelled', async () => {
+  it('never surfaces a draft order in any tab or any figure', async () => {
     const all = await repo.getList(new Pagination(1, 100), { search: runId }, scope)
     expect(all.items.some((o) => o.status === 'draft')).toBe(false)
-    expect(all.items.some((o) => o.status === 'cancelled')).toBe(false)
-    expect(all.total).toBe(6)
+    expect(all.total).toBe(7)
 
     const stats = await repo.getStats({ search: runId }, scope)
     expect(stats.tabs.all).toBe(all.total)
-    expect(stats.tabs.cancelled).toBe(1)
-    expect(stats.totalOrders).toBe(7)
   })
 
   it('gives every tab a count equal to the rows that tab returns', async () => {

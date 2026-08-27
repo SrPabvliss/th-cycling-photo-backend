@@ -43,8 +43,7 @@ describe('AddPhotoColorHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
       assert: jest.fn().mockResolvedValue(undefined),
     }
-    const freeze = { assertNotFrozen: jest.fn().mockResolvedValue(undefined) }
-    handler = new AddPhotoColorHandler(photoReadRepo, colorRepo, authz as never, freeze as never)
+    handler = new AddPhotoColorHandler(photoReadRepo, colorRepo, authz as never)
   })
 
   it('throws when photo missing (including out-of-scope)', async () => {

@@ -11,6 +11,7 @@ export class OrderPaymentContextRepository implements IOrderPaymentContextReposi
       where: { id: { in: orderIds } },
       select: {
         id: true,
+        event_id: true,
         status: true,
         subtotal: true,
         user_id: true,
@@ -20,6 +21,7 @@ export class OrderPaymentContextRepository implements IOrderPaymentContextReposi
 
     return records.map((record) => ({
       orderId: record.id,
+      eventId: record.event_id,
       status: record.status,
       subtotalDollars: record.subtotal === null ? null : Number(record.subtotal),
       sellerTenantId: record.event.tenant_id,

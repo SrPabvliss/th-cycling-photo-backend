@@ -44,6 +44,82 @@ function pageQuery(queryRaw: jest.Mock) {
   return queryRaw.mock.calls[0][0] as { sql: string; values: unknown[] }
 }
 
+describe('UserReadRepository getUsersList', () => {
+  it('marks the user as already running an organizador when their tenant is not the platform one', async () => {
+    const { repository, findMany, count } = buildRepository()
+    findMany.mockResolvedValueOnce([
+      {
+        id: 'user-1',
+        email: 'ana@example.com',
+        first_name: 'Ana',
+        last_name: 'Ruiz',
+        avatar_url: null,
+        is_active: true,
+        created_at: new Date('2026-01-01'),
+        email_verified_at: null,
+        user_roles: [],
+        tenant: { id: 'tenant-1', name: 'Ciclo Andes', is_platform: false },
+      },
+    ])
+    count.mockResolvedValueOnce(1)
+
+    const result = await repository.getUsersList(new Pagination(1, 20))
+
+    expect(result.items[0].organizerId).toBe('tenant-1')
+    expect(result.items[0].organizerName).toBe('Ciclo Andes')
+    expect(result.items[0].emailVerified).toBe(false)
+  })
+
+  it('leaves the organizer pair null for a platform-tenant staff account, even with a verified email', async () => {
+    const { repository, findMany, count } = buildRepository()
+    findMany.mockResolvedValueOnce([
+      {
+        id: 'user-2',
+        email: 'staff@titantv.com',
+        first_name: 'Staff',
+        last_name: null,
+        avatar_url: null,
+        is_active: true,
+        created_at: new Date('2026-01-01'),
+        email_verified_at: new Date('2026-01-02'),
+        user_roles: [],
+        tenant: { id: 'platform-tenant', name: 'TitanTV', is_platform: true },
+      },
+    ])
+    count.mockResolvedValueOnce(1)
+
+    const result = await repository.getUsersList(new Pagination(1, 20))
+
+    expect(result.items[0].organizerId).toBeNull()
+    expect(result.items[0].organizerName).toBeNull()
+    expect(result.items[0].emailVerified).toBe(true)
+  })
+
+  it('leaves the organizer pair null for a user with no tenant at all', async () => {
+    const { repository, findMany, count } = buildRepository()
+    findMany.mockResolvedValueOnce([
+      {
+        id: 'user-3',
+        email: 'nobody@example.com',
+        first_name: null,
+        last_name: null,
+        avatar_url: null,
+        is_active: true,
+        created_at: new Date('2026-01-01'),
+        email_verified_at: null,
+        user_roles: [],
+        tenant: null,
+      },
+    ])
+    count.mockResolvedValueOnce(1)
+
+    const result = await repository.getUsersList(new Pagination(1, 20))
+
+    expect(result.items[0].organizerId).toBeNull()
+    expect(result.items[0].organizerName).toBeNull()
+  })
+})
+
 describe('UserReadRepository getBuyersList filters', () => {
   it('produces a NOT EXISTS predicate on orders for the "never" purchase filter', async () => {
     const { repository, queryRaw } = buildRepository()

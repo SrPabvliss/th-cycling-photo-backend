@@ -58,13 +58,13 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
       throw AppException.businessRule('event.creator_tenant_required')
     }
 
-    await this.configService.assertProfileComplete(tenantId)
-
     const { isPlatform, defaultEventPhotoQuota } = await this.tenantRepo.checkQuota(tenantId)
 
-    // Stable id so configuration can materialise before the slot-consuming write.
     const eventId = crypto.randomUUID()
     const config = await this.configService.materialise(tenantId, eventId, command.configuration)
+    this.configService.assertConfigurationComplete(config)
+
+    await this.configService.verifyNewPayphones(command.configuration?.payoutMethods)
 
     const saved = await this.prisma.$transaction(async (tx) => {
       let contractId: string | null = null

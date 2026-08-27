@@ -1,5 +1,3 @@
-export const POLICY_VERSION = '2026-08-16'
-
 export const CONSENT_TYPE = {
   TERMS_PRIVACY: 'terms_privacy',
   GUARDIAN: 'guardian',

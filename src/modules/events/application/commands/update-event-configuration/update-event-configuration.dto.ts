@@ -1,10 +1,23 @@
+import { EventPayoutSelectionDto } from '@events/application/commands/create-event/create-event.dto'
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { IsArray, IsOptional, IsString, IsUUID, MaxLength, ValidateIf } from 'class-validator'
+import { MAX_PUBLIC_NAME_LENGTH, MIN_PUBLIC_NAME_LENGTH } from '@shared/constants/payout.constants'
+import { Transform, Type } from 'class-transformer'
+import {
+  IsArray,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator'
 
 export class UpdateEventConfigurationDto {
   @ApiPropertyOptional({ nullable: true })
   @IsString()
-  @MaxLength(200)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @MinLength(MIN_PUBLIC_NAME_LENGTH)
+  @MaxLength(MAX_PUBLIC_NAME_LENGTH)
   @IsOptional()
   publicName?: string | null
 
@@ -20,9 +33,10 @@ export class UpdateEventConfigurationDto {
   @IsOptional()
   whatsappNumber?: string | null
 
-  @ApiPropertyOptional({ type: [String] })
+  @ApiPropertyOptional({ type: [EventPayoutSelectionDto] })
   @IsArray()
-  @IsUUID('4', { each: true })
+  @ValidateNested({ each: true })
+  @Type(() => EventPayoutSelectionDto)
   @IsOptional()
-  payoutMethodIds?: string[]
+  payoutMethods?: EventPayoutSelectionDto[]
 }

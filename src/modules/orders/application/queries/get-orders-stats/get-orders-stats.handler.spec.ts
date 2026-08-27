@@ -22,7 +22,7 @@ function buildStats(overrides: Partial<OrdersStatsProjection> = {}): OrdersStats
     tabs: {
       all: 0,
       pending: 0,
-      paymentInfoSent: 0,
+      payment_info_sent: 0,
       paid: 0,
       delivered: 0,
       gifted: 0,

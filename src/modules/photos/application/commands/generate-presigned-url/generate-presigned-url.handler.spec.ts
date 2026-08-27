@@ -48,7 +48,9 @@ describe('GeneratePresignedUrlHandler', () => {
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
       getEventDetailBySlug: jest.fn(),
+      getAggregateByEvent: jest.fn(),
       countAll: jest.fn(),
+      countPendingReview: jest.fn(),
       getPublicEventsList: jest.fn(),
       getPublicEventDetail: jest.fn(),
       getPublicPhotos: jest.fn(),
@@ -60,6 +62,7 @@ describe('GeneratePresignedUrlHandler', () => {
       getAllAssignedEventIds: jest.fn().mockResolvedValue([]),
       getEventBriefsByIds: jest.fn(),
       isFrozen: jest.fn(),
+      getEventsStats: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoReadRepo = {
@@ -67,6 +70,7 @@ describe('GeneratePresignedUrlHandler', () => {
       findByIdInScope: jest.fn(),
       existsByEventAndFilename: jest.fn(),
       getPhotosList: jest.fn(),
+      getGalleryFacets: jest.fn(),
       getPhotoDetail: jest.fn(),
       getPhotoDetailBySlug: jest.fn(),
       getPhotoViewBySlug: jest.fn(),
@@ -79,6 +83,7 @@ describe('GeneratePresignedUrlHandler', () => {
       getResumePoint: jest.fn(),
       getDistinctEventIdsForPhotoIds: jest.fn(),
       countAll: jest.fn(),
+      countPendingReview: jest.fn(),
       sumAllFileSize: jest.fn(),
       countByIds: jest.fn(),
       findSimilar: jest.fn(),

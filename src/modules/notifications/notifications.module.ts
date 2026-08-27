@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common'
+import { forwardRef, Global, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { MarkAllReadHandler } from '@notifications/application/commands/mark-all-read/mark-all-read.handler'
 import { MarkAsReadHandler } from '@notifications/application/commands/mark-as-read/mark-as-read.handler'
@@ -23,7 +23,7 @@ const QueryHandlers = [GetNotificationsListHandler, GetUnreadCountHandler]
 
 @Global()
 @Module({
-  imports: [CqrsModule, AuthModule, UsersModule, EventsModule],
+  imports: [CqrsModule, AuthModule, UsersModule, forwardRef(() => EventsModule)],
   controllers: [NotificationsController],
   providers: [
     ...CommandHandlers,

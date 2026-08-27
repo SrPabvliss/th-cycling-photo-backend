@@ -121,11 +121,7 @@ export class ContractRepository implements IContractRepository {
   ): Promise<{ tenantId: string; tenantCreated: boolean }> {
     return this.prisma.$transaction(async (tx) => {
       const accepted = await tx.tenantContract.updateMany({
-        where: {
-          id: data.contractId,
-          status: 'pending',
-          valid_until: { gt: new Date() },
-        },
+        where: { id: data.contractId, status: 'pending' },
         data: {
           status: 'accepted',
           accepted_at: new Date(),
@@ -204,13 +200,10 @@ export class ContractRepository implements IContractRepository {
   }
 
   async revoke(id: string): Promise<void> {
-    const revoked = await this.prisma.tenantContract.updateMany({
-      where: { id, status: 'pending' },
+    await this.prisma.tenantContract.update({
+      where: { id },
       data: { status: 'revoked', revoked_at: new Date() },
     })
-    if (revoked.count === 0) {
-      throw AppException.businessRule('contract.not_pending')
-    }
   }
 
   async rotateToken(id: string, tokenHash: string): Promise<void> {

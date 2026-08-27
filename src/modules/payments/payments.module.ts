@@ -1,3 +1,4 @@
+import { EventsModule } from '@events/events.module'
 import { BullModule } from '@nestjs/bullmq'
 import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
@@ -26,6 +27,7 @@ import { TenantsModule } from '../tenants/tenants.module'
   imports: [
     CqrsModule,
     forwardRef(() => OrdersModule),
+    forwardRef(() => EventsModule),
     BullModule.registerQueue({ name: 'payment-confirmation' }),
     TenantsModule,
   ],

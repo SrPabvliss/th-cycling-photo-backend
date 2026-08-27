@@ -1,4 +1,3 @@
-import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import {
@@ -22,7 +21,6 @@ export class DeletePhotoColorHandler implements ICommandHandler<DeletePhotoColor
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(PHOTO_COLOR_WRITE_REPOSITORY) private readonly colorRepo: IPhotoColorWriteRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
-    private readonly freeze: FreezeStateService,
   ) {}
 
   async execute(cmd: DeletePhotoColorCommand): Promise<{ colorId: string; photoId: string }> {
@@ -30,7 +28,6 @@ export class DeletePhotoColorHandler implements ICommandHandler<DeletePhotoColor
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.color.delete', photo.eventId)
-    await this.freeze.assertNotFrozen(photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')
     }

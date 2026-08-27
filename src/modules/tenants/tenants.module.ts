@@ -14,6 +14,7 @@ import { GetOrganizerDetailHandler } from './application/queries/get-organizer-d
 import { GetOrganizerEventsHandler } from './application/queries/get-organizer-events/get-organizer-events.handler'
 import { GetOrganizersListHandler } from './application/queries/get-organizers-list/get-organizers-list.handler'
 import { GetOrganizersStatsHandler } from './application/queries/get-organizers-stats/get-organizers-stats.handler'
+import { VerifyPayoutReceiverHandler } from './application/queries/verify-payout-receiver/verify-payout-receiver.handler'
 import { ORGANIZER_READ_REPOSITORY } from './domain/ports/organizer-read-repository.port'
 import { TENANT_PAYOUT_METHOD_REPOSITORY } from './domain/ports/tenant-payout-method-repository.port'
 import { TENANT_PROFILE_REPOSITORY } from './domain/ports/tenant-profile-repository.port'
@@ -40,6 +41,7 @@ const handlers = [
   GetOrganizersStatsHandler,
   GetOrganizerDetailHandler,
   GetOrganizerEventsHandler,
+  VerifyPayoutReceiverHandler,
 ]
 
 @Module({

@@ -64,7 +64,9 @@ describe('ConfirmPhotoBatchHandler', () => {
       getEventsList: jest.fn(),
       getEventDetail: jest.fn(),
       getEventDetailBySlug: jest.fn(),
+      getAggregateByEvent: jest.fn(),
       countAll: jest.fn(),
+      countPendingReview: jest.fn(),
       getPublicEventsList: jest.fn(),
       getPublicEventDetail: jest.fn(),
       getPublicPhotos: jest.fn(),
@@ -76,6 +78,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       getAllAssignedEventIds: jest.fn().mockResolvedValue([]),
       getEventBriefsByIds: jest.fn(),
       isFrozen: jest.fn(),
+      getEventsStats: jest.fn(),
     } as jest.Mocked<IEventReadRepository>
 
     photoWriteRepo = {

@@ -45,6 +45,7 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+.env.ops
 
 # temp directory
 .temp
@@ -90,3 +91,5 @@ docs/
 
 # Handoff / notas locales, nunca al repo
 *.local.md
+
+.worktrees/

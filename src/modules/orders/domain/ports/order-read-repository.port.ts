@@ -26,7 +26,7 @@ export const ORDER_TABS: ReadonlyArray<{
 }> = [
   { id: 'all', status: undefined },
   { id: 'pending', status: OrderStatus.PENDING },
-  { id: 'paymentInfoSent', status: OrderStatus.PAYMENT_INFO_SENT },
+  { id: 'payment_info_sent', status: OrderStatus.PAYMENT_INFO_SENT },
   { id: 'paid', status: OrderStatus.PAID },
   { id: 'delivered', status: OrderStatus.DELIVERED },
   { id: 'gifted', status: OrderStatus.GIFTED },

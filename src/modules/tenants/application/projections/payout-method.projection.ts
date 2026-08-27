@@ -12,4 +12,5 @@ export class PayoutMethodProjection {
   @ApiPropertyOptional({ nullable: true }) accountType: string | null
   @ApiPropertyOptional({ nullable: true }) accountHolder: string | null
   @ApiPropertyOptional({ nullable: true }) holderIdentification: string | null
+  @ApiPropertyOptional({ nullable: true }) verifiedAt: Date | null
 }

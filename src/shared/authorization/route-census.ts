@@ -100,13 +100,6 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
   { method: 'GET', path: '/event-types', legacyMarker: 'NONE', permission: 'event_type.read' },
   { method: 'GET', path: '/events', legacyMarker: 'NONE', permission: 'event.read' },
   { method: 'GET', path: '/events/stats', legacyMarker: 'NONE', permission: 'event.stats.read' },
-  {
-    method: 'GET',
-    path: '/events/creation-context',
-    // Same gate as POST /events — not open to any authenticated buyer.
-    legacyMarker: 'admin,operator',
-    permission: 'event.create',
-  },
   { method: 'GET', path: '/events/:slug', legacyMarker: 'NONE', permission: 'event.read' },
   { method: 'POST', path: '/events', legacyMarker: 'admin,operator', permission: 'event.create' },
   {
@@ -339,7 +332,7 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
   {
     method: 'GET',
     path: '/events/:eventId/photos/facets',
-    legacyMarker: 'admin,operator',
+    legacyMarker: 'NONE',
     permission: 'photo.read',
   },
   {
@@ -487,47 +480,6 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
   },
   { method: 'GET', path: '/pricing/preview', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
   { method: 'GET', path: '/pricing/tiers', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
-  { method: 'GET', path: '/contracts', legacyMarker: 'admin', permission: 'contract.read' },
-  { method: 'POST', path: '/contracts', legacyMarker: 'admin', permission: 'contract.issue' },
-  {
-    method: 'POST',
-    path: '/contracts/:id/resend',
-    legacyMarker: 'admin',
-    permission: 'contract.issue',
-  },
-  {
-    method: 'POST',
-    path: '/contracts/:id/revoke',
-    legacyMarker: 'admin',
-    permission: 'contract.revoke',
-  },
-  {
-    method: 'GET',
-    path: '/contracts/mine',
-    legacyMarker: 'admin,operator',
-    permission: 'tenant.profile.read',
-  },
-  {
-    method: 'GET',
-    path: '/contracts/token/:token',
-    legacyMarker: 'NONE',
-    permission: 'AUTHENTICATED',
-  },
-  {
-    method: 'POST',
-    path: '/contracts/token/:token/accept',
-    legacyMarker: 'NONE',
-    permission: 'AUTHENTICATED',
-  },
-  { method: 'GET', path: '/organizers', legacyMarker: 'admin', permission: 'tenant.read' },
-  { method: 'GET', path: '/organizers/stats', legacyMarker: 'admin', permission: 'tenant.read' },
-  { method: 'GET', path: '/organizers/:id', legacyMarker: 'admin', permission: 'tenant.read' },
-  {
-    method: 'GET',
-    path: '/organizers/:id/events',
-    legacyMarker: 'admin',
-    permission: 'tenant.read',
-  },
   { method: 'GET', path: '/buyers', legacyMarker: 'admin', permission: 'buyer.read' },
   { method: 'GET', path: '/buyers/stats', legacyMarker: 'admin', permission: 'buyer.read' },
   { method: 'GET', path: '/buyers/:id', legacyMarker: 'admin', permission: 'buyer.read' },

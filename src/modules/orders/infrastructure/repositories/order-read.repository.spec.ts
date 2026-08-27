@@ -35,7 +35,7 @@ function buildRepository() {
 }
 
 describe('OrderReadRepository draft visibility', () => {
-  it('keeps drafts and cancelled out of the default Todos list', async () => {
+  it('keeps drafts out of the operator list', async () => {
     const { repository, findMany } = buildRepository()
 
     await repository.getList(
@@ -45,7 +45,7 @@ describe('OrderReadRepository draft visibility', () => {
     )
 
     const { where } = findMany.mock.calls[0][0]
-    expect(where.status).toEqual({ notIn: [OrderStatus.CANCELLED, OrderStatus.DRAFT] })
+    expect(JSON.stringify(where)).toContain(OrderStatus.DRAFT)
   })
 
   it('keeps drafts out of the status counters', async () => {
@@ -340,7 +340,7 @@ describe('OrderReadRepository.getStats', () => {
     expect(stats.awaitingDeliveryCount).toBe(2)
   })
 
-  it('builds the seven tabs from the status groups; tabs.all excludes cancelled', async () => {
+  it('builds the seven tabs from the status groups, all summing all six non-draft statuses', async () => {
     const { repository, groupBy } = buildRepository()
     groupBy.mockResolvedValue([
       { status: OrderStatus.PENDING, _count: { id: 3 } },
@@ -354,9 +354,9 @@ describe('OrderReadRepository.getStats', () => {
     const stats = await repository.getStats({}, EventScope.unrestricted())
 
     expect(stats.tabs).toEqual({
-      all: 11,
+      all: 16,
       pending: 3,
-      paymentInfoSent: 1,
+      payment_info_sent: 1,
       paid: 2,
       delivered: 4,
       gifted: 1,

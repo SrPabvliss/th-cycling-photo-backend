@@ -27,13 +27,25 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
     const event = await this.readRepo.getEventDetailBySlug(query.slug, scope)
     if (!event) throw AppException.notFound('Event', query.slug)
 
-    const [totalFileSize, classifiedCount] = await Promise.all([
+    const [totalFileSize, classifiedCount, aggregate] = await Promise.all([
       this.photoReadRepo.getTotalFileSizeByEvent(event.id),
       this.photoReadRepo.getClassifiedCountByEvent(event.id),
+      this.readRepo.getAggregateByEvent(event.id),
     ])
 
     event.totalFileSize = totalFileSize
     event.classifiedCount = classifiedCount
+    event.reviewedCount = aggregate.reviewedCount
+    event.categorizedCount = aggregate.categorizedCount
+    event.lastUploadAt = aggregate.lastUploadAt
+    event.revenue = aggregate.revenue
+    event.soldPhotoCount = aggregate.soldPhotoCount
+    event.ordersCount =
+      aggregate.paidCount +
+      aggregate.deliveredCount +
+      aggregate.giftedCount +
+      aggregate.unpaidCount +
+      aggregate.cancelledCount
 
     return event
   }

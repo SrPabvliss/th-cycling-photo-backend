@@ -10,6 +10,7 @@ const BUYER = 'buyer-1'
 
 const CONTEXT = {
   orderId: 'order-1',
+  eventId: 'event-1',
   status: 'pending',
   subtotalDollars: 20,
   sellerTenantId: 'tenant-1',
@@ -29,10 +30,19 @@ const merchantAccount = {
 
 type FixtureContext = {
   orderId: string
+  eventId: string
   status: string
   subtotalDollars: number | null
   sellerTenantId: string | null
   buyerUserId: string
+}
+
+type FixtureEventPayoutMethod = {
+  provider: string
+  isActive: boolean
+  mode: string | null
+  receiverIdentifier: string | null
+  sourcePayoutMethodId: string | null
 }
 
 function buildGateway() {
@@ -62,11 +72,31 @@ function buildGateway() {
   }
 }
 
-function buildHandler({ contexts }: { contexts: FixtureContext[] }) {
+function buildHandler({
+  contexts,
+  eventPayoutMethods = [],
+  eventPayoutMethodsByEvent,
+}: {
+  contexts: FixtureContext[]
+  eventPayoutMethods?: FixtureEventPayoutMethod[]
+  eventPayoutMethodsByEvent?: Record<string, FixtureEventPayoutMethod[]>
+}) {
   const contextRepo = { findByOrderIds: jest.fn().mockResolvedValue(contexts) }
   const payoutRepo = {
     findActivePayphoneForTenant: jest.fn().mockResolvedValue(merchantAccount),
     save: jest.fn().mockImplementation((a) => Promise.resolve(a)),
+  }
+  const eventPayoutRepo = {
+    findByEventId: jest
+      .fn()
+      .mockImplementation((eventId: string) =>
+        Promise.resolve(
+          eventPayoutMethodsByEvent
+            ? (eventPayoutMethodsByEvent[eventId] ?? [])
+            : eventPayoutMethods,
+        ),
+      ),
+    replaceForEvent: jest.fn(),
   }
   const transactionRepo = { save: jest.fn().mockImplementation((t) => Promise.resolve(t)) }
   const gateway = buildGateway()
@@ -80,6 +110,7 @@ function buildHandler({ contexts }: { contexts: FixtureContext[] }) {
   const handler = new CreatePaymentIntentHandler(
     contextRepo as never,
     payoutRepo as never,
+    eventPayoutRepo as never,
     transactionRepo as never,
     registry as never,
     new PaymentAmountCalculator(),
@@ -89,12 +120,13 @@ function buildHandler({ contexts }: { contexts: FixtureContext[] }) {
     new SellerAccountSuspension(payoutRepo as never),
   )
 
-  return { handler, transactionRepo, contextRepo, payoutRepo, gateway, scheduler }
+  return { handler, transactionRepo, contextRepo, payoutRepo, eventPayoutRepo, gateway, scheduler }
 }
 
 describe('CreatePaymentIntentHandler', () => {
   let contextRepo: { findByOrderIds: jest.Mock }
   let payoutRepo: { findActivePayphoneForTenant: jest.Mock; save: jest.Mock }
+  let eventPayoutRepo: { findByEventId: jest.Mock; replaceForEvent: jest.Mock }
   let transactionRepo: { save: jest.Mock }
   let gateway: {
     provider: string
@@ -125,6 +157,10 @@ describe('CreatePaymentIntentHandler', () => {
       findActivePayphoneForTenant: jest.fn().mockResolvedValue(merchantAccount),
       save: jest.fn().mockImplementation((a) => Promise.resolve(a)),
     }
+    eventPayoutRepo = {
+      findByEventId: jest.fn().mockResolvedValue([]),
+      replaceForEvent: jest.fn(),
+    }
     transactionRepo = { save: jest.fn().mockImplementation((t) => Promise.resolve(t)) }
     gateway = buildGateway()
     registry = { get: jest.fn().mockReturnValue(gateway) }
@@ -137,6 +173,7 @@ describe('CreatePaymentIntentHandler', () => {
     handler = new CreatePaymentIntentHandler(
       contextRepo as never,
       payoutRepo as never,
+      eventPayoutRepo as never,
       transactionRepo as never,
       registry as never,
       new PaymentAmountCalculator(),
@@ -321,6 +358,7 @@ describe('CreatePaymentIntentHandler', () => {
       contexts: [
         {
           orderId: 'order-1',
+          eventId: 'event-1',
           status: 'pending',
           subtotalDollars: 10,
           sellerTenantId: 'tenant-1',
@@ -328,6 +366,7 @@ describe('CreatePaymentIntentHandler', () => {
         },
         {
           orderId: 'order-2',
+          eventId: 'event-2',
           status: 'pending',
           subtotalDollars: 15,
           sellerTenantId: 'tenant-1',
@@ -348,6 +387,7 @@ describe('CreatePaymentIntentHandler', () => {
       contexts: [
         {
           orderId: 'order-1',
+          eventId: 'event-1',
           status: 'draft',
           subtotalDollars: 10,
           sellerTenantId: null,
@@ -366,6 +406,7 @@ describe('CreatePaymentIntentHandler', () => {
       contexts: [
         {
           orderId: 'order-1',
+          eventId: 'event-1',
           status: 'pending',
           subtotalDollars: 10,
           sellerTenantId: 'tenant-1',
@@ -373,6 +414,7 @@ describe('CreatePaymentIntentHandler', () => {
         },
         {
           orderId: 'order-2',
+          eventId: 'event-2',
           status: 'pending',
           subtotalDollars: 15,
           sellerTenantId: 'tenant-2',
@@ -391,6 +433,7 @@ describe('CreatePaymentIntentHandler', () => {
       contexts: [
         {
           orderId: 'order-1',
+          eventId: 'event-1',
           status: 'draft',
           subtotalDollars: 10,
           sellerTenantId: 'tenant-1',
@@ -409,6 +452,7 @@ describe('CreatePaymentIntentHandler', () => {
       contexts: [
         {
           orderId: 'order-1',
+          eventId: 'event-1',
           status: 'pending',
           subtotalDollars: 10,
           sellerTenantId: 'tenant-1',
@@ -422,5 +466,238 @@ describe('CreatePaymentIntentHandler', () => {
 
     const [first, second] = transactionRepo.save.mock.calls.map((call) => call[0])
     expect(first.clientTransactionId).not.toBe(second.clientTransactionId)
+  })
+
+  describe('event-only Payphone override', () => {
+    it('routes to the event-only Payphone when the event carries one, never consulting the tenant profile', async () => {
+      const { handler, transactionRepo, payoutRepo, gateway } = buildHandler({
+        contexts: [{ ...CONTEXT }],
+        eventPayoutMethods: [
+          {
+            provider: 'payphone',
+            isActive: true,
+            mode: PaymentMode.SPLIT_RECEIVER,
+            receiverIdentifier: '991234567',
+            sourcePayoutMethodId: null,
+          },
+        ],
+      })
+
+      await handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER))
+
+      expect(payoutRepo.findActivePayphoneForTenant).not.toHaveBeenCalled()
+      expect(gateway.buildCheckoutIntent).toHaveBeenCalledWith(
+        expect.objectContaining({ receiverIdentifier: '991234567' }),
+      )
+      expect(transactionRepo.save.mock.calls[0][0].receiverSnapshot).toBe('991234567')
+    })
+
+    it('falls back to the tenant lookup when the event only carries copied payout rows', async () => {
+      const { handler, payoutRepo } = buildHandler({
+        contexts: [{ ...CONTEXT }],
+        eventPayoutMethods: [
+          {
+            provider: 'payphone',
+            isActive: true,
+            mode: PaymentMode.SPLIT_RECEIVER,
+            receiverIdentifier: '987654321',
+            sourcePayoutMethodId: 'tenant-payout-method-1',
+          },
+        ],
+      })
+
+      await handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER))
+
+      expect(payoutRepo.findActivePayphoneForTenant).toHaveBeenCalledWith('tenant-1')
+    })
+
+    it('fails loudly, rather than falling through to the tenant account, when the event-only row cannot satisfy the gateway', async () => {
+      const { handler, payoutRepo } = buildHandler({
+        contexts: [{ ...CONTEXT }],
+        eventPayoutMethods: [
+          {
+            provider: 'payphone',
+            isActive: true,
+            mode: PaymentMode.SPLIT_RECEIVER,
+            receiverIdentifier: null,
+            sourcePayoutMethodId: null,
+          },
+        ],
+      })
+
+      await expect(
+        handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER)),
+      ).rejects.toMatchObject({ messageKey: 'payment.account_not_verified' })
+      expect(payoutRepo.findActivePayphoneForTenant).not.toHaveBeenCalled()
+    })
+
+    it('takes the first active Payphone row by sort order, and falls back when that row is a copy', async () => {
+      const { handler, payoutRepo } = buildHandler({
+        contexts: [{ ...CONTEXT }],
+        eventPayoutMethods: [
+          {
+            provider: 'payphone',
+            isActive: true,
+            mode: PaymentMode.SPLIT_RECEIVER,
+            receiverIdentifier: '987654321',
+            sourcePayoutMethodId: 'tenant-payout-method-1',
+          },
+          {
+            provider: 'payphone',
+            isActive: true,
+            mode: PaymentMode.SPLIT_RECEIVER,
+            receiverIdentifier: '991234567',
+            sourcePayoutMethodId: null,
+          },
+        ],
+      })
+
+      await handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER))
+
+      expect(payoutRepo.findActivePayphoneForTenant).toHaveBeenCalledWith('tenant-1')
+    })
+
+    it('falls back to the tenant lookup when the event-only Payphone row is inactive', async () => {
+      const { handler, payoutRepo } = buildHandler({
+        contexts: [{ ...CONTEXT }],
+        eventPayoutMethods: [
+          {
+            provider: 'payphone',
+            isActive: false,
+            mode: PaymentMode.SPLIT_RECEIVER,
+            receiverIdentifier: '991234567',
+            sourcePayoutMethodId: null,
+          },
+        ],
+      })
+
+      await handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER))
+
+      expect(payoutRepo.findActivePayphoneForTenant).toHaveBeenCalledWith('tenant-1')
+    })
+
+    it('falls back to the tenant lookup when the event only carries an event-only bank transfer row', async () => {
+      const { handler, payoutRepo } = buildHandler({
+        contexts: [{ ...CONTEXT }],
+        eventPayoutMethods: [
+          {
+            provider: 'bank_transfer',
+            isActive: true,
+            mode: null,
+            receiverIdentifier: null,
+            sourcePayoutMethodId: null,
+          },
+        ],
+      })
+
+      await handler.execute(new CreatePaymentIntentCommand(['order-1'], BUYER))
+
+      expect(payoutRepo.findActivePayphoneForTenant).toHaveBeenCalledWith('tenant-1')
+    })
+  })
+
+  describe('mixed-event cart refusal', () => {
+    const twoEventContexts: FixtureContext[] = [
+      {
+        orderId: 'order-1',
+        eventId: 'event-1',
+        status: 'pending',
+        subtotalDollars: 10,
+        sellerTenantId: 'tenant-1',
+        buyerUserId: BUYER,
+      },
+      {
+        orderId: 'order-2',
+        eventId: 'event-2',
+        status: 'pending',
+        subtotalDollars: 15,
+        sellerTenantId: 'tenant-1',
+        buyerUserId: BUYER,
+      },
+    ]
+
+    it('refuses when one event has its own receiver and the other has none at all', async () => {
+      const { handler, payoutRepo, eventPayoutRepo } = buildHandler({
+        contexts: twoEventContexts,
+        eventPayoutMethodsByEvent: {
+          'event-1': [
+            {
+              provider: 'payphone',
+              isActive: true,
+              mode: PaymentMode.SPLIT_RECEIVER,
+              receiverIdentifier: '991234567',
+              sourcePayoutMethodId: null,
+            },
+          ],
+          'event-2': [],
+        },
+      })
+      payoutRepo.findActivePayphoneForTenant.mockResolvedValue(null)
+
+      await expect(
+        handler.execute(new CreatePaymentIntentCommand(['order-1', 'order-2'], BUYER)),
+      ).rejects.toMatchObject({ messageKey: 'payment.mixed_receivers' })
+      expect(eventPayoutRepo.findByEventId).toHaveBeenCalledWith('event-1')
+      expect(eventPayoutRepo.findByEventId).toHaveBeenCalledWith('event-2')
+    })
+
+    it('refuses when the two events resolve to two different receivers', async () => {
+      const { handler, payoutRepo } = buildHandler({
+        contexts: twoEventContexts,
+        eventPayoutMethodsByEvent: {
+          'event-1': [
+            {
+              provider: 'payphone',
+              isActive: true,
+              mode: PaymentMode.SPLIT_RECEIVER,
+              receiverIdentifier: '991234567',
+              sourcePayoutMethodId: null,
+            },
+          ],
+          'event-2': [],
+        },
+      })
+      payoutRepo.findActivePayphoneForTenant.mockResolvedValue({
+        provider: 'payphone',
+        mode: PaymentMode.SPLIT_RECEIVER,
+        isUsable: true,
+        credentialsEncrypted: null,
+        receiverIdentifier: '984112233',
+      })
+
+      await expect(
+        handler.execute(new CreatePaymentIntentCommand(['order-1', 'order-2'], BUYER)),
+      ).rejects.toMatchObject({ messageKey: 'payment.mixed_receivers' })
+    })
+
+    it('succeeds unchanged when every event in the cart resolves to the same receiver', async () => {
+      const { handler, transactionRepo } = buildHandler({
+        contexts: twoEventContexts,
+        eventPayoutMethodsByEvent: {
+          'event-1': [
+            {
+              provider: 'payphone',
+              isActive: true,
+              mode: PaymentMode.SPLIT_RECEIVER,
+              receiverIdentifier: '991234567',
+              sourcePayoutMethodId: null,
+            },
+          ],
+          'event-2': [
+            {
+              provider: 'payphone',
+              isActive: true,
+              mode: PaymentMode.SPLIT_RECEIVER,
+              receiverIdentifier: '991234567',
+              sourcePayoutMethodId: null,
+            },
+          ],
+        },
+      })
+
+      await handler.execute(new CreatePaymentIntentCommand(['order-1', 'order-2'], BUYER))
+
+      expect(transactionRepo.save.mock.calls[0][0].receiverSnapshot).toBe('991234567')
+    })
   })
 })

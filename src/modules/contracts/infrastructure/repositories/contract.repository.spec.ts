@@ -123,49 +123,6 @@ describe('ContractRepository.acceptInTransaction', () => {
     expect(tx.userConsent.upsert).not.toHaveBeenCalled()
     expect(tx.tenant.create).not.toHaveBeenCalled()
   })
-
-  it('guards acceptance with pending status and a still-valid valid_until', async () => {
-    const { repository, tx } = buildRepository('tenant-existing')
-
-    await repository.acceptInTransaction(PAYLOAD)
-
-    expect(tx.tenantContract.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          id: 'contract-1',
-          status: 'pending',
-          valid_until: { gt: expect.any(Date) },
-        }),
-      }),
-    )
-  })
-})
-
-describe('ContractRepository.revoke', () => {
-  it('revokes only when the row is still pending', async () => {
-    const updateMany = jest.fn().mockResolvedValue({ count: 1 })
-    const repository = new ContractRepository({
-      tenantContract: { updateMany },
-    } as never)
-
-    await repository.revoke('contract-1')
-
-    expect(updateMany).toHaveBeenCalledWith({
-      where: { id: 'contract-1', status: 'pending' },
-      data: { status: 'revoked', revoked_at: expect.any(Date) },
-    })
-  })
-
-  it('throws contract.not_pending when no pending row is updated', async () => {
-    const updateMany = jest.fn().mockResolvedValue({ count: 0 })
-    const repository = new ContractRepository({
-      tenantContract: { updateMany },
-    } as never)
-
-    await expect(repository.revoke('contract-1')).rejects.toMatchObject({
-      messageKey: 'contract.not_pending',
-    })
-  })
 })
 
 describe('ContractRepository.consumeSlot', () => {

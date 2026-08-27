@@ -6,9 +6,11 @@ import type {
   PublicEventListProjection,
 } from '@events/application/projections'
 import { Event } from '@events/domain/entities'
+import { type EventFacts, resolveEventAlert } from '@events/domain/event-alert'
 import type { EventStatusType } from '@events/domain/value-objects/event-status.vo'
 import { Prisma, type Event as PrismaEvent } from '@generated/prisma/client'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import type { EventAggregate } from '../repositories/event-aggregates'
 
 // --- Select shapes for Prisma queries ---
 
@@ -25,6 +27,7 @@ export const eventListSelectConfig = {
   province: { select: { name: true } },
   canton: { select: { name: true } },
   status: true,
+  is_frozen: true,
   _count: { select: { photos: true } },
   assets: {
     select: coverImageAssetSelectConfig,
@@ -35,15 +38,30 @@ export const eventListSelectConfig = {
 
 export type EventListSelect = Prisma.EventGetPayload<{ select: typeof eventListSelectConfig }>
 
+export const eventListRowSelectConfig = {
+  ...eventListSelectConfig,
+  tenant_id: true,
+  tenant: { select: { name: true } },
+  photo_quota: true,
+  photos_uploaded: true,
+  deleted_at: true,
+} satisfies Prisma.EventSelect
+
+export type EventListRowSelect = Prisma.EventGetPayload<{
+  select: typeof eventListRowSelectConfig
+}>
+
 export const eventDetailSelectConfig = {
   ...eventListSelectConfig,
   province_id: true,
   canton_id: true,
   photo_quota: true,
   photos_uploaded: true,
-  is_frozen: true,
+  frozen_at: true,
   created_at: true,
   updated_at: true,
+  tenant: { select: { name: true } },
+  event_type: { select: { name: true } },
   contract: { select: { commercial_name: true } },
 } satisfies Prisma.EventSelect
 
@@ -88,6 +106,7 @@ export type PublicEventListSelect = Prisma.EventGetPayload<{
 }>
 
 export const publicEventDetailSelectConfig = {
+  id: true,
   name: true,
   slug: true,
   start_date: true,
@@ -194,9 +213,21 @@ export function toSummaryProjection(
 }
 
 /** Converts a Prisma selected record to a list projection. */
-export function toListProjection(record: EventListSelect, cdn: CdnUrlBuilder): EventListProjection {
+export function toListProjection(
+  record: EventListRowSelect,
+  cdn: CdnUrlBuilder,
+  aggregate: EventAggregate,
+): EventListProjection {
   const coverSlug = getCoverImageSlug(record.assets)
   const coverUrl = coverSlug ? cdn.assetUrl(coverSlug, 'cover-sm') : null
+  const facts: EventFacts = {
+    isArchived: record.deleted_at !== null,
+    hasCover: coverSlug !== null,
+    isFrozen: record.is_frozen,
+    photoCount: record._count.photos,
+    photosUploaded: record.photos_uploaded,
+    photoQuota: record.photo_quota,
+  }
   return {
     id: record.id,
     slug: record.slug,
@@ -208,8 +239,25 @@ export function toListProjection(record: EventListSelect, cdn: CdnUrlBuilder): E
     coverImageUrl: coverUrl,
     coverImageSlug: coverSlug,
     status: record.status,
+    isFrozen: record.is_frozen,
     photoCount: record._count.photos,
     totalFileSize: 0,
+    organizerId: record.tenant_id,
+    organizerName: record.tenant.name,
+    photoQuota: record.photo_quota,
+    photosUploaded: record.photos_uploaded,
+    reviewedCount: aggregate.reviewedCount,
+    categorizedCount: aggregate.categorizedCount,
+    revenue: aggregate.revenue,
+    paidCount: aggregate.paidCount,
+    deliveredCount: aggregate.deliveredCount,
+    giftedCount: aggregate.giftedCount,
+    unpaidCount: aggregate.unpaidCount,
+    cancelledCount: aggregate.cancelledCount,
+    soldPhotoCount: aggregate.soldPhotoCount,
+    lastUploadAt: aggregate.lastUploadAt,
+    isArchived: facts.isArchived,
+    alert: resolveEventAlert(facts),
   }
 }
 
@@ -238,10 +286,19 @@ export function toDetailProjection(
     photosUploaded: record.photos_uploaded,
     isFrozen: record.is_frozen,
     classifiedCount: 0,
+    categorizedCount: 0,
     totalFileSize: 0,
-    contractName: record.contract?.commercial_name ?? null,
+    reviewedCount: 0,
+    lastUploadAt: null,
+    revenue: '0.00',
+    ordersCount: 0,
+    soldPhotoCount: 0,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
+    frozenAt: record.frozen_at,
+    organizerName: record.tenant.name,
+    eventTypeName: record.event_type.name,
+    contractName: record.contract?.commercial_name ?? null,
   }
 }
 
@@ -266,6 +323,7 @@ export function toPublicDetailProjection(
   cdn: CdnUrlBuilder,
 ): PublicEventDetailProjection {
   return {
+    id: record.id,
     slug: record.slug,
     name: record.name,
     startDate: record.start_date,

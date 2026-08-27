@@ -117,8 +117,7 @@ export class OrderReadRepository implements IOrderReadRepository {
           ? { in: [] }
           : (filters.status as Prisma.EnumOrderStatusFilter)
     } else {
-      // "Todos"/ALL excludes cancelled (and drafts). Cancelled only via the cancelled tab.
-      where.status = { notIn: [OrderStatus.CANCELLED, OrderStatus.DRAFT] }
+      where.status = { not: OrderStatus.DRAFT }
     }
     if (filters.search) where.OR = this.buildSearchOr(filters.search)
 
@@ -372,9 +371,9 @@ export class OrderReadRepository implements IOrderReadRepository {
       openAmount: (openAmountAgg._sum.subtotal ?? new Prisma.Decimal(0)).toFixed(2),
       awaitingDeliveryCount,
       tabs: {
-        all: total - cancelled,
+        all: total,
         pending,
-        paymentInfoSent,
+        payment_info_sent: paymentInfoSent,
         paid,
         delivered,
         gifted,

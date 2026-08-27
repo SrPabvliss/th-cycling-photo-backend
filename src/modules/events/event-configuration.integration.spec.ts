@@ -438,7 +438,7 @@ describe('event configuration', () => {
       null,
       eventType.id,
       new AuditContext(completeUser.id),
-      { payoutMethodIds: [tenantBMethod.id] },
+      { payoutMethods: [{ source: 'profile', id: tenantBMethod.id }] },
     )
 
     await expect(createEvent.execute(command)).rejects.toMatchObject({

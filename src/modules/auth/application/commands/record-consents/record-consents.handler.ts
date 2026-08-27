@@ -1,6 +1,6 @@
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import { POLICY_VERSION } from '../../../domain/constants/consent.constants'
+import { POLICY_VERSIONS } from '../../../domain/constants/consent.constants'
 import { CONSENT_REPOSITORY, type IConsentRepository } from '../../../domain/ports'
 import { RecordConsentsCommand } from './record-consents.command'
 
@@ -14,7 +14,7 @@ export class RecordConsentsHandler implements ICommandHandler<RecordConsentsComm
         this.consentRepo.record({
           userId: command.userId,
           type,
-          policyVersion: POLICY_VERSION,
+          policyVersion: POLICY_VERSIONS[type],
           ipAddress: command.ipAddress ?? null,
           userAgent: command.userAgent ?? null,
         }),

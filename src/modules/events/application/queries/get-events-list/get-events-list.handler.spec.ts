@@ -21,9 +21,10 @@ describe('GetEventsListHandler', () => {
     } as unknown as jest.Mocked<IAuthorizationService>
     const handler = new GetEventsListHandler(readRepo, photoRepo, authz)
 
-    await handler.execute(new GetEventsListQuery(new Pagination(1, 20), false, undefined, 'u1'))
+    const filters = { tab: 'active' } as const
+    await handler.execute(new GetEventsListQuery(new Pagination(1, 20), filters, 'u1'))
 
     expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
-    expect(readRepo.getEventsList).toHaveBeenCalledWith(expect.anything(), false, undefined, scope)
+    expect(readRepo.getEventsList).toHaveBeenCalledWith(expect.anything(), filters, scope)
   })
 })

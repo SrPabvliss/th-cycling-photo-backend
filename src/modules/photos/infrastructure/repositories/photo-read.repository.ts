@@ -1,10 +1,4 @@
-import {
-  AttributeSource,
-  BibReadingStatus,
-  OrderStatus,
-  PhotoStatus,
-  Prisma,
-} from '@generated/prisma/client'
+import { AttributeSource, BibReadingStatus, PhotoStatus, Prisma } from '@generated/prisma/client'
 import { Inject, Injectable } from '@nestjs/common'
 import type {
   GalleryFacetsProjection,
@@ -111,23 +105,20 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     const bibWhere = this.bibFilterWhere(filters.bib)
     if (bibWhere) Object.assign(where, bibWhere)
 
-    // Sold/unsold via relation filter — avoids loading every sold photo id into memory.
-    if (filters.sale === 'sold') {
-      where.order_items = {
-        some: { order: { status: { in: [OrderStatus.paid, OrderStatus.delivered] } } },
-      }
-    } else if (filters.sale === 'unsold') {
-      where.order_items = {
-        none: { order: { status: { in: [OrderStatus.paid, OrderStatus.delivered] } } },
-      }
-    }
+    const idSets = await Promise.all([
+      filters.sale ? this.soldPhotoIds(eventId) : Promise.resolve(null),
+      filters.plateNumber
+        ? this.findPhotoIdsMatchingBibDigits(filters.plateNumber, filters.bibMatch ?? 'exact')
+        : Promise.resolve(null),
+    ])
 
-    if (filters.plateNumber) {
-      const matchIds = await this.findPhotoIdsMatchingBibDigits(
-        filters.plateNumber,
-        filters.bibMatch ?? 'exact',
-        eventId,
-      )
+    const [soldIds, matchIds] = idSets
+
+    if (soldIds !== null) {
+      if (filters.sale === 'sold') where.id = { in: soldIds }
+      else where.id = { notIn: soldIds }
+    }
+    if (matchIds !== null) {
       const list = [...matchIds]
       where.AND = [...(Array.isArray(where.AND) ? where.AND : []), { id: { in: list } }]
     }
@@ -296,14 +287,19 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return [{ uploaded_at: 'desc' }, { id: 'asc' }]
   }
 
-  /**
-   * Ordered photo ids for the two sorts that depend on bib data.
-   *
-   * GAP: still materializes every matching photo id before ranking. Prisma filters (bib/sale/
-   * category/scope) are expressed as a `where` object that would need a full SQL rewrite to push
-   * ORDER BY + LIMIT into Postgres. Ranking itself is done in SQL over that id set; only the page
-   * slice is hydrated afterward.
-   */
+  /** Photo ids of an event that sit in a paid or delivered order. */
+  private async soldPhotoIds(eventId: string): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<Array<{ photo_id: string }>>(Prisma.sql`
+      SELECT DISTINCT oi.photo_id
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      JOIN photos p ON p.id = oi.photo_id
+      WHERE p.event_id = ${eventId}::uuid AND o.status IN ('paid', 'delivered')
+    `)
+    return rows.map((r) => r.photo_id)
+  }
+
+  /** Ordered photo ids for the two sorts that depend on bib data. */
   private async orderedIdsForBibSort(
     where: Prisma.PhotoWhereInput,
     sort: 'no_bib_first' | 'bib_asc',
@@ -913,7 +909,6 @@ export class PhotoReadRepository implements IPhotoReadRepository {
         await this.findPhotoIdsMatchingBibDigits(
           filters.plateNumber as string,
           filters.bibMatch ?? 'exact',
-          filters.eventId,
         ),
       )
     }
@@ -927,26 +922,20 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return [...first].filter((id) => rest.every((s) => s.has(id)))
   }
 
-  /**
-   * Returns photo ids whose effective (latest-correction) bib digits match.
-   * When `eventId` is set (gallery list), the match is scoped to that event.
-   */
+  /** Returns photo ids whose effective (latest-correction) bib digits match. */
   private async findPhotoIdsMatchingBibDigits(
     value: string,
     match: 'exact' | 'starts' | 'contains',
-    eventId?: string,
   ): Promise<Set<string>> {
     const escaped = value.replace(/[\\%_]/g, (c) => `\\${c}`)
     const pattern =
       match === 'starts' ? `${escaped}%` : match === 'contains' ? `%${escaped}%` : escaped
-    const eventFilter = eventId ? Prisma.sql`AND p.event_id = ${eventId}::uuid` : Prisma.empty
 
     const sql =
       match === 'exact'
         ? Prisma.sql`
             SELECT DISTINCT pb.photo_id
             FROM photo_bibs pb
-            JOIN photos p ON p.id = pb.photo_id
             LEFT JOIN LATERAL (
               SELECT new_value AS corrected_value, TRUE AS has_correction
               FROM corrections
@@ -954,7 +943,6 @@ export class PhotoReadRepository implements IPhotoReadRepository {
               ORDER BY corrected_at DESC LIMIT 1
             ) latest ON TRUE
             WHERE pb.deleted_at IS NULL
-              ${eventFilter}
               AND LOWER(
                 CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
               ) = LOWER(${value})
@@ -962,7 +950,6 @@ export class PhotoReadRepository implements IPhotoReadRepository {
         : Prisma.sql`
             SELECT DISTINCT pb.photo_id
             FROM photo_bibs pb
-            JOIN photos p ON p.id = pb.photo_id
             LEFT JOIN LATERAL (
               SELECT new_value AS corrected_value, TRUE AS has_correction
               FROM corrections
@@ -970,7 +957,6 @@ export class PhotoReadRepository implements IPhotoReadRepository {
               ORDER BY corrected_at DESC LIMIT 1
             ) latest ON TRUE
             WHERE pb.deleted_at IS NULL
-              ${eventFilter}
               AND (
                 CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
               ) ILIKE ${pattern} ESCAPE '\\'
