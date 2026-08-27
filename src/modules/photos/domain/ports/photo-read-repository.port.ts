@@ -1,5 +1,6 @@
 import type { PhotoStatus } from '@generated/prisma/client'
 import type {
+  GalleryFacetsProjection,
   PhotoDetailProjection,
   PhotoListProjection,
   PhotoViewProjection,
@@ -29,6 +30,21 @@ export type ReviewQueueStatusFilter = 'all' | 'pending' | 'reviewed'
 
 export const REVIEW_QUEUE_STATUS_FILTERS: ReviewQueueStatusFilter[] = ['all', 'pending', 'reviewed']
 
+export type GalleryBibFilter = 'none' | 'any' | 'doubtful' | 'corrected'
+export type GallerySaleFilter = 'sold' | 'unsold'
+export type GallerySort = 'recent' | 'no_bib_first' | 'bib_asc' | 'filename'
+
+export interface IGalleryFilters {
+  classified?: boolean
+  photoCategoryId?: number
+  uncategorized?: boolean
+  bib?: GalleryBibFilter
+  sale?: GallerySaleFilter
+  plateNumber?: string
+  bibMatch?: 'exact' | 'starts' | 'contains'
+  sort?: GallerySort
+}
+
 export interface IPhotoReadRepository {
   findById(id: string): Promise<Photo | null>
   /**
@@ -41,10 +57,10 @@ export interface IPhotoReadRepository {
   getPhotosList(
     eventId: string,
     pagination: Pagination,
-    classified: boolean | undefined,
-    photoCategoryId: number | undefined,
+    filters: IGalleryFilters,
     scope: EventScope,
   ): Promise<PaginatedResult<PhotoListProjection>>
+  getGalleryFacets(eventId: string, scope: EventScope): Promise<GalleryFacetsProjection>
   getPhotoDetail(id: string, scope: EventScope): Promise<PhotoDetailProjection | null>
   getPhotoDetailBySlug(slug: string, scope: EventScope): Promise<PhotoDetailProjection | null>
   searchPhotos(
@@ -72,6 +88,8 @@ export interface IPhotoReadRepository {
   findSimilar(photoId: string, eventId: string, limit: number): Promise<SimilarPhotoProjection[]>
   getPhotoViewBySlug(slug: string, scope: EventScope): Promise<PhotoViewProjection | null>
   countAll(scope: EventScope): Promise<number>
+  /** Photos still awaiting an operator decision: anything not yet `reviewed`. */
+  countPendingReview(scope: EventScope): Promise<number>
   sumAllFileSize(scope: EventScope): Promise<number>
   getReviewQueue(params: {
     eventSlug: string

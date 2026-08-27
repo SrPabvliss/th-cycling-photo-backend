@@ -18,6 +18,7 @@ import { MarkPhotoReviewedHandler } from '@photos/application/commands/mark-phot
 import { SetPhotoRetouchFlagHandler } from '@photos/application/commands/set-photo-retouch-flag/set-photo-retouch-flag.handler'
 import { FindSimilarPhotosHandler } from '@photos/application/queries/find-similar-photos/find-similar-photos.handler'
 import { GetDownloadManifestHandler } from '@photos/application/queries/get-download-manifest/get-download-manifest.handler'
+import { GetGalleryFacetsHandler } from '@photos/application/queries/get-gallery-facets/get-gallery-facets.handler'
 import { GetPendingRetouchHandler } from '@photos/application/queries/get-pending-retouch/get-pending-retouch.handler'
 import { GetPhotoDetailHandler } from '@photos/application/queries/get-photo-detail/get-photo-detail.handler'
 import { GetPhotoDetailBySlugHandler } from '@photos/application/queries/get-photo-detail-by-slug/get-photo-detail-by-slug.handler'
@@ -64,6 +65,7 @@ const CommandHandlers = [
 ]
 const QueryHandlers = [
   FindSimilarPhotosHandler,
+  GetGalleryFacetsHandler,
   GetPhotosListHandler,
   GetPhotoDetailHandler,
   GetPhotoDetailBySlugHandler,

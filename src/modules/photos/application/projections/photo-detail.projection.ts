@@ -19,6 +19,15 @@ export class BibAttributeProjection {
   source: AttributeSource
   /** Pre-signed download URL (TTL 3600s); null when no crop persisted or signing failed */
   cropUrl: string | null
+  /** Name of the person who wrote or last corrected this bib; null for an untouched AI reading. */
+  correctedByName: string | null
+}
+
+export class PhotoOrderProjection {
+  id: string
+  buyerName: string
+  createdAt: Date
+  status: string
 }
 
 export class ColorAttributeProjection {
@@ -88,4 +97,13 @@ export class PhotoDetailProjection {
   bibs: BibAttributeProjection[]
   /** AI- and reviewer-generated color attributes for this photo */
   colors: ColorAttributeProjection[]
+  photoCategoryId: number | null
+  photoCategoryName: string | null
+  /** Paid or delivered orders containing this photo, newest first. */
+  orders: PhotoOrderProjection[]
+  /** 1-based rank within the event, ordered by upload time descending. */
+  position: number
+  eventPhotoCount: number
+  previousSlug: string | null
+  nextSlug: string | null
 }

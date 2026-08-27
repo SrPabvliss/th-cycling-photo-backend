@@ -1,7 +1,15 @@
-import { PhotoStatus, Prisma } from '@generated/prisma/client'
+import {
+  AttributeSource,
+  BibReadingStatus,
+  OrderStatus,
+  PhotoStatus,
+  Prisma,
+} from '@generated/prisma/client'
 import { Inject, Injectable } from '@nestjs/common'
 import type {
+  GalleryFacetsProjection,
   PhotoDetailProjection,
+  PhotoListBib,
   PhotoListProjection,
   PhotoViewProjection,
   SimilarPhotoProjection,
@@ -10,7 +18,10 @@ import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { Photo } from '@photos/domain/entities'
 import {
   CORRECTION_REPOSITORY,
+  type GalleryBibFilter,
+  type GallerySort,
   type ICorrectionRepository,
+  type IGalleryFilters,
   type IPhotoReadRepository,
   type ReviewQueueStatusFilter,
 } from '@photos/domain/ports'
@@ -83,34 +94,325 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return record !== null
   }
 
-  /** Retrieves a paginated list of photos for a given event. */
+  /** Retrieves a paginated page of an event's photos under the gallery's filters. */
   async getPhotosList(
     eventId: string,
     pagination: Pagination,
-    classified: boolean | undefined,
-    photoCategoryId: number | undefined,
+    filters: IGalleryFilters,
     scope: EventScope,
   ): Promise<PaginatedResult<PhotoListProjection>> {
     const where: Prisma.PhotoWhereInput = { event_id: eventId, event: scope.toPrisma() }
-    if (classified === true) where.status = PhotoStatus.reviewed
-    if (classified === false) where.status = { not: PhotoStatus.reviewed }
-    if (photoCategoryId) where.photo_category_id = photoCategoryId
+
+    if (filters.classified === true) where.status = PhotoStatus.reviewed
+    if (filters.classified === false) where.status = { not: PhotoStatus.reviewed }
+    if (filters.uncategorized) where.photo_category_id = null
+    else if (filters.photoCategoryId) where.photo_category_id = filters.photoCategoryId
+
+    const bibWhere = this.bibFilterWhere(filters.bib)
+    if (bibWhere) Object.assign(where, bibWhere)
+
+    // Sold/unsold via relation filter — avoids loading every sold photo id into memory.
+    if (filters.sale === 'sold') {
+      where.order_items = {
+        some: { order: { status: { in: [OrderStatus.paid, OrderStatus.delivered] } } },
+      }
+    } else if (filters.sale === 'unsold') {
+      where.order_items = {
+        none: { order: { status: { in: [OrderStatus.paid, OrderStatus.delivered] } } },
+      }
+    }
+
+    if (filters.plateNumber) {
+      const matchIds = await this.findPhotoIdsMatchingBibDigits(
+        filters.plateNumber,
+        filters.bibMatch ?? 'exact',
+        eventId,
+      )
+      const list = [...matchIds]
+      where.AND = [...(Array.isArray(where.AND) ? where.AND : []), { id: { in: list } }]
+    }
+
+    if (filters.sort === 'no_bib_first' || filters.sort === 'bib_asc') {
+      const orderedIds = await this.orderedIdsForBibSort(where, filters.sort)
+      const total = orderedIds.length
+      const slice = orderedIds.slice(pagination.skip, pagination.skip + pagination.take)
+
+      if (slice.length === 0) return new PaginatedResult([], total, pagination)
+
+      const photos = await this.prisma.photo.findMany({
+        where: { id: { in: slice } },
+        select: PhotoMapper.photoListSelectConfig,
+      })
+      const byId = new Map(photos.map((p) => [p.id, p]))
+      const ordered = slice
+        .map((id) => byId.get(id))
+        .filter((p): p is (typeof photos)[number] => !!p)
+
+      return new PaginatedResult(await this.enrichListProjections(ordered), total, pagination)
+    }
 
     const [photos, total] = await Promise.all([
       this.prisma.photo.findMany({
         where,
         select: PhotoMapper.photoListSelectConfig,
-        orderBy: { filename: 'asc' },
+        orderBy: this.gallerySortOrder(filters.sort),
         skip: pagination.skip,
         take: pagination.take,
       }),
       this.prisma.photo.count({ where }),
     ])
 
-    return new PaginatedResult(
-      photos.map((p) => PhotoMapper.toListProjection(p, this.cdn)),
-      total,
-      pagination,
+    return new PaginatedResult(await this.enrichListProjections(photos), total, pagination)
+  }
+
+  /** Event-wide counts for the gallery's filter panel, unaffected by the active filters. */
+  async getGalleryFacets(eventId: string, scope: EventScope): Promise<GalleryFacetsProjection> {
+    const [row] = await this.prisma.$queryRaw<
+      Array<{
+        total: number
+        without_bib: number
+        doubtful: number
+        corrected: number
+        uncategorized: number
+        sold: number
+      }>
+    >(Prisma.sql`
+      WITH live AS (
+        SELECT p.id, p.photo_category_id
+        FROM photos p
+        JOIN events e ON e.id = p.event_id
+        WHERE p.event_id = ${eventId}::uuid ${eventScopeFilter(scope, 'e')}
+      ),
+      corr AS (
+        SELECT DISTINCT c.photo_id
+        FROM corrections c
+        JOIN live ON live.id = c.photo_id
+        WHERE c.target_type = 'photo_bib' AND c.field = 'digits'
+      ),
+      bib AS (
+        SELECT pb.photo_id,
+               bool_or(pb.source = 'reviewer') AS reviewer,
+               bool_and(pb.source = 'ai' AND pb.status = 'abstained') AS all_weak
+        FROM photo_bibs pb
+        JOIN live ON live.id = pb.photo_id
+        WHERE pb.deleted_at IS NULL
+        GROUP BY pb.photo_id
+      ),
+      sold AS (
+        SELECT DISTINCT oi.photo_id
+        FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id
+        JOIN live ON live.id = oi.photo_id
+        WHERE o.status IN ('paid', 'delivered')
+      )
+      SELECT
+        (SELECT count(*)::int FROM live) AS total,
+        (SELECT count(*)::int FROM live WHERE id NOT IN (SELECT photo_id FROM bib)) AS without_bib,
+        (SELECT count(*)::int FROM bib
+           WHERE NOT reviewer AND all_weak AND photo_id NOT IN (SELECT photo_id FROM corr)
+        ) AS doubtful,
+        (SELECT count(*)::int FROM live
+           WHERE id IN (SELECT photo_id FROM corr)
+              OR id IN (SELECT photo_id FROM bib WHERE reviewer)
+        ) AS corrected,
+        (SELECT count(*)::int FROM live WHERE photo_category_id IS NULL) AS uncategorized,
+        (SELECT count(*)::int FROM sold) AS sold
+    `)
+
+    const categories = await this.prisma.photo.groupBy({
+      by: ['photo_category_id'],
+      where: { event_id: eventId, event: scope.toPrisma(), photo_category_id: { not: null } },
+      _count: { _all: true },
+    })
+
+    const names = new Map(
+      (
+        await this.prisma.photoCategory.findMany({
+          where: { id: { in: categories.map((c) => c.photo_category_id as number) } },
+          select: { id: true, name: true },
+        })
+      ).map((c) => [c.id, c.name]),
+    )
+
+    return {
+      total: row.total,
+      withoutBib: row.without_bib,
+      withBib: row.total - row.without_bib,
+      doubtfulBib: row.doubtful,
+      correctedBib: row.corrected,
+      uncategorized: row.uncategorized,
+      sold: row.sold,
+      unsold: row.total - row.sold,
+      categories: categories
+        .flatMap((c) => {
+          const id = c.photo_category_id as number
+          const name = names.get(id)
+          return name === undefined ? [] : [{ id, name, count: c._count._all }]
+        })
+        .sort((a, b) => a.name.localeCompare(b.name, 'es')),
+    }
+  }
+
+  /** Prisma fragment for the four bib predicates; null means "no bib filter". */
+  private bibFilterWhere(bib: GalleryBibFilter | undefined): Prisma.PhotoWhereInput | null {
+    if (!bib) return null
+    if (bib === 'none') return { bibs: { none: { deleted_at: null } } }
+    if (bib === 'any') return { bibs: { some: { deleted_at: null } } }
+    if (bib === 'corrected') {
+      return {
+        OR: [
+          { bibs: { some: { deleted_at: null, source: AttributeSource.reviewer } } },
+          { corrections: { some: { target_type: 'photo_bib', field: 'digits' } } },
+        ],
+      }
+    }
+    // doubtful: read by the model, below its own threshold, and nobody has touched it since
+    return {
+      AND: [
+        { bibs: { some: { deleted_at: null } } },
+        { NOT: { bibs: { some: { deleted_at: null, source: AttributeSource.reviewer } } } },
+        { NOT: { corrections: { some: { target_type: 'photo_bib', field: 'digits' } } } },
+        {
+          bibs: {
+            every: {
+              OR: [
+                { deleted_at: { not: null } },
+                { source: AttributeSource.ai, status: BibReadingStatus.abstained },
+              ],
+            },
+          },
+        },
+      ],
+    }
+  }
+
+  /**
+   * `id` is the tie-break, not decoration: 10,980 of 11,000 photos share an `uploaded_at` with at
+   * least one sibling, in groups of up to 20. Without a total order Postgres may return tied rows in
+   * a different sequence per request, so a photo can appear on two pages or on none while paging.
+   */
+  private gallerySortOrder(sort: GallerySort | undefined): Prisma.PhotoOrderByWithRelationInput[] {
+    if (sort === 'filename') return [{ filename: 'asc' }, { id: 'asc' }]
+    return [{ uploaded_at: 'desc' }, { id: 'asc' }]
+  }
+
+  /**
+   * Ordered photo ids for the two sorts that depend on bib data.
+   *
+   * GAP: still materializes every matching photo id before ranking. Prisma filters (bib/sale/
+   * category/scope) are expressed as a `where` object that would need a full SQL rewrite to push
+   * ORDER BY + LIMIT into Postgres. Ranking itself is done in SQL over that id set; only the page
+   * slice is hydrated afterward.
+   */
+  private async orderedIdsForBibSort(
+    where: Prisma.PhotoWhereInput,
+    sort: 'no_bib_first' | 'bib_asc',
+  ): Promise<string[]> {
+    const ids = (
+      await this.prisma.photo.findMany({
+        where,
+        select: { id: true },
+        orderBy: [{ uploaded_at: 'desc' }, { id: 'asc' }],
+      })
+    ).map((r) => r.id)
+    if (ids.length === 0) return []
+
+    const rows = await this.prisma.$queryRaw<Array<{ id: string; rank: string | null }>>(Prisma.sql`
+      SELECT p.id,
+             MIN(NULLIF(regexp_replace(
+               CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END,
+               -- '\\D' is doubled on purpose: inside a JS template literal '\D' collapses to 'D',
+               -- which would strip the letter D instead of every non-digit. Verified against the database.
+               '\\D', '', 'g'), '')::bigint)::text AS rank
+      FROM photos p
+      LEFT JOIN photo_bibs pb ON pb.photo_id = p.id AND pb.deleted_at IS NULL
+      LEFT JOIN LATERAL (
+        SELECT new_value AS corrected_value, TRUE AS has_correction
+        FROM corrections
+        WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
+        ORDER BY corrected_at DESC LIMIT 1
+      ) latest ON TRUE
+      WHERE p.id = ANY(${ids}::uuid[])
+      GROUP BY p.id
+    `)
+
+    const rankOf = new Map(rows.map((r) => [r.id, r.rank === null ? null : Number(r.rank)]))
+
+    return ids.slice().sort((a, b) => {
+      const ra = rankOf.get(a) ?? null
+      const rb = rankOf.get(b) ?? null
+      if (sort === 'no_bib_first') {
+        if (ra === null && rb !== null) return -1
+        if (ra !== null && rb === null) return 1
+        return 0
+      }
+      if (ra === null && rb === null) return 0
+      if (ra === null) return 1
+      if (rb === null) return -1
+      return ra - rb
+    })
+  }
+
+  /** Attaches effective bibs, category and sold flag to a page of photo rows. */
+  async enrichListProjections(rows: PhotoMapper.PhotoListSelect[]): Promise<PhotoListProjection[]> {
+    if (rows.length === 0) return []
+
+    const ids = rows.map((r) => r.id)
+
+    const [bibRows, soldRows] = await Promise.all([
+      this.prisma.$queryRaw<
+        Array<{
+          photo_id: string
+          digits: string
+          source: 'ai' | 'reviewer'
+          confidence: string | null
+          status: 'read' | 'abstained' | null
+          corrected: boolean
+        }>
+      >(Prisma.sql`
+        SELECT
+          pb.photo_id,
+          COALESCE(CASE WHEN latest.has_correction THEN latest.corrected_value END, pb.digits) AS digits,
+          pb.source::text AS source,
+          pb.confidence::text AS confidence,
+          pb.status::text AS status,
+          COALESCE(latest.has_correction, FALSE) AS corrected
+        FROM photo_bibs pb
+        LEFT JOIN LATERAL (
+          SELECT new_value AS corrected_value, TRUE AS has_correction
+          FROM corrections
+          WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
+          ORDER BY corrected_at DESC LIMIT 1
+        ) latest ON TRUE
+        WHERE pb.deleted_at IS NULL AND pb.photo_id = ANY(${ids}::uuid[])
+        ORDER BY pb.created_at ASC
+      `),
+      this.prisma.$queryRaw<Array<{ photo_id: string }>>(Prisma.sql`
+        SELECT DISTINCT oi.photo_id
+        FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id
+        WHERE oi.photo_id = ANY(${ids}::uuid[])
+          AND o.status IN ('paid', 'delivered')
+      `),
+    ])
+
+    const bibsByPhoto = bibRows.reduce((acc, r) => {
+      const list = acc.get(r.photo_id) ?? []
+      list.push({
+        digits: r.digits,
+        source: r.source,
+        confidence: r.confidence === null ? null : Number(r.confidence),
+        status: r.status,
+        corrected: r.corrected,
+      })
+      acc.set(r.photo_id, list)
+      return acc
+    }, new Map<string, PhotoListBib[]>())
+
+    const soldIds = new Set(soldRows.map((r) => r.photo_id))
+
+    return rows.map((r) =>
+      PhotoMapper.toListProjection(r, this.cdn, bibsByPhoto.get(r.id) ?? [], soldIds.has(r.id)),
     )
   }
 
@@ -120,10 +422,15 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       where: { id, event: scope.toPrisma() },
       select: PhotoMapper.photoDetailSelectConfig,
     })
+    if (!record) return null
 
-    return record
-      ? await PhotoMapper.toDetailProjection(record, this.cdn, this.storage, this.correctionRepo)
-      : null
+    const projection = await PhotoMapper.toDetailProjection(
+      record,
+      this.cdn,
+      this.storage,
+      this.correctionRepo,
+    )
+    return this.enrichDetailProjection(record, projection)
   }
 
   /** Retrieves a single photo's detail by public slug (admin/operator). */
@@ -135,10 +442,96 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       where: { public_slug: slug, event: scope.toPrisma() },
       select: PhotoMapper.photoDetailSelectConfig,
     })
+    if (!record) return null
 
-    return record
-      ? await PhotoMapper.toDetailProjection(record, this.cdn, this.storage, this.correctionRepo)
-      : null
+    const projection = await PhotoMapper.toDetailProjection(
+      record,
+      this.cdn,
+      this.storage,
+      this.correctionRepo,
+    )
+    return this.enrichDetailProjection(record, projection)
+  }
+
+  /**
+   * Attaches paid/delivered orders, the photo's rank within its event, and the corrector's
+   * name per bib onto an already-built detail projection.
+   */
+  async enrichDetailProjection(
+    record: PhotoMapper.PhotoDetailSelect,
+    projection: PhotoDetailProjection,
+  ): Promise<PhotoDetailProjection> {
+    const photoId = record.id
+    const eventId = record.event_id
+
+    const [orderRows, windowRows, correctorRows] = await Promise.all([
+      this.prisma.$queryRaw<
+        Array<{ id: string; buyer_name: string; created_at: Date; status: string }>
+      >(
+        Prisma.sql`
+        SELECT o.id,
+               COALESCE(NULLIF(TRIM(CONCAT(o.snap_first_name, ' ', o.snap_last_name)), ''), u.email) AS buyer_name,
+               o.created_at,
+               o.status::text AS status
+        FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id
+        JOIN users u ON u.id = o.user_id
+        WHERE oi.photo_id = ${photoId}::uuid AND o.status IN ('paid', 'delivered')
+        ORDER BY o.created_at DESC
+      `,
+      ),
+      this.prisma.$queryRaw<
+        Array<{
+          position: number
+          total: number
+          prev_slug: string | null
+          next_slug: string | null
+        }>
+      >(Prisma.sql`
+        WITH ranked AS (
+          SELECT id, public_slug,
+                 ROW_NUMBER() OVER (ORDER BY uploaded_at DESC, id ASC)::int AS rn,
+                 LAG(public_slug) OVER (ORDER BY uploaded_at DESC, id ASC) AS prev_slug,
+                 LEAD(public_slug) OVER (ORDER BY uploaded_at DESC, id ASC) AS next_slug,
+                 COUNT(*) OVER ()::int AS total
+          FROM photos WHERE event_id = ${eventId}::uuid
+        )
+        SELECT rn AS position, total, prev_slug, next_slug FROM ranked WHERE id = ${photoId}::uuid
+      `),
+      this.prisma.$queryRaw<Array<{ bib_id: string; name: string }>>(Prisma.sql`
+        SELECT pb.id AS bib_id,
+               COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) AS name
+        FROM photo_bibs pb
+        LEFT JOIN LATERAL (
+          SELECT reviewer_id FROM corrections
+          WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
+          ORDER BY corrected_at DESC LIMIT 1
+        ) latest ON TRUE
+        JOIN users u ON u.id = COALESCE(latest.reviewer_id, pb.created_by_id)
+        WHERE pb.photo_id = ${photoId}::uuid AND pb.deleted_at IS NULL
+      `),
+    ])
+
+    const [windowRow] = windowRows
+    const correctorByBibId = new Map(correctorRows.map((r) => [r.bib_id, r.name]))
+
+    return {
+      ...projection,
+      orders: orderRows.map((r) => ({
+        id: r.id,
+        buyerName: r.buyer_name,
+        createdAt: r.created_at,
+        status: r.status,
+      })),
+      position: windowRow?.position ?? 1,
+      eventPhotoCount: windowRow?.total ?? 1,
+      previousSlug: windowRow?.prev_slug ?? null,
+      nextSlug: windowRow?.next_slug ?? null,
+      bibs: projection.bibs.map((b) => ({
+        ...b,
+        correctedByName: correctorByBibId.get(b.id) ?? null,
+      })),
+    }
   }
 
   /** Retrieves a lightweight photo view by public slug. */
@@ -177,11 +570,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       this.prisma.photo.count({ where }),
     ])
 
-    return new PaginatedResult(
-      photos.map((p) => PhotoMapper.toListProjection(p, this.cdn)),
-      total,
-      pagination,
-    )
+    return new PaginatedResult(await this.enrichListProjections(photos), total, pagination)
   }
 
   /** Returns the total file size (in bytes) for a single event's photos. */
@@ -209,6 +598,13 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   /** Counts photos inside `scope` (all of them for an unrestricted/platform caller). */
   async countAll(scope: EventScope): Promise<number> {
     return this.prisma.photo.count({ where: { event: scope.toPrisma() } })
+  }
+
+  /** Counts photos inside `scope` that no operator has marked reviewed yet. */
+  async countPendingReview(scope: EventScope): Promise<number> {
+    return this.prisma.photo.count({
+      where: { event: scope.toPrisma(), status: { not: PhotoStatus.reviewed } },
+    })
   }
 
   /** Returns the sum of file sizes (bytes) for photos inside `scope`. */
@@ -517,6 +913,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
         await this.findPhotoIdsMatchingBibDigits(
           filters.plateNumber as string,
           filters.bibMatch ?? 'exact',
+          filters.eventId,
         ),
       )
     }
@@ -530,20 +927,26 @@ export class PhotoReadRepository implements IPhotoReadRepository {
     return [...first].filter((id) => rest.every((s) => s.has(id)))
   }
 
-  /** Returns photo ids whose effective (latest-correction) bib digits match. */
+  /**
+   * Returns photo ids whose effective (latest-correction) bib digits match.
+   * When `eventId` is set (gallery list), the match is scoped to that event.
+   */
   private async findPhotoIdsMatchingBibDigits(
     value: string,
     match: 'exact' | 'starts' | 'contains',
+    eventId?: string,
   ): Promise<Set<string>> {
     const escaped = value.replace(/[\\%_]/g, (c) => `\\${c}`)
     const pattern =
       match === 'starts' ? `${escaped}%` : match === 'contains' ? `%${escaped}%` : escaped
+    const eventFilter = eventId ? Prisma.sql`AND p.event_id = ${eventId}::uuid` : Prisma.empty
 
     const sql =
       match === 'exact'
         ? Prisma.sql`
             SELECT DISTINCT pb.photo_id
             FROM photo_bibs pb
+            JOIN photos p ON p.id = pb.photo_id
             LEFT JOIN LATERAL (
               SELECT new_value AS corrected_value, TRUE AS has_correction
               FROM corrections
@@ -551,6 +954,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
               ORDER BY corrected_at DESC LIMIT 1
             ) latest ON TRUE
             WHERE pb.deleted_at IS NULL
+              ${eventFilter}
               AND LOWER(
                 CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
               ) = LOWER(${value})
@@ -558,6 +962,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
         : Prisma.sql`
             SELECT DISTINCT pb.photo_id
             FROM photo_bibs pb
+            JOIN photos p ON p.id = pb.photo_id
             LEFT JOIN LATERAL (
               SELECT new_value AS corrected_value, TRUE AS has_correction
               FROM corrections
@@ -565,6 +970,7 @@ export class PhotoReadRepository implements IPhotoReadRepository {
               ORDER BY corrected_at DESC LIMIT 1
             ) latest ON TRUE
             WHERE pb.deleted_at IS NULL
+              ${eventFilter}
               AND (
                 CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
               ) ILIKE ${pattern} ESCAPE '\\'

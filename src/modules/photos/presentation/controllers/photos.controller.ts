@@ -31,6 +31,7 @@ import {
 import {
   ConfirmBatchProjection,
   DownloadUrlProjection,
+  GalleryFacetsProjection,
   PendingRetouchOrderProjection,
   PhotoDetailProjection,
   PhotoListProjection,
@@ -53,6 +54,7 @@ import {
   SearchPhotosQuery,
 } from '@photos/application/queries'
 import { GetDownloadManifestQuery } from '@photos/application/queries/get-download-manifest/get-download-manifest.query'
+import { GetGalleryFacetsQuery } from '@photos/application/queries/get-gallery-facets/get-gallery-facets.query'
 import { GetPhotoViewQuery } from '@photos/application/queries/get-photo-view/get-photo-view.query'
 import { GetResumePointQuery } from '@photos/application/queries/get-resume-point/get-resume-point.query'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
@@ -100,6 +102,22 @@ export class PhotosController {
     return this.queryBus.execute(new GetDownloadManifestQuery(eventId, user.userId))
   }
 
+  /** Event-wide counts for the gallery's filter panel. */
+  @RequirePermission('photo.read')
+  @AllowedWhenFrozen()
+  @Get('events/:eventId/photos/facets')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({ summary: 'Counts for the gallery filter panel' })
+  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Gallery facets',
+    type: GalleryFacetsProjection,
+  })
+  async facets(@Param('eventId') eventId: string, @CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetGalleryFacetsQuery(eventId, user.userId))
+  }
+
   /** Lists photos for a given event with pagination. */
   @RequirePermission('photo.read')
   @AllowedWhenFrozen()
@@ -118,15 +136,9 @@ export class PhotosController {
     @Query() dto: GetPhotosListDto,
     @CurrentUser() user: ICurrentUser,
   ) {
-    const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetPhotosListQuery(
-      eventId,
-      pagination,
-      dto.classified,
-      dto.photoCategoryId,
-      user.userId,
-    )
-    return this.queryBus.execute(query)
+    const { page, limit, ...filters } = dto
+    const pagination = new Pagination(page ?? 1, limit ?? 20)
+    return this.queryBus.execute(new GetPhotosListQuery(eventId, pagination, filters, user.userId))
   }
 
   /** Searches photos across events with multi-criteria filtering. */
