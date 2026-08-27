@@ -516,6 +516,8 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
     permission: 'tenant.read',
   },
   { method: 'GET', path: '/buyers', legacyMarker: 'admin', permission: 'buyer.read' },
+  { method: 'GET', path: '/buyers/stats', legacyMarker: 'admin', permission: 'buyer.read' },
+  { method: 'GET', path: '/buyers/:id', legacyMarker: 'admin', permission: 'buyer.read' },
   { method: 'GET', path: '/users/me/phones', legacyMarker: 'NONE', permission: 'AUTHENTICATED' },
   { method: 'POST', path: '/users/me/phones', legacyMarker: 'NONE', permission: 'AUTHENTICATED' },
   {

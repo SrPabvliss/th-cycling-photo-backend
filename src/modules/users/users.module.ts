@@ -27,7 +27,9 @@ import { SetPrimaryPhoneHandler } from './application/commands/set-primary-phone
 import { UpdateMyProfileHandler } from './application/commands/update-my-profile/update-my-profile.handler'
 import { UpdateUserHandler } from './application/commands/update-user/update-user.handler'
 import { UpdateUserPhoneHandler } from './application/commands/update-user-phone/update-user-phone.handler'
+import { GetBuyerDetailHandler } from './application/queries/get-buyer-detail/get-buyer-detail.handler'
 import { GetBuyersListHandler } from './application/queries/get-buyers-list/get-buyers-list.handler'
+import { GetBuyersStatsHandler } from './application/queries/get-buyers-stats/get-buyers-stats.handler'
 import { GetMyProfileHandler } from './application/queries/get-my-profile/get-my-profile.handler'
 import { GetUserDetailHandler } from './application/queries/get-user-detail/get-user-detail.handler'
 import { GetUserPhonesHandler } from './application/queries/get-user-phones/get-user-phones.handler'
@@ -49,6 +51,8 @@ const CommandHandlers = [
 ]
 const QueryHandlers = [
   GetBuyersListHandler,
+  GetBuyersStatsHandler,
+  GetBuyerDetailHandler,
   GetUsersListHandler,
   GetUserDetailHandler,
   GetUserPhonesHandler,

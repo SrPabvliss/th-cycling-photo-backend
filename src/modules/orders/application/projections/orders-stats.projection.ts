@@ -17,4 +17,23 @@ export class OrdersStatsProjection {
   cancelledCount: number
   /** Sum of subtotal across paid + delivered orders, as a Decimal string (e.g. "1234.50"). USD assumed. */
   totalRevenue: string
+  /** Orders in pending or payment_info_sent status */
+  openCount: number
+  /** Sum of subtotal across pending + payment_info_sent orders, as a Decimal string. */
+  openAmount: string
+  /** Orders paid or gifted with no delivery timestamp yet */
+  awaitingDeliveryCount: number
+  /** Tab counts for the in-scope non-draft population; `all` matches default Todos (excludes cancelled) */
+  tabs: OrdersStatsTabsProjection
+}
+
+export class OrdersStatsTabsProjection {
+  /** Non-draft, non-cancelled orders in scope (matches default "Todos" list) */
+  all: number
+  pending: number
+  paymentInfoSent: number
+  paid: number
+  delivered: number
+  gifted: number
+  cancelled: number
 }

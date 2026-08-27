@@ -1,3 +1,4 @@
+import { Prisma } from '@generated/prisma/client'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { OrderReadRepository } from './order-read.repository'
@@ -7,13 +8,14 @@ function buildRepository() {
   const findFirst = jest.fn().mockResolvedValue(null)
   const count = jest.fn().mockResolvedValue(0)
   const groupBy = jest.fn().mockResolvedValue([])
+  const aggregate = jest.fn().mockResolvedValue({ _sum: { subtotal: null } })
   const orderItemCount = jest.fn().mockResolvedValue(0)
   const orderItemFindMany = jest.fn().mockResolvedValue([])
   const paymentTransactionOrderCount = jest.fn().mockResolvedValue(0)
   const cdn = { galleryUrl: jest.fn((slug: string) => `https://cdn.test/gallery/${slug}.jpg`) }
 
   const prisma = {
-    order: { findMany, findFirst, count, groupBy },
+    order: { findMany, findFirst, count, groupBy, aggregate },
     orderItem: { count: orderItemCount, findMany: orderItemFindMany },
     paymentTransactionOrder: { count: paymentTransactionOrderCount },
   }
@@ -24,6 +26,7 @@ function buildRepository() {
     findFirst,
     count,
     groupBy,
+    aggregate,
     orderItemCount,
     orderItemFindMany,
     paymentTransactionOrderCount,
@@ -32,7 +35,7 @@ function buildRepository() {
 }
 
 describe('OrderReadRepository draft visibility', () => {
-  it('keeps drafts out of the operator list', async () => {
+  it('keeps drafts and cancelled out of the default Todos list', async () => {
     const { repository, findMany } = buildRepository()
 
     await repository.getList(
@@ -42,7 +45,7 @@ describe('OrderReadRepository draft visibility', () => {
     )
 
     const { where } = findMany.mock.calls[0][0]
-    expect(JSON.stringify(where)).toContain(OrderStatus.DRAFT)
+    expect(where.status).toEqual({ notIn: [OrderStatus.CANCELLED, OrderStatus.DRAFT] })
   })
 
   it('keeps drafts out of the status counters', async () => {
@@ -288,5 +291,87 @@ describe('OrderReadRepository buyer queries are deliberately ownership-scoped, n
     expect(scope.toPrisma()).toEqual({
       OR: [{ tenant_id: { in: [] } }, { id: { in: [] } }],
     })
+  })
+})
+
+describe('OrderReadRepository.getStats', () => {
+  it('excludes draft from the status groups, and never lists it in the open/awaiting status filters', async () => {
+    const { repository, groupBy, aggregate, count } = buildRepository()
+
+    await repository.getStats({}, EventScope.unrestricted())
+
+    expect(groupBy.mock.calls[0][0].where.status).toEqual({ not: OrderStatus.DRAFT })
+    expect(aggregate.mock.calls[0][0].where.status.in).not.toContain(OrderStatus.DRAFT)
+    expect(count.mock.calls[0][0].where.status.in).not.toContain(OrderStatus.DRAFT)
+  })
+
+  it('sums openAmount as a decimal string over pending and payment_info_sent only', async () => {
+    const { repository, aggregate } = buildRepository()
+    aggregate.mockResolvedValueOnce({ _sum: { subtotal: new Prisma.Decimal('12.10') } })
+    aggregate.mockResolvedValueOnce({ _sum: { subtotal: new Prisma.Decimal('45.00') } })
+
+    const stats = await repository.getStats({}, EventScope.unrestricted())
+
+    expect(aggregate.mock.calls[0][0].where.status).toEqual({
+      in: [OrderStatus.PENDING, OrderStatus.PAYMENT_INFO_SENT],
+    })
+    expect(stats.openAmount).toBe('12.10')
+    expect(typeof stats.openAmount).toBe('string')
+  })
+
+  it('returns "0.00" for openAmount when nothing is open, never a bare number', async () => {
+    const { repository, aggregate } = buildRepository()
+    aggregate.mockResolvedValue({ _sum: { subtotal: null } })
+
+    const stats = await repository.getStats({}, EventScope.unrestricted())
+
+    expect(stats.openAmount).toBe('0.00')
+  })
+
+  it('counts awaiting delivery as paid or gifted with no delivered_at', async () => {
+    const { repository, count } = buildRepository()
+    count.mockResolvedValue(2)
+
+    const stats = await repository.getStats({}, EventScope.unrestricted())
+
+    const { where } = count.mock.calls[0][0]
+    expect(where.status).toEqual({ in: [OrderStatus.PAID, OrderStatus.GIFTED] })
+    expect(where.delivered_at).toBeNull()
+    expect(stats.awaitingDeliveryCount).toBe(2)
+  })
+
+  it('builds the seven tabs from the status groups; tabs.all excludes cancelled', async () => {
+    const { repository, groupBy } = buildRepository()
+    groupBy.mockResolvedValue([
+      { status: OrderStatus.PENDING, _count: { id: 3 } },
+      { status: OrderStatus.PAYMENT_INFO_SENT, _count: { id: 1 } },
+      { status: OrderStatus.PAID, _count: { id: 2 } },
+      { status: OrderStatus.DELIVERED, _count: { id: 4 } },
+      { status: OrderStatus.GIFTED, _count: { id: 1 } },
+      { status: OrderStatus.CANCELLED, _count: { id: 5 } },
+    ])
+
+    const stats = await repository.getStats({}, EventScope.unrestricted())
+
+    expect(stats.tabs).toEqual({
+      all: 11,
+      pending: 3,
+      paymentInfoSent: 1,
+      paid: 2,
+      delivered: 4,
+      gifted: 1,
+      cancelled: 5,
+    })
+    expect(stats.openCount).toBe(4)
+  })
+
+  it('scopes by eventId and search without touching status', async () => {
+    const { repository, groupBy } = buildRepository()
+
+    await repository.getStats({ eventId: 'event-1', search: 'andrea' }, EventScope.unrestricted())
+
+    const { where } = groupBy.mock.calls[0][0]
+    expect(where.event_id).toBe('event-1')
+    expect(JSON.stringify(where.OR)).toContain('andrea')
   })
 })

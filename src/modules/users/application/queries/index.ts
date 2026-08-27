@@ -1,5 +1,7 @@
+export { GetBuyerDetailQuery } from './get-buyer-detail/get-buyer-detail.query'
 export { GetBuyersListDto } from './get-buyers-list/get-buyers-list.dto'
 export { GetBuyersListQuery } from './get-buyers-list/get-buyers-list.query'
+export { GetBuyersStatsQuery } from './get-buyers-stats/get-buyers-stats.query'
 export { GetMyProfileQuery } from './get-my-profile/get-my-profile.query'
 export { GetUserDetailQuery } from './get-user-detail/get-user-detail.query'
 export { GetUserPhonesQuery } from './get-user-phones/get-user-phones.query'

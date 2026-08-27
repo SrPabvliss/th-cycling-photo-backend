@@ -1,11 +1,28 @@
 import type { PaginatedResult, Pagination } from '@shared/application'
 import type {
+  BuyerDetailProjection,
   BuyerListProjection,
+  BuyersStatsProjection,
   MyProfileProjection,
   UserDetailProjection,
   UserListProjection,
 } from '../../application/projections'
 import type { User } from '../entities'
+
+export type BuyerListFilters = {
+  search?: string
+  purchase?: string
+  sort?: string
+  countryId?: number
+  provinceId?: number
+  registeredFrom?: Date
+  registeredTo?: Date
+  gender?: string
+  ageFrom?: number
+  ageTo?: number
+  emailVerified?: boolean
+  hasWhatsapp?: boolean
+}
 
 export interface IUserReadRepository {
   findById(id: string): Promise<User | null>
@@ -22,8 +39,10 @@ export interface IUserReadRepository {
   findActiveAdminIds(): Promise<string[]>
   getBuyersList(
     pagination: Pagination,
-    search?: string,
+    filters: BuyerListFilters,
   ): Promise<PaginatedResult<BuyerListProjection>>
+  getBuyersStats(filters: BuyerListFilters): Promise<BuyersStatsProjection>
+  getBuyerDetail(id: string): Promise<BuyerDetailProjection | null>
   getMyProfile(userId: string): Promise<MyProfileProjection | null>
 }
 

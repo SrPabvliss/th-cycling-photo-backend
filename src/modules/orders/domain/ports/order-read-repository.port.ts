@@ -5,18 +5,33 @@ import type {
   MyOrdersSummaryProjection,
   OrderDetailProjection,
   OrderListProjection,
+  OrdersStatsProjection,
   RetouchCompletedOrderProjection,
 } from '@orders/application/projections'
 import type { PendingRetouchOrderProjection } from '@photos/application/projections'
 import type { PaginatedResult, Pagination } from '@shared/application'
 import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { Order } from '../entities'
+import { OrderStatus, type OrderStatusType } from '../value-objects/order-status.vo'
 
 export type OrderListFilters = {
   eventId?: string
   status?: string
   search?: string
 }
+
+export const ORDER_TABS: ReadonlyArray<{
+  id: keyof OrdersStatsProjection['tabs']
+  status?: OrderStatusType
+}> = [
+  { id: 'all', status: undefined },
+  { id: 'pending', status: OrderStatus.PENDING },
+  { id: 'paymentInfoSent', status: OrderStatus.PAYMENT_INFO_SENT },
+  { id: 'paid', status: OrderStatus.PAID },
+  { id: 'delivered', status: OrderStatus.DELIVERED },
+  { id: 'gifted', status: OrderStatus.GIFTED },
+  { id: 'cancelled', status: OrderStatus.CANCELLED },
+]
 
 export interface IOrderReadRepository {
   findById(id: string): Promise<Order | null>
@@ -35,6 +50,13 @@ export interface IOrderReadRepository {
   countByStatus(eventId: string | undefined, scope: EventScope): Promise<Record<string, number>>
   /** Subtotal of paid + delivered orders in scope, optionally one event. Decimal string, '0' if none. */
   sumRevenue(eventId: string | undefined, scope: EventScope): Promise<string>
+  /**
+   * Order statistics: totals, the open/awaiting-delivery figures and the seven tab counts.
+   * Scoped to the caller, optionally to one event, optionally filtered by search. `filters.status`
+   * is accepted (callers reuse the same filter shape as `getList`) but deliberately ignored: the
+   * tabs partition one population, so selecting a tab must never move these figures.
+   */
+  getStats(filters: OrderListFilters, scope: EventScope): Promise<OrdersStatsProjection>
   existsByPreviewLinkId(previewLinkId: string): Promise<boolean>
   /** True if any order line item references this photo (blocks hard-delete). */
   existsByPhotoId(photoId: string): Promise<boolean>
