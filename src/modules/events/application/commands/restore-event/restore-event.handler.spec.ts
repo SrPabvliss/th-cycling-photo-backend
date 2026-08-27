@@ -63,9 +63,12 @@ describe('RestoreEventHandler', () => {
     } as unknown as jest.Mocked<IAuthorizationService>
 
     tenantRepo = {
-      checkQuota: jest
-        .fn()
-        .mockResolvedValue({ quota: 10, used: 10, isPlatform: false, defaultEventPhotoQuota: null }),
+      checkQuota: jest.fn().mockResolvedValue({
+        quota: 10,
+        used: 10,
+        isPlatform: false,
+        defaultEventPhotoQuota: null,
+      }),
     } as unknown as jest.Mocked<ITenantRepository>
 
     contractRepo = {

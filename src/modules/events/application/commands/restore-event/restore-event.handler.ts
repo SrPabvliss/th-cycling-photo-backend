@@ -41,7 +41,11 @@ export class RestoreEventHandler implements ICommandHandler<RestoreEventCommand>
     await this.authz.assert(command.userId, 'event.restore', event.id)
     event.assertNotFrozen()
 
-    await this.assertRestoreDoesNotOversubscribe(event.tenantId, event.photosUploaded, event.contractId)
+    await this.assertRestoreDoesNotOversubscribe(
+      event.tenantId,
+      event.photosUploaded,
+      event.contractId,
+    )
 
     event.restore()
     await this.writeRepo.save(event)
