@@ -67,13 +67,18 @@ export class OrdersController {
   @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Get order statistics, optionally scoped to an event' })
   @ApiQuery({ name: 'eventId', required: false, description: 'Scope stats to a single event' })
+  @ApiQuery({ name: 'search', required: false, description: 'Filter stats by customer search' })
   @ApiEnvelopeResponse({
     status: 200,
     description: 'Order statistics retrieved',
     type: OrdersStatsProjection,
   })
-  async getStats(@Query('eventId') eventId: string | undefined, @CurrentUser() user: ICurrentUser) {
-    return this.queryBus.execute(new GetOrdersStatsQuery(eventId, user.userId))
+  async getStats(
+    @Query('eventId') eventId: string | undefined,
+    @Query('search') search: string | undefined,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.queryBus.execute(new GetOrdersStatsQuery(eventId, user.userId, search))
   }
 
   @RequirePermission('order.read')

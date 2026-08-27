@@ -1,4 +1,4 @@
-import type { Prisma } from '@generated/prisma/client'
+import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import type {
   MyOrderCustomerState,
@@ -8,6 +8,7 @@ import type {
   MyOrdersSummaryProjection,
   OrderDetailProjection,
   OrderListProjection,
+  OrdersStatsProjection,
   RetouchCompletedOrderProjection,
 } from '@orders/application/projections'
 import type { Order } from '@orders/domain/entities'
@@ -28,6 +29,7 @@ const ORDER_LIST_SELECT = {
   notified_at: true,
   paid_at: true,
   delivered_at: true,
+  cancelled_at: true,
   snap_first_name: true,
   snap_last_name: true,
   snap_phone: true,
@@ -47,7 +49,7 @@ const ORDER_LIST_SELECT = {
       },
     },
   },
-  event: { select: { name: true } },
+  event: { select: { id: true, name: true } },
   _count: { select: { items: true } },
   delivery_link: { select: { id: true } },
   items: {
@@ -115,26 +117,10 @@ export class OrderReadRepository implements IOrderReadRepository {
           ? { in: [] }
           : (filters.status as Prisma.EnumOrderStatusFilter)
     } else {
+      // "Todos"/ALL excludes cancelled (and drafts). Cancelled only via the cancelled tab.
       where.status = { notIn: [OrderStatus.CANCELLED, OrderStatus.DRAFT] }
     }
-    if (filters.search) {
-      const term = filters.search
-      where.OR = [
-        { snap_first_name: { contains: term, mode: 'insensitive' } },
-        { snap_last_name: { contains: term, mode: 'insensitive' } },
-        { snap_phone: { contains: term, mode: 'insensitive' } },
-        { user: { first_name: { contains: term, mode: 'insensitive' } } },
-        { user: { last_name: { contains: term, mode: 'insensitive' } } },
-        { user: { email: { contains: term, mode: 'insensitive' } } },
-        {
-          user: {
-            phones: {
-              some: { phone_number: { contains: term, mode: 'insensitive' } },
-            },
-          },
-        },
-      ]
-    }
+    if (filters.search) where.OR = this.buildSearchOr(filters.search)
 
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
@@ -155,6 +141,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         notifiedAt: o.notified_at,
         paidAt: o.paid_at,
         deliveredAt: o.delivered_at,
+        cancelledAt: o.cancelled_at,
         userName: [o.snap_first_name, o.snap_last_name].filter(Boolean).join(' '),
         userId: o.user.id,
         customerFirstName: o.user.first_name,
@@ -162,6 +149,7 @@ export class OrderReadRepository implements IOrderReadRepository {
         customerEmail: o.user.email,
         customerPrimaryPhone: o.user.phones[0]?.phone_number ?? null,
         snapWhatsapp: o.snap_phone,
+        eventId: o.event.id,
         eventName: o.event.name,
         photoCount: o._count.items,
         subtotal: o.subtotal !== null ? o.subtotal.toString() : null,
@@ -200,8 +188,14 @@ export class OrderReadRepository implements IOrderReadRepository {
         subtotal: true,
         snap_currency: true,
         payment_method: true,
-        user: { select: { first_name: true, last_name: true } },
-        event: { select: { id: true, name: true } },
+        user: {
+          select: {
+            first_name: true,
+            last_name: true,
+            phones: { where: { is_primary: true }, select: { phone_number: true }, take: 1 },
+          },
+        },
+        event: { select: { id: true, name: true, tenant: { select: { name: true } } } },
         preview_link: { select: { token: true } },
         items: {
           select: {
@@ -244,6 +238,8 @@ export class OrderReadRepository implements IOrderReadRepository {
       snapEmail: record.snap_email,
       eventId: record.event.id,
       eventName: record.event.name,
+      organizerName: record.event.tenant.name,
+      customerPrimaryPhone: record.user.phones[0]?.phone_number ?? null,
       subtotal: record.subtotal !== null ? record.subtotal.toString() : null,
       snapCurrency: record.snap_currency,
       paymentMethod: record.payment_method,
@@ -298,6 +294,93 @@ export class OrderReadRepository implements IOrderReadRepository {
       },
     })
     return (result._sum.subtotal ?? 0).toString()
+  }
+
+  /** Builds the case-insensitive search fragment shared by the list and the stats queries. */
+  private buildSearchOr(term: string): Prisma.OrderWhereInput['OR'] {
+    return [
+      { snap_first_name: { contains: term, mode: 'insensitive' } },
+      { snap_last_name: { contains: term, mode: 'insensitive' } },
+      { snap_phone: { contains: term, mode: 'insensitive' } },
+      { user: { first_name: { contains: term, mode: 'insensitive' } } },
+      { user: { last_name: { contains: term, mode: 'insensitive' } } },
+      { user: { email: { contains: term, mode: 'insensitive' } } },
+      {
+        user: {
+          phones: {
+            some: { phone_number: { contains: term, mode: 'insensitive' } },
+          },
+        },
+      },
+    ]
+  }
+
+  /**
+   * Order statistics: totals, the open/awaiting-delivery figures and the seven tab counts.
+   * Scoped to the caller, optionally to one event, optionally filtered by search — but never by
+   * status: the tabs partition one population, so selecting a tab must not move these figures.
+   */
+  async getStats(filters: OrderListFilters, scope: EventScope): Promise<OrdersStatsProjection> {
+    const where: Prisma.OrderWhereInput = {
+      status: { not: OrderStatus.DRAFT },
+      event: scope.toPrisma(),
+      ...(filters.eventId ? { event_id: filters.eventId } : {}),
+      ...(filters.search ? { OR: this.buildSearchOr(filters.search) } : {}),
+    }
+
+    const [statusGroups, openAmountAgg, awaitingDeliveryCount, revenueAgg] = await Promise.all([
+      this.prisma.order.groupBy({ by: ['status'], where, _count: { id: true } }),
+      this.prisma.order.aggregate({
+        where: { ...where, status: { in: [OrderStatus.PENDING, OrderStatus.PAYMENT_INFO_SENT] } },
+        _sum: { subtotal: true },
+      }),
+      this.prisma.order.count({
+        where: {
+          ...where,
+          status: { in: [OrderStatus.PAID, OrderStatus.GIFTED] },
+          delivered_at: null,
+        },
+      }),
+      this.prisma.order.aggregate({
+        where: { ...where, status: { in: [OrderStatus.PAID, OrderStatus.DELIVERED] } },
+        _sum: { subtotal: true },
+      }),
+    ])
+
+    const countOf = (status: string) =>
+      statusGroups.find((g) => g.status === status)?._count.id ?? 0
+
+    const pending = countOf(OrderStatus.PENDING)
+    const paymentInfoSent = countOf(OrderStatus.PAYMENT_INFO_SENT)
+    const paid = countOf(OrderStatus.PAID)
+    const delivered = countOf(OrderStatus.DELIVERED)
+    const gifted = countOf(OrderStatus.GIFTED)
+    const cancelled = countOf(OrderStatus.CANCELLED)
+    const total = pending + paymentInfoSent + paid + delivered + gifted + cancelled
+
+    return {
+      totalOrders: total,
+      activeOrders: total - cancelled,
+      pendingCount: pending,
+      paymentInfoSentCount: paymentInfoSent,
+      paidCount: paid + delivered,
+      deliveredCount: delivered,
+      giftedCount: gifted,
+      cancelledCount: cancelled,
+      totalRevenue: (revenueAgg._sum.subtotal ?? new Prisma.Decimal(0)).toFixed(2),
+      openCount: pending + paymentInfoSent,
+      openAmount: (openAmountAgg._sum.subtotal ?? new Prisma.Decimal(0)).toFixed(2),
+      awaitingDeliveryCount,
+      tabs: {
+        all: total - cancelled,
+        pending,
+        paymentInfoSent,
+        paid,
+        delivered,
+        gifted,
+        cancelled,
+      },
+    }
   }
 
   /** Checks if an order already exists for a preview link. */

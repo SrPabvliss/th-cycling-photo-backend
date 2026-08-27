@@ -52,11 +52,14 @@ export class OrderDetailProjection {
   snapLastName: string | null
   /** Snap WhatsApp at time of order */
   snapWhatsapp: string | null
+  customerPrimaryPhone: string | null
   /** Snap email at time of order */
   snapEmail: string | null
   eventId: string
   /** Event name */
   eventName: string
+  /** Tenant that owns the order's event. Shown to TitanTV only. */
+  organizerName: string
   /** Order subtotal (Decimal serialized as string to preserve precision) */
   subtotal: string | null
   /** Currency code snapshot at time of order (e.g. USD) */

@@ -26,5 +26,5 @@ export { OrderListPreviewPhotoProjection, OrderListProjection } from './order-li
 export { OrderPaymentConfirmedProjection } from './order-payment-confirmed.projection'
 export { OrderPaymentMethodProjection } from './order-payment-method.projection'
 export { toOrderPayoutMethod } from './order-payout-method.mapper'
-export { OrdersStatsProjection } from './orders-stats.projection'
+export { OrdersStatsProjection, OrdersStatsTabsProjection } from './orders-stats.projection'
 export { RetouchCompletedOrderProjection } from './retouch-completed-order.projection'
