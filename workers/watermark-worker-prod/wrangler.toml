@@ -25,3 +25,4 @@ id = "39b5e4e4652645678ad93027d4b97c7e"
 
 # Required secrets: B2_KEY_ID, B2_APP_KEY, B2_BUCKET, B2_REGION,
 #   WATERMARK_OPACITY, DEFAULT_QUALITY, QR_WORKER_HOST, PUBLIC_DOMAIN
+# Optional: WATERMARK_TILE_WIDTH (px each mosaic tile is drawn at; defaults to 200)

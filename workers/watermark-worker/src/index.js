@@ -8,6 +8,11 @@ const ASSET_PRESETS = {
   'cover-lg': { width: 1200, quality: 85, fit: 'cover', format: 'auto' },
 }
 
+// Every gallery render is 800px wide, so a fixed tile width is what keeps the mosaic identical
+// across tenants: without it Cloudflare draws the PNG at its native pixel size, and a 2000px logo
+// covers the whole photo while a 100px one tiles into noise.
+const DEFAULT_WATERMARK_TILE_WIDTH = 200
+
 const INTERNAL_PRESETS = {
   thumb: { width: 400, quality: 80, fit: 'scale-down', format: 'auto' },
   workspace: { width: 1400, quality: 90, fit: 'scale-down', format: 'auto' },
@@ -181,6 +186,7 @@ async function fetchWatermarked(slug, env) {
             url: watermarkUrl,
             repeat: true,
             opacity: parseFloat(env.WATERMARK_OPACITY) || 0.3,
+            width: parseInt(env.WATERMARK_TILE_WIDTH, 10) || DEFAULT_WATERMARK_TILE_WIDTH,
           },
           {
             url: qrUrl,
