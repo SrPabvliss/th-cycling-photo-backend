@@ -1,0 +1,5 @@
+{
+  "duplicate_number": "You already registered this phone number",
+  "phone_number_invalid_length": "The phone number must be between 7 and 20 characters",
+  "label_invalid_length": "The label must be between 1 and 50 characters"
+}

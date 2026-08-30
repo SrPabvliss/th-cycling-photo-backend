@@ -834,6 +834,7 @@ model UserPhone {
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
+  @@unique([user_id, phone_number])
   @@index([user_id])
   // Unique partial index (user_id) WHERE is_primary = true created via raw SQL
   @@map("user_phones")
