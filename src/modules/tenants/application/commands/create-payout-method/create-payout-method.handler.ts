@@ -29,12 +29,16 @@ export class CreatePayoutMethodHandler implements ICommandHandler<CreatePayoutMe
     const tenantId = await this.userRepo.findTenantId(command.actorUserId)
     if (!tenantId) throw AppException.forbidden('tenant.not_a_tenant_member')
 
+    const existing = await this.repo.findByTenantId(tenantId)
+    if (existing.some((entry) => entry.provider === command.provider && entry.isActive)) {
+      throw AppException.businessRule('payment.payout_method_already_exists')
+    }
+
     const method =
       command.provider === PayoutProvider.PAYPHONE
         ? await this.buildPayphone(command, tenantId)
         : this.buildBankTransfer(command, tenantId)
 
-    const existing = await this.repo.findByTenantId(tenantId)
     const nextSortOrder = existing.reduce((max, m) => Math.max(max, m.sortOrder), -1) + 1
     method.reorder(nextSortOrder)
     await this.repo.save(method)
