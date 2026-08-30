@@ -116,7 +116,7 @@ export class UserWriteRepository implements IUserWriteRepository {
       const { countryId, provinceId, cantonId, birthDate, gender } = data.profile
 
       if (!existing) {
-        if (countryId === undefined) return
+        if (countryId === undefined) throw AppException.businessRule('user.country_required')
 
         await tx.customerProfile.create({
           data: {

@@ -6,5 +6,6 @@
   "already_deactivated": "La cuenta de usuario ya está desactivada",
   "already_active": "La cuenta de usuario ya está activa",
   "invalid_avatar_storage_key": "La clave de almacenamiento no corresponde a la ruta esperada para el avatar de este usuario",
-  "invalid_birth_date": "La fecha de nacimiento no es válida"
+  "invalid_birth_date": "La fecha de nacimiento no es válida",
+  "country_required": "Selecciona un país para guardar tus datos personales"
 }
