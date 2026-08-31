@@ -29,6 +29,7 @@ export class EventPayoutMethodProjection {
 export class EventConfigurationProjection {
   @ApiPropertyOptional({ nullable: true }) publicName: string | null
   @ApiPropertyOptional({ nullable: true }) watermarkStorageKey: string | null
+  @ApiPropertyOptional({ nullable: true }) watermarkUrl: string | null
   @ApiPropertyOptional({ nullable: true }) whatsappNumber: string | null
   @ApiProperty({ type: [EventPayoutMethodProjection] }) payoutMethods: EventPayoutMethodProjection[]
   @ApiProperty() isEditable: boolean

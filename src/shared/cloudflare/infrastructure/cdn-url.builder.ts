@@ -2,6 +2,10 @@ import { createHmac } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
+function versionOf(storageKey: string): string {
+  return encodeURIComponent(storageKey.split('/').pop() ?? '')
+}
+
 export type InternalPreset = 'thumb' | 'workspace' | 'embedding'
 export type AssetPreset = 'cover-sm' | 'cover-lg'
 
@@ -27,15 +31,35 @@ export class CdnUrlBuilder {
     return `${this.baseUrl}${pathname}${this.signUrl(pathname)}`
   }
 
-  /** Public event asset URL with optional Worker-handled preset. */
-  assetUrl(slug: string, preset?: AssetPreset): string {
+  /**
+   * Public event asset URL with optional Worker-handled preset. The crop origin rides in the query
+   * rather than in KV: Workers KV caches every read at the edge for at least a minute, so a
+   * re-framed cover kept serving the previous crop until that expired. In the URL it is read on the
+   * spot, and it doubles as the cache key, so a new framing is a new address.
+   */
+  assetUrl(slug: string, preset?: AssetPreset, gravity?: string | null): string {
     const presetSegment = preset ? `${preset}/` : ''
-    return `${this.baseUrl}/assets/${presetSegment}${slug}.jpg`
+    const query = gravity ? `?g=${encodeURIComponent(gravity)}` : ''
+    return `${this.baseUrl}/assets/${presetSegment}${slug}.jpg${query}`
+  }
+
+  /** Crop origin in the `XxY` shape the Worker parses, short enough to read in a URL. */
+  static focalGravity(focalX: number, focalY: number): string {
+    return `${focalX.toFixed(3)}x${focalY.toFixed(3)}`
   }
 
   watermarkUrl(tenantId: string, storageKey: string): string {
-    const version = encodeURIComponent(storageKey.split('/').pop() ?? '')
-    return `${this.baseUrl}/assets/wm-tenant-${tenantId}.png?v=${version}`
+    return `${this.baseUrl}/assets/wm-tenant-${tenantId}.png?v=${versionOf(storageKey)}`
+  }
+
+  /**
+   * An event keeps its own frozen copy of the watermark, published under the
+   * `wm-{eventId}` KV key. Resolving it through `watermarkUrl` would serve the
+   * tenant's current one instead, which is a different image as soon as the
+   * event was configured with its own.
+   */
+  eventWatermarkUrl(eventId: string, storageKey: string): string {
+    return `${this.baseUrl}/assets/wm-${eventId}.png?v=${versionOf(storageKey)}`
   }
 
   /**
