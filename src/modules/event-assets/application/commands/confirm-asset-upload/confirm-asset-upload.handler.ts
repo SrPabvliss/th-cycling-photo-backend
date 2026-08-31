@@ -64,17 +64,18 @@ export class ConfirmAssetUploadHandler implements ICommandHandler<ConfirmAssetUp
       storageKey: command.storageKey,
       fileSize: command.fileSize,
       mimeType: command.mimeType,
+      focalX: command.focalX,
+      focalY: command.focalY,
     })
+
+    // The Worker resolves assets by slug and never reads the database, so the storage key travels
+    // through KV. Publishing before persisting keeps the two in step: a KV failure leaves no row
+    // pointing at a slug the CDN cannot serve, and the upload can be retried. The reverse order
+    // used to swallow the error and hand back a cover nobody could load. The crop origin does not
+    // go here — it rides in the image URL, where a change is visible immediately.
+    await this.kvStorage.write(asset.publicSlug, asset.storageKey)
 
     const saved = await this.writeRepo.save(asset)
-
-    // Register slug→storage_key in Workers KV so the Worker can serve it under /assets/
-    await this.kvStorage.write(saved.publicSlug, saved.storageKey).catch((err) => {
-      this.logger.error(
-        'Failed to write KV mapping for asset — saved but CDN slug not registered',
-        err,
-      )
-    })
 
     return { id: saved.id }
   }

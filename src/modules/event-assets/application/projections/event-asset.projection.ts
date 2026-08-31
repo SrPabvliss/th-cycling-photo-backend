@@ -16,6 +16,12 @@ export class EventAssetProjection {
   @ApiPropertyOptional({ description: 'MIME type', example: 'image/jpeg' })
   mimeType: string | null
 
+  @ApiProperty({ description: 'Horizontal focal point, 0 = left, 1 = right' })
+  focalX: number
+
+  @ApiProperty({ description: 'Vertical focal point, 0 = top, 1 = bottom' })
+  focalY: number
+
   @ApiProperty({ description: 'When the asset was uploaded' })
   uploadedAt: Date
 }

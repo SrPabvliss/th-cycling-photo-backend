@@ -20,3 +20,17 @@ export function resolveWatermarkUrl(eventId, wmPath, publicDomain) {
   }
   return `https://${publicDomain}/assets/wm-${eventId}.png?v=${hashPath(wmPath)}`
 }
+
+/**
+ * The crop origin travels in the request rather than in KV. Workers KV caches every read at the
+ * edge for at least a minute, so a re-framed cover kept serving the previous crop until that
+ * expired; the query string is read on the spot and doubles as the cache key.
+ */
+export function gravityFromQuery(params) {
+  const raw = params.get('g')
+  if (!raw) return null
+
+  const [x, y] = raw.split('x').map(Number)
+  const isFraction = (value) => Number.isFinite(value) && value >= 0 && value <= 1
+  return isFraction(x) && isFraction(y) ? { x, y } : null
+}

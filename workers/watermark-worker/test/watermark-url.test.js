@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { eventIdFromObjectPath, resolveWatermarkUrl } from '../src/watermark-url.js'
+import {
+  eventIdFromObjectPath,
+  gravityFromQuery,
+  resolveWatermarkUrl,
+} from '../src/watermark-url.js'
 
 const DOMAIN = 'cdn-dev.titantv.com.ec'
 const FALLBACK = `https://${DOMAIN}/gallery/_assets/watermark.png?v=3`
@@ -34,4 +38,17 @@ test('the cache buster changes when the storage key changes', () => {
   const first = resolveWatermarkUrl('abc-123', 'tenants/t-1/watermark/aaa-logo.png', DOMAIN)
   const second = resolveWatermarkUrl('abc-123', 'tenants/t-1/watermark/bbb-logo.png', DOMAIN)
   assert.notEqual(first, second)
+})
+
+test('reads the crop origin from the request instead of KV', () => {
+  assert.deepEqual(gravityFromQuery(new URLSearchParams('g=0.315x0.383')), { x: 0.315, y: 0.383 })
+  assert.deepEqual(gravityFromQuery(new URLSearchParams('g=0x1')), { x: 0, y: 1 })
+})
+
+test('ignores a crop origin that is missing or out of range', () => {
+  assert.equal(gravityFromQuery(new URLSearchParams('')), null)
+  assert.equal(gravityFromQuery(new URLSearchParams('g=1.5x0.2')), null)
+  assert.equal(gravityFromQuery(new URLSearchParams('g=-0.1x0.2')), null)
+  assert.equal(gravityFromQuery(new URLSearchParams('g=abcxdef')), null)
+  assert.equal(gravityFromQuery(new URLSearchParams('g=0.5')), null)
 })

@@ -787,6 +787,8 @@ model EventAsset {
   public_slug String         @unique @db.VarChar(30)
   file_size   BigInt?
   mime_type   String?        @db.VarChar(50)
+  focal_x     Float          @default(0.5)
+  focal_y     Float          @default(0.5)
   uploaded_at DateTime       @default(now()) @db.Timestamptz
 
   event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)

@@ -10,6 +10,8 @@ export const eventAssetSelectConfig = {
   public_slug: true,
   file_size: true,
   mime_type: true,
+  focal_x: true,
+  focal_y: true,
   uploaded_at: true,
 } satisfies Prisma.EventAssetSelect
 
@@ -26,6 +28,8 @@ export function toPersistence(entity: EventAsset): Prisma.EventAssetUncheckedCre
     public_slug: entity.publicSlug,
     file_size: entity.fileSize,
     mime_type: entity.mimeType,
+    focal_x: entity.focalX,
+    focal_y: entity.focalY,
     uploaded_at: entity.uploadedAt,
   }
 }
@@ -39,6 +43,8 @@ export function toEntity(record: PrismaEventAsset): EventAsset {
     publicSlug: record.public_slug,
     fileSize: record.file_size,
     mimeType: record.mime_type,
+    focalX: record.focal_x,
+    focalY: record.focal_y,
     uploadedAt: record.uploaded_at,
   })
 }
@@ -50,6 +56,8 @@ export function toProjection(record: EventAssetSelect, url: string): EventAssetP
     url,
     fileSize: record.file_size ? Number(record.file_size) : null,
     mimeType: record.mime_type,
+    focalX: record.focal_x,
+    focalY: record.focal_y,
     uploadedAt: record.uploaded_at,
   }
 }

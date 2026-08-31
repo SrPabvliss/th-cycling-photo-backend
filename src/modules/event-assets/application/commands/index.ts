@@ -3,3 +3,5 @@ export { ConfirmAssetUploadDto } from './confirm-asset-upload/confirm-asset-uplo
 export { DeleteEventAssetCommand } from './delete-event-asset/delete-event-asset.command'
 export { GenerateAssetPresignedUrlCommand } from './generate-asset-presigned-url/generate-asset-presigned-url.command'
 export { GenerateAssetPresignedUrlDto } from './generate-asset-presigned-url/generate-asset-presigned-url.dto'
+export { SetAssetFocalPointCommand } from './set-asset-focal-point/set-asset-focal-point.command'
+export { SetAssetFocalPointDto } from './set-asset-focal-point/set-asset-focal-point.dto'
