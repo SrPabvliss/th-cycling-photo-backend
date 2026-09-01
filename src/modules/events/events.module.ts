@@ -66,6 +66,7 @@ const QueryHandlers = [
 import { ImagesModule } from '@shared/images'
 import { ContractsModule } from '../contracts/contracts.module'
 import { TenantsModule } from '../tenants/tenants.module'
+import { EventBankAccountService } from './application/services/event-bank-account.service'
 @Module({
   imports: [
     ImagesModule,
@@ -82,6 +83,7 @@ import { TenantsModule } from '../tenants/tenants.module'
     ...QueryHandlers,
     EventConfigurationService,
     FreezeStateService,
+    EventBankAccountService,
     { provide: EVENT_READ_REPOSITORY, useClass: EventReadRepository },
     { provide: EVENT_WRITE_REPOSITORY, useClass: EventWriteRepository },
     { provide: EVENT_OPERATOR_REPOSITORY, useClass: EventOperatorRepository },
@@ -93,6 +95,7 @@ import { TenantsModule } from '../tenants/tenants.module'
     EVENT_OPERATOR_REPOSITORY,
     EVENT_PAYOUT_METHOD_REPOSITORY,
     FreezeStateService,
+    EventBankAccountService,
   ],
 })
 export class EventsModule {}
