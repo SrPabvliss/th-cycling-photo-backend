@@ -3,9 +3,9 @@ import type {
   MyOrderDownloadRaw,
   MyOrderListProjection,
   MyOrdersSummaryProjection,
-  OrderDetailProjection,
   OrderListProjection,
   OrdersStatsProjection,
+  RawOrderDetailProjection,
   RetouchCompletedOrderProjection,
 } from '@orders/application/projections'
 import type { PendingRetouchOrderProjection } from '@photos/application/projections'
@@ -46,7 +46,7 @@ export interface IOrderReadRepository {
     filters: OrderListFilters,
     scope: EventScope,
   ): Promise<PaginatedResult<OrderListProjection>>
-  getDetail(id: string, scope: EventScope): Promise<OrderDetailProjection | null>
+  getDetail(id: string, scope: EventScope): Promise<RawOrderDetailProjection | null>
   countByStatus(eventId: string | undefined, scope: EventScope): Promise<Record<string, number>>
   /** Subtotal of paid + delivered orders in scope, optionally one event. Decimal string, '0' if none. */
   sumRevenue(eventId: string | undefined, scope: EventScope): Promise<string>

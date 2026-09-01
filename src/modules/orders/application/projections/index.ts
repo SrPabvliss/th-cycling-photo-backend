@@ -16,6 +16,7 @@ export {
   MyOrdersSpentProjection,
   MyOrdersSummaryProjection,
 } from './my-orders-summary.projection'
+export type { RawOrderDetailProjection } from './order-detail.projection'
 export {
   OrderDeliveryLinkProjection,
   OrderDetailProjection,
@@ -27,4 +28,5 @@ export { OrderPaymentConfirmedProjection } from './order-payment-confirmed.proje
 export { OrderPaymentMethodProjection } from './order-payment-method.projection'
 export { toOrderPayoutMethod } from './order-payout-method.mapper'
 export { OrdersStatsProjection, OrdersStatsTabsProjection } from './orders-stats.projection'
+export { PaymentInfoNotifiedProjection } from './payment-info-notified.projection'
 export { RetouchCompletedOrderProjection } from './retouch-completed-order.projection'

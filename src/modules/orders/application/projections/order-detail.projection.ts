@@ -25,6 +25,16 @@ export class OrderDeliveryLinkProjection {
   status: string
   expiresAt: Date
   downloadCount: number
+  /** Ready-to-send message for this link. Built here so every send point says the same thing. */
+  whatsappTemplate: string
+}
+
+/**
+ * What the repository can read. The message needs the public delivery base URL, which is
+ * configuration, so only the query handler can finish the projection.
+ */
+export type RawOrderDetailProjection = Omit<OrderDetailProjection, 'deliveryLink'> & {
+  deliveryLink: Omit<OrderDeliveryLinkProjection, 'whatsappTemplate'> | null
 }
 
 export class OrderDetailProjection {

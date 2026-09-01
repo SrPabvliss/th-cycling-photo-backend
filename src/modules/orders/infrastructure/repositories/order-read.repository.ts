@@ -6,9 +6,9 @@ import type {
   MyOrderDownloadRaw,
   MyOrderListProjection,
   MyOrdersSummaryProjection,
-  OrderDetailProjection,
   OrderListProjection,
   OrdersStatsProjection,
+  RawOrderDetailProjection,
   RetouchCompletedOrderProjection,
 } from '@orders/application/projections'
 import type { Order } from '@orders/domain/entities'
@@ -168,7 +168,7 @@ export class OrderReadRepository implements IOrderReadRepository {
   }
 
   /** Retrieves order detail with user, photos, and delivery link, scoped to the caller. */
-  async getDetail(id: string, scope: EventScope): Promise<OrderDetailProjection | null> {
+  async getDetail(id: string, scope: EventScope): Promise<RawOrderDetailProjection | null> {
     const record = await this.prisma.order.findFirst({
       where: { id, status: { not: OrderStatus.DRAFT }, event: scope.toPrisma() },
       select: {
