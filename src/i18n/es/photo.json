@@ -5,5 +5,7 @@
   "plate_number_out_of_range": "El número de placa debe estar entre 1 y 999",
   "density_percentage_out_of_range": "El porcentaje de densidad debe estar entre 0 y 100",
   "invalid_object_key_prefix": "La clave del objeto no coincide con el prefijo esperado del evento",
-  "delete_blocked_referenced": "No se puede eliminar: la foto ya fue vendida o está en un enlace de preview"
+  "delete_blocked_referenced": "No se puede eliminar: la foto ya fue vendida o está en un enlace de preview",
+  "invalid_status_for_processing": "Esta foto no está en un estado que permita procesarla",
+  "processing_in_progress": "La foto se está procesando, espera a que termine"
 }

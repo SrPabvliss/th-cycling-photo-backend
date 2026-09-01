@@ -1,6 +1,7 @@
 import { assertEnvironmentMatchesDeployment } from '@shared/payment-gateways'
 import { plainToInstance } from 'class-transformer'
 import {
+  IsEmail,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -204,9 +205,9 @@ export class EnvironmentVariables {
   @IsNumber()
   PAYMENT_EXPIRY_SWEEP_DELAY_MS?: number
 
-  @IsString()
-  @IsNotEmpty()
-  PAYMENT_SYSTEM_USER_ID: string
+  /** Resolved to a user row at boot: an id would drift between environments, an email will not. */
+  @IsEmail()
+  PAYMENT_SYSTEM_USER_EMAIL: string
 }
 
 export function validate(config: Record<string, unknown>) {

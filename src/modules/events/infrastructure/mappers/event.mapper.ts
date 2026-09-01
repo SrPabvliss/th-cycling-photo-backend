@@ -9,13 +9,16 @@ import { Event } from '@events/domain/entities'
 import { type EventFacts, resolveEventAlert } from '@events/domain/event-alert'
 import type { EventStatusType } from '@events/domain/value-objects/event-status.vo'
 import { Prisma, type Event as PrismaEvent } from '@generated/prisma/client'
-import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import type { AssetPreset } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import type { EventAggregate } from '../repositories/event-aggregates'
 
 // --- Select shapes for Prisma queries ---
 
 export const coverImageAssetSelectConfig = {
   public_slug: true,
+  focal_x: true,
+  focal_y: true,
 } satisfies Prisma.EventAssetSelect
 
 export const eventListSelectConfig = {
@@ -115,7 +118,7 @@ export const publicEventDetailSelectConfig = {
   province: { select: { name: true } },
   canton: { select: { name: true } },
   _count: { select: { photos: true } },
-  assets: { select: { asset_type: true, public_slug: true } },
+  assets: { select: { asset_type: true, public_slug: true, focal_x: true, focal_y: true } },
   photo_categories: {
     select: { photo_category: { select: { id: true, name: true } } },
     orderBy: { photo_category: { name: 'asc' } },
@@ -193,12 +196,23 @@ function getCoverImageSlug(assets: { public_slug: string }[]): string | null {
   return assets[0]?.public_slug ?? null
 }
 
+type CoverAsset = { public_slug: string; focal_x: number; focal_y: number }
+
+function coverUrlOf(assets: CoverAsset[], cdn: CdnUrlBuilder, preset: AssetPreset): string | null {
+  const cover = assets[0]
+  if (!cover) return null
+  return cdn.assetUrl(
+    cover.public_slug,
+    preset,
+    CdnUrlBuilder.focalGravity(cover.focal_x, cover.focal_y),
+  )
+}
+
 /** Converts a Prisma record to a summary projection (cross-module shape). */
 export function toSummaryProjection(
   record: EventSummarySelect,
   cdn: CdnUrlBuilder,
 ): EventSummaryProjection {
-  const coverSlug = getCoverImageSlug(record.assets)
   const location = [record.canton?.name, record.province?.name].filter(Boolean).join(', ')
   return {
     id: record.id,
@@ -207,7 +221,7 @@ export function toSummaryProjection(
     startDate: record.start_date,
     endDate: record.end_date,
     location,
-    coverUrl: coverSlug ? cdn.assetUrl(coverSlug, 'cover-lg') : null,
+    coverUrl: coverUrlOf(record.assets, cdn, 'cover-lg'),
     totalPhotos: record._count.photos,
   }
 }
@@ -219,7 +233,7 @@ export function toListProjection(
   aggregate: EventAggregate,
 ): EventListProjection {
   const coverSlug = getCoverImageSlug(record.assets)
-  const coverUrl = coverSlug ? cdn.assetUrl(coverSlug, 'cover-sm') : null
+  const coverUrl = coverUrlOf(record.assets, cdn, 'cover-sm')
   const facts: EventFacts = {
     isArchived: record.deleted_at !== null,
     hasCover: coverSlug !== null,
@@ -267,7 +281,7 @@ export function toDetailProjection(
   cdn: CdnUrlBuilder,
 ): EventDetailProjection {
   const coverSlug = getCoverImageSlug(record.assets)
-  const coverUrl = coverSlug ? cdn.assetUrl(coverSlug, 'cover-lg') : null
+  const coverUrl = coverUrlOf(record.assets, cdn, 'cover-lg')
   return {
     id: record.id,
     slug: record.slug,

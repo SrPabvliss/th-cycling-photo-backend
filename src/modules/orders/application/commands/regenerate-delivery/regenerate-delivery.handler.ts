@@ -1,13 +1,10 @@
 import { CreateDeliveryLinkCommand } from '@deliveries/application/commands'
 import type { DeliveryLinkCreatedProjection } from '@deliveries/application/projections'
-import {
-  DELIVERY_LINK_WRITE_REPOSITORY,
-  type IDeliveryLinkWriteRepository,
-} from '@deliveries/domain/ports'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { OrderPaymentConfirmedProjection } from '@orders/application/projections'
 import { type IOrderReadRepository, ORDER_READ_REPOSITORY } from '@orders/domain/ports'
+import { buildDeliveryTemplate } from '@orders/domain/services/delivery-template'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import {
   AUTHORIZATION_SERVICE,
@@ -22,8 +19,6 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
 
   constructor(
     @Inject(ORDER_READ_REPOSITORY) private readonly orderReadRepo: IOrderReadRepository,
-    @Inject(DELIVERY_LINK_WRITE_REPOSITORY)
-    private readonly deliveryWriteRepo: IDeliveryLinkWriteRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly commandBus: CommandBus,
   ) {}
@@ -42,16 +37,14 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
       throw AppException.businessRule('order.not_delivered')
     }
 
-    // 3. Invalidate existing delivery link (safe even if already expired)
-    await this.deliveryWriteRepo.invalidateByOrderId(command.orderId)
-
-    // 4. Create new delivery link
+    // 3. Create the new delivery link. It replaces the old one in place; the
+    //    order keeps exactly one link, so nothing is invalidated beforehand.
     const deliveryResult = await this.commandBus.execute<
       CreateDeliveryLinkCommand,
       DeliveryLinkCreatedProjection
     >(new CreateDeliveryLinkCommand(order.id))
 
-    // 5. Audit log — captures who regenerated, when, for which order.
+    // 4. Audit log — captures who regenerated, when, for which order.
     //    Old token is not logged on purpose: leaking it to logs defeats
     //    the security purpose of regeneration.
     this.logger.log({
@@ -65,7 +58,10 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
     const detail = await this.orderReadRepo.getDetail(order.id, scope)
     const photoCount = detail?.photos.length ?? 0
     const customerFirstName = detail?.snapFirstName ?? ''
-    const whatsappTemplate = `¡Hola ${customerFirstName}! \u{1F504} Te enviamos un nuevo enlace de descarga para tus ${photoCount} fotos: ${deliveryResult.deliveryUrl}. Estará disponible por 7 días. ¡Gracias! \u{1F389}`
+    const whatsappTemplate = buildDeliveryTemplate(
+      { customerFirstName, photoCount, deliveryUrl: deliveryResult.deliveryUrl },
+      'regenerated',
+    )
 
     return {
       orderId: order.id,

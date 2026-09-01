@@ -25,4 +25,11 @@ export class UserPhoneReadRepository implements IUserPhoneReadRepository {
   async countByUserId(userId: string): Promise<number> {
     return this.prisma.userPhone.count({ where: { user_id: userId } })
   }
+
+  async findByUserIdAndNumber(userId: string, phoneNumber: string): Promise<UserPhone | null> {
+    const record = await this.prisma.userPhone.findFirst({
+      where: { user_id: userId, phone_number: phoneNumber },
+    })
+    return record ? UserPhoneMapper.toEntity(record) : null
+  }
 }

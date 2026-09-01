@@ -40,6 +40,7 @@ const cdn = {
 
 const buildStorage = (): jest.Mocked<IStorageAdapter> => ({
   upload: jest.fn(),
+  download: jest.fn(),
   getPresignedUrl: jest.fn(),
   getPresignedDownloadUrl: jest.fn(async ({ key }) => `https://signed/${key}?sig=x`),
   getPublicUrl: jest.fn(),

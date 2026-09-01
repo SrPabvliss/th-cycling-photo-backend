@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing'
 import { KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
+import { WatermarkNormalizer } from '@shared/images'
 import { STORAGE_ADAPTER } from '@shared/storage/domain/ports'
 import { USER_READ_REPOSITORY } from '@users/domain/ports'
 import { TenantProfile } from '../../../domain/entities/tenant-profile.entity'
@@ -33,6 +34,7 @@ describe('ConfirmWatermarkUploadHandler', () => {
       profileRepo as never,
       userRepo as never,
       kv as never,
+      { normalize: jest.fn().mockResolvedValue(undefined) } as never,
     )
   })
 
@@ -86,6 +88,7 @@ describe('ConfirmWatermarkUploadHandler', () => {
         { provide: USER_READ_REPOSITORY, useValue: userRepo },
         { provide: KV_STORAGE_ADAPTER, useValue: kv },
         { provide: STORAGE_ADAPTER, useValue: storage },
+        { provide: WatermarkNormalizer, useValue: { normalize: jest.fn() } },
       ],
     }).compile()
 

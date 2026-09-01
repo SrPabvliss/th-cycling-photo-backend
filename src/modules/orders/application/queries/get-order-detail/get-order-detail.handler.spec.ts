@@ -50,7 +50,12 @@ describe('GetOrderDetailHandler', () => {
     readRepo = { getDetail: jest.fn() }
     authz = { resolveEventScope: jest.fn(), can: jest.fn().mockResolvedValue(false) }
     payoutRepo = { findByEventId: jest.fn() }
-    handler = new GetOrderDetailHandler(readRepo as never, authz as never, payoutRepo as never)
+    handler = new GetOrderDetailHandler(
+      readRepo as never,
+      authz as never,
+      payoutRepo as never,
+      { getOrThrow: () => 'https://titan.tv/delivery' } as never,
+    )
   })
 
   it('returns the order detail when it is within the caller scope', async () => {
@@ -62,7 +67,7 @@ describe('GetOrderDetailHandler', () => {
     const result = await handler.execute(new GetOrderDetailQuery('order-1', 'u1'))
 
     expect(readRepo.getDetail).toHaveBeenCalledWith('order-1', scope)
-    expect(result).toBe(detail)
+    expect(result).toMatchObject(detail)
   })
 
   it('throws NOT_FOUND when the order does not exist', async () => {

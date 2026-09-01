@@ -2,7 +2,11 @@ import type { DeliveryLink } from '../entities'
 
 export interface IDeliveryLinkWriteRepository {
   save(deliveryLink: DeliveryLink): Promise<DeliveryLink>
-  invalidateByOrderId(orderId: string): Promise<void>
+  /**
+   * Overwrites the order's single delivery link with a new token, resetting the
+   * download history. `order_id` is unique: regeneration replaces, never adds.
+   */
+  replaceForOrder(deliveryLink: DeliveryLink): Promise<DeliveryLink>
   /**
    * Atomically increments `download_count` for the given link, enforcing
    * `maxAccesses` as a hard cap. Returns true if the access was recorded,

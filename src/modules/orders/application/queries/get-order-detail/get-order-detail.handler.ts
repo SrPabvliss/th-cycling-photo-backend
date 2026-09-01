@@ -3,9 +3,16 @@ import {
   type IEventPayoutMethodRepository,
 } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
-import { type OrderDetailProjection, toOrderPayoutMethod } from '@orders/application/projections'
+import {
+  type OrderDetailProjection,
+  type RawOrderDetailProjection,
+  toOrderPayoutMethod,
+} from '@orders/application/projections'
 import { type IOrderReadRepository, ORDER_READ_REPOSITORY } from '@orders/domain/ports'
+import { customerFirstName } from '@orders/domain/services/customer-name'
+import { buildDeliveryTemplate } from '@orders/domain/services/delivery-template'
 import {
   AUTHORIZATION_SERVICE,
   type IAuthorizationService,
@@ -20,7 +27,28 @@ export class GetOrderDetailHandler implements IQueryHandler<GetOrderDetailQuery>
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     @Inject(EVENT_PAYOUT_METHOD_REPOSITORY)
     private readonly payoutRepo: IEventPayoutMethodRepository,
+    private readonly config: ConfigService,
   ) {}
+
+  private withDeliveryTemplate(detail: RawOrderDetailProjection): OrderDetailProjection {
+    if (!detail.deliveryLink) return { ...detail, deliveryLink: null }
+
+    const baseUrl = this.config.getOrThrow<string>('delivery.baseUrl')
+    return {
+      ...detail,
+      deliveryLink: {
+        ...detail.deliveryLink,
+        whatsappTemplate: buildDeliveryTemplate(
+          {
+            customerFirstName: customerFirstName(detail),
+            photoCount: detail.photos?.length ?? 0,
+            deliveryUrl: `${baseUrl}/${detail.deliveryLink.token}`,
+          },
+          'resend',
+        ),
+      },
+    }
+  }
 
   /**
    * Retrieves a single order's detail, or throws 404 — including when the
@@ -32,13 +60,15 @@ export class GetOrderDetailHandler implements IQueryHandler<GetOrderDetailQuery>
     const detail = await this.readRepo.getDetail(query.orderId, scope)
     if (!detail) throw AppException.notFound('entities.order', query.orderId)
 
+    const withTemplate = this.withDeliveryTemplate(detail)
+
     const canSeePayout = await this.authz.can(query.userId, 'order.notify_payment', detail.eventId)
-    if (!canSeePayout) return detail
+    if (!canSeePayout) return withTemplate
 
     // the event snapshot, never the live tenant: editing the profile must not change an issued order
     const methods = await this.payoutRepo.findByEventId(detail.eventId)
     return {
-      ...detail,
+      ...withTemplate,
       payoutMethods: methods.filter((m) => m.isActive).map(toOrderPayoutMethod),
     }
   }

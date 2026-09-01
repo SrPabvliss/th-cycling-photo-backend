@@ -2,6 +2,7 @@ import { EventPayoutMethod } from '@events/domain/entities'
 import type { EventBrandSnapshot } from '@events/domain/value-objects/event-brand-snapshot.vo'
 import { Inject, Injectable } from '@nestjs/common'
 import { AppException } from '@shared/domain'
+import { WatermarkNormalizer } from '@shared/images'
 import {
   normalizeEcuadorPhone,
   PAYMENT_GATEWAY_REGISTRY,
@@ -76,7 +77,18 @@ export class EventConfigurationService {
     private readonly payoutRepo: ITenantPayoutMethodRepository,
     @Inject(PAYMENT_GATEWAY_REGISTRY)
     private readonly registry: PaymentGatewayRegistry,
+    private readonly watermarkNormalizer: WatermarkNormalizer,
   ) {}
+
+  /**
+   * A watermark the organiser uploads for this event alone never passes through the profile, so
+   * this is the only place its margin can be fixed before the gallery starts drawing it.
+   */
+  private async giveWatermarkRoom(selection?: ConfigurationSelection): Promise<void> {
+    if (selection?.watermarkStorageKey) {
+      await this.watermarkNormalizer.normalize(selection.watermarkStorageKey)
+    }
+  }
 
   async verifyNewPayphones(payoutMethods?: EventPayoutSelection[]): Promise<void> {
     const newPayphones = (payoutMethods ?? []).filter(
@@ -157,6 +169,7 @@ export class EventConfigurationService {
     ])
 
     this.assertWatermarkOwned(selection, tenantId)
+    await this.giveWatermarkRoom(selection)
 
     return this.build(eventId, selection, methods, [], {
       publicName: profile?.publicName ?? null,
@@ -173,6 +186,7 @@ export class EventConfigurationService {
   ): Promise<RematerialisedConfiguration> {
     if (selection.watermarkStorageKey !== undefined) {
       this.assertWatermarkOwned(selection, event.tenantId)
+      await this.giveWatermarkRoom(selection)
     }
 
     if (selection.payoutMethods === undefined) {

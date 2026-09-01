@@ -64,9 +64,14 @@ describe('GetEventConfigurationPresetHandler', () => {
         ]),
     } as unknown as jest.Mocked<ITenantPayoutMethodRepository>
 
-    configService = new EventConfigurationService(profileRepo, payoutRepo, {
-      get: jest.fn(),
-    } as never)
+    configService = new EventConfigurationService(
+      profileRepo,
+      payoutRepo,
+      { get: jest.fn() } as never,
+      {
+        normalize: jest.fn().mockResolvedValue(undefined),
+      } as never,
+    )
     cdn = {
       watermarkUrl: jest.fn().mockReturnValue('https://cdn.example.com/assets/watermark.png'),
     } as unknown as CdnUrlBuilder

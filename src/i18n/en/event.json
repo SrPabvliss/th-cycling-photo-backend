@@ -15,5 +15,6 @@
   "photo_quota_exceeded": "This event allows {quota} photos and {used} are already used. You can upload {remaining} more.",
   "tenant_quota_exceeded": "Your plan allows {quota} events and all of them are in use. Contact TitanTV to increase the quota.",
   "watermark_not_owned": "The selected watermark does not belong to your organisation",
-  "no_contract_available": "You do not have an active contract with an available slot to create an event. Contact TitanTV."
+  "no_contract_available": "You do not have an active contract with an available slot to create an event. Contact TitanTV.",
+  "date_range_invalid": "The end date cannot be earlier than the start date"
 }

@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger'
-import { IsIn, IsNotEmpty, IsString, MaxLength } from 'class-validator'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator'
 
 const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
 
@@ -21,4 +21,14 @@ export class GeneratePresignedUrlDto {
   @IsString()
   @IsIn(ALLOWED_CONTENT_TYPES)
   contentType: string
+
+  @ApiPropertyOptional({
+    description: 'How many files the caller intends to upload in this batch',
+    example: 40,
+    minimum: 1,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  batchSize?: number
 }

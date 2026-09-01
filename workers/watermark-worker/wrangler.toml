@@ -26,3 +26,4 @@ id = "2d500704ffd7413ca3401e6c08b1f8f3"
 # All sensitive vars go in .dev.vars (local) or wrangler secret (production)
 # Required secrets: B2_KEY_ID, B2_APP_KEY, B2_BUCKET, B2_REGION,
 #   WATERMARK_OPACITY, DEFAULT_QUALITY, QR_WORKER_HOST, PUBLIC_DOMAIN
+# Optional: WATERMARK_TILE_WIDTH (px each mosaic tile is drawn at; defaults to 200)

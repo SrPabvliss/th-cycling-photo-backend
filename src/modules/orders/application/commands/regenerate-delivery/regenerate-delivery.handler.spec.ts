@@ -27,7 +27,6 @@ describe('RegenerateDeliveryHandler', () => {
       findByIdInScope: jest.fn(),
       getDetail: jest.fn().mockResolvedValue(null),
     }
-    const deliveryWriteRepo = { invalidateByOrderId: jest.fn().mockResolvedValue(undefined) }
     const authz = {
       can: jest.fn(),
       assert: jest.fn().mockResolvedValue(undefined),
@@ -38,26 +37,25 @@ describe('RegenerateDeliveryHandler', () => {
     }
     const handler = new RegenerateDeliveryHandler(
       orderReadRepo as never,
-      deliveryWriteRepo as never,
       authz,
       commandBus as never,
     )
-    return { orderReadRepo, deliveryWriteRepo, authz, commandBus, handler }
+    return { orderReadRepo, authz, commandBus, handler }
   }
 
   it('throws when the order does not exist', async () => {
-    const { orderReadRepo, deliveryWriteRepo, authz, handler } = buildHandler()
+    const { orderReadRepo, commandBus, authz, handler } = buildHandler()
     orderReadRepo.findByIdInScope.mockResolvedValue(null)
 
     await expect(handler.execute(new RegenerateDeliveryCommand('missing', audit))).rejects.toThrow(
       AppException,
     )
-    expect(deliveryWriteRepo.invalidateByOrderId).not.toHaveBeenCalled()
+    expect(commandBus.execute).not.toHaveBeenCalled()
     expect(authz.assert).not.toHaveBeenCalled()
   })
 
   it('throws NOT_FOUND — not FORBIDDEN — when the order exists but its event is outside the caller scope', async () => {
-    const { orderReadRepo, deliveryWriteRepo, authz, handler } = buildHandler()
+    const { orderReadRepo, commandBus, authz, handler } = buildHandler()
     const restrictedScope = new EventScope(false, ['my-tenant'], [])
     authz.resolveEventScope.mockResolvedValueOnce(restrictedScope)
     orderReadRepo.findByIdInScope.mockResolvedValue(null)
@@ -73,18 +71,18 @@ describe('RegenerateDeliveryHandler', () => {
       restrictedScope,
     )
     expect(authz.assert).not.toHaveBeenCalled()
-    expect(deliveryWriteRepo.invalidateByOrderId).not.toHaveBeenCalled()
+    expect(commandBus.execute).not.toHaveBeenCalled()
   })
 
   it('regenerates the delivery link for a delivered order and re-fetches detail with the same scope', async () => {
-    const { orderReadRepo, deliveryWriteRepo, authz, handler } = buildHandler()
+    const { orderReadRepo, commandBus, authz, handler } = buildHandler()
     const order = buildDeliveredOrder()
     orderReadRepo.findByIdInScope.mockResolvedValue(order)
 
     const result = await handler.execute(new RegenerateDeliveryCommand(order.id, audit))
 
     expect(authz.assert).toHaveBeenCalledWith('admin-1', 'order.delivery.regenerate', 'event-1')
-    expect(deliveryWriteRepo.invalidateByOrderId).toHaveBeenCalledWith(order.id)
+    expect(commandBus.execute).toHaveBeenCalledTimes(1)
     expect(orderReadRepo.getDetail).toHaveBeenCalledWith(order.id, unrestrictedScope)
     expect(result.orderId).toBe(order.id)
   })

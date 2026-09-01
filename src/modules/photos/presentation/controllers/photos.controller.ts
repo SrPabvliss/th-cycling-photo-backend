@@ -466,6 +466,7 @@ export class PhotosController {
       dto.fileName,
       dto.contentType,
       user.userId,
+      dto.batchSize ?? 1,
     )
     return this.commandBus.execute(command)
   }

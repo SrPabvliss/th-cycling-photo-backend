@@ -60,6 +60,7 @@ describe('ConfirmAssetUploadHandler', () => {
 
     kvStorage = {
       write: jest.fn().mockResolvedValue(undefined),
+      writeBulk: jest.fn().mockResolvedValue(undefined),
       delete: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IKvStorageAdapter>
 

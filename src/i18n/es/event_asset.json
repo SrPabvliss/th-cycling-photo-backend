@@ -1,4 +1,5 @@
 {
   "unsupported_type": "Sólo se permite subir imágenes de portada (cover_image).",
-  "invalid_storage_key": "La clave de almacenamiento no coincide con la ruta esperada para este recurso del evento."
+  "invalid_storage_key": "La clave de almacenamiento no coincide con la ruta esperada para este recurso del evento.",
+  "invalid_focal_point": "El punto de encuadre debe estar entre 0 y 1 en los dos ejes"
 }

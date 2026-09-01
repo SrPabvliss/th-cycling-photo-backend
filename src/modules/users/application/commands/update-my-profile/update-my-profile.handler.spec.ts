@@ -123,7 +123,7 @@ describe('UpdateMyProfileHandler', () => {
     expect(locationValidator.validateFull).toHaveBeenCalledWith(63, 18, 180150)
   })
 
-  it('updates only the names for a user without the customer role', async () => {
+  it('stores the personal profile for a user without the customer role', async () => {
     readRepo.getUserDetail.mockResolvedValue(buildAdmin())
 
     await handler.execute(
@@ -133,9 +133,15 @@ describe('UpdateMyProfileHandler', () => {
     expect(writeRepo.updateProfile).toHaveBeenCalledWith(USER_ID, {
       firstName: 'Pablo',
       lastName: undefined,
-      profile: null,
+      profile: {
+        countryId: 63,
+        provinceId: undefined,
+        cantonId: undefined,
+        birthDate: undefined,
+        gender: undefined,
+      },
     })
-    expect(locationValidator.validateFull).not.toHaveBeenCalled()
+    expect(locationValidator.validateFull).toHaveBeenCalledWith(63, null, null)
   })
 
   it('throws when the user does not exist', async () => {

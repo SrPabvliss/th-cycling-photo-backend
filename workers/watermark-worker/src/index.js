@@ -1,12 +1,23 @@
 import { AwsClient } from 'aws4fetch'
-import { eventIdFromObjectPath, resolveWatermarkUrl } from './watermark-url.js'
+import { eventIdFromObjectPath, gravityFromQuery, resolveWatermarkUrl } from './watermark-url.js'
 
 // ─── Preset maps ───────────────────────────────────────────────────────────
 
+// `fit: cover` only crops when both sides are given: with a width alone Cloudflare just scales the
+// image and keeps its original ratio, which left the 16:9 framing to the browser's object-fit and
+// made the organiser's focal point pointless. These heights are the 16:9 counterpart of each width.
 const ASSET_PRESETS = {
-  'cover-sm': { width: 400, quality: 80, fit: 'cover', format: 'auto' },
-  'cover-lg': { width: 1200, quality: 85, fit: 'cover', format: 'auto' },
+  'cover-sm': { width: 400, height: 225, quality: 80, fit: 'cover', format: 'auto' },
+  'cover-lg': { width: 1200, height: 675, quality: 85, fit: 'cover', format: 'auto' },
 }
+
+// Every gallery render is 800px wide, so a fixed tile width is what keeps the mosaic identical
+// across tenants: without it Cloudflare draws the PNG at its native pixel size, and a 2000px logo
+// covers the whole photo while a 100px one tiles into noise.
+//
+// 380 is the platform's own watermark asset, whose density is the one already validated in
+// production. Anything smaller crowds the photo: 200 tiled it five across and buried the rider.
+const DEFAULT_WATERMARK_TILE_WIDTH = 380
 
 const INTERNAL_PRESETS = {
   thumb: { width: 400, quality: 80, fit: 'scale-down', format: 'auto' },
@@ -128,9 +139,13 @@ async function fetchOriginal(slug, env) {
 }
 
 /** Resolves slug → B2 path, signs request, applies cf.image preset transform. */
-async function fetchWithPreset(slug, presetOptions, env) {
+async function fetchWithPreset(slug, presetOptions, env, gravity) {
   const objectPath = await env.IMAGE_MAP.get(slug)
   if (!objectPath) return new Response('Not Found', { status: 404 })
+
+  // Gravity only means anything to a cropping fit; on the others it would be silently dropped.
+  const options =
+    gravity && presetOptions.fit === 'cover' ? { ...presetOptions, gravity } : presetOptions
 
   const b2 = getB2Client(env)
   const originUrl = getB2Url(env, objectPath)
@@ -139,9 +154,12 @@ async function fetchWithPreset(slug, presetOptions, env) {
   const response = await fetch(originUrl, {
     headers: signedReq.headers,
     cf: {
-      image: { ...presetOptions, 'origin-auth': 'share-publicly' },
+      image: { ...options, 'origin-auth': 'share-publicly' },
       cacheEverything: true,
       cacheTtl: 604800,
+      // The subrequest URL is the same B2 object whatever the crop, so the origin has to carry the
+      // framing too. Without it the edge would answer every re-frame with the first crop it cached.
+      cacheKey: `${originUrl}#${slug}-${gravity ? `${gravity.x}x${gravity.y}` : 'centre'}`,
     },
   })
 
@@ -181,6 +199,7 @@ async function fetchWatermarked(slug, env) {
             url: watermarkUrl,
             repeat: true,
             opacity: parseFloat(env.WATERMARK_OPACITY) || 0.3,
+            width: parseInt(env.WATERMARK_TILE_WIDTH, 10) || DEFAULT_WATERMARK_TILE_WIDTH,
           },
           {
             url: qrUrl,
@@ -269,7 +288,7 @@ export default {
       if (preset) {
         const presetOptions = INTERNAL_PRESETS[preset]
         if (!presetOptions) return new Response('Not Found', { status: 404 })
-        return fetchWithPreset(slug, presetOptions, env)
+        return fetchWithPreset(slug, presetOptions, env, null)
       }
       return fetchOriginal(slug, env)
     }
@@ -279,7 +298,7 @@ export default {
       if (preset) {
         const presetOptions = ASSET_PRESETS[preset]
         if (!presetOptions) return new Response('Not Found', { status: 404 })
-        return fetchWithPreset(slug, presetOptions, env)
+        return fetchWithPreset(slug, presetOptions, env, gravityFromQuery(url.searchParams))
       }
       return fetchOriginal(slug, env)
     }

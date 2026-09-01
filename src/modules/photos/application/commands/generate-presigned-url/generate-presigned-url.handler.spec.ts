@@ -94,6 +94,7 @@ describe('GeneratePresignedUrlHandler', () => {
 
     storageAdapter = {
       upload: jest.fn(),
+      download: jest.fn(),
       getPresignedUrl: jest.fn(),
       getPresignedDownloadUrl: jest.fn(),
       getPublicUrl: jest.fn(),
@@ -270,6 +271,53 @@ describe('GeneratePresignedUrlHandler', () => {
     await expect(handler.execute(command)).rejects.toMatchObject({
       messageKey: 'event.photo_quota_exceeded',
     })
+  })
+
+  it('refuses the whole batch when it does not fit in what is left', async () => {
+    eventReadRepo.findById.mockResolvedValueOnce({
+      id: 'event-1',
+      tenantId: '11111111-1111-4111-8111-111111111111',
+      photoQuota: 15,
+      photosUploaded: 12,
+    } as Event)
+
+    const command = new GeneratePresignedUrlCommand(
+      existingEvent.id,
+      'photo.jpg',
+      'image/jpeg',
+      'u1',
+      8,
+    )
+
+    await expect(handler.execute(command)).rejects.toMatchObject({
+      messageKey: 'event.photo_quota_exceeded',
+    })
+    expect(storageAdapter.getPresignedUrl).not.toHaveBeenCalled()
+  })
+
+  it('signs a batch that fits exactly in what is left', async () => {
+    eventReadRepo.findById.mockResolvedValueOnce({
+      id: 'event-1',
+      tenantId: '11111111-1111-4111-8111-111111111111',
+      photoQuota: 15,
+      photosUploaded: 12,
+    } as Event)
+    photoReadRepo.existsByEventAndFilename.mockResolvedValueOnce(false)
+    storageAdapter.getPresignedUrl.mockResolvedValueOnce({
+      url: 'https://s3.us-east-005.backblazeb2.com/signed-url',
+      objectKey: 'events/event-1/uuid-photo.jpg',
+      expiresIn: 300,
+    })
+
+    const command = new GeneratePresignedUrlCommand(
+      existingEvent.id,
+      'photo.jpg',
+      'image/jpeg',
+      'u1',
+      3,
+    )
+
+    await expect(handler.execute(command)).resolves.toMatchObject({ isDuplicate: false })
   })
 
   it('issues a presigned url when the event has no cap', async () => {

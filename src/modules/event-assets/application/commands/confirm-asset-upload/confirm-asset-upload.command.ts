@@ -8,5 +8,7 @@ export class ConfirmAssetUploadCommand {
     public readonly fileSize: bigint | null,
     public readonly mimeType: string | null,
     public readonly userId: string,
+    public readonly focalX?: number,
+    public readonly focalY?: number,
   ) {}
 }

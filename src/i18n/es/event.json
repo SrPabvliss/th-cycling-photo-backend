@@ -15,5 +15,6 @@
   "photo_quota_exceeded": "Este evento permite {quota} fotos y ya se usaron {used}. Puedes subir {remaining} más.",
   "tenant_quota_exceeded": "Tu plan permite {quota} eventos y ya los estás usando todos. Contacta a TitanTV para ampliar el cupo.",
   "watermark_not_owned": "La marca de agua seleccionada no pertenece a tu organización",
-  "no_contract_available": "No tienes un contrato vigente con cupo disponible para crear un evento. Contacta a TitanTV."
+  "no_contract_available": "No tienes un contrato vigente con cupo disponible para crear un evento. Contacta a TitanTV.",
+  "date_range_invalid": "La fecha de fin no puede ser anterior a la de inicio"
 }

@@ -3,8 +3,12 @@ import type { IEventWriteRepository } from '@events/domain/ports'
 import type { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
-import { nanoid } from 'nanoid'
+import { customAlphabet } from 'nanoid'
 import * as EventMapper from '../mappers/event.mapper'
+
+// Slugs travel in public URLs and the lookup matches them exactly, so the suffix stays lowercase
+// and drops look-alike characters. nanoid's default alphabet is mixed case and includes `_`.
+const slugSuffix = customAlphabet('23456789abcdefghijkmnpqrstuvwxyz', 6)
 
 @Injectable()
 export class EventWriteRepository implements IEventWriteRepository {
@@ -33,7 +37,7 @@ export class EventWriteRepository implements IEventWriteRepository {
     })
 
     if (existing) {
-      event.slug = `${event.slug}-${nanoid(6)}`
+      event.slug = `${event.slug}-${slugSuffix()}`
     }
   }
 

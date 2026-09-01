@@ -18,6 +18,14 @@ export class UpdateUserPhoneHandler implements ICommandHandler<UpdateUserPhoneCo
     if (!phone) throw AppException.notFound('UserPhone', command.phoneId)
     if (phone.userId !== command.userId) throw AppException.notFound('UserPhone', command.phoneId)
 
+    if (command.phoneNumber !== undefined && command.phoneNumber !== phone.phoneNumber) {
+      const duplicate = await this.readRepo.findByUserIdAndNumber(
+        command.userId,
+        command.phoneNumber,
+      )
+      if (duplicate) throw AppException.businessRule('user_phone.duplicate_number')
+    }
+
     phone.update({
       phoneNumber: command.phoneNumber,
       label: command.label,

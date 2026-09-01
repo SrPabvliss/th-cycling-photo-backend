@@ -17,5 +17,6 @@
   "receiver_verification_unavailable": "Cannot verify the number with Payphone: API application credentials are missing",
   "mixed_sellers": "Orders from different photographers cannot be charged together",
   "mixed_receivers": "These events do not receive payment in the same account. Pay each event separately",
-  "invalid_bank_details": "The bank details are incomplete"
+  "invalid_bank_details": "The bank details are incomplete",
+  "payout_method_already_exists": "You already have an active account of this type. Edit or remove it before adding another"
 }

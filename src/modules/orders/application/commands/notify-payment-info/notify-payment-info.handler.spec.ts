@@ -17,20 +17,27 @@ const buildOrder = () =>
 
 describe('NotifyPaymentInfoHandler', () => {
   const unrestrictedScope = EventScope.unrestricted()
-  let readRepo: { findByIdInScope: jest.Mock }
+  let readRepo: { findByIdInScope: jest.Mock; getDetail: jest.Mock }
   let writeRepo: { save: jest.Mock }
   let authz: jest.Mocked<IAuthorizationService>
   let handler: NotifyPaymentInfoHandler
+  let bankAccounts: { resolveForEvent: jest.Mock }
 
   beforeEach(() => {
-    readRepo = { findByIdInScope: jest.fn() }
+    readRepo = { findByIdInScope: jest.fn(), getDetail: jest.fn().mockResolvedValue(null) }
     writeRepo = { save: jest.fn().mockResolvedValue(undefined) }
     authz = {
       can: jest.fn(),
       assert: jest.fn().mockResolvedValue(undefined),
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as jest.Mocked<IAuthorizationService>
-    handler = new NotifyPaymentInfoHandler(writeRepo as never, readRepo as never, authz)
+    bankAccounts = { resolveForEvent: jest.fn().mockResolvedValue(null) }
+    handler = new NotifyPaymentInfoHandler(
+      writeRepo as never,
+      readRepo as never,
+      authz,
+      bankAccounts as never,
+    )
   })
 
   it('throws not-found when order does not exist', async () => {
@@ -71,7 +78,7 @@ describe('NotifyPaymentInfoHandler', () => {
     expect(order.status).toBe(OrderStatus.PAYMENT_INFO_SENT)
     expect(order.notifiedById).toBe('admin-1')
     expect(writeRepo.save).toHaveBeenCalledWith(order)
-    expect(result).toEqual({ id: order.id })
+    expect(result).toMatchObject({ id: order.id })
   })
 
   it('is idempotent on already-notified orders (no audit overwrite)', async () => {
@@ -87,6 +94,44 @@ describe('NotifyPaymentInfoHandler', () => {
     expect(order.notifiedById).toBe('admin-1')
     expect(order.notifiedAt).toBe(originalNotifiedAt)
     expect(writeRepo.save).toHaveBeenCalledWith(order)
-    expect(result).toEqual({ id: order.id })
+    expect(result).toMatchObject({ id: order.id })
+  })
+
+  it('puts the resolved account in the message, so a resend is not an empty promise', async () => {
+    const order = buildOrder()
+    readRepo.findByIdInScope.mockResolvedValue(order)
+    bankAccounts.resolveForEvent.mockResolvedValue({
+      bankName: 'Banco Pichincha',
+      accountType: 'savings',
+      accountNumber: '321421412',
+      accountHolder: 'FRANKLIN VILLACRES',
+      holderIdentification: '1804',
+    })
+
+    const result = await handler.execute(
+      new NotifyPaymentInfoCommand(order.id, new AuditContext('admin-1')),
+    )
+
+    expect(bankAccounts.resolveForEvent).toHaveBeenCalledWith('event-1')
+    expect(result.whatsappTemplate).toContain('321421412')
+  })
+
+  it('carries the account on every resend, not only on the first notification', async () => {
+    const order = buildOrder()
+    order.notifyPaymentInfo('admin-1')
+    readRepo.findByIdInScope.mockResolvedValue(order)
+    bankAccounts.resolveForEvent.mockResolvedValue({
+      bankName: 'Banco Pichincha',
+      accountType: 'savings',
+      accountNumber: '321421412',
+      accountHolder: 'FRANKLIN VILLACRES',
+      holderIdentification: '1804',
+    })
+
+    const result = await handler.execute(
+      new NotifyPaymentInfoCommand(order.id, new AuditContext('admin-1')),
+    )
+
+    expect(result.whatsappTemplate).toContain('321421412')
   })
 })

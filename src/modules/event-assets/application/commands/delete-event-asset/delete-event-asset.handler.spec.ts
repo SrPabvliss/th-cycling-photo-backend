@@ -50,6 +50,8 @@ describe('DeleteEventAssetHandler', () => {
       publicSlug: 'slug-abc',
       fileSize: 1024n,
       mimeType: 'image/jpeg',
+      focalX: 0.5,
+      focalY: 0.5,
       uploadedAt: new Date(),
     })
 

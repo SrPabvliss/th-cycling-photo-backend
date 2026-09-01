@@ -23,9 +23,7 @@ export class UpdateMyProfileHandler implements ICommandHandler<UpdateMyProfileCo
     const detail = await this.readRepo.getUserDetail(command.userId)
     if (!detail) throw AppException.notFound('User', command.userId)
 
-    const profile = detail.roles.includes('customer')
-      ? await this.buildProfile(command.userId, command.data)
-      : null
+    const profile = await this.buildProfile(command.userId, command.data)
 
     await this.writeRepo.updateProfile(command.userId, {
       firstName: command.data.firstName,
