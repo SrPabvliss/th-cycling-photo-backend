@@ -14,7 +14,10 @@ const ASSET_PRESETS = {
 // Every gallery render is 800px wide, so a fixed tile width is what keeps the mosaic identical
 // across tenants: without it Cloudflare draws the PNG at its native pixel size, and a 2000px logo
 // covers the whole photo while a 100px one tiles into noise.
-const DEFAULT_WATERMARK_TILE_WIDTH = 200
+//
+// 380 is the platform's own watermark asset, whose density is the one already validated in
+// production. Anything smaller crowds the photo: 200 tiled it five across and buried the rider.
+const DEFAULT_WATERMARK_TILE_WIDTH = 380
 
 const INTERNAL_PRESETS = {
   thumb: { width: 400, quality: 80, fit: 'scale-down', format: 'auto' },

@@ -16,6 +16,7 @@ describe('CropUploadUrlsService', () => {
   beforeEach(async () => {
     storage = {
       upload: jest.fn(),
+      download: jest.fn(),
       getPresignedUrl: jest.fn(async ({ key }) => ({
         url: `https://b2.example.com/${key}?sig=mock`,
         objectKey: key,

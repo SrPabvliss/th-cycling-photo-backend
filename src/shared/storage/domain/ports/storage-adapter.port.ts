@@ -55,6 +55,9 @@ export interface IStorageAdapter {
   /** Uploads a file to storage and returns the storage key and public URL. */
   upload(params: UploadParams): Promise<UploadResult>
 
+  /** Reads a stored object back into memory. */
+  download(key: string): Promise<Buffer>
+
   /** Generates a presigned URL for direct browser upload to storage. */
   getPresignedUrl(params: PresignedUrlParams): Promise<PresignedUrlResult>
 

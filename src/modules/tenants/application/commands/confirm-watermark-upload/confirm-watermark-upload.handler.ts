@@ -2,6 +2,7 @@ import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
+import { WatermarkNormalizer } from '@shared/images'
 import { type IUserReadRepository, USER_READ_REPOSITORY } from '@users/domain/ports'
 import {
   type ITenantProfileRepository,
@@ -19,6 +20,7 @@ export class ConfirmWatermarkUploadHandler
     @Inject(TENANT_PROFILE_REPOSITORY) private readonly profileRepo: ITenantProfileRepository,
     @Inject(USER_READ_REPOSITORY) private readonly userRepo: IUserReadRepository,
     @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
+    private readonly watermarkNormalizer: WatermarkNormalizer,
   ) {}
 
   async execute(command: ConfirmWatermarkUploadCommand): Promise<void> {
@@ -33,6 +35,8 @@ export class ConfirmWatermarkUploadHandler
 
     const profile = await this.profileRepo.findByTenantId(tenantId)
     if (!profile) throw AppException.notFound('entities.tenant', tenantId)
+
+    await this.watermarkNormalizer.normalize(command.storageKey)
 
     profile.changeBrand(undefined, command.storageKey)
     await this.profileRepo.save(profile)

@@ -63,11 +63,12 @@ const QueryHandlers = [
   GetPublicEventPhotosHandler,
 ]
 
+import { ImagesModule } from '@shared/images'
 import { ContractsModule } from '../contracts/contracts.module'
 import { TenantsModule } from '../tenants/tenants.module'
-
 @Module({
   imports: [
+    ImagesModule,
     CqrsModule,
     LocationsModule,
     UsersModule,

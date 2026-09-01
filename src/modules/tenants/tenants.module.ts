@@ -44,8 +44,9 @@ const handlers = [
   VerifyPayoutReceiverHandler,
 ]
 
+import { ImagesModule } from '@shared/images'
 @Module({
-  imports: [CqrsModule, UsersModule],
+  imports: [ImagesModule, CqrsModule, UsersModule],
   controllers: [TenantsController, TenantProfileController, OrganizersController],
   providers: [
     ...handlers,

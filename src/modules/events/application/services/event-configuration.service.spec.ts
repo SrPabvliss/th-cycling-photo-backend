@@ -54,6 +54,7 @@ describe('EventConfigurationService', () => {
         delete: jest.fn(),
       },
       { get: jest.fn().mockReturnValue(gateway) } as never,
+      { normalize: jest.fn().mockResolvedValue(undefined) } as never,
     )
 
   it('reports every missing requirement, not just the first', async () => {
