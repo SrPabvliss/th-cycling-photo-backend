@@ -21,12 +21,19 @@ export class DeliveryLinkWriteRepository implements IDeliveryLinkWriteRepository
     return DeliveryLinkMapper.toEntity(saved)
   }
 
-  /** Invalidates (expires) any existing delivery link for an order. */
-  async invalidateByOrderId(orderId: string): Promise<void> {
-    await this.prisma.deliveryLink.updateMany({
-      where: { order_id: orderId, status: { not: 'expired' } },
-      data: { status: 'expired' },
+  /**
+   * Replaces the order's delivery link in place. `order_id` is unique, so a
+   * regeneration cannot insert a second row: it overwrites the existing one
+   * with the new token and starts the download count over.
+   */
+  async replaceForOrder(deliveryLink: DeliveryLink): Promise<DeliveryLink> {
+    const saved = await this.prisma.deliveryLink.upsert({
+      where: { order_id: deliveryLink.orderId },
+      create: DeliveryLinkMapper.toPersistence(deliveryLink),
+      update: DeliveryLinkMapper.toReplacement(deliveryLink),
     })
+
+    return DeliveryLinkMapper.toEntity(saved)
   }
 
   /**

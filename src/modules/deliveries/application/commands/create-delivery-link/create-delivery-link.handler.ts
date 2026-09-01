@@ -22,16 +22,15 @@ export class CreateDeliveryLinkHandler implements ICommandHandler<CreateDelivery
   }
 
   async execute(command: CreateDeliveryLinkCommand): Promise<DeliveryLinkCreatedProjection> {
-    // Invalidate any existing delivery link for this order
-    await this.writeRepo.invalidateByOrderId(command.orderId)
-
-    // Create new delivery link
     const deliveryLink = DeliveryLink.create({
       orderId: command.orderId,
       expiresInDays: command.expiresInDays,
     })
 
-    const saved = await this.writeRepo.save(deliveryLink)
+    // Replaces the order's link rather than expiring the old one and inserting
+    // a new row: order_id is unique, so the insert would fail and leave the
+    // order with an expired link and no replacement.
+    const saved = await this.writeRepo.replaceForOrder(deliveryLink)
 
     return {
       id: saved.id,
