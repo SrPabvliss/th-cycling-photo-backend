@@ -40,12 +40,19 @@ export class GeneratePresignedUrlHandler implements ICommandHandler<GeneratePres
     await this.authz.assert(command.userId, 'photo.upload', event.id)
     await this.freeze.assertNotFrozen(event.id)
 
-    if (event.photoQuota !== null && event.photosUploaded >= event.photoQuota) {
-      throw AppException.businessRule('event.photo_quota_exceeded', false, {
-        quota: event.photoQuota,
-        used: event.photosUploaded,
-        remaining: 0,
-      })
+    // Refusing here is what keeps the bucket clean. The upload goes straight to B2 and only the
+    // later batch confirm charges quota atomically, so a batch that cannot fit used to be signed,
+    // uploaded in full and then rejected — leaving every one of those objects orphaned in storage.
+    // Weighing the whole batch means nothing is signed unless all of it fits.
+    if (event.photoQuota !== null) {
+      const remaining = Math.max(0, event.photoQuota - event.photosUploaded)
+      if (command.batchSize > remaining) {
+        throw AppException.businessRule('event.photo_quota_exceeded', false, {
+          quota: event.photoQuota,
+          used: event.photosUploaded,
+          remaining,
+        })
+      }
     }
 
     const exists = await this.photoReadRepo.existsByEventAndFilename(

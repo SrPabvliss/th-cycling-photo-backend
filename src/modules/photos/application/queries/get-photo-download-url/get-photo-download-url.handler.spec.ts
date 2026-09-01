@@ -70,6 +70,7 @@ describe('GetPhotoDownloadUrlHandler', () => {
 
     storageAdapter = {
       upload: jest.fn(),
+      download: jest.fn(),
       getPresignedUrl: jest.fn(),
       getPresignedDownloadUrl: jest.fn(),
       getPublicUrl: jest.fn(),
