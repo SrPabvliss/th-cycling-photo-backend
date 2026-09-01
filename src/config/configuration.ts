@@ -22,7 +22,7 @@ export default () => {
     PAYPHONE_API_TOKEN,
     PAYPHONE_API_STORE_ID,
     PAYMENT_EXPIRY_SWEEP_DELAY_MS,
-    PAYMENT_SYSTEM_USER_ID,
+    PAYMENT_SYSTEM_USER_EMAIL,
   } = process.env
 
   const { CREDENTIAL_ENCRYPTION_KEY } = process.env
@@ -145,7 +145,7 @@ export default () => {
     payments: {
       taxRate: 0,
       expirySweepDelayMs: Number.parseInt(PAYMENT_EXPIRY_SWEEP_DELAY_MS || '900000', 10),
-      systemUserId: PAYMENT_SYSTEM_USER_ID,
+      systemUserEmail: PAYMENT_SYSTEM_USER_EMAIL,
     },
     crypto: {
       credentialKey: CREDENTIAL_ENCRYPTION_KEY,

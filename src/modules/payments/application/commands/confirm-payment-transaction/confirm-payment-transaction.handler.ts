@@ -1,6 +1,5 @@
 import { SettleCartCommand } from '@cart/application/commands'
 import { Inject, Logger } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { ConfirmOrderPaymentCommand, SendDeliveryCommand } from '@orders/application/commands'
 import type { OrderPaymentConfirmedProjection } from '@orders/application/projections'
@@ -9,6 +8,7 @@ import type {
   PaymentDeliveryProjection,
   PaymentResultProjection,
 } from '@payments/application/projections'
+import { PaymentSystemActor } from '@payments/application/services/payment-system-actor.service'
 import { SellerAccountSuspension } from '@payments/application/services/seller-account-suspension.service'
 import type { PaymentTransaction } from '@payments/domain/entities'
 import {
@@ -38,14 +38,13 @@ import {
 } from '../../../../tenants/domain/ports/tenant-payout-method-repository.port'
 import { ConfirmPaymentTransactionCommand } from './confirm-payment-transaction.command'
 
-type ConfirmationOutcome = Omit<PaymentResultProjection, 'deliveries'>
+type ConfirmationOutcome = Omit<PaymentResultProjection, 'deliveries' | 'settled'>
 
 @CommandHandler(ConfirmPaymentTransactionCommand)
 export class ConfirmPaymentTransactionHandler
   implements ICommandHandler<ConfirmPaymentTransactionCommand>
 {
   private readonly logger = new Logger(ConfirmPaymentTransactionHandler.name)
-  private readonly systemUserId: string
 
   constructor(
     @Inject(PAYMENT_TRANSACTION_WRITE_REPOSITORY)
@@ -58,11 +57,9 @@ export class ConfirmPaymentTransactionHandler
     private readonly registry: PaymentGatewayRegistry,
     private readonly cipher: CredentialCipher,
     private readonly commandBus: CommandBus,
-    private readonly config: ConfigService,
     private readonly accountSuspension: SellerAccountSuspension,
-  ) {
-    this.systemUserId = this.config.getOrThrow<string>('payments.systemUserId')
-  }
+    private readonly systemActor: PaymentSystemActor,
+  ) {}
 
   async execute(command: ConfirmPaymentTransactionCommand): Promise<PaymentResultProjection> {
     let sellerTenantId: string | null | undefined
@@ -137,22 +134,26 @@ export class ConfirmPaymentTransactionHandler
       throw error
     }
 
-    if (!outcome.approved) return { ...outcome, deliveries: [] }
+    if (!outcome.approved) return { ...outcome, settled: false, deliveries: [] }
 
-    const deliveries = await this.settleOrders(
+    const { settledOrderIds, deliveries } = await this.settleOrders(
       command.clientTransactionId,
       outcome.orderIds,
       command.buyerUserId,
     )
 
-    return { ...outcome, deliveries }
+    return {
+      ...outcome,
+      settled: settledOrderIds.length === outcome.orderIds.length,
+      deliveries,
+    }
   }
 
   private async settleOrders(
     clientTransactionId: string,
     orderIds: string[],
     buyerUserId: string,
-  ): Promise<PaymentDeliveryProjection[]> {
+  ): Promise<{ settledOrderIds: string[]; deliveries: PaymentDeliveryProjection[] }> {
     const settleable = await this.transactionRepo.runLocked(clientTransactionId, async () => {
       const contexts = await this.contextRepo.findByOrderIds(orderIds)
       const foundOrderIds = new Set(contexts.map((context) => context.orderId))
@@ -201,7 +202,7 @@ export class ConfirmPaymentTransactionHandler
       settleable.map(async (orderId) => {
         try {
           await this.commandBus.execute(
-            new ConfirmOrderPaymentCommand(orderId, new AuditContext(this.systemUserId)),
+            new ConfirmOrderPaymentCommand(orderId, new AuditContext(this.systemActor.userId)),
           )
           return orderId
         } catch (error) {
@@ -225,7 +226,8 @@ export class ConfirmPaymentTransactionHandler
       }
     }
 
-    return this.deliverOrders(clientTransactionId, settledOrderIds)
+    const deliveries = await this.deliverOrders(clientTransactionId, settledOrderIds)
+    return { settledOrderIds, deliveries }
   }
 
   private async deliverOrders(
@@ -238,7 +240,7 @@ export class ConfirmPaymentTransactionHandler
           const delivery = await this.commandBus.execute<
             SendDeliveryCommand,
             OrderPaymentConfirmedProjection
-          >(new SendDeliveryCommand(orderId, new AuditContext(this.systemUserId)))
+          >(new SendDeliveryCommand(orderId, new AuditContext(this.systemActor.userId)))
 
           if (!delivery?.deliveryUrl || !delivery.token) return null
 

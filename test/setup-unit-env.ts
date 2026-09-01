@@ -36,7 +36,7 @@ const PLACEHOLDERS: Record<string, string> = {
   PAYPHONE_TOKEN: 'placeholder',
   PAYPHONE_STORE_ID: 'placeholder',
   CREDENTIAL_ENCRYPTION_KEY: '0'.repeat(64),
-  PAYMENT_SYSTEM_USER_ID: '00000000-0000-0000-0000-000000000000',
+  PAYMENT_SYSTEM_USER_EMAIL: 'system@titantv.test',
 }
 
 for (const [key, value] of Object.entries(PLACEHOLDERS)) {

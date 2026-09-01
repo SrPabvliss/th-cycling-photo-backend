@@ -28,7 +28,7 @@ const validEnv = {
   PAYPHONE_TOKEN: 'test-payphone-token',
   PAYPHONE_STORE_ID: 'test-store-id',
   CREDENTIAL_ENCRYPTION_KEY: 'a'.repeat(64),
-  PAYMENT_SYSTEM_USER_ID: 'system-user-id',
+  PAYMENT_SYSTEM_USER_EMAIL: 'system@titantv.test',
 }
 
 describe('Environment Validation', () => {
@@ -97,7 +97,7 @@ describe('MAIL_REDIRECT_TO production guard', () => {
     PAYPHONE_TOKEN: 'prod-payphone-token',
     PAYPHONE_STORE_ID: 'prod-store-id',
     CREDENTIAL_ENCRYPTION_KEY: 'a'.repeat(64),
-    PAYMENT_SYSTEM_USER_ID: 'system-user-id',
+    PAYMENT_SYSTEM_USER_EMAIL: 'system@titantv.test',
   }
 
   it('should reject MAIL_REDIRECT_TO in production', () => {
@@ -149,7 +149,7 @@ describe('PAYPHONE_ENVIRONMENT deployment guard', () => {
     PAYPHONE_TOKEN: 'prod-payphone-token',
     PAYPHONE_STORE_ID: 'prod-store-id',
     CREDENTIAL_ENCRYPTION_KEY: 'a'.repeat(64),
-    PAYMENT_SYSTEM_USER_ID: 'system-user-id',
+    PAYMENT_SYSTEM_USER_EMAIL: 'system@titantv.test',
   }
 
   it('should reject a production deployment pointed at the test gateway', () => {

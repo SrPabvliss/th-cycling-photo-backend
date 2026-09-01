@@ -101,14 +101,6 @@ function buildHandler({
   const registry = { get: jest.fn().mockReturnValue(gateway) }
   const cipher = { decrypt: jest.fn().mockReturnValue(MERCHANT_CREDENTIALS) }
   const commandBus = { execute: jest.fn().mockResolvedValue({ id: 'order-1' }) }
-  const config = {
-    getOrThrow: jest.fn().mockImplementation((key: string) => {
-      if (key === 'payments.systemUserId') return 'system-user-1'
-      return undefined
-    }),
-    get: jest.fn(),
-  }
-
   const handler = new ConfirmPaymentTransactionHandler(
     transactionRepo as never,
     payoutRepo as never,
@@ -116,8 +108,8 @@ function buildHandler({
     registry as never,
     cipher as never,
     commandBus as never,
-    config as never,
     new SellerAccountSuspension(payoutRepo as never),
+    { userId: 'system-user-1' } as never,
   )
 
   return {
@@ -128,7 +120,6 @@ function buildHandler({
     contextRepo,
     gateway,
     commandBus,
-    config,
   }
 }
 

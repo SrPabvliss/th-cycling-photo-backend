@@ -9,6 +9,7 @@ import {
 } from '@payments/application/commands'
 import { GetPaymentTransactionHandler } from '@payments/application/queries'
 import { PaymentConfirmationScheduler } from '@payments/application/services/payment-confirmation-scheduler.service'
+import { PaymentSystemActor } from '@payments/application/services/payment-system-actor.service'
 import { SellerAccountSuspension } from '@payments/application/services/seller-account-suspension.service'
 import {
   ORDER_PAYMENT_CONTEXT_REPOSITORY,
@@ -21,6 +22,7 @@ import { OrderPaymentContextRepository } from '@payments/infrastructure/reposito
 import { PaymentTransactionReadRepository } from '@payments/infrastructure/repositories/payment-transaction-read.repository'
 import { PaymentTransactionWriteRepository } from '@payments/infrastructure/repositories/payment-transaction-write.repository'
 import { PaymentsController } from '@payments/presentation/controllers/payments.controller'
+import { UsersModule } from '@users/users.module'
 import { TenantsModule } from '../tenants/tenants.module'
 
 @Module({
@@ -30,6 +32,7 @@ import { TenantsModule } from '../tenants/tenants.module'
     forwardRef(() => EventsModule),
     BullModule.registerQueue({ name: 'payment-confirmation' }),
     TenantsModule,
+    UsersModule,
   ],
   controllers: [PaymentsController],
   providers: [
@@ -39,6 +42,7 @@ import { TenantsModule } from '../tenants/tenants.module'
     ConfirmPaymentTransactionHandler,
     PaymentConfirmationScheduler,
     SellerAccountSuspension,
+    PaymentSystemActor,
     ConfirmPaymentProcessor,
     { provide: PAYMENT_TRANSACTION_READ_REPOSITORY, useClass: PaymentTransactionReadRepository },
     { provide: PAYMENT_TRANSACTION_WRITE_REPOSITORY, useClass: PaymentTransactionWriteRepository },
