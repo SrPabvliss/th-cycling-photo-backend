@@ -5,5 +5,7 @@
   "plate_number_out_of_range": "Plate number must be between 1 and 999",
   "density_percentage_out_of_range": "Density percentage must be between 0 and 100",
   "invalid_object_key_prefix": "Object key does not match the expected event prefix",
-  "delete_blocked_referenced": "Cannot delete: the photo has already been sold or is in a preview link"
+  "delete_blocked_referenced": "Cannot delete: the photo has already been sold or is in a preview link",
+  "invalid_status_for_processing": "This photo is not in a state that allows processing",
+  "processing_in_progress": "The photo is being processed, wait until it finishes"
 }

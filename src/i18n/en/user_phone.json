@@ -1,5 +1,7 @@
 {
   "duplicate_number": "You already registered this phone number",
   "phone_number_invalid_length": "The phone number must be between 7 and 20 characters",
-  "label_invalid_length": "The label must be between 1 and 50 characters"
+  "label_invalid_length": "The label must be between 1 and 50 characters",
+  "cannot_delete_last_phone": "You cannot delete your only phone: at least one must stay on file",
+  "cannot_delete_primary_phone": "You cannot delete your primary phone: set another one as primary first"
 }

@@ -1,5 +1,7 @@
 {
   "duplicate_number": "Ya registraste este número de teléfono",
   "phone_number_invalid_length": "El número de teléfono debe tener entre 7 y 20 caracteres",
-  "label_invalid_length": "La etiqueta debe tener entre 1 y 50 caracteres"
+  "label_invalid_length": "La etiqueta debe tener entre 1 y 50 caracteres",
+  "cannot_delete_last_phone": "No puedes eliminar tu único teléfono: necesitas al menos uno registrado",
+  "cannot_delete_primary_phone": "No puedes eliminar tu teléfono principal: marca otro como principal primero"
 }
