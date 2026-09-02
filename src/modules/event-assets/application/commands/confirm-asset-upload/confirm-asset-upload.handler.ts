@@ -40,7 +40,7 @@ export class ConfirmAssetUploadHandler implements ICommandHandler<ConfirmAssetUp
 
     const scope = await this.authz.resolveEventScope(command.userId)
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
-    if (!event) throw AppException.notFound('Event', command.eventId)
+    if (!event) throw AppException.notFound('entities.event', command.eventId)
     await this.authz.assert(command.userId, 'event_asset.confirm', event.id)
     await this.freeze.assertNotFrozen(command.eventId)
 

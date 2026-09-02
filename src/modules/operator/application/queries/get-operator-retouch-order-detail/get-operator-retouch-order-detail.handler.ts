@@ -30,7 +30,7 @@ export class GetOperatorRetouchOrderDetailHandler
   ): Promise<OperatorRetouchOrderDetailProjection> {
     const row = await this.retouchRead.findOrderDetailRow(query.orderId, query.scope === 'pending')
     if (!row) {
-      throw AppException.notFound('Order', query.orderId)
+      throw AppException.notFound('entities.order', query.orderId)
     }
 
     const seesAllEvents = await this.authz.can(query.operatorId, 'event.read.all')

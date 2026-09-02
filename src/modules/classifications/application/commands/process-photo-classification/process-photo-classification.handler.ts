@@ -47,7 +47,7 @@ export class ProcessPhotoClassificationHandler
 
   async execute(command: ProcessPhotoClassificationCommand): Promise<void> {
     const photo = await this.photoReadRepo.findById(command.photoId)
-    if (!photo) throw AppException.notFound('Photo', command.photoId)
+    if (!photo) throw AppException.notFound('entities.photo', command.photoId)
 
     if (!ALLOWED_STATUSES.has(photo.status)) {
       throw AppException.businessRule('photo.invalid_status_for_processing', false, {

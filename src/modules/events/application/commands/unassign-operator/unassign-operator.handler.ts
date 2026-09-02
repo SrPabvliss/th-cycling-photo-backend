@@ -28,14 +28,14 @@ export class UnassignOperatorHandler implements ICommandHandler<UnassignOperator
     // letting a tenant unassign an operator from another tenant's event.
     const scope = await this.authz.resolveEventScope(command.unassignedById)
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
-    if (!event) throw AppException.notFound('Event', command.eventId)
+    if (!event) throw AppException.notFound('entities.event', command.eventId)
 
     await this.authz.assert(command.unassignedById, 'event.collaborator.unassign', event.id)
     event.assertNotFrozen()
 
     const isAssigned = await this.operatorRepo.isAssigned(command.eventId, command.userId)
     if (!isAssigned) {
-      throw AppException.notFound('EventOperator', `${command.eventId}/${command.userId}`)
+      throw AppException.notFound('entities.event_operator', `${command.eventId}/${command.userId}`)
     }
 
     await this.operatorRepo.unassign(command.eventId, command.userId)

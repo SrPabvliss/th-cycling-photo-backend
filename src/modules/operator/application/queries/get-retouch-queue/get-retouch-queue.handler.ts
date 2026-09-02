@@ -32,7 +32,7 @@ export class GetRetouchQueueHandler implements IQueryHandler<GetRetouchQueueQuer
   ): Promise<PaginatedResult<RetouchQueueOrderProjection>> {
     const event = await this.eventRead.existsActiveEventBySlug(query.eventSlug)
     if (!event) {
-      throw AppException.notFound('Event', query.eventSlug)
+      throw AppException.notFound('entities.event', query.eventSlug)
     }
 
     const seesAllEvents = await this.authz.can(query.operatorId, 'event.read.all')

@@ -32,7 +32,7 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
 
     const scope = await this.authz.resolveEventScope(command.audit.userId)
     const event = await this.readRepo.findByIdInScope(command.id, scope)
-    if (!event) throw AppException.notFound('Event', command.id)
+    if (!event) throw AppException.notFound('entities.event', command.id)
     await this.authz.assert(command.audit.userId, 'event.update', event.id)
     event.assertNotFrozen()
 

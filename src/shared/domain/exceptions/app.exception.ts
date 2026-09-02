@@ -1,8 +1,12 @@
 import { HttpStatus } from '@nestjs/common'
 
+/** Key under `i18n/{locale}/entities.json`, the only accepted shape for a user-facing entity. */
+export type EntityKey = `entities.${string}`
+
 export enum ErrorCode {
   VALIDATION_FAILED = 'VALIDATION_FAILED',
   NOT_FOUND = 'NOT_FOUND',
+  UNAUTHORIZED = 'UNAUTHORIZED',
   FORBIDDEN = 'FORBIDDEN',
   CONFLICT = 'CONFLICT',
   BUSINESS_RULE = 'BUSINESS_RULE',
@@ -28,8 +32,11 @@ export class AppException extends Error {
     super(messageKey)
   }
 
-  /** Resource not found (404) */
-  static notFound(entity: string, id: string): AppException {
+  /**
+   * Resource not found (404). The entity is a translation key, not a display name: the filter
+   * resolves it before interpolating, so a raw name would reach the user in English.
+   */
+  static notFound(entity: EntityKey, id: string): AppException {
     return new AppException('errors.NOT_FOUND', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, false, {
       entity,
       id,

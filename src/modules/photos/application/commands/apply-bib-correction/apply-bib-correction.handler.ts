@@ -32,7 +32,7 @@ export class ApplyBibCorrectionHandler implements ICommandHandler<ApplyBibCorrec
   ): Promise<{ changed: boolean; correctionId?: string }> {
     const scope = await this.authz.resolveEventScope(cmd.reviewerId)
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
-    if (!photo) throw AppException.notFound('Photo', cmd.photoId)
+    if (!photo) throw AppException.notFound('entities.photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.bib.correct', photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')
@@ -40,7 +40,7 @@ export class ApplyBibCorrectionHandler implements ICommandHandler<ApplyBibCorrec
 
     const bib = await this.bibRepo.findById(cmd.bibId)
     if (!bib || bib.photoId !== cmd.photoId) {
-      throw AppException.notFound('PhotoBib', cmd.bibId)
+      throw AppException.notFound('entities.photo_bib', cmd.bibId)
     }
 
     if (!/^[0-9]{1,6}$/.test(cmd.newValue)) {

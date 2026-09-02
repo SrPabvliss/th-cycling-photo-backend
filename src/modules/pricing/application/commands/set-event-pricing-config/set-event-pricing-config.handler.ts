@@ -35,7 +35,7 @@ export class SetEventPricingConfigHandler implements ICommandHandler<SetEventPri
     // 404, not 403, so an out-of-scope event's existence isn't disclosed.
     const scope = await this.authz.resolveEventScope(cmd.setById)
     const event = await this.eventReadRepo.findByIdInScope(cmd.eventId, scope)
-    if (!event) throw AppException.notFound('Event', cmd.eventId)
+    if (!event) throw AppException.notFound('entities.event', cmd.eventId)
 
     await this.authz.assert(cmd.setById, 'pricing.config.set', event.id)
     await this.freeze.assertNotFrozen(event.id)

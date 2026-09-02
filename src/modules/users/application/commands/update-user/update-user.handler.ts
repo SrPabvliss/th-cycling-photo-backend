@@ -15,7 +15,7 @@ export class UpdateUserHandler implements ICommandHandler<UpdateUserCommand> {
 
   async execute(command: UpdateUserCommand): Promise<EntityIdProjection> {
     const user = await this.readRepo.findById(command.userId)
-    if (!user) throw AppException.notFound('User', command.userId)
+    if (!user) throw AppException.notFound('entities.user', command.userId)
 
     user.update({
       firstName: command.firstName,

@@ -12,7 +12,7 @@ export class GetBuyerDetailHandler implements IQueryHandler<GetBuyerDetailQuery>
 
   async execute(query: GetBuyerDetailQuery): Promise<BuyerDetailProjection> {
     const buyer = await this.readRepo.getBuyerDetail(query.id)
-    if (!buyer) throw AppException.notFound('Buyer', query.id)
+    if (!buyer) throw AppException.notFound('entities.buyer', query.id)
     return buyer
   }
 }

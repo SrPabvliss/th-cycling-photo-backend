@@ -19,7 +19,7 @@ export class GetPhotoViewHandler implements IQueryHandler<GetPhotoViewQuery> {
   async execute(query: GetPhotoViewQuery): Promise<PhotoViewProjection> {
     const scope = await this.authz.resolveEventScope(query.userId)
     const photo = await this.readRepo.getPhotoViewBySlug(query.slug, scope)
-    if (!photo) throw AppException.notFound('Photo', query.slug)
+    if (!photo) throw AppException.notFound('entities.photo', query.slug)
     return photo
   }
 }

@@ -15,8 +15,9 @@ export class UpdateUserPhoneHandler implements ICommandHandler<UpdateUserPhoneCo
 
   async execute(command: UpdateUserPhoneCommand): Promise<EntityIdProjection> {
     const phone = await this.readRepo.findById(command.phoneId)
-    if (!phone) throw AppException.notFound('UserPhone', command.phoneId)
-    if (phone.userId !== command.userId) throw AppException.notFound('UserPhone', command.phoneId)
+    if (!phone) throw AppException.notFound('entities.user_phone', command.phoneId)
+    if (phone.userId !== command.userId)
+      throw AppException.notFound('entities.user_phone', command.phoneId)
 
     if (command.phoneNumber !== undefined && command.phoneNumber !== phone.phoneNumber) {
       const duplicate = await this.readRepo.findByUserIdAndNumber(

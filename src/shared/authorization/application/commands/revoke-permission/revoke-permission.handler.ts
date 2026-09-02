@@ -24,7 +24,7 @@ export class RevokePermissionHandler implements ICommandHandler<RevokePermission
       where: { id: cmd.userId },
       select: { id: true, is_protected: true },
     })
-    if (!target) throw AppException.notFound('user', cmd.userId)
+    if (!target) throw AppException.notFound('entities.user', cmd.userId)
     if (target.is_protected) throw AppException.businessRule('authz.protected_account')
 
     if (cmd.key === 'permission.grant') {

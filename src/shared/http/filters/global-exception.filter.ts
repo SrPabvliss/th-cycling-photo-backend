@@ -50,8 +50,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     if (exception instanceof AppException) {
+      const args = i18n ? this.resolveEntityArg(exception.context, i18n) : exception.context
       const translatedMessage = i18n
-        ? String(i18n.t(exception.messageKey, { args: exception.context }))
+        ? String(i18n.t(exception.messageKey, { args }))
         : exception.messageKey
 
       return {
@@ -106,8 +107,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
       const fields = this.extractValidationFields(exceptionResponse)
 
-      const errorCode = fields ? 'VALIDATION_FAILED' : 'INTERNAL'
-      const messageKey = fields ? 'errors.VALIDATION_FAILED' : 'errors.INTERNAL'
+      const errorCode = fields ? ErrorCode.VALIDATION_FAILED : this.mapHttpStatusToCode(status)
+      const messageKey = `errors.${errorCode}`
       const translatedMessage = i18n ? String(i18n.t(messageKey)) : messageKey
 
       return {
@@ -147,6 +148,26 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         meta,
       },
     }
+  }
+
+  /**
+   * `AppException.notFound` receives the entity as a translation key, so interpolating it raw
+   * printed `entities.order no encontrado` at the user.
+   */
+  private resolveEntityArg(
+    context: Record<string, unknown> | undefined,
+    i18n: I18nContext,
+  ): Record<string, unknown> | undefined {
+    const entity = context?.entity
+    if (typeof entity !== 'string' || !entity.startsWith('entities.')) return context
+
+    return { ...context, entity: String(i18n.t(entity)) }
+  }
+
+  private mapHttpStatusToCode(status: number): ErrorCode {
+    if (status === HttpStatus.UNAUTHORIZED) return ErrorCode.UNAUTHORIZED
+    if (status === HttpStatus.FORBIDDEN) return ErrorCode.FORBIDDEN
+    return ErrorCode.INTERNAL
   }
 
   /**

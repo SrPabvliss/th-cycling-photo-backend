@@ -42,7 +42,7 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     const scope = await this.authz.resolveEventScope(command.audit.userId)
     const event = await this.eventReadRepo.findById(command.eventId)
     if (!event || !scope.includesEvent(event)) {
-      throw AppException.notFound('Event', command.eventId)
+      throw AppException.notFound('entities.event', command.eventId)
     }
     await this.authz.assert(command.audit.userId, 'photo.upload', event.id)
     await this.freeze.assertNotFrozen(command.eventId)

@@ -33,7 +33,7 @@ export class ClearEventPricingConfigHandler
     // Ruling 21 — see SetEventPricingConfigHandler for the reasoning.
     const scope = await this.authz.resolveEventScope(cmd.clearedById)
     const event = await this.eventReadRepo.findByIdInScope(cmd.eventId, scope)
-    if (!event) throw AppException.notFound('Event', cmd.eventId)
+    if (!event) throw AppException.notFound('entities.event', cmd.eventId)
 
     await this.authz.assert(cmd.clearedById, 'pricing.config.clear', event.id)
     await this.freeze.assertNotFrozen(event.id)

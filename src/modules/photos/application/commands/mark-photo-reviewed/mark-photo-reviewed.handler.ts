@@ -26,7 +26,7 @@ export class MarkPhotoReviewedHandler implements ICommandHandler<MarkPhotoReview
   async execute(cmd: MarkPhotoReviewedCommand): Promise<{ photoId: string; reviewedAt: Date }> {
     const scope = await this.authz.resolveEventScope(cmd.reviewerId)
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
-    if (!photo) throw AppException.notFound('Photo', cmd.photoId)
+    if (!photo) throw AppException.notFound('entities.photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.review', photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')

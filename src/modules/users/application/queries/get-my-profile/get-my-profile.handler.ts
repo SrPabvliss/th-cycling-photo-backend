@@ -12,7 +12,7 @@ export class GetMyProfileHandler implements IQueryHandler<GetMyProfileQuery> {
 
   async execute(query: GetMyProfileQuery): Promise<MyProfileProjection> {
     const profile = await this.readRepo.getMyProfile(query.userId)
-    if (!profile) throw AppException.notFound('User', query.userId)
+    if (!profile) throw AppException.notFound('entities.user', query.userId)
     return profile
   }
 }

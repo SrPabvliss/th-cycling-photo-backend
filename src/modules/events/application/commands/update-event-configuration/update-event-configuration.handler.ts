@@ -40,7 +40,7 @@ export class UpdateEventConfigurationHandler
   async execute(command: UpdateEventConfigurationCommand): Promise<EntityIdProjection> {
     const scope = await this.authz.resolveEventScope(command.actorUserId)
     const event = await this.readRepo.findByIdInScope(command.id, scope)
-    if (!event) throw AppException.notFound('Event', command.id)
+    if (!event) throw AppException.notFound('entities.event', command.id)
     await this.authz.assert(command.actorUserId, 'event.update', event.id)
 
     event.assertNotFrozen()

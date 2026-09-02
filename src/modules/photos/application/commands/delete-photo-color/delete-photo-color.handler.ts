@@ -26,7 +26,7 @@ export class DeletePhotoColorHandler implements ICommandHandler<DeletePhotoColor
   async execute(cmd: DeletePhotoColorCommand): Promise<{ colorId: string; photoId: string }> {
     const scope = await this.authz.resolveEventScope(cmd.reviewerId)
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
-    if (!photo) throw AppException.notFound('Photo', cmd.photoId)
+    if (!photo) throw AppException.notFound('entities.photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.color.delete', photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')
@@ -34,7 +34,7 @@ export class DeletePhotoColorHandler implements ICommandHandler<DeletePhotoColor
 
     const color = await this.colorRepo.findById(cmd.colorId)
     if (!color || color.photoId !== cmd.photoId) {
-      throw AppException.notFound('PhotoColor', cmd.colorId)
+      throw AppException.notFound('entities.photo_color', cmd.colorId)
     }
 
     await this.colorRepo.softDelete(cmd.colorId, cmd.reviewerId)

@@ -21,14 +21,14 @@ export class GetPhotoDownloadUrlHandler implements IQueryHandler<GetPhotoDownloa
   async execute(query: GetPhotoDownloadUrlQuery): Promise<DownloadUrlProjection> {
     const scope = await this.authz.resolveEventScope(query.userId)
     const photo = await this.photoReadRepo.findByIdInScope(query.photoId, scope)
-    if (!photo) throw AppException.notFound('Photo', query.photoId)
+    if (!photo) throw AppException.notFound('entities.photo', query.photoId)
     await this.authz.assert(query.userId, 'photo.download', photo.eventId)
 
     let storageKey: string
 
     if (query.type === 'retouched') {
       if (!photo.retouchedStorageKey) {
-        throw AppException.notFound('Retouched photo', query.photoId)
+        throw AppException.notFound('entities.retouched_photo', query.photoId)
       }
       storageKey = photo.retouchedStorageKey
     } else {
