@@ -9,6 +9,8 @@ const BASE = {
   photosPerEvent: 600,
 }
 
+const PIPE_OPTIONS = { enableImplicitConversion: true }
+
 describe('IssueContractDto', () => {
   it('turns a date-only validUntil into that day last instant in Ecuador time, not UTC midnight', async () => {
     const dto = plainToInstance(IssueContractDto, { ...BASE, validUntil: '2026-12-31' })
@@ -19,8 +21,33 @@ describe('IssueContractDto', () => {
     expect(dto.validUntil.toISOString()).toBe('2027-01-01T04:59:59.999Z')
   })
 
+  it('keeps that last instant under the implicit conversion the global pipe applies', async () => {
+    const dto = plainToInstance(
+      IssueContractDto,
+      { ...BASE, validUntil: '2026-12-31' },
+      PIPE_OPTIONS,
+    )
+
+    const errors = await validate(dto)
+
+    expect(errors).toHaveLength(0)
+    expect(dto.validUntil.toISOString()).toBe('2027-01-01T04:59:59.999Z')
+  })
+
   it('rejects a validUntil that is not a valid date-only string', async () => {
     const dto = plainToInstance(IssueContractDto, { ...BASE, validUntil: 'not-a-date' })
+
+    const errors = await validate(dto)
+
+    expect(errors.some((error) => error.property === 'validUntil')).toBe(true)
+  })
+
+  it('rejects a non date-only string under the implicit conversion too', async () => {
+    const dto = plainToInstance(
+      IssueContractDto,
+      { ...BASE, validUntil: 'not-a-date' },
+      PIPE_OPTIONS,
+    )
 
     const errors = await validate(dto)
 

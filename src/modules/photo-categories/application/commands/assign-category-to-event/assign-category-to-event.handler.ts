@@ -33,13 +33,14 @@ export class AssignCategoryToEventHandler implements ICommandHandler<AssignCateg
     // Out-of-scope ids resolve to null (404, not 403) so the event's existence isn't disclosed.
     const scope = await this.authz.resolveEventScope(command.assignedById)
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
-    if (!event) throw AppException.notFound('Event', command.eventId)
+    if (!event) throw AppException.notFound('entities.event', command.eventId)
 
     await this.authz.assert(command.assignedById, 'photo_category.event.assign', event.id)
     await this.freeze.assertNotFrozen(event.id)
 
     const category = await this.readRepo.findById(command.photoCategoryId)
-    if (!category) throw AppException.notFound('PhotoCategory', String(command.photoCategoryId))
+    if (!category)
+      throw AppException.notFound('entities.photo_category', String(command.photoCategoryId))
 
     const id = await this.writeRepo.assignToEvent(event.id, command.photoCategoryId)
     return { id }

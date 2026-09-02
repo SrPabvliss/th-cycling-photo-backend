@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { endOfDayInEcuador } from '@shared/domain'
-import { Transform } from 'class-transformer'
+import { Transform, Type } from 'class-transformer'
 import { IsDate, IsEmail, IsInt, IsNotEmpty, IsString, MaxLength, Min } from 'class-validator'
 
 export class IssueContractDto {
@@ -29,6 +29,7 @@ export class IssueContractDto {
     description: 'Last day (Ecuador time) the contract stays usable, as yyyy-MM-dd',
     example: '2026-12-31',
   })
+  @Type(() => String)
   @Transform(({ value }) => (typeof value === 'string' ? endOfDayInEcuador(value) : value))
   @IsDate()
   validUntil: Date

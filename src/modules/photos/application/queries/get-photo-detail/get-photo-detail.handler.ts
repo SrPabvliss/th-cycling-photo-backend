@@ -23,7 +23,7 @@ export class GetPhotoDetailHandler implements IQueryHandler<GetPhotoDetailQuery>
   async execute(query: GetPhotoDetailQuery): Promise<PhotoDetailProjection> {
     const scope = await this.authz.resolveEventScope(query.userId)
     const photo = await this.readRepo.getPhotoDetail(query.id, scope)
-    if (!photo) throw AppException.notFound('Photo', query.id)
+    if (!photo) throw AppException.notFound('entities.photo', query.id)
 
     return photo
   }

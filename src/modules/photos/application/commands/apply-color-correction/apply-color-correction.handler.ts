@@ -32,7 +32,7 @@ export class ApplyColorCorrectionHandler implements ICommandHandler<ApplyColorCo
   ): Promise<{ changed: boolean; correctionId?: string }> {
     const scope = await this.authz.resolveEventScope(cmd.reviewerId)
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
-    if (!photo) throw AppException.notFound('Photo', cmd.photoId)
+    if (!photo) throw AppException.notFound('entities.photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.color.correct', photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')
@@ -40,7 +40,7 @@ export class ApplyColorCorrectionHandler implements ICommandHandler<ApplyColorCo
 
     const color = await this.colorRepo.findById(cmd.colorId)
     if (!color || color.photoId !== cmd.photoId) {
-      throw AppException.notFound('PhotoColor', cmd.colorId)
+      throw AppException.notFound('entities.photo_color', cmd.colorId)
     }
 
     const original = cmd.field === 'primary_color' ? color.primaryColor : color.secondaryColor

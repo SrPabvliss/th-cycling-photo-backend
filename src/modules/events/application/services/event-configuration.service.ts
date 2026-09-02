@@ -292,13 +292,13 @@ export class EventConfigurationService {
   ): EventPayoutMethod {
     if (entry.source === 'event') {
       const kept = existing.find((method) => method.id === entry.id)
-      if (!kept) throw AppException.notFound('entities.payoutMethod', entry.id)
+      if (!kept) throw AppException.notFound('entities.payout_method', entry.id)
       return kept
     }
 
     if (entry.source === 'profile') {
       const match = available.find((method) => method.id === entry.id)
-      if (!match) throw AppException.notFound('entities.payoutMethod', entry.id)
+      if (!match) throw AppException.notFound('entities.payout_method', entry.id)
       return EventPayoutMethod.copyFrom(eventId, match)
     }
 

@@ -21,7 +21,7 @@ export class UpdateMyProfileHandler implements ICommandHandler<UpdateMyProfileCo
 
   async execute(command: UpdateMyProfileCommand): Promise<EntityIdProjection> {
     const detail = await this.readRepo.getUserDetail(command.userId)
-    if (!detail) throw AppException.notFound('User', command.userId)
+    if (!detail) throw AppException.notFound('entities.user', command.userId)
 
     const profile = await this.buildProfile(command.userId, command.data)
 

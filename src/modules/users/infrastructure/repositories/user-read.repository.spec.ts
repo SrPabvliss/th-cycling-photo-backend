@@ -70,6 +70,27 @@ describe('UserReadRepository getUsersList', () => {
     expect(result.items[0].emailVerified).toBe(false)
   })
 
+  it('requires every word of a multi-word search to match some name or email field', async () => {
+    const { repository, findMany } = buildRepository()
+
+    await repository.getUsersList(new Pagination(1, 20), false, undefined, 'andres boxes')
+
+    const where = findMany.mock.calls[0][0].where as {
+      AND: { OR: { first_name?: { contains: string } }[] }[]
+    }
+    expect(where.AND).toHaveLength(2)
+    expect(where.AND[0].OR[0].first_name?.contains).toBe('andres')
+    expect(where.AND[1].OR[0].first_name?.contains).toBe('boxes')
+  })
+
+  it('ignores a search made only of blanks', async () => {
+    const { repository, findMany } = buildRepository()
+
+    await repository.getUsersList(new Pagination(1, 20), false, undefined, '   ')
+
+    expect(findMany.mock.calls[0][0].where.AND).toBeUndefined()
+  })
+
   it('leaves the organizer pair null for a platform-tenant staff account, even with a verified email', async () => {
     const { repository, findMany, count } = buildRepository()
     findMany.mockResolvedValueOnce([

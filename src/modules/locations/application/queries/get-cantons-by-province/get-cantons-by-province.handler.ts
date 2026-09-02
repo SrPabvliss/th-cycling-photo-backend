@@ -14,7 +14,7 @@ export class GetCantonsByProvinceHandler implements IQueryHandler<GetCantonsByPr
   /** Returns cantons for a given province, sorted alphabetically. */
   async execute(query: GetCantonsByProvinceQuery): Promise<CantonProjection[]> {
     const exists = await this.readRepo.provinceExists(query.provinceId)
-    if (!exists) throw AppException.notFound('Province', String(query.provinceId))
+    if (!exists) throw AppException.notFound('entities.province', String(query.provinceId))
 
     return this.readRepo.findCantonsByProvinceId(query.provinceId)
   }

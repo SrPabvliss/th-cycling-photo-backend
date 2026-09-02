@@ -28,7 +28,7 @@ export class AddPhotoColorHandler implements ICommandHandler<AddPhotoColorComman
   async execute(cmd: AddPhotoColorCommand): Promise<{ colorId: string; photoId: string }> {
     const scope = await this.authz.resolveEventScope(cmd.reviewerId)
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
-    if (!photo) throw AppException.notFound('Photo', cmd.photoId)
+    if (!photo) throw AppException.notFound('entities.photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.color.create', photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')

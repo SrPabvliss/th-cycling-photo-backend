@@ -33,7 +33,7 @@ export class UnassignCategoryFromEventHandler
     // what denies that — 404, not 403, so nothing is disclosed.
     const scope = await this.authz.resolveEventScope(command.unassignedById)
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
-    if (!event) throw AppException.notFound('Event', command.eventId)
+    if (!event) throw AppException.notFound('entities.event', command.eventId)
 
     await this.authz.assert(command.unassignedById, 'photo_category.event.remove', event.id)
     await this.freeze.assertNotFrozen(event.id)

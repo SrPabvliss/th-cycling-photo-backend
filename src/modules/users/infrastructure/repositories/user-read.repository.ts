@@ -262,12 +262,16 @@ export class UserReadRepository implements IUserReadRepository {
       where.user_roles = { some: { role: { name: role as RoleType } } }
     }
 
-    if (search) {
-      where.OR = [
-        { first_name: { contains: search, mode: 'insensitive' } },
-        { last_name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ]
+    const terms = search?.trim().split(/\s+/).filter(Boolean) ?? []
+
+    if (terms.length > 0) {
+      where.AND = terms.map((term) => ({
+        OR: [
+          { first_name: { contains: term, mode: 'insensitive' as const } },
+          { last_name: { contains: term, mode: 'insensitive' as const } },
+          { email: { contains: term, mode: 'insensitive' as const } },
+        ],
+      }))
     }
 
     const [users, total] = await Promise.all([

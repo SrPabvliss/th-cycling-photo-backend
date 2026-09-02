@@ -35,7 +35,7 @@ export class GeneratePresignedUrlHandler implements ICommandHandler<GeneratePres
     const scope = await this.authz.resolveEventScope(command.userId)
     const event = await this.eventReadRepo.findById(command.eventId)
     if (!event || !scope.includesEvent(event)) {
-      throw AppException.notFound('Event', command.eventId)
+      throw AppException.notFound('entities.event', command.eventId)
     }
     await this.authz.assert(command.userId, 'photo.upload', event.id)
     await this.freeze.assertNotFrozen(event.id)

@@ -15,8 +15,9 @@ export class DeleteUserPhoneHandler implements ICommandHandler<DeleteUserPhoneCo
 
   async execute(command: DeleteUserPhoneCommand): Promise<EntityIdProjection> {
     const phone = await this.readRepo.findById(command.phoneId)
-    if (!phone) throw AppException.notFound('UserPhone', command.phoneId)
-    if (phone.userId !== command.userId) throw AppException.notFound('UserPhone', command.phoneId)
+    if (!phone) throw AppException.notFound('entities.user_phone', command.phoneId)
+    if (phone.userId !== command.userId)
+      throw AppException.notFound('entities.user_phone', command.phoneId)
 
     const count = await this.readRepo.countByUserId(command.userId)
     if (count <= 1) {

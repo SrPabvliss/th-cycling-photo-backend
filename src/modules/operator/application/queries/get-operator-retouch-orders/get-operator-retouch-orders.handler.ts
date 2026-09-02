@@ -38,7 +38,7 @@ export class GetOperatorRetouchOrdersHandler
     if (isAdmin) {
       if (query.eventSlug) {
         const event = await this.eventRead.existsActiveEventBySlug(query.eventSlug)
-        if (!event) throw AppException.notFound('Event', query.eventSlug)
+        if (!event) throw AppException.notFound('entities.event', query.eventSlug)
         eventIdsForQuery = [event.id]
       }
     } else {

@@ -29,7 +29,7 @@ export class SetPhotoRetouchFlagHandler implements ICommandHandler<SetPhotoRetou
     const scope = await this.authz.resolveEventScope(command.userId)
     const photo = await this.photoRead.findByIdInScope(command.photoId, scope)
     if (!photo) {
-      throw AppException.notFound('Photo', command.photoId)
+      throw AppException.notFound('entities.photo', command.photoId)
     }
     await this.authz.assert(command.userId, 'photo.retouch.flag', photo.eventId)
     await this.freeze.assertNotFrozen(photo.eventId)

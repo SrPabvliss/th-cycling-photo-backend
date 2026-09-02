@@ -18,7 +18,7 @@ export class DeactivateUserHandler implements ICommandHandler<DeactivateUserComm
 
   async execute(command: DeactivateUserCommand): Promise<EntityIdProjection> {
     const user = await this.readRepo.findById(command.userId)
-    if (!user) throw AppException.notFound('User', command.userId)
+    if (!user) throw AppException.notFound('entities.user', command.userId)
 
     // The break-glass account rejects every mutating operation, including deactivating itself.
     const guard = await this.prisma.user.findUniqueOrThrow({

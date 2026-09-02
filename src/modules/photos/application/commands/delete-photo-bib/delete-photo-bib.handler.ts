@@ -26,7 +26,7 @@ export class DeletePhotoBibHandler implements ICommandHandler<DeletePhotoBibComm
   async execute(cmd: DeletePhotoBibCommand): Promise<{ bibId: string; photoId: string }> {
     const scope = await this.authz.resolveEventScope(cmd.reviewerId)
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
-    if (!photo) throw AppException.notFound('Photo', cmd.photoId)
+    if (!photo) throw AppException.notFound('entities.photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.bib.delete', photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')
@@ -34,7 +34,7 @@ export class DeletePhotoBibHandler implements ICommandHandler<DeletePhotoBibComm
 
     const bib = await this.bibRepo.findById(cmd.bibId)
     if (!bib || bib.photoId !== cmd.photoId) {
-      throw AppException.notFound('PhotoBib', cmd.bibId)
+      throw AppException.notFound('entities.photo_bib', cmd.bibId)
     }
 
     await this.bibRepo.softDelete(cmd.bibId, cmd.reviewerId)

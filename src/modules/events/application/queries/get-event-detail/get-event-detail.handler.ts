@@ -25,7 +25,7 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
     // other unknown slug — the caller must not be able to learn that an
     // event exists by probing slugs. Do not turn this into a 403.
     const event = await this.readRepo.getEventDetailBySlug(query.slug, scope)
-    if (!event) throw AppException.notFound('Event', query.slug)
+    if (!event) throw AppException.notFound('entities.event', query.slug)
 
     const [totalFileSize, classifiedCount, aggregate] = await Promise.all([
       this.photoReadRepo.getTotalFileSizeByEvent(event.id),

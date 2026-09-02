@@ -23,7 +23,7 @@ export class FindSimilarPhotosHandler implements IQueryHandler<FindSimilarPhotos
   async execute(query: FindSimilarPhotosQuery): Promise<SimilarPhotoProjection[]> {
     const scope = await this.authz.resolveEventScope(query.userId)
     const photo = await this.photoReadRepo.findByIdInScope(query.photoId, scope)
-    if (!photo) throw AppException.notFound('Photo', query.photoId)
+    if (!photo) throw AppException.notFound('entities.photo', query.photoId)
 
     return this.photoReadRepo.findSimilar(query.photoId, photo.eventId, query.limit)
   }

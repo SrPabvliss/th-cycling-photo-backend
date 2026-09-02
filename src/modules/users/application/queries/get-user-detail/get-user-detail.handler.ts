@@ -12,7 +12,7 @@ export class GetUserDetailHandler implements IQueryHandler<GetUserDetailQuery> {
 
   async execute(query: GetUserDetailQuery): Promise<UserDetailProjection> {
     const user = await this.readRepo.getUserDetail(query.id)
-    if (!user) throw AppException.notFound('User', query.id)
+    if (!user) throw AppException.notFound('entities.user', query.id)
     return user
   }
 }

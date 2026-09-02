@@ -25,7 +25,7 @@ export class SetEventFreezeHandler implements ICommandHandler<SetEventFreezeComm
   async execute(command: SetEventFreezeCommand): Promise<EntityIdProjection> {
     const scope = await this.authz.resolveEventScope(command.userId)
     const event = await this.readRepo.findByIdInScope(command.id, scope)
-    if (!event) throw AppException.notFound('Event', command.id)
+    if (!event) throw AppException.notFound('entities.event', command.id)
 
     await this.authz.assert(command.userId, 'event.freeze', event.id)
 

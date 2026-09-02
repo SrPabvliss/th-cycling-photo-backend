@@ -27,7 +27,7 @@ export class AddPhotoBibHandler implements ICommandHandler<AddPhotoBibCommand> {
   async execute(cmd: AddPhotoBibCommand): Promise<{ bibId: string; photoId: string }> {
     const scope = await this.authz.resolveEventScope(cmd.reviewerId)
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
-    if (!photo) throw AppException.notFound('Photo', cmd.photoId)
+    if (!photo) throw AppException.notFound('entities.photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.bib.create', photo.eventId)
     if (photo.status === 'processing') {
       throw AppException.businessRule('photo.processing_in_progress')

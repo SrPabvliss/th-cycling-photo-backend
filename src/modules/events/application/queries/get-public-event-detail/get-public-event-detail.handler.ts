@@ -11,7 +11,7 @@ export class GetPublicEventDetailHandler implements IQueryHandler<GetPublicEvent
 
   async execute(query: GetPublicEventDetailQuery): Promise<PublicEventDetailProjection> {
     const event = await this.readRepo.getPublicEventDetail(query.slug)
-    if (!event) throw AppException.notFound('Event', query.slug)
+    if (!event) throw AppException.notFound('entities.event', query.slug)
     return event
   }
 }

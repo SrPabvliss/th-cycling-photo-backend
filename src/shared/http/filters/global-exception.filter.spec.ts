@@ -107,6 +107,37 @@ describe('GlobalExceptionFilter', () => {
       expect(body.error.shouldThrow).toBe(false)
     })
 
+    it('resolves the entity name instead of printing its translation key', () => {
+      const mockI18n = {
+        t: jest.fn((key: string, options?: { args?: Record<string, unknown> }) =>
+          key === 'entities.tenant_contract'
+            ? 'Contrato de organizador'
+            : `${options?.args?.entity} no encontrado`,
+        ),
+      }
+      ;(I18nContext.current as jest.Mock).mockReturnValue(mockI18n)
+
+      const exception = AppException.notFound('entities.tenant_contract', 'abc')
+      filter.catch(exception, mockHost)
+
+      expect(mockJson.mock.calls[0][0].error.message).toBe('Contrato de organizador no encontrado')
+    })
+
+    it('leaves an entity that is not a translation key untouched, as the type now prevents', () => {
+      const mockI18n = {
+        t: jest.fn(
+          (_key: string, options?: { args?: Record<string, unknown> }) =>
+            `${options?.args?.entity} no encontrado`,
+        ),
+      }
+      ;(I18nContext.current as jest.Mock).mockReturnValue(mockI18n)
+
+      const exception = AppException.notFound('Event' as `entities.${string}`, '123')
+      filter.catch(exception, mockHost)
+
+      expect(mockJson.mock.calls[0][0].error.message).toBe('Event no encontrado')
+    })
+
     it('should translate messages when i18n is available', () => {
       const mockI18n = { t: jest.fn().mockReturnValue('Evento no encontrado') }
       ;(I18nContext.current as jest.Mock).mockReturnValue(mockI18n)
@@ -141,15 +172,32 @@ describe('GlobalExceptionFilter', () => {
       })
     })
 
-    it('should handle HttpException without validation fields', () => {
+    it('reports a permission failure as FORBIDDEN, not as an unexpected error', () => {
       const exception = new HttpException('Forbidden', HttpStatus.FORBIDDEN)
 
       filter.catch(exception, mockHost)
 
       expect(mockStatus).toHaveBeenCalledWith(HttpStatus.FORBIDDEN)
       const body = mockJson.mock.calls[0][0]
-      expect(body.error.code).toBe('INTERNAL')
+      expect(body.error.code).toBe(ErrorCode.FORBIDDEN)
       expect(body.error.fields).toBeUndefined()
+    })
+
+    it('reports a missing or expired session as UNAUTHORIZED', () => {
+      const exception = new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED)
+
+      filter.catch(exception, mockHost)
+
+      expect(mockStatus).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED)
+      expect(mockJson.mock.calls[0][0].error.code).toBe(ErrorCode.UNAUTHORIZED)
+    })
+
+    it('keeps INTERNAL for an HttpException with no dedicated code', () => {
+      const exception = new HttpException('Teapot', HttpStatus.I_AM_A_TEAPOT)
+
+      filter.catch(exception, mockHost)
+
+      expect(mockJson.mock.calls[0][0].error.code).toBe(ErrorCode.INTERNAL)
     })
   })
 

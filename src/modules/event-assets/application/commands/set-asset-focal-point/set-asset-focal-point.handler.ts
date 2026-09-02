@@ -29,12 +29,12 @@ export class SetAssetFocalPointHandler implements ICommandHandler<SetAssetFocalP
   async execute(command: SetAssetFocalPointCommand): Promise<EntityIdProjection> {
     const scope = await this.authz.resolveEventScope(command.userId)
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
-    if (!event) throw AppException.notFound('Event', command.eventId)
+    if (!event) throw AppException.notFound('entities.event', command.eventId)
     await this.authz.assert(command.userId, 'event_asset.confirm', event.id)
     await this.freeze.assertNotFrozen(command.eventId)
 
     const asset = await this.readRepo.findByEventAndType(command.eventId, command.assetType)
-    if (!asset) throw AppException.notFound('EventAsset', command.assetType)
+    if (!asset) throw AppException.notFound('entities.event_asset', command.assetType)
 
     asset.moveFocalPoint(command.focalX, command.focalY)
     const saved = await this.writeRepo.save(asset)

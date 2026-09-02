@@ -15,8 +15,9 @@ export class SetPrimaryPhoneHandler implements ICommandHandler<SetPrimaryPhoneCo
 
   async execute(command: SetPrimaryPhoneCommand): Promise<EntityIdProjection> {
     const phone = await this.readRepo.findById(command.phoneId)
-    if (!phone) throw AppException.notFound('UserPhone', command.phoneId)
-    if (phone.userId !== command.userId) throw AppException.notFound('UserPhone', command.phoneId)
+    if (!phone) throw AppException.notFound('entities.user_phone', command.phoneId)
+    if (phone.userId !== command.userId)
+      throw AppException.notFound('entities.user_phone', command.phoneId)
 
     await this.writeRepo.setPrimary(command.userId, command.phoneId)
     return { id: command.phoneId }
