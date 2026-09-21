@@ -1,5 +1,6 @@
 /**
- * Backfills Workers KV with slug → storage_key mappings for all existing photos.
+ * Backfills Workers KV with slug → storage_key mappings for all existing photos,
+ * retouched photos and event assets.
  * Run after migration 20260409220000_photo_public_slug.
  *
  * Usage: npx tsx scripts/backfill-kv-slugs.ts
@@ -33,11 +34,30 @@ const prisma = new PrismaClient({ adapter })
 const KV_BASE = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_KV_NAMESPACE_ID}`
 
 async function main() {
-  const photos = await prisma.photo.findMany({
-    select: { id: true, public_slug: true, storage_key: true },
+  const photoRows = await prisma.photo.findMany({
+    select: {
+      public_slug: true,
+      storage_key: true,
+      retouched_public_slug: true,
+      retouched_storage_key: true,
+    },
   })
+  const assetRows = await prisma.eventAsset.findMany({
+    select: { public_slug: true, storage_key: true },
+  })
+  // The Worker resolves every slug the same way, so retouched photos and event
+  // assets (covers) go through the same mapping as the original photos.
+  const photos = [
+    ...photoRows.map((p) => ({ public_slug: p.public_slug, storage_key: p.storage_key })),
+    ...photoRows.flatMap((p) =>
+      p.retouched_public_slug && p.retouched_storage_key
+        ? [{ public_slug: p.retouched_public_slug, storage_key: p.retouched_storage_key }]
+        : [],
+    ),
+    ...assetRows,
+  ]
 
-  console.log(`Found ${photos.length} photos to backfill`)
+  console.log(`Found ${photos.length} slugs to backfill`)
 
   if (photos.length === 0) {
     console.log('Nothing to do')
