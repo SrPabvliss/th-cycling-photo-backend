@@ -13,8 +13,19 @@ set -euo pipefail
 # Configuration lives in .env.ops, which is not tracked. Copy .env.ops.example
 # and fill it in. Nothing about the server belongs in this file.
 #
-# Photos will not load. Development points at the development buckets and the
-# restored rows reference production storage keys. That is expected.
+# Photos do not load by default: development reads the development bucket and
+# the restored rows reference objects that only exist in production. Pass
+# --with-photos (or WITH_PHOTOS=1) to copy those objects into the development
+# bucket, server-side, and publish their slugs to the development KV. It needs
+# B2_COPY_KEY_ID, B2_COPY_KEY and PROD_B2_BUCKET_NAME in .env.ops.
+
+WITH_PHOTOS="${WITH_PHOTOS:-0}"
+for arg in "$@"; do
+  case "$arg" in
+    --with-photos) WITH_PHOTOS=1 ;;
+    *) echo "Unknown option: $arg" >&2; exit 1 ;;
+  esac
+done
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -42,6 +53,12 @@ missing_config() {
 }
 
 [ -n "${BREAK_GLASS_EMAIL:-}" ] || missing_config BREAK_GLASS_EMAIL
+
+if [ "$WITH_PHOTOS" = "1" ]; then
+  [ -n "${B2_COPY_KEY_ID:-}" ] || missing_config B2_COPY_KEY_ID
+  [ -n "${B2_COPY_KEY:-}" ] || missing_config B2_COPY_KEY
+  [ -n "${PROD_B2_BUCKET_NAME:-}" ] || missing_config PROD_B2_BUCKET_NAME
+fi
 
 if [ -z "$DUMP_FILE" ]; then
   [ -n "${PROD_SSH_HOST:-}" ] || missing_config PROD_SSH_HOST
@@ -152,8 +169,20 @@ select
   (select count(*) from user_permission_grants) as grants,
   (select count(*) from permissions) as permissions;"
 
-echo "Every account now signs in with '$DEV_PASSWORD'. Photos will not load — the"
-echo "rows reference production storage and this environment reads development buckets."
+if [ "$WITH_PHOTOS" = "1" ]; then
+  echo
+  echo "==> Copying photos from the production bucket"
+  npx tsx scripts/copy-prod-photos-to-dev.ts
+
+  echo
+  echo "==> Publishing photo slugs to the development KV"
+  npx tsx scripts/backfill-kv-slugs.ts
+  echo "Every account now signs in with '$DEV_PASSWORD'."
+else
+  echo "Every account now signs in with '$DEV_PASSWORD'. Photos will not load — the"
+  echo "rows reference production storage and this environment reads development buckets."
+  echo "Re-run with --with-photos to copy them."
+fi
 echo
 echo "This database now holds real customer names, emails and phone numbers."
 echo "Treat it as production data: do not share the dump, and delete it when done."
