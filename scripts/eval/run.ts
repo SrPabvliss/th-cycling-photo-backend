@@ -12,6 +12,7 @@
  *   npx tsx scripts/eval/run.ts --detector yolo --ocr parseq --label "piloto 1" \
  *     [--events <uuid>,<uuid>] [--resume <run_id>] [--concurrency 4] \
  *     [--det-threshold 0.05] [--ocr-threshold 0] [--max-bibs 10] [--limit N]
+ *     [--bib-padding 0.12] [--endpoint <url>]
  *
  * EVAL_ENDPOINT_<DETECTOR>_<OCR> in .env.ops names each endpoint, e.g.
  *   EVAL_ENDPOINT_YOLO_PARSEQ=https://...--eval-yolo-parseq-api.modal.run
@@ -50,6 +51,8 @@ type Args = {
   detThreshold: number
   ocrThreshold: number
   maxBibs: number
+  bibPadding?: number
+  endpoint?: string
   limit?: number
 }
 
@@ -76,6 +79,8 @@ function parseArgs(): Args {
     detThreshold: Number(get('det-threshold') ?? 0.05),
     ocrThreshold: Number(get('ocr-threshold') ?? 0),
     maxBibs: Number(get('max-bibs') ?? 10),
+    bibPadding: get('bib-padding') ? Number(get('bib-padding')) : undefined,
+    endpoint: get('endpoint'),
     limit: get('limit') ? Number(get('limit')) : undefined,
   }
 }
@@ -94,8 +99,8 @@ if (!B2_APPLICATION_KEY_ID || !B2_APPLICATION_KEY || !B2_BUCKET_NAME) {
 
 const args = parseArgs()
 const endpointVar = `EVAL_ENDPOINT_${args.detector.split('_')[0].toUpperCase()}_${args.ocr.toUpperCase()}`
-const endpoint = process.env[endpointVar]
-if (!endpoint) fail(`Missing ${endpointVar} in .env.ops.`)
+const endpoint = args.endpoint ?? process.env[endpointVar]
+if (!endpoint) fail(`Missing ${endpointVar} in .env.ops (or pass --endpoint).`)
 
 const pool = new Pool({
   host: DB_HOST,
@@ -155,8 +160,8 @@ async function createOrResumeRun(): Promise<number> {
   const { rows } = await pool.query(
     `insert into eval.runs
        (label, detector, ocr, endpoint, det_threshold, ocr_threshold, max_bibs, ocr_preprocess,
-        ai_commit, meta, concurrency, events)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ai_commit, meta, concurrency, events, notes)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      returning id`,
     [
       args.label,
@@ -171,6 +176,7 @@ async function createOrResumeRun(): Promise<number> {
       meta,
       args.concurrency,
       args.events ?? null,
+      args.bibPadding != null ? `bib_padding=${args.bibPadding}` : null,
     ],
   )
   console.log(
@@ -206,7 +212,8 @@ async function processPhoto(runId: number, photo: PhotoRow): Promise<'ok' | 'err
   )
   const url =
     `${endpoint}/pipeline?detector=${args.detector}&ocr=${args.ocr}&color=none` +
-    `&ocr_threshold=${args.ocrThreshold}&max_bibs=${args.maxBibs}`
+    `&ocr_threshold=${args.ocrThreshold}&max_bibs=${args.maxBibs}` +
+    (args.bibPadding != null ? `&bib_padding=${args.bibPadding}` : '')
 
   const t0 = performance.now()
   let response: any
