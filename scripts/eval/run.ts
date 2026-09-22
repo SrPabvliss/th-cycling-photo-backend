@@ -12,7 +12,8 @@
  *   npx tsx scripts/eval/run.ts --detector yolo --ocr parseq --label "piloto 1" \
  *     [--events <uuid>,<uuid>] [--resume <run_id>] [--concurrency 4] \
  *     [--det-threshold 0.05] [--ocr-threshold 0] [--max-bibs 10] [--limit N]
- *     [--bib-padding 0.12] [--endpoint <url>]
+ *     [--bib-padding 0.12] [--endpoint <url>] [--no-crops]
+ * Bib crops are kept on the service volume under crops/run<id>/ unless --no-crops.
  *
  * EVAL_ENDPOINT_<DETECTOR>_<OCR> in .env.ops names each endpoint, e.g.
  *   EVAL_ENDPOINT_YOLO_PARSEQ=https://...--eval-yolo-parseq-api.modal.run
@@ -54,6 +55,7 @@ type Args = {
   bibPadding?: number
   endpoint?: string
   limit?: number
+  saveCrops: boolean
 }
 
 function parseArgs(): Args {
@@ -81,6 +83,7 @@ function parseArgs(): Args {
     maxBibs: Number(get('max-bibs') ?? 10),
     bibPadding: get('bib-padding') ? Number(get('bib-padding')) : undefined,
     endpoint: get('endpoint'),
+    saveCrops: !argv.includes('--no-crops'),
     limit: get('limit') ? Number(get('limit')) : undefined,
   }
 }
@@ -213,7 +216,8 @@ async function processPhoto(runId: number, photo: PhotoRow): Promise<'ok' | 'err
   const url =
     `${endpoint}/pipeline?detector=${args.detector}&ocr=${args.ocr}&color=none` +
     `&ocr_threshold=${args.ocrThreshold}&max_bibs=${args.maxBibs}` +
-    (args.bibPadding != null ? `&bib_padding=${args.bibPadding}` : '')
+    (args.bibPadding != null ? `&bib_padding=${args.bibPadding}` : '') +
+    (args.saveCrops ? `&crop_dir=run${runId}` : '')
 
   const t0 = performance.now()
   let response: any
