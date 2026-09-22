@@ -12,7 +12,8 @@
  *   npx tsx scripts/eval/run.ts --detector yolo --ocr parseq --label "piloto 1" \
  *     [--events <uuid>,<uuid>] [--resume <run_id>] [--concurrency 4] \
  *     [--det-threshold 0.05] [--ocr-threshold 0] [--max-bibs 10] [--limit N]
- *     [--bib-padding 0.12] [--endpoint <url>] [--no-crops]
+ *     [--bib-padding 0.12] [--endpoint <url>] [--no-crops] [--every K]
+ * --every K keeps one photo in K (by the fixed order): a spread sample for timing passes.
  * Bib crops are kept on the service volume under crops/run<id>/ unless --no-crops.
  *
  * EVAL_ENDPOINT_<DETECTOR>_<OCR> in .env.ops names each endpoint, e.g.
@@ -56,6 +57,7 @@ type Args = {
   endpoint?: string
   limit?: number
   saveCrops: boolean
+  every?: number
 }
 
 function parseArgs(): Args {
@@ -84,6 +86,7 @@ function parseArgs(): Args {
     bibPadding: get('bib-padding') ? Number(get('bib-padding')) : undefined,
     endpoint: get('endpoint'),
     saveCrops: !argv.includes('--no-crops'),
+    every: get('every') ? Number(get('every')) : undefined,
     limit: get('limit') ? Number(get('limit')) : undefined,
   }
 }
@@ -200,9 +203,10 @@ async function pendingPhotos(runId: number): Promise<PhotoRow[]> {
      select o.id, o.storage_key, o.seq::int
      from ordered o
      where not exists (select 1 from eval.run_photos r where r.run_id = $2 and r.photo_id = o.id)
+       and ($3::int is null or o.seq % $3 = 0)
      order by o.seq
      ${args.limit ? `limit ${args.limit}` : ''}`,
-    [args.events ?? null, runId],
+    [args.events ?? null, runId, args.every ?? null],
   )
   return rows
 }
