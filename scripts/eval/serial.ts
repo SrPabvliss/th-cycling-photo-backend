@@ -167,9 +167,16 @@ async function createOrResumeRuns(): Promise<number[]> {
       const p = args.pairs[i]
       if (r.detector !== p.detector || r.ocr !== p.ocr)
         fail(`Run ${r.id} is ${r.detector}+${r.ocr}, not ${p.detector}+${p.ocr}.`)
-      if (r.status !== 'running') fail(`Run ${r.id} is ${r.status}, not running.`)
+      if (r.status !== 'running' && r.status !== 'completed') fail(`Run ${r.id} is ${r.status}.`)
     })
-    console.log(`Resuming runs ${args.resume.join(', ')}`)
+    // Rows that failed (network, 5xx) are redone: drop them so the photo counts as pending.
+    const dropped = await pool.query(
+      'delete from eval.run_photos where run_id = any($1) and status = $2',
+      [args.resume, 'error'],
+    )
+    console.log(
+      `Resuming runs ${args.resume.join(', ')} (${dropped.rowCount ?? 0} failed rows dropped)`,
+    )
     return args.resume
   }
 
