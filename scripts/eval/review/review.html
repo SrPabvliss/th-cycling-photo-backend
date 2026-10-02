@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Revisión de referencia</title>
+<style>
+  :root {
+    --bg: #111317; --panel: #1b1e24; --line: #2c313a; --text: #e6e8eb; --muted: #9aa1ab;
+    --ok: #3fb950; --fix: #d29922; --none: #58a6ff; --unread: #bc8cff; --out: #f85149;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  body { display: grid; grid-template-rows: auto 1fr; grid-template-columns: 1fr 320px; height: 100vh; }
+  header { grid-column: 1 / 3; display: flex; gap: 16px; align-items: center; padding: 8px 12px;
+    background: var(--panel); border-bottom: 1px solid var(--line); }
+  header select { background: var(--bg); color: var(--text); border: 1px solid var(--line); padding: 4px 6px; max-width: 360px; }
+  header .grow { flex: 1; }
+  .muted { color: var(--muted); }
+  #viewport { position: relative; overflow: hidden; cursor: grab; background: #000; }
+  #viewport.drag { cursor: grabbing; }
+  #layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #layer img { display: block; user-select: none; -webkit-user-drag: none; }
+  #layer svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #badge { position: absolute; top: 10px; left: 10px; padding: 4px 10px; border-radius: 4px; font-weight: 600; display: none; }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); pointer-events: none; }
+  aside { background: var(--panel); border-left: 1px solid var(--line); padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; }
+  .bib { display: flex; justify-content: space-between; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; margin-bottom: 4px; }
+  .bib b { font-size: 22px; letter-spacing: .04em; }
+  .bib.abst { opacity: .5; }
+  .empty { padding: 8px; border: 1px dashed var(--line); border-radius: 4px; color: var(--muted); }
+  .keys button { display: flex; width: 100%; justify-content: space-between; margin-bottom: 6px; padding: 8px 10px;
+    background: var(--bg); color: var(--text); border: 1px solid var(--line); border-left-width: 4px; border-radius: 4px; cursor: pointer; font: inherit; }
+  .keys button:hover { background: #22262e; }
+  .keys kbd { font-family: ui-monospace, monospace; color: var(--muted); }
+  input[type=text] { width: 100%; padding: 8px; font-size: 20px; background: var(--bg); color: var(--text); border: 1px solid var(--fix); border-radius: 4px; }
+  #exclude { display: none; }
+  #error { display: none; background: var(--out); color: #fff; padding: 8px; border-radius: 4px; }
+  .help { font-size: 12px; color: var(--muted); }
+  .help div { display: flex; justify-content: space-between; }
+  label.toggle { display: flex; gap: 6px; align-items: center; }
+</style>
+</head>
+<body>
+<header>
+  <select id="event"></select>
+  <span id="progress" class="muted"></span>
+  <span class="grow"></span>
+  <label class="toggle"><input type="checkbox" id="skip" checked> saltar decididas</label>
+  <span id="position"></span>
+</header>
+<div id="viewport">
+  <div id="layer"><img id="photo" alt=""><svg id="boxes" viewBox="0 0 1 1" preserveAspectRatio="none"><title>cajas de placa</title></svg></div>
+  <div id="badge"></div>
+  <div id="loading">cargando…</div>
+</div>
+<aside>
+  <section>
+    <h2>Etiqueta actual</h2>
+    <div id="bibs"></div>
+    <div class="muted" id="filename" style="margin-top:6px;font-size:12px"></div>
+  </section>
+  <section id="edit" style="display:none">
+    <h2>Números correctos (separados por espacio)</h2>
+    <input type="text" id="digits" inputmode="numeric" autocomplete="off">
+    <div class="help" style="margin-top:4px">Enter guarda · Esc cancela · vacío = sin placa</div>
+  </section>
+  <section id="exclude">
+    <h2>Motivo de exclusión</h2>
+    <div class="keys">
+      <button type="button" data-reason="premiacion" style="border-left-color:var(--out)">Premiación / podio <kbd>1</kbd></button>
+      <button type="button" data-reason="sin_ciclista" style="border-left-color:var(--out)">Sin ciclista en carrera <kbd>2</kbd></button>
+      <button type="button" data-reason="otro" style="border-left-color:var(--out)">Otro (con nota) <kbd>3</kbd></button>
+    </div>
+    <input type="text" id="note" placeholder="nota y Enter" style="display:none;font-size:14px">
+  </section>
+  <section class="keys" id="actions">
+    <h2>Decisión</h2>
+    <button type="button" data-key="Enter" style="border-left-color:var(--ok)">Etiqueta correcta <kbd>Enter</kbd></button>
+    <button type="button" data-key="e" style="border-left-color:var(--fix)">Corregir números <kbd>E</kbd></button>
+    <button type="button" data-key="n" style="border-left-color:var(--none)">Sin placa visible <kbd>N</kbd></button>
+    <button type="button" data-key="i" style="border-left-color:var(--unread)">Placa visible, ilegible <kbd>I</kbd></button>
+    <button type="button" data-key="x" style="border-left-color:var(--out)">Excluir de la prueba <kbd>X</kbd></button>
+  </section>
+  <div id="error"></div>
+  <section class="help">
+    <h2>Navegación</h2>
+    <div><span>Foto anterior / siguiente</span><kbd>← →</kbd></div>
+    <div><span>Zoom a la placa</span><kbd>B</kbd></div>
+    <div><span>Ver foto completa</span><kbd>0</kbd></div>
+    <div><span>Zoom</span><kbd>rueda · arrastrar</kbd></div>
+  </section>
+</aside>
+<script>
+const COLORS = { ok: 'var(--ok)', corregido: 'var(--fix)', sin_placa: 'var(--none)', ilegible: 'var(--unread)', excluir: 'var(--out)' }
+const LABELS = { ok: 'correcta', corregido: 'corregida', sin_placa: 'sin placa', ilegible: 'ilegible', excluir: 'excluida' }
+const $ = (id) => document.getElementById(id)
+let events = []
+let photos = []
+let idx = 0
+let mode = 'normal'
+// A decision needs the photo on screen: blocked until the image has loaded, and one save at a time.
+let ready = false
+let saving = false
+let view = { s: 1, x: 0, y: 0 }
+
+const store = {
+  get(k) { try { return localStorage.getItem(k) } catch { return null } },
+  set(k, v) { try { localStorage.setItem(k, v) } catch {} },
+}
+
+// Digits the reference would keep today: non-deleted readings that are not abstentions.
+const currentDigits = (p) => p.bibs.filter((b) => b.digits && b.status !== 'abstained').map((b) => b.digits)
+
+async function loadEvents(selected) {
+  events = await (await fetch('/api/events')).json()
+  const sel = $('event')
+  sel.innerHTML = events.map((e) => `<option value="${e.id}">${e.start_date} · ${e.name} (${e.decided}/${e.photos})</option>`).join('')
+  const first = selected || store.get('event') || (events.find((e) => e.decided < e.photos) || events[0]).id
+  sel.value = first
+  await loadQueue(first)
+}
+
+async function loadQueue(eventId) {
+  store.set('event', eventId)
+  photos = await (await fetch(`/api/queue?event=${eventId}`)).json()
+  const pending = photos.findIndex((p) => !p.decision)
+  idx = pending >= 0 ? pending : 0
+  show()
+}
+
+function progress() {
+  const done = photos.filter((p) => p.decision).length
+  const ev = events.find((e) => e.id === $('event').value)
+  if (ev) ev.decided = done
+  $('progress').textContent = `${done} de ${photos.length} decididas en el evento · ${events.reduce((a, e) => a + e.decided, 0)} de ${events.reduce((a, e) => a + e.photos, 0)} en total`
+  const opt = $('event').selectedOptions[0]
+  if (ev && opt) opt.textContent = `${ev.start_date} · ${ev.name} (${done}/${ev.photos})`
+}
+
+function show() {
+  const p = photos[idx]
+  if (!p) return
+  setMode('normal')
+  $('position').textContent = `foto ${idx + 1} de ${photos.length}`
+  $('filename').textContent = p.filename
+  const bibs = p.bibs.filter((b) => b.digits)
+  $('bibs').innerHTML = bibs.length
+    ? bibs.map((b) => `<div class="bib ${b.status === 'abstained' ? 'abst' : ''}"><b>${b.digits}</b><span class="muted">${b.source}${b.confidence != null ? ' · ' + Number(b.confidence).toFixed(2) : ''}${b.status === 'abstained' ? ' · abstención' : ''}</span></div>`).join('')
+    : '<div class="empty">sin dorsal asignado</div>'
+  const badge = $('badge')
+  if (p.decision) {
+    const d = p.decision
+    badge.style.display = 'block'
+    badge.style.background = COLORS[d.decision]
+    badge.textContent = `${LABELS[d.decision]}${d.digits_after ? ': ' + d.digits_after.replace(/;/g, ' ') : ''}${d.reason ? ' · ' + d.reason : ''}`
+  } else badge.style.display = 'none'
+  $('loading').style.display = 'grid'
+  const img = $('photo')
+  ready = false
+  img.onload = () => { $('loading').style.display = 'none'; drawBoxes(p); fit(); ready = true }
+  img.src = `/img/${p.event_id}/${p.id}.jpg`
+  for (const k of [1, 2, 3]) {
+    const n = photos[idx + k]
+    if (n) new Image().src = `/img/${n.event_id}/${n.id}.jpg`
+  }
+  progress()
+}
+
+function drawBoxes(p) {
+  const rect = (b, color, dash) => {
+    const [x1, y1, x2, y2] = b
+    return `<rect x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" ${dash ? 'stroke-dasharray="6 4"' : ''}/>`
+  }
+  const bibBoxes = p.bibs.filter((b) => Array.isArray(b.bbox)).map((b) => rect(b.bbox, '#3fb950', false))
+  const plateBoxes = p.plates.filter((d) => Array.isArray(d.bbox)).map((d) => rect(d.bbox, '#d29922', true))
+  $('boxes').innerHTML = plateBoxes.join('') + bibBoxes.join('')
+}
+
+function apply() {
+  $('layer').style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.s})`
+}
+
+function fit() {
+  const vp = $('viewport').getBoundingClientRect()
+  const img = $('photo')
+  const s = Math.min(vp.width / img.naturalWidth, vp.height / img.naturalHeight)
+  view = { s, x: (vp.width - img.naturalWidth * s) / 2, y: (vp.height - img.naturalHeight * s) / 2 }
+  apply()
+}
+
+function zoomToPlate() {
+  const p = photos[idx]
+  const img = $('photo')
+  const boxes = [...p.bibs.map((b) => b.bbox), ...p.plates.map((d) => d.bbox)].filter(Array.isArray)
+  if (!boxes.length) return
+  const x1 = Math.min(...boxes.map((b) => b[0]))
+  const y1 = Math.min(...boxes.map((b) => b[1]))
+  const x2 = Math.max(...boxes.map((b) => b[2]))
+  const y2 = Math.max(...boxes.map((b) => b[3]))
+  const vp = $('viewport').getBoundingClientRect()
+  const w = (x2 - x1) * img.naturalWidth
+  const h = (y2 - y1) * img.naturalHeight
+  const s = Math.min(vp.width * 0.5 / w, vp.height * 0.5 / h, 4)
+  const cx = ((x1 + x2) / 2) * img.naturalWidth
+  const cy = ((y1 + y2) / 2) * img.naturalHeight
+  view = { s, x: vp.width / 2 - cx * s, y: vp.height / 2 - cy * s }
+  apply()
+}
+
+$('viewport').addEventListener('wheel', (e) => {
+  e.preventDefault()
+  const vp = $('viewport').getBoundingClientRect()
+  const mx = e.clientX - vp.left
+  const my = e.clientY - vp.top
+  const k = Math.exp(-e.deltaY * 0.0015)
+  view = { s: view.s * k, x: mx - (mx - view.x) * k, y: my - (my - view.y) * k }
+  apply()
+}, { passive: false })
+
+let dragStart = null
+$('viewport').addEventListener('mousedown', (e) => { dragStart = { x: e.clientX - view.x, y: e.clientY - view.y }; $('viewport').classList.add('drag') })
+window.addEventListener('mousemove', (e) => { if (dragStart) { view.x = e.clientX - dragStart.x; view.y = e.clientY - dragStart.y; apply() } })
+window.addEventListener('mouseup', () => { dragStart = null; $('viewport').classList.remove('drag') })
+window.addEventListener('resize', fit)
+
+function setMode(m) {
+  mode = m
+  $('edit').style.display = m === 'edit' ? 'block' : 'none'
+  $('exclude').style.display = m === 'exclude' || m === 'note' ? 'block' : 'none'
+  $('note').style.display = m === 'note' ? 'block' : 'none'
+  $('actions').style.display = m === 'normal' ? 'block' : 'none'
+  if (m === 'edit') {
+    const input = $('digits')
+    input.value = currentDigits(photos[idx]).join(' ')
+    input.focus(); input.select()
+  }
+  if (m === 'note') { $('note').value = ''; $('note').focus() }
+  if (m === 'normal') document.activeElement?.blur()
+}
+
+async function decide(decision, extra = {}) {
+  if (!ready || saving) return
+  saving = true
+  const p = photos[idx]
+  const before = currentDigits(p).join(';')
+  const payload = {
+    photo_id: p.id, event_id: p.event_id, filename: p.filename, decision,
+    digits_before: before, digits_after: '', reason: '', note: '', ...extra,
+  }
+  try {
+    const res = await fetch('/api/decision', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
+    if (!res.ok) throw new Error((await res.json()).error || res.status)
+    p.decision = await res.json()
+    $('error').style.display = 'none'
+    next()
+  } catch (err) {
+    $('error').textContent = `No se guardó (${err.message}). La foto sigue en pantalla.`
+    $('error').style.display = 'block'
+  } finally {
+    saving = false
+  }
+}
+
+function next() {
+  let j = idx + 1
+  if ($('skip').checked) while (j < photos.length && photos[j].decision) j++
+  if (j >= photos.length) {
+    const left = photos.findIndex((p) => !p.decision)
+    if (left >= 0) j = left
+    else { idx = photos.length - 1; show(); $('error').textContent = 'Evento completo. Elige otro evento arriba.'; $('error').style.display = 'block'; return }
+  }
+  idx = j
+  show()
+}
+
+function prev() { if (idx > 0) { idx--; show() } }
+
+function onKey(key) {
+  if (mode === 'normal') {
+    if (key === 'Enter') decide('ok', { digits_after: currentDigits(photos[idx]).join(';') })
+    else if (key === 'e') setMode('edit')
+    else if (key === 'n') decide('sin_placa')
+    else if (key === 'i') decide('ilegible')
+    else if (key === 'x') setMode('exclude')
+    else if (key === 'ArrowRight') { idx = Math.min(idx + 1, photos.length - 1); show() }
+    else if (key === 'ArrowLeft') prev()
+    else if (key === 'b') zoomToPlate()
+    else if (key === '0') fit()
+  } else if (mode === 'exclude') {
+    if (key === '1') decide('excluir', { reason: 'premiacion' })
+    else if (key === '2') decide('excluir', { reason: 'sin_ciclista' })
+    else if (key === '3') setMode('note')
+    else if (key === 'Escape') setMode('normal')
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  if (mode === 'edit') {
+    if (e.key === 'Escape') setMode('normal')
+    else if (e.key === 'Enter') {
+      e.preventDefault()
+      const digits = $('digits').value.trim().split(/[\s,;]+/).filter(Boolean)
+      if (digits.some((d) => !/^\d+$/.test(d))) { $('error').textContent = 'Solo números separados por espacio.'; $('error').style.display = 'block'; return }
+      const joined = digits.join(';')
+      if (!joined) decide('sin_placa')
+      else decide(joined === currentDigits(photos[idx]).join(';') ? 'ok' : 'corregido', { digits_after: joined })
+    }
+    return
+  }
+  if (mode === 'note') {
+    if (e.key === 'Escape') setMode('exclude')
+    else if (e.key === 'Enter') { e.preventDefault(); decide('excluir', { reason: 'otro', note: $('note').value.trim() }) }
+    return
+  }
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
+  // A held key repeats: let arrows repeat, never a decision.
+  if (e.repeat && !['ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); return }
+  if (['Enter', 'ArrowLeft', 'ArrowRight', 'e', 'n', 'i', 'x', 'b', '0', '1', '2', '3', 'Escape'].includes(key)) {
+    e.preventDefault()
+    onKey(key)
+  }
+})
+
+for (const b of document.querySelectorAll('#actions button')) b.addEventListener('click', () => onKey(b.dataset.key))
+for (const b of document.querySelectorAll('#exclude button')) b.addEventListener('click', () => onKey({ premiacion: '1', sin_ciclista: '2', otro: '3' }[b.dataset.reason]))
+$('event').addEventListener('change', (e) => loadQueue(e.target.value))
+
+loadEvents()
+</script>
+</body>
+</html>
