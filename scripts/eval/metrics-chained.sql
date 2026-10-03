@@ -6,11 +6,17 @@
 -- Accuracy per photo: the set of digits read equals the reference set.
 -- Operating thresholds: detection :det (bbox confidence), reader abstention
 -- :ocr on the uncalibrated confidence (0 = keep every reading).
--- Usage: psql ... -v det=0.25 -v ocr=0 -v lo=28 -v hi=47 -f scripts/eval/metrics-chained.sql
+-- Usage: psql ... -v det=0.25 -v dfine=0.5 -v ocr=0 -v lo=28 -v hi=47 -f scripts/eval/metrics-chained.sql
 
 create temp table if not exists tmp_pairs as
 select ru.id as run_id, substr(ru.label, 12, 1) as account, ru.detector || '+' || ru.ocr as pair
 from eval.runs ru where ru.id between :lo and :hi;
+
+-- Operating threshold per detector: the one that maximizes F1 on each
+-- detector's own validation split (eval_boxes.py, s42); production keeps the
+-- threshold it is deployed with. :det applies to any detector not listed.
+create temp table tmp_thr (detector text primary key, thr real);
+insert into tmp_thr values ('yolo26m_1024', 0.55), ('rfdetr_l_896', 0.50), ('yolo11m_1024_fx', 0.35), ('dfine_l_640', :dfine), ('yolo', 0.25);
 
 create temp table tmp_per_photo as
 with ref as (
@@ -20,10 +26,12 @@ with ref as (
 ),
 pred as (
   select rb.run_id, rb.photo_id,
-         coalesce(array_agg(distinct rb.digits order by rb.digits) filter (where rb.bbox_confidence >= :det and coalesce(rb.confidence_uncalibrated, rb.confidence) >= :ocr and rb.digits <> ''), '{}') as read,
-         bool_or(rb.bbox_confidence >= :det) as detected
+         coalesce(array_agg(distinct rb.digits order by rb.digits) filter (where rb.bbox_confidence >= coalesce(t.thr, :det) and coalesce(rb.confidence_uncalibrated, rb.confidence) >= :ocr and rb.digits <> ''), '{}') as read,
+         bool_or(rb.bbox_confidence >= coalesce(t.thr, :det)) as detected
   from eval.run_bibs rb
   join tmp_pairs tp on tp.run_id = rb.run_id
+  join eval.runs ru on ru.id = rb.run_id
+  left join tmp_thr t on t.detector = ru.detector
   group by rb.run_id, rb.photo_id
 )
 select tp.account, tp.pair, rp.run_id, rp.photo_id, r.event_id,
@@ -99,3 +107,4 @@ from tmp_per_photo group by account, pair order by account, pair;
 
 drop table tmp_per_photo;
 drop table tmp_pairs;
+drop table tmp_thr;
