@@ -16,7 +16,7 @@ from eval.runs ru where ru.id between :lo and :hi;
 -- detector's own validation split (eval_boxes.py, s42); production keeps the
 -- threshold it is deployed with. :det applies to any detector not listed.
 create temp table tmp_thr (detector text primary key, thr real);
-insert into tmp_thr values ('yolo26m_1024', 0.55), ('rfdetr_l_896', 0.50), ('yolo11m_1024_fx', 0.35), ('dfine_l_640', :dfine), ('yolo', 0.25);
+insert into tmp_thr values ('yolo26m_1024', 0.55), ('rfdetr_l_896', 0.50), ('yolo11m_1024_fx', 0.35), ('dfine_l_640', :dfine), ('yolo', 0.25), ('yolo26m_c5_1024', 0.45), ('rfdetr_l_896_c5', 0.65);
 
 create temp table tmp_per_photo as
 with ref as (

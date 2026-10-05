@@ -1,0 +1,82 @@
+SELECT 6
+CREATE TABLE
+INSERT 0 7
+SELECT 37164
+
+== Exactitud por par (fotos revisadas e incluidas; ilegibles aparte) ==
+           pair           | photos | with_bib | photo_exact | exact_with_bib | det_recall | wrong_read | missed | false_read_no_bib | unreadable | read_on_unreadable 
+--------------------------+--------+----------+-------------+----------------+------------+------------+--------+-------------------+------------+--------------------
+ rfdetr_l_896_c5+svtrv2_b |  12046 |     9593 |        78.6 |           75.2 |       84.5 |        9.3 |   15.5 |               8.1 |        342 |               23.4
+ rfdetr_l_896+svtrv2_b    |  12046 |     9593 |        83.3 |           81.8 |       92.8 |       11.0 |    7.2 |              10.7 |        342 |               43.9
+ yolo26m_c5_1024+svtrv2_b |  12046 |     9593 |        75.6 |           71.3 |       79.4 |        8.0 |   20.6 |               7.9 |        342 |               21.3
+(3 rows)
+
+
+== Exactitud por evento y par (fotos con dorsal) ==
+                    event                    |           pair           | with_bib | exact_with_bib 
+---------------------------------------------+--------------------------+----------+----------------
+ The Lost Line - Freestyle                   | rfdetr_l_896_c5+svtrv2_b |     1156 |           89.7
+ The Lost Line - Freestyle                   | rfdetr_l_896+svtrv2_b    |     1156 |           91.9
+ The Lost Line - Freestyle                   | yolo26m_c5_1024+svtrv2_b |     1156 |           88.0
+ 2da. Válida Copa Bike Parks. Coto Bike Park | rfdetr_l_896_c5+svtrv2_b |      982 |           81.1
+ 2da. Válida Copa Bike Parks. Coto Bike Park | rfdetr_l_896+svtrv2_b    |      982 |           88.0
+ 2da. Válida Copa Bike Parks. Coto Bike Park | yolo26m_c5_1024+svtrv2_b |      982 |           86.8
+ DOWNHILL CEVALLOS                           | rfdetr_l_896_c5+svtrv2_b |      819 |           82.4
+ DOWNHILL CEVALLOS                           | rfdetr_l_896+svtrv2_b    |      819 |           84.4
+ DOWNHILL CEVALLOS                           | yolo26m_c5_1024+svtrv2_b |      819 |           74.5
+ Downhill Lumbisi 2026                       | rfdetr_l_896_c5+svtrv2_b |      739 |           81.7
+ Downhill Lumbisi 2026                       | rfdetr_l_896+svtrv2_b    |      739 |           81.7
+ Downhill Lumbisi 2026                       | yolo26m_c5_1024+svtrv2_b |      739 |           81.3
+ Ecuador OPEN                                | rfdetr_l_896_c5+svtrv2_b |      258 |           70.2
+ ENDURO RETO PIMAMPIRO 2026                  | rfdetr_l_896_c5+svtrv2_b |      416 |           85.3
+ Ecuador OPEN                                | rfdetr_l_896+svtrv2_b    |      258 |           80.6
+ ENDURO RETO PIMAMPIRO 2026                  | rfdetr_l_896+svtrv2_b    |      416 |           86.8
+ Ecuador OPEN                                | yolo26m_c5_1024+svtrv2_b |      258 |           77.1
+ ENDURO RETO PIMAMPIRO 2026                  | yolo26m_c5_1024+svtrv2_b |      416 |           73.3
+ 3ra. Válida Copa Bike Parks, Pamba          | rfdetr_l_896_c5+svtrv2_b |      734 |           72.5
+ 3ra. Válida Copa Bike Parks, Pamba          | rfdetr_l_896+svtrv2_b    |      734 |           73.8
+ 3ra. Válida Copa Bike Parks, Pamba          | yolo26m_c5_1024+svtrv2_b |      734 |           74.9
+ Sigchos Fest                                | rfdetr_l_896_c5+svtrv2_b |      212 |           67.9
+ Sigchos Fest                                | rfdetr_l_896+svtrv2_b    |      212 |           72.2
+ Sigchos Fest                                | yolo26m_c5_1024+svtrv2_b |      212 |           63.7
+ Downhill El Bosque Tercera Edición          | rfdetr_l_896_c5+svtrv2_b |      712 |           53.7
+ Downhill El Bosque Tercera Edición          | rfdetr_l_896+svtrv2_b    |      712 |           64.5
+ Downhill El Bosque Tercera Edición          | yolo26m_c5_1024+svtrv2_b |      712 |           58.6
+ OPEN SHIMANO                                | rfdetr_l_896_c5+svtrv2_b |     1877 |           78.9
+ OPEN SHIMANO                                | rfdetr_l_896+svtrv2_b    |     1877 |           87.3
+ OPEN SHIMANO                                | yolo26m_c5_1024+svtrv2_b |     1877 |           69.7
+ Downhill Teleférico                         | rfdetr_l_896_c5+svtrv2_b |     1688 |           60.9
+ Downhill Teleférico                         | rfdetr_l_896+svtrv2_b    |     1688 |           74.7
+ Downhill Teleférico                         | yolo26m_c5_1024+svtrv2_b |     1688 |           50.2
+(33 rows)
+
+
+== Tiempo por foto y par, ms (sin frías): servicio, decodificación, detección (biblioteca + red), red sola, OCR ==
+           pair           |   n   | total_p50 | total_p95 | decode_p50 | det_p50 | model_p50 | det_lib_pre_p50 | ocr_p50 | http_p50 
+--------------------------+-------+-----------+-----------+------------+---------+-----------+-----------------+---------+----------
+ rfdetr_l_896_c5+svtrv2_b | 12382 |       315 |       719 |        209 |      71 |      28.7 |              42 |    17.6 |      620
+ rfdetr_l_896+svtrv2_b    | 12382 |       301 |       648 |        209 |      69 |      28.7 |              40 |    17.0 |      597
+ yolo26m_c5_1024+svtrv2_b | 12382 |       368 |       799 |        209 |     136 |      14.7 |             121 |    16.9 |      668
+(3 rows)
+
+
+== Diferencia pareada por foto frente a producción (yolo+parseq), ms, mediana [p25, p75] del total_ms ==
+ pair | n | delta_p50 | delta_p25 | delta_p75 
+------+---+-----------+-----------+-----------
+(0 rows)
+
+
+== Tiempo por cuenta (host) y par: total_ms p50 ==
+ account |           pair           |  n   | total_p50 | decode_p50 
+---------+--------------------------+------+-----------+------------
+ E       | rfdetr_l_896_c5+svtrv2_b | 6109 |       287 |        190
+ E       | rfdetr_l_896+svtrv2_b    | 6109 |       269 |        189
+ E       | yolo26m_c5_1024+svtrv2_b | 6109 |       325 |        189
+ F       | rfdetr_l_896_c5+svtrv2_b | 6279 |       325 |        215
+ F       | rfdetr_l_896+svtrv2_b    | 6279 |       312 |        215
+ F       | yolo26m_c5_1024+svtrv2_b | 6279 |       381 |        215
+(6 rows)
+
+DROP TABLE
+DROP TABLE
+DROP TABLE
