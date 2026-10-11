@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caracterización de eventos</title>
+<style>
+  :root { --bg: #111317; --panel: #1b1e24; --line: #2c313a; --text: #e6e8eb; --muted: #9aa1ab; --out: #f85149; --ok: #3fb950; --star: #e3b341; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  body { display: grid; grid-template-rows: auto 1fr; grid-template-columns: 1fr 380px; height: 100vh; }
+  header { grid-column: 1 / 3; display: flex; gap: 16px; align-items: center; padding: 8px 12px;
+    background: var(--panel); border-bottom: 1px solid var(--line); }
+  header select { background: var(--bg); color: var(--text); border: 1px solid var(--line); padding: 4px 6px; max-width: 320px; }
+  header .grow { flex: 1; }
+  .muted { color: var(--muted); }
+  #viewport { position: relative; overflow: hidden; cursor: grab; background: #000; }
+  #viewport.drag { cursor: grabbing; }
+  #layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #layer img { display: block; user-select: none; -webkit-user-drag: none; }
+  #layer svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #badge { position: absolute; top: 10px; left: 10px; padding: 4px 10px; border-radius: 4px; font-weight: 600; display: none; background: #fff; color: #000; max-width: 70%; }
+  #star { position: absolute; top: 10px; right: 10px; padding: 4px 10px; border-radius: 4px; font-weight: 600; display: none; background: var(--star); color: #000; }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); pointer-events: none; }
+  aside { background: var(--panel); border-left: 1px solid var(--line); padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; }
+  .steps { display: flex; gap: 4px; flex-wrap: wrap; }
+  .steps span { padding: 3px 8px; border-radius: 4px; border: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .steps span.done { color: var(--text); background: #22262e; }
+  .steps span.now { color: #000; font-weight: 600; }
+  .keys button { display: flex; width: 100%; justify-content: space-between; margin-bottom: 6px; padding: 8px 10px; text-align: left; gap: 8px;
+    background: var(--bg); color: var(--text); border: 1px solid var(--line); border-left-width: 4px; border-radius: 4px; cursor: pointer; font: inherit; }
+  .keys button:hover { background: #22262e; }
+  .keys button.on { background: #2a3140; }
+  .keys kbd { font-family: ui-monospace, monospace; color: var(--muted); flex: none; }
+  input[type=text] { width: 100%; padding: 8px; font-size: 14px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; }
+  #error { display: none; background: var(--out); color: #fff; padding: 8px; border-radius: 4px; }
+  .help { font-size: 12px; color: var(--muted); }
+  .help div { display: flex; justify-content: space-between; }
+  label.toggle { display: flex; gap: 6px; align-items: center; }
+  #crumb { font-weight: 600; margin-bottom: 6px; }
+  #summary { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <select id="filterEvent"><option value="">todos los eventos</option></select>
+  <span id="progress" class="muted"></span>
+  <span class="grow"></span>
+  <label class="toggle"><input type="checkbox" id="skip" checked> saltar decididas</label>
+  <span id="position"></span>
+</header>
+<div id="viewport">
+  <div id="layer"><img id="photo" alt=""><svg id="boxes" viewBox="0 0 1 1" preserveAspectRatio="none"><title>cajas detectadas</title></svg></div>
+  <div id="badge"></div>
+  <div id="star">★ representativa</div>
+  <div id="loading">cargando…</div>
+</div>
+<aside>
+  <section>
+    <h2>Foto</h2>
+    <div id="meta" class="muted"></div>
+    <div id="truth" class="muted"></div>
+  </section>
+  <section>
+    <h2>Dimensiones</h2>
+    <div class="steps" id="steps"></div>
+  </section>
+  <section class="keys" id="options">
+    <div id="crumb"></div>
+    <div id="optlist"></div>
+  </section>
+  <section id="noteBox" style="display:none">
+    <h2>Nota</h2>
+    <input type="text" id="note" placeholder="nota y Enter (Esc cancela)">
+  </section>
+  <div id="error"></div>
+  <section id="summary"></section>
+  <section class="help">
+    <h2>Teclas</h2>
+    <div><span>Elegir opción</span><kbd>1 … n</kbd></div>
+    <div><span>Dimensión anterior</span><kbd>Retroceso</kbd></div>
+    <div><span>Marcar representativa del evento</span><kbd>R</kbd></div>
+    <div><span>Nota (se guarda con la foto)</span><kbd>N</kbd></div>
+    <div><span>Foto anterior / siguiente</span><kbd>← →</kbd></div>
+    <div><span>Zoom a la placa / foto completa</span><kbd>B / 0</kbd></div>
+    <div><span>Zoom</span><kbd>rueda · arrastrar</kbd></div>
+  </section>
+</aside>
+<script>
+const $ = (id) => document.getElementById(id)
+let dims = []
+let all = []
+let photos = []
+let idx = 0
+let step = 0
+let answers = {}
+let rep = false
+let note = ''
+let mode = 'dim'   // dim | note
+let ready = false
+let saving = false
+let view = { s: 1, x: 0, y: 0 }
+const store = { get(k) { try { return localStorage.getItem(k) } catch { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch {} } }
+
+async function init() {
+  dims = (await (await fetch('/api/taxonomy')).json()).dimensiones
+  all = await (await fetch('/api/queue')).json()
+  const events = [...new Set(all.map((p) => p.event))].sort()
+  $('filterEvent').insertAdjacentHTML('beforeend', events.map((e) => `<option value="${e}">${e}</option>`).join(''))
+  $('filterEvent').value = store.get('event') || ''
+  applyFilter()
+}
+
+function applyFilter() {
+  const e = $('filterEvent').value
+  store.set('event', e)
+  photos = all.filter((p) => !e || p.event === e)
+  const pending = photos.findIndex((p) => !p.decision)
+  idx = pending >= 0 ? pending : 0
+  show()
+}
+
+function progress() {
+  const done = photos.filter((p) => p.decision).length
+  const reps = all.filter((p) => p.decision && p.decision.representativa === '1').length
+  $('progress').textContent = `${done} de ${photos.length} en el filtro · ${all.filter((p) => p.decision).length} de ${all.length} en total · ${reps} representativas`
+}
+
+function labelOf(dimId, optId) {
+  const d = dims.find((x) => x.id === dimId)
+  const o = d && d.opciones.find(([id]) => id === optId)
+  return o ? o[1].split(' (')[0] : optId
+}
+
+function show() {
+  const p = photos[idx]
+  if (!p) { $('position').textContent = 'sin fotos en el filtro'; return }
+  // A decided photo starts a fresh pass but keeps its flag and note, so R or N alone re-saves it.
+  answers = {}
+  step = 0
+  rep = Boolean(p.decision && p.decision.representativa === '1')
+  note = p.decision ? p.decision.note || '' : ''
+  setMode('dim')
+  $('position').textContent = `foto ${idx + 1} de ${photos.length}`
+  $('meta').textContent = `${p.event} · ${p.filename}`
+  $('truth').textContent = p.unreadable ? 'referencia: ilegible' : p.truth ? `referencia: ${p.truth.replace(/;/g, ' ')}` : 'referencia: sin dorsal'
+  const badge = $('badge')
+  if (p.decision) {
+    badge.style.display = 'block'
+    badge.textContent = dims.map((d) => labelOf(d.id, p.decision[d.id])).join(' · ') + (p.decision.note ? ` · ${p.decision.note}` : '')
+  } else badge.style.display = 'none'
+  $('star').style.display = rep ? 'block' : 'none'
+  $('loading').style.display = 'grid'
+  const img = $('photo')
+  ready = false
+  img.onload = () => { $('loading').style.display = 'none'; drawBoxes(p); fit(); ready = true }
+  img.src = `/img/${p.event_id}/${p.id}.jpg`
+  for (const k of [1, 2, 3]) { const n = photos[idx + k]; if (n) new Image().src = `/img/${n.event_id}/${n.id}.jpg` }
+  progress()
+  renderStep()
+}
+
+function renderStep() {
+  $('steps').innerHTML = dims.map((d, i) => {
+    const cls = i < step ? 'done' : i === step ? 'now' : ''
+    const style = i === step ? `background:${d.color};border-color:${d.color}` : ''
+    return `<span class="${cls}" style="${style}">${d.label}${answers[d.id] ? `: ${labelOf(d.id, answers[d.id])}` : ''}</span>`
+  }).join('')
+  const d = dims[step]
+  $('crumb').textContent = d.label
+  $('crumb').style.color = d.color
+  $('optlist').innerHTML = d.opciones.map(([id, label], i) =>
+    `<button type="button" data-id="${id}" style="border-left-color:${d.color}"><span>${label}</span><kbd>${i + 1}</kbd></button>`).join('')
+  for (const b of document.querySelectorAll('#optlist button')) b.addEventListener('click', () => pick(b.dataset.id))
+  $('summary').textContent = (rep ? '★ representativa. ' : '') + (note ? `Nota: ${note}` : '')
+}
+
+function drawBoxes(p) {
+  $('boxes').innerHTML = p.boxes.map((b) => {
+    const [x1, y1, x2, y2] = b.bbox
+    return `<rect x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}" fill="none" stroke="#f85149" stroke-width="2" vector-effect="non-scaling-stroke"/>`
+  }).join('')
+}
+
+function apply() { $('layer').style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.s})` }
+
+function fit() {
+  const vp = $('viewport').getBoundingClientRect()
+  const img = $('photo')
+  const s = Math.min(vp.width / img.naturalWidth, vp.height / img.naturalHeight)
+  view = { s, x: (vp.width - img.naturalWidth * s) / 2, y: (vp.height - img.naturalHeight * s) / 2 }
+  apply()
+}
+
+function zoomToPlate() {
+  const p = photos[idx]
+  const img = $('photo')
+  if (!p.boxes.length) return
+  const boxes = p.boxes.map((b) => b.bbox)
+  const x1 = Math.min(...boxes.map((b) => b[0]))
+  const y1 = Math.min(...boxes.map((b) => b[1]))
+  const x2 = Math.max(...boxes.map((b) => b[2]))
+  const y2 = Math.max(...boxes.map((b) => b[3]))
+  const vp = $('viewport').getBoundingClientRect()
+  const w = (x2 - x1) * img.naturalWidth
+  const h = (y2 - y1) * img.naturalHeight
+  const s = Math.min(vp.width * 0.4 / w, vp.height * 0.4 / h, 6)
+  const cx = ((x1 + x2) / 2) * img.naturalWidth
+  const cy = ((y1 + y2) / 2) * img.naturalHeight
+  view = { s, x: vp.width / 2 - cx * s, y: vp.height / 2 - cy * s }
+  apply()
+}
+
+$('viewport').addEventListener('wheel', (e) => {
+  e.preventDefault()
+  const vp = $('viewport').getBoundingClientRect()
+  const mx = e.clientX - vp.left
+  const my = e.clientY - vp.top
+  const k = Math.exp(-e.deltaY * 0.0015)
+  view = { s: view.s * k, x: mx - (mx - view.x) * k, y: my - (my - view.y) * k }
+  apply()
+}, { passive: false })
+let dragStart = null
+$('viewport').addEventListener('mousedown', (e) => { dragStart = { x: e.clientX - view.x, y: e.clientY - view.y }; $('viewport').classList.add('drag') })
+window.addEventListener('mousemove', (e) => { if (dragStart) { view.x = e.clientX - dragStart.x; view.y = e.clientY - dragStart.y; apply() } })
+window.addEventListener('mouseup', () => { dragStart = null; $('viewport').classList.remove('drag') })
+window.addEventListener('resize', fit)
+
+function setMode(m) {
+  mode = m
+  $('options').style.display = m === 'dim' ? 'block' : 'none'
+  $('noteBox').style.display = m === 'note' ? 'block' : 'none'
+  if (m === 'note') { $('note').value = note; $('note').focus(); $('note').select() }
+  if (m === 'dim') document.activeElement?.blur()
+}
+
+function pick(id) {
+  answers[dims[step].id] = id
+  if (step < dims.length - 1) { step++; renderStep(); return }
+  save(answers)
+}
+
+function back() {
+  if (step === 0) return
+  step--
+  delete answers[dims[step].id]
+  renderStep()
+}
+
+// Saves a full set of answers; for an already decided photo, R or N re-save its answers.
+function current() {
+  const p = photos[idx]
+  if (Object.keys(answers).length === dims.length) return answers
+  if (p.decision) return Object.fromEntries(dims.map((d) => [d.id, p.decision[d.id]]))
+  return null
+}
+
+async function save(a, advance = true) {
+  if (!ready || saving) return
+  saving = true
+  const p = photos[idx]
+  const payload = { photo_id: p.id, ...a, representativa: rep, note }
+  try {
+    const res = await fetch('/api/decision', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
+    if (!res.ok) throw new Error((await res.json()).error || res.status)
+    p.decision = await res.json()
+    $('error').style.display = 'none'
+    if (advance) next()
+    else show()
+  } catch (err) {
+    $('error').textContent = `No se guardó (${err.message}). La foto sigue en pantalla.`
+    $('error').style.display = 'block'
+  } finally { saving = false }
+}
+
+function toggleRep() {
+  rep = !rep
+  $('star').style.display = rep ? 'block' : 'none'
+  const a = current()
+  if (a) save(a, false)
+  else renderStep()
+}
+
+function next() {
+  let j = idx + 1
+  if ($('skip').checked) while (j < photos.length && photos[j].decision) j++
+  if (j >= photos.length) {
+    const left = photos.findIndex((p) => !p.decision)
+    if (left >= 0) j = left
+    else { idx = photos.length - 1; show(); $('error').textContent = 'Filtro completo. Cambia el evento arriba.'; $('error').style.display = 'block'; return }
+  }
+  idx = j; show()
+}
+function prev() { if (idx > 0) { idx--; show() } }
+
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  // A focused select or checkbox in the header would swallow the key: take it back.
+  if (mode !== 'note' && e.target !== document.body) { e.preventDefault(); e.target.blur?.() }
+  if (mode === 'note') {
+    if (e.key === 'Escape') setMode('dim')
+    else if (e.key === 'Enter') {
+      e.preventDefault()
+      note = $('note').value.trim()
+      setMode('dim')
+      const a = current()
+      if (a) save(a, false)
+      else renderStep()
+    }
+    return
+  }
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
+  if (e.repeat && !['ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); return }
+  if (key === 'ArrowRight') { e.preventDefault(); idx = Math.min(idx + 1, photos.length - 1); show(); return }
+  if (key === 'ArrowLeft') { e.preventDefault(); prev(); return }
+  if (key === 'Backspace') { e.preventDefault(); back(); return }
+  if (key === 'b') { e.preventDefault(); zoomToPlate(); return }
+  if (key === '0') { e.preventDefault(); fit(); return }
+  if (key === 'r') { e.preventDefault(); toggleRep(); return }
+  if (key === 'n') { e.preventDefault(); setMode('note'); return }
+  const i = Number(key) - 1
+  if (Number.isInteger(i) && dims[step].opciones[i]) { e.preventDefault(); pick(dims[step].opciones[i][0]) }
+})
+$('filterEvent').addEventListener('change', (e) => { applyFilter(); e.target.blur() })
+$('skip').addEventListener('change', (e) => e.target.blur())
+init()
+</script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+{
+  "dimensiones": [
+    {
+      "id": "luz",
+      "label": "Luz",
+      "color": "#e3b341",
+      "opciones": [
+        ["sol_directo", "Sol directo (sombras duras, brillos)"],
+        ["nublado_difusa", "Nublado o luz difusa"],
+        ["sombra_bosque", "Sombra de bosque o mixta (manchas de luz)"],
+        ["noche_artificial", "Noche o luz artificial"]
+      ]
+    },
+    {
+      "id": "entorno",
+      "label": "Entorno",
+      "color": "#3fb950",
+      "opciones": [
+        ["bosque", "Bosque (árboles cierran el fondo)"],
+        ["tierra_abierta", "Tierra abierta, cárcava o ladera"],
+        ["pasto_paramo", "Pasto, páramo o matorral bajo"],
+        ["urbano", "Urbano, escaleras u obra"]
+      ]
+    },
+    {
+      "id": "clima",
+      "label": "Clima visible",
+      "color": "#58a6ff",
+      "opciones": [
+        ["seco", "Seco, sin polvo ni agua"],
+        ["polvo", "Polvo en el aire o sobre el corredor"],
+        ["mojado_lluvia", "Mojado o lluvia"],
+        ["barro", "Barro sobre bici, corredor o placa"],
+        ["niebla", "Niebla o bruma"]
+      ]
+    },
+    {
+      "id": "angulo",
+      "label": "Ángulo de cámara",
+      "color": "#bc8cff",
+      "opciones": [
+        ["frontal", "Frontal (placa de cara)"],
+        ["tres_cuartos", "Tres cuartos"],
+        ["lateral_contrapicado", "Lateral, contrapicado o picado fuerte"]
+      ]
+    },
+    {
+      "id": "distancia",
+      "label": "Distancia",
+      "color": "#f78166",
+      "opciones": [
+        ["cerca", "Cerca (corredor llena el cuadro)"],
+        ["media", "Media (corredor y entorno)"],
+        ["lejos", "Lejos (corredor pequeño en el paisaje)"]
+      ]
+    }
+  ]
+}
