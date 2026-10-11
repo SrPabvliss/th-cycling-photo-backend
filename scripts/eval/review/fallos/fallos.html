@@ -31,6 +31,7 @@
     background: var(--bg); color: var(--text); border: 1px solid var(--line); border-left-width: 4px; border-radius: 4px; cursor: pointer; font: inherit; }
   .keys button:hover { background: #22262e; }
   .keys button.on { background: #2a3140; }
+  .keys small { display: block; font-size: 11px; color: var(--muted); line-height: 1.3; margin-top: 2px; }
   .keys kbd { font-family: ui-monospace, monospace; color: var(--muted); flex: none; }
   input[type=text] { width: 100%; padding: 8px; font-size: 14px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; }
   #error { display: none; background: var(--out); color: #fff; padding: 8px; border-radius: 4px; }
@@ -108,7 +109,7 @@ async function init() {
   tax = await (await fetch('/api/taxonomy')).json()
   all = await (await fetch('/api/queue')).json()
   $('motivos').insertAdjacentHTML('beforeend', tax.motivos.map((m) =>
-    `<button type="button" data-id="${m.id}" style="border-left-color:${m.color}"><span>${m.label}</span><kbd>${m.key}</kbd></button>`).join(''))
+    `<button type="button" data-id="${m.id}" style="border-left-color:${m.color}"><span>${m.label}${m.sub.length ? `<small>${m.sub.filter(([id]) => id !== 'otro').map(([, l]) => l).join(' · ')}</small>` : ''}</span><kbd>${m.key}</kbd></button>`).join(''))
   $('marcas').innerHTML = tax.marcas.map((m) =>
     `<button type="button" data-id="${m.id}" style="border-left-color:var(--muted)"><span>${m.label}</span><kbd>${m.key.toUpperCase()}</kbd></button>`).join('')
   for (const b of document.querySelectorAll('#motivos button')) b.addEventListener('click', () => pickMotivo(b.dataset.id))
