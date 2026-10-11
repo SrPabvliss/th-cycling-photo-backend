@@ -6,12 +6,30 @@
       "label": "Oclusión",
       "color": "#f85149",
       "sub": [
-        ["cable", "Cable de freno o funda"],
-        ["manubrio_horquilla", "Manubrio, potencia u horquilla"],
-        ["mano_cuerpo", "Mano, brazo o cuerpo del ciclista"],
-        ["llanta", "Llanta o rueda"],
-        ["otro_corredor", "Otro corredor u objeto externo"],
-        ["otro", "Otro"]
+        [
+          "cable",
+          "Cable de freno o funda"
+        ],
+        [
+          "manubrio_horquilla",
+          "Manubrio, potencia u horquilla"
+        ],
+        [
+          "mano_cuerpo",
+          "Mano, brazo o cuerpo del ciclista"
+        ],
+        [
+          "llanta",
+          "Llanta o rueda"
+        ],
+        [
+          "otro_corredor",
+          "Otro corredor u objeto externo"
+        ],
+        [
+          "otro",
+          "Otro"
+        ]
       ]
     },
     {
@@ -20,12 +38,30 @@
       "label": "Posición de la placa",
       "color": "#d29922",
       "sub": [
-        ["doblada", "Doblada o arqueada"],
-        ["oblicua", "Girada u oblicua a la cámara"],
-        ["al_reves", "Al revés o volteada"],
-        ["de_lado", "De lado o de perfil"],
-        ["suelta", "Caída, suelta o fuera de sitio"],
-        ["otro", "Otro"]
+        [
+          "doblada",
+          "Doblada o arqueada"
+        ],
+        [
+          "oblicua",
+          "Girada u oblicua a la cámara"
+        ],
+        [
+          "al_reves",
+          "Al revés o volteada"
+        ],
+        [
+          "de_lado",
+          "De lado o de perfil"
+        ],
+        [
+          "suelta",
+          "Caída, suelta o fuera de sitio"
+        ],
+        [
+          "otro",
+          "Otro"
+        ]
       ]
     },
     {
@@ -34,12 +70,30 @@
       "label": "Condiciones de captura",
       "color": "#58a6ff",
       "sub": [
-        ["reflejo", "Reflejo, flash o sobreexposición"],
-        ["poca_luz", "Sombra o poca luz"],
-        ["barro", "Barro o suciedad"],
-        ["lluvia_polvo", "Lluvia, polvo o salpicadura"],
-        ["desenfoque", "Desenfoque o movimiento"],
-        ["otro", "Otro"]
+        [
+          "reflejo",
+          "Reflejo, flash o sobreexposición"
+        ],
+        [
+          "poca_luz",
+          "Sombra o poca luz"
+        ],
+        [
+          "barro",
+          "Barro o suciedad"
+        ],
+        [
+          "lluvia_polvo",
+          "Lluvia, polvo o salpicadura"
+        ],
+        [
+          "desenfoque",
+          "Desenfoque o movimiento"
+        ],
+        [
+          "otro",
+          "Otro"
+        ]
       ]
     },
     {
@@ -48,9 +102,18 @@
       "label": "Escala",
       "color": "#3fb950",
       "sub": [
-        ["lejana", "Placa pequeña o corredor lejano"],
-        ["parcial", "Placa parcialmente fuera del cuadro"],
-        ["otro", "Otro"]
+        [
+          "lejana",
+          "Placa pequeña o corredor lejano"
+        ],
+        [
+          "parcial",
+          "Placa parcialmente fuera del cuadro"
+        ],
+        [
+          "otro",
+          "Otro"
+        ]
       ]
     },
     {
@@ -59,12 +122,30 @@
       "label": "Diseño de la placa",
       "color": "#bc8cff",
       "sub": [
-        ["logos_texto", "Logos o texto junto al número"],
-        ["tipografia", "Tipografía ambigua"],
-        ["en_blanco", "Placa sin número"],
-        ["nombre", "Nombre u otro texto en vez de número"],
-        ["ceros", "Ceros iniciales"],
-        ["otro", "Otro"]
+        [
+          "logos_texto",
+          "Logos o texto junto al número"
+        ],
+        [
+          "tipografia",
+          "Tipografía ambigua"
+        ],
+        [
+          "en_blanco",
+          "Placa sin número"
+        ],
+        [
+          "nombre",
+          "Nombre u otro texto en vez de número"
+        ],
+        [
+          "ceros",
+          "Ceros iniciales"
+        ],
+        [
+          "otro",
+          "Otro"
+        ]
       ]
     },
     {
@@ -81,13 +162,15 @@
       "color": "#e6e8eb",
       "sub": [],
       "note": true
+    },
+    {
+      "id": "referencia_errada",
+      "key": "e",
+      "label": "Referencia errada: corregir número",
+      "color": "#ffffff",
+      "sub": [],
+      "fix": true
     }
   ],
-  "marcas": [
-    {
-      "id": "ref_errada",
-      "key": "r",
-      "label": "Referencia errada (etiqueta mal: placa legible marcada sin placa o ilegible, o número equivocado)"
-    }
-  ]
+  "marcas": []
 }

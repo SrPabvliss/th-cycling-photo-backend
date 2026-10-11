@@ -54,7 +54,6 @@
 <div id="viewport">
   <div id="layer"><img id="photo" alt=""><svg id="boxes" viewBox="0 0 1 1" preserveAspectRatio="none"><title>cajas detectadas</title></svg></div>
   <div id="badge"></div>
-  <div id="flag" style="position:absolute;top:10px;right:10px;padding:4px 10px;border-radius:4px;font-weight:600;background:#fff;color:#000;display:none">R · referencia errada</div>
   <div id="loading">cargando…</div>
 </div>
 <aside>
@@ -65,10 +64,6 @@
     <div><span class="tipo" id="tipo"></span> <span class="muted" id="boxinfo"></span></div>
     <div class="muted" id="meta" style="margin-top:6px;font-size:12px"></div>
   </section>
-  <section>
-    <h2>Marcas (no son motivo)</h2>
-    <div class="keys" id="marcas"></div>
-  </section>
   <section class="keys" id="motivos">
     <h2>Motivo</h2>
   </section>
@@ -77,6 +72,11 @@
     <div id="crumb"></div>
     <div id="sublist"></div>
     <div class="help">Esc vuelve al motivo</div>
+  </section>
+  <section id="fixBox" style="display:none">
+    <h2>Referencia correcta (números separados por espacio; vacío = sin placa)</h2>
+    <input type="text" id="fix" inputmode="numeric" autocomplete="off" style="font-size:20px">
+    <div class="help" style="margin-top:4px">Enter guarda · Esc cancela</div>
   </section>
   <section id="noteBox" style="display:none">
     <h2>Nota</h2>
@@ -100,7 +100,6 @@ let photos = []
 let idx = 0
 let mode = 'motivo'   // motivo | sub | note
 let chosen = null     // motivo elegido mientras se pide submotivo o nota
-let marcasOn = new Set()
 let ready = false
 let saving = false
 let view = { s: 1, x: 0, y: 0 }
@@ -111,10 +110,7 @@ async function init() {
   all = await (await fetch('/api/queue')).json()
   $('motivos').insertAdjacentHTML('beforeend', tax.motivos.map((m) =>
     `<button type="button" data-id="${m.id}" style="border-left-color:${m.color}"><span>${m.label}${m.sub.length ? `<small>${m.sub.filter(([id]) => id !== 'otro').map(([, l]) => l).join(' · ')}</small>` : ''}</span><kbd>${m.key}</kbd></button>`).join(''))
-  $('marcas').innerHTML = tax.marcas.map((m) =>
-    `<button type="button" data-id="${m.id}" style="border-left-color:var(--muted)"><span>${m.label}</span><kbd>${m.key.toUpperCase()}</kbd></button>`).join('')
   for (const b of document.querySelectorAll('#motivos button')) b.addEventListener('click', () => pickMotivo(b.dataset.id))
-  for (const b of document.querySelectorAll('#marcas button')) b.addEventListener('click', () => toggleMarca(b.dataset.id))
   const tipos = [...new Set(all.map((p) => p.tipo))]
   $('filterTipo').insertAdjacentHTML('beforeend', tipos.map((t) => `<option value="${t}">${TIPOS[t] || t}</option>`).join(''))
   const events = [...new Set(all.map((p) => p.event))].sort()
@@ -142,7 +138,7 @@ function progress() {
 function show() {
   const p = photos[idx]
   if (!p) { $('position').textContent = 'sin fotos en el filtro'; return }
-  setMode('motivo'); marcasOn = new Set(); renderMarcas()
+  setMode('motivo')
   $('position').textContent = `foto ${idx + 1} de ${photos.length}`
   $('truth').textContent = p.truth ? p.truth.replace(/;/g, ' ') : '—'
   $('read').textContent = p.read ? p.read.replace(/;/g, ' ') : '—'
@@ -155,8 +151,8 @@ function show() {
     const m = tax.motivos.find((x) => x.id === d.motivo)
     badge.style.display = 'block'; badge.style.background = m ? m.color : '#fff'
     const sub = m && m.sub.find(([id]) => id === d.submotivo)
-    badge.textContent = `${m ? m.label : d.motivo}${sub ? ' · ' + sub[1] : ''}${d.marcas ? ' · ' + d.marcas : ''}${d.note ? ' · ' + d.note : ''}`
-    marcasOn = new Set(d.marcas.split(';').filter(Boolean)); renderMarcas()
+    const fix = m?.fix ? `: ${d.truth_fix ? d.truth_fix.replace(/;/g, ' ') : 'sin placa'}` : ''
+    badge.textContent = `${m ? m.label : d.motivo}${sub ? ` · ${sub[1]}` : ''}${fix}${d.note ? ` · ${d.note}` : ''}`
   } else badge.style.display = 'none'
   $('loading').style.display = 'grid'
   const img = $('photo')
@@ -218,17 +214,14 @@ window.addEventListener('mousemove', (e) => { if (dragStart) { view.x = e.client
 window.addEventListener('mouseup', () => { dragStart = null; $('viewport').classList.remove('drag') })
 window.addEventListener('resize', fit)
 
-function renderMarcas() {
-  for (const b of document.querySelectorAll('#marcas button')) b.classList.toggle('on', marcasOn.has(b.dataset.id))
-  $('flag').style.display = marcasOn.has('ref_errada') ? 'block' : 'none'
-}
-function toggleMarca(id) { if (marcasOn.has(id)) marcasOn.delete(id); else marcasOn.add(id); renderMarcas() }
 
 function setMode(m) {
   mode = m
   $('motivos').style.display = m === 'motivo' ? 'block' : 'none'
   $('submotivos').style.display = m === 'sub' ? 'block' : 'none'
   $('noteBox').style.display = m === 'note' ? 'block' : 'none'
+  $('fixBox').style.display = m === 'fix' ? 'block' : 'none'
+  if (m === 'fix') { const i = $('fix'); i.value = (photos[idx].read || '').replace(/;/g, ' '); i.focus(); i.select() }
   if (m === 'sub') {
     $('crumb').textContent = chosen.label
     $('sublist').innerHTML = chosen.sub.map(([id, label], i) =>
@@ -244,14 +237,15 @@ function pickMotivo(id) {
   if (!chosen) return
   if (chosen.sub.length) setMode('sub')
   else if (chosen.note) setMode('note')
+  else if (chosen.fix) setMode('fix')
   else decide(chosen, '', '')
 }
 
-async function decide(motivo, submotivo, note) {
+async function decide(motivo, submotivo, note, truthFix = '') {
   if (!ready || saving) return
   saving = true
   const p = photos[idx]
-  const payload = { photo_id: p.id, motivo: motivo.id, submotivo, note, marcas: [...marcasOn].join(';') }
+  const payload = { photo_id: p.id, motivo: motivo.id, submotivo, note, truth_fix: truthFix }
   try {
     const res = await fetch('/api/decision', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
     if (!res.ok) throw new Error((await res.json()).error || res.status)
@@ -279,10 +273,20 @@ function prev() { if (idx > 0) { idx--; show() } }
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return
   // A focused select or checkbox in the header would swallow the key (a digit picks an event, space toggles): take it back.
-  if (mode !== 'note' && e.target !== document.body) { e.preventDefault(); e.target.blur?.() }
+  if (mode !== 'note' && mode !== 'fix' && e.target !== document.body) { e.preventDefault(); e.target.blur?.() }
   if (mode === 'note') {
     if (e.key === 'Escape') setMode('motivo')
     else if (e.key === 'Enter') { e.preventDefault(); decide(chosen, '', $('note').value.trim()) }
+    return
+  }
+  if (mode === 'fix') {
+    if (e.key === 'Escape') setMode('motivo')
+    else if (e.key === 'Enter') {
+      e.preventDefault()
+      const digits = $('fix').value.trim().split(/[\s,;]+/).filter(Boolean)
+      if (digits.some((d) => !/^\d+$/.test(d))) { $('error').textContent = 'Solo números separados por espacio.'; $('error').style.display = 'block'; return }
+      decide(chosen, '', '', digits.join(';'))
+    }
     return
   }
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
@@ -291,8 +295,6 @@ document.addEventListener('keydown', (e) => {
   if (key === 'ArrowLeft') { e.preventDefault(); prev(); return }
   if (key === 'b') { e.preventDefault(); zoomToPlate(); return }
   if (key === '0') { e.preventDefault(); fit(); return }
-  const marca = tax.marcas.find((m) => m.key === key)
-  if (marca) { e.preventDefault(); toggleMarca(marca.id); return }
   if (mode === 'motivo') {
     const m = tax.motivos.find((x) => x.key === key)
     if (m) { e.preventDefault(); pickMotivo(m.id) }

@@ -38,11 +38,12 @@ const SAMPLE = get('sample') ?? join(__dirname, 'muestra.csv')
 const CSV = get('csv') ?? join(__dirname, 'data', 'fallos-decisiones.csv')
 const PAGE = join(__dirname, 'fallos.html')
 const TAXONOMY = JSON.parse(readFileSync(join(__dirname, 'motivos.json'), 'utf8')) as {
-  motivos: { id: string; sub: [string, string][]; note?: boolean }[]
+  motivos: { id: string; sub: [string, string][]; note?: boolean; fix?: boolean }[]
   marcas: { id: string }[]
 }
 
-const HEADER = 'at,photo_id,event_id,event,filename,tipo,truth,read,motivo,submotivo,marcas,note\n'
+const HEADER =
+  'at,photo_id,event_id,event,filename,tipo,truth,read,motivo,submotivo,marcas,note,truth_fix\n'
 type Decision = Record<(typeof KEYS)[number], string>
 const KEYS = HEADER.trim().split(',') as [
   'at',
@@ -57,6 +58,7 @@ const KEYS = HEADER.trim().split(',') as [
   'submotivo',
   'marcas',
   'note',
+  'truth_fix',
 ]
 
 function csvField(value: string): string {
@@ -205,6 +207,11 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       .filter(Boolean)
     if (marcas.some((m) => !TAXONOMY.marcas.some((t) => t.id === m)))
       return send(res, 400, { error: 'marcas' })
+    // Reference correction: the digits the reviewer now reads (empty = no bib), applied to the
+    // reference later; every other motivo leaves it empty.
+    const truthFix = String(body.truth_fix ?? '').trim()
+    if (motivo.fix && truthFix && !/^\d+(;\d+)*$/.test(truthFix)) return send(res, 400, { error: 'truth_fix' })
+    if (!motivo.fix && truthFix) return send(res, 400, { error: 'truth_fix' })
     const d: Decision = {
       at: new Date().toISOString(),
       photo_id: p.id,
@@ -218,6 +225,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       submotivo,
       marcas: marcas.join(';'),
       note,
+      truth_fix: truthFix,
     }
     appendDecision(d)
     return send(res, 200, d)
