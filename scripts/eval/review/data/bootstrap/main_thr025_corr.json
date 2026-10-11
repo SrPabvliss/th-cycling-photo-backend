@@ -1,0 +1,918 @@
+[
+ {
+  "a": "rfdetr_l_896+svtrv2_b",
+  "b": "yolo+parseq",
+  "label": "ganador frente a configuración de producción",
+  "exact": {
+   "n": 9629,
+   "a": 82.98,
+   "b": 69.45,
+   "diff": 13.53,
+   "ci_photo": [
+    12.62,
+    14.45
+   ],
+   "ci_event": [
+    6.9,
+    19.26
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    1743,
+    440
+   ],
+   "p_mcnemar": 1.1493049224749603e-182,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 2.2,
+    "3ra. Válida Copa Bike Parks, Pamba": 6.1,
+    "DOWNHILL CEVALLOS": 8.5,
+    "Downhill El Bosque Tercera Edición": 11.5,
+    "Downhill Lumbisi 2026": 7.4,
+    "Downhill Teleférico": 28.0,
+    "ENDURO RETO PIMAMPIRO 2026": 7.9,
+    "Ecuador OPEN": 9.2,
+    "OPEN SHIMANO": 19.7,
+    "Sigchos Fest": 8.0,
+    "The Lost Line - Freestyle": 9.5
+   },
+   "p_holm": 9.194439379799683e-182
+  },
+  "detected": {
+   "n": 9629,
+   "a": 94.69,
+   "b": 84.28,
+   "diff": 10.42,
+   "ci_photo": [
+    9.68,
+    11.17
+   ],
+   "ci_event": [
+    2.76,
+    16.87
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    1246,
+    243
+   ],
+   "p_mcnemar": 2.140010702966404e-162,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 0.8,
+    "3ra. Válida Copa Bike Parks, Pamba": 3.8,
+    "DOWNHILL CEVALLOS": 3.5,
+    "Downhill El Bosque Tercera Edición": 4.9,
+    "Downhill Lumbisi 2026": 1.7,
+    "Downhill Teleférico": 26.0,
+    "ENDURO RETO PIMAMPIRO 2026": 0.2,
+    "Ecuador OPEN": 6.2,
+    "OPEN SHIMANO": 19.8,
+    "Sigchos Fest": 4.7,
+    "The Lost Line - Freestyle": 4.4
+   },
+   "p_holm": 1.7120085623731233e-161
+  },
+  "time": {
+   "n": 12027,
+   "median_ms": -50.4,
+   "p25": -76.7,
+   "p75": -27.3,
+   "ci_median": [
+    -51.7,
+    -49.3
+   ],
+   "hosts": [
+    "A/abl",
+    "B/abl",
+    "C/abl",
+    "D/abl"
+   ],
+   "via": "directo"
+  }
+ },
+ {
+  "a": "rfdetr_l_896+svtrv2_s",
+  "b": "yolo+parseq",
+  "label": "RF-DETR-L + S frente a producción",
+  "exact": {
+   "n": 9629,
+   "a": 80.35,
+   "b": 69.45,
+   "diff": 10.9,
+   "ci_photo": [
+    9.97,
+    11.82
+   ],
+   "ci_event": [
+    3.87,
+    16.43
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    1625,
+    575
+   ],
+   "p_mcnemar": 2.484354476373717e-115,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 1.5,
+    "3ra. Válida Copa Bike Parks, Pamba": 4.1,
+    "DOWNHILL CEVALLOS": 4.7,
+    "Downhill El Bosque Tercera Edición": 10.4,
+    "Downhill Lumbisi 2026": 1.2,
+    "Downhill Teleférico": 24.6,
+    "ENDURO RETO PIMAMPIRO 2026": 1.2,
+    "Ecuador OPEN": 5.0,
+    "OPEN SHIMANO": 19.1,
+    "Sigchos Fest": 6.1,
+    "The Lost Line - Freestyle": 6.5
+   },
+   "p_holm": 1.739048133461602e-114
+  },
+  "detected": {
+   "n": 9629,
+   "a": 94.69,
+   "b": 84.28,
+   "diff": 10.42,
+   "ci_photo": [
+    9.65,
+    11.17
+   ],
+   "ci_event": [
+    2.8,
+    16.87
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    1246,
+    243
+   ],
+   "p_mcnemar": 2.140010702966404e-162,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 0.8,
+    "3ra. Válida Copa Bike Parks, Pamba": 3.8,
+    "DOWNHILL CEVALLOS": 3.5,
+    "Downhill El Bosque Tercera Edición": 4.9,
+    "Downhill Lumbisi 2026": 1.7,
+    "Downhill Teleférico": 26.0,
+    "ENDURO RETO PIMAMPIRO 2026": 0.2,
+    "Ecuador OPEN": 6.2,
+    "OPEN SHIMANO": 19.8,
+    "Sigchos Fest": 4.7,
+    "The Lost Line - Freestyle": 4.4
+   },
+   "p_holm": 1.7120085623731233e-161
+  },
+  "time": {
+   "n": 12029,
+   "median_ms": -55.2,
+   "p25": -79.2,
+   "p75": -30.1,
+   "ci_median": [
+    -56.3,
+    -53.9
+   ],
+   "hosts": [
+    "A/main",
+    "B/main",
+    "C/main",
+    "D/main"
+   ],
+   "via": "directo"
+  }
+ },
+ {
+  "a": "rfdetr_l_896+svtrv2_b",
+  "b": "rfdetr_l_896+svtrv2_s",
+  "label": "lector: B frente a S (mismo detector)",
+  "exact": {
+   "n": 9629,
+   "a": 82.98,
+   "b": 80.35,
+   "diff": 2.63,
+   "ci_photo": [
+    2.05,
+    3.22
+   ],
+   "ci_event": [
+    1.57,
+    3.9
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    545,
+    292
+   ],
+   "p_mcnemar": 1.6708003615091974e-18,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 0.7,
+    "3ra. Válida Copa Bike Parks, Pamba": 2.0,
+    "DOWNHILL CEVALLOS": 3.8,
+    "Downhill El Bosque Tercera Edición": 1.1,
+    "Downhill Lumbisi 2026": 6.2,
+    "Downhill Teleférico": 3.4,
+    "ENDURO RETO PIMAMPIRO 2026": 6.7,
+    "Ecuador OPEN": 4.2,
+    "OPEN SHIMANO": 0.6,
+    "Sigchos Fest": 1.9,
+    "The Lost Line - Freestyle": 2.9
+   },
+   "p_holm": 5.012401084527592e-18
+  },
+  "detected": {
+   "n": 9629,
+   "a": 94.69,
+   "b": 94.69,
+   "diff": 0.0,
+   "ci_photo": [
+    0.0,
+    0.0
+   ],
+   "ci_event": [
+    0.0,
+    0.0
+   ],
+   "p_photo_gt0": 0.0,
+   "discordant": [
+    0,
+    0
+   ],
+   "p_mcnemar": 1.0,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 0.0,
+    "3ra. Válida Copa Bike Parks, Pamba": 0.0,
+    "DOWNHILL CEVALLOS": 0.0,
+    "Downhill El Bosque Tercera Edición": 0.0,
+    "Downhill Lumbisi 2026": 0.0,
+    "Downhill Teleférico": 0.0,
+    "ENDURO RETO PIMAMPIRO 2026": 0.0,
+    "Ecuador OPEN": 0.0,
+    "OPEN SHIMANO": 0.0,
+    "Sigchos Fest": 0.0,
+    "The Lost Line - Freestyle": 0.0
+   },
+   "p_holm": 1.0
+  },
+  "time": {
+   "n": 12027,
+   "median_ms": 4.8,
+   "p25": null,
+   "p75": null,
+   "ci_median": [
+    3.0,
+    6.4
+   ],
+   "hosts": [
+    "A/abl",
+    "A/main",
+    "B/abl",
+    "B/main",
+    "C/abl",
+    "C/main",
+    "D/abl",
+    "D/main"
+   ],
+   "via": "vía producción (A − prod) − (B − prod)"
+  }
+ },
+ {
+  "a": "rfdetr_l_896+svtrv2_s",
+  "b": "rfdetr_l_896+parseq_v2",
+  "label": "lector: SVTRv2-S frente a PARSeq (RF-DETR-L)",
+  "exact": {
+   "n": 9629,
+   "a": 80.35,
+   "b": 75.05,
+   "diff": 5.3,
+   "ci_photo": [
+    4.55,
+    6.04
+   ],
+   "ci_event": [
+    3.48,
+    6.87
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    949,
+    439
+   ],
+   "p_mcnemar": 1.8655652015371493e-43,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 1.6,
+    "3ra. Válida Copa Bike Parks, Pamba": 7.5,
+    "DOWNHILL CEVALLOS": 2.4,
+    "Downhill El Bosque Tercera Edición": 11.5,
+    "Downhill Lumbisi 2026": 3.1,
+    "Downhill Teleférico": 6.3,
+    "ENDURO RETO PIMAMPIRO 2026": 0.0,
+    "Ecuador OPEN": 8.8,
+    "OPEN SHIMANO": 7.0,
+    "Sigchos Fest": 1.4,
+    "The Lost Line - Freestyle": 4.3
+   },
+   "p_holm": 9.327826007685746e-43
+  },
+  "detected": {
+   "n": 9629,
+   "a": 94.69,
+   "b": 94.69,
+   "diff": 0.0,
+   "ci_photo": [
+    0.0,
+    0.0
+   ],
+   "ci_event": [
+    0.0,
+    0.0
+   ],
+   "p_photo_gt0": 0.0,
+   "discordant": [
+    0,
+    0
+   ],
+   "p_mcnemar": 1.0,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 0.0,
+    "3ra. Válida Copa Bike Parks, Pamba": 0.0,
+    "DOWNHILL CEVALLOS": 0.0,
+    "Downhill El Bosque Tercera Edición": 0.0,
+    "Downhill Lumbisi 2026": 0.0,
+    "Downhill Teleférico": 0.0,
+    "ENDURO RETO PIMAMPIRO 2026": 0.0,
+    "Ecuador OPEN": 0.0,
+    "OPEN SHIMANO": 0.0,
+    "Sigchos Fest": 0.0,
+    "The Lost Line - Freestyle": 0.0
+   },
+   "p_holm": 1.0
+  },
+  "time": {
+   "n": 12028,
+   "median_ms": -1.0,
+   "p25": -5.2,
+   "p75": 2.8,
+   "ci_median": [
+    -1.1,
+    -0.9
+   ],
+   "hosts": [
+    "A/main",
+    "B/main",
+    "C/main",
+    "D/main"
+   ],
+   "via": "directo"
+  }
+ },
+ {
+  "a": "yolo26m_1024+svtrv2_s",
+  "b": "yolo26m_1024+parseq_v2",
+  "label": "lector: SVTRv2-S frente a PARSeq (YOLO26m)",
+  "exact": {
+   "n": 9629,
+   "a": 66.54,
+   "b": 63.26,
+   "diff": 3.28,
+   "ci_photo": [
+    2.63,
+    3.94
+   ],
+   "ci_event": [
+    2.01,
+    4.76
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    665,
+    349
+   ],
+   "p_mcnemar": 1.9851467263951372e-23,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 0.7,
+    "3ra. Válida Copa Bike Parks, Pamba": 6.1,
+    "DOWNHILL CEVALLOS": 1.2,
+    "Downhill El Bosque Tercera Edición": 9.9,
+    "Downhill Lumbisi 2026": 2.8,
+    "Downhill Teleférico": 3.7,
+    "ENDURO RETO PIMAMPIRO 2026": -0.2,
+    "Ecuador OPEN": 0.8,
+    "OPEN SHIMANO": 3.1,
+    "Sigchos Fest": 2.3,
+    "The Lost Line - Freestyle": 3.1
+   },
+   "p_holm": 7.940586905580549e-23
+  },
+  "detected": {
+   "n": 9629,
+   "a": 77.38,
+   "b": 77.38,
+   "diff": 0.0,
+   "ci_photo": [
+    0.0,
+    0.0
+   ],
+   "ci_event": [
+    0.0,
+    0.0
+   ],
+   "p_photo_gt0": 0.0,
+   "discordant": [
+    0,
+    0
+   ],
+   "p_mcnemar": 1.0,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 0.0,
+    "3ra. Válida Copa Bike Parks, Pamba": 0.0,
+    "DOWNHILL CEVALLOS": 0.0,
+    "Downhill El Bosque Tercera Edición": 0.0,
+    "Downhill Lumbisi 2026": 0.0,
+    "Downhill Teleférico": 0.0,
+    "ENDURO RETO PIMAMPIRO 2026": 0.0,
+    "Ecuador OPEN": 0.0,
+    "OPEN SHIMANO": 0.0,
+    "Sigchos Fest": 0.0,
+    "The Lost Line - Freestyle": 0.0
+   },
+   "p_holm": 1.0
+  },
+  "time": {
+   "n": 12029,
+   "median_ms": -0.5,
+   "p25": -6.6,
+   "p75": 6.4,
+   "ci_median": [
+    -0.6,
+    -0.3
+   ],
+   "hosts": [
+    "A/main",
+    "B/main",
+    "C/main",
+    "D/main"
+   ],
+   "via": "directo"
+  }
+ },
+ {
+  "a": "rfdetr_l_896+svtrv2_s",
+  "b": "yolo26m_1024+svtrv2_s",
+  "label": "detector: RF-DETR-L frente a YOLO26m (mismo lector)",
+  "exact": {
+   "n": 9629,
+   "a": 80.35,
+   "b": 66.54,
+   "diff": 13.81,
+   "ci_photo": [
+    12.93,
+    14.72
+   ],
+   "ci_event": [
+    3.9,
+    21.68
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    1723,
+    393
+   ],
+   "p_mcnemar": 7.200651725540044e-198,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 2.0,
+    "3ra. Válida Copa Bike Parks, Pamba": 1.4,
+    "DOWNHILL CEVALLOS": 8.1,
+    "Downhill El Bosque Tercera Edición": -1.5,
+    "Downhill Lumbisi 2026": 3.9,
+    "Downhill Teleférico": 30.7,
+    "ENDURO RETO PIMAMPIRO 2026": 12.6,
+    "Ecuador OPEN": 5.8,
+    "OPEN SHIMANO": 27.1,
+    "Sigchos Fest": 20.7,
+    "The Lost Line - Freestyle": 6.3
+   },
+   "p_holm": 6.48058655298604e-197
+  },
+  "detected": {
+   "n": 9629,
+   "a": 94.69,
+   "b": 77.38,
+   "diff": 17.31,
+   "ci_photo": [
+    16.47,
+    18.15
+   ],
+   "ci_event": [
+    5.17,
+    27.78
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    1841,
+    174
+   ],
+   "p_mcnemar": 0.0,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 1.7,
+    "3ra. Válida Copa Bike Parks, Pamba": 3.5,
+    "DOWNHILL CEVALLOS": 9.9,
+    "Downhill El Bosque Tercera Edición": 2.1,
+    "Downhill Lumbisi 2026": 4.0,
+    "Downhill Teleférico": 41.8,
+    "ENDURO RETO PIMAMPIRO 2026": 16.2,
+    "Ecuador OPEN": 5.0,
+    "OPEN SHIMANO": 31.3,
+    "Sigchos Fest": 23.9,
+    "The Lost Line - Freestyle": 5.9
+   },
+   "p_holm": 0.0
+  },
+  "time": {
+   "n": 12027,
+   "median_ms": -56.0,
+   "p25": -85.8,
+   "p75": -32.2,
+   "ci_median": [
+    -57.2,
+    -54.7
+   ],
+   "hosts": [
+    "A/main",
+    "B/main",
+    "C/main",
+    "D/main"
+   ],
+   "via": "directo"
+  }
+ },
+ {
+  "a": "rfdetr_l_896+svtrv2_s",
+  "b": "dfine_l_640+svtrv2_s",
+  "label": "detector: RF-DETR-L frente a D-FINE-L (mismo lector)",
+  "exact": {
+   "n": 9629,
+   "a": 80.35,
+   "b": 80.55,
+   "diff": -0.2,
+   "ci_photo": [
+    -0.85,
+    0.48
+   ],
+   "ci_event": [
+    -2.18,
+    1.45
+   ],
+   "p_photo_gt0": 0.2807,
+   "discordant": [
+    517,
+    536
+   ],
+   "p_mcnemar": 0.5791205747499762,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": -2.4,
+    "3ra. Válida Copa Bike Parks, Pamba": -4.8,
+    "DOWNHILL CEVALLOS": -0.7,
+    "Downhill El Bosque Tercera Edición": -4.2,
+    "Downhill Lumbisi 2026": 0.0,
+    "Downhill Teleférico": 3.7,
+    "ENDURO RETO PIMAMPIRO 2026": -4.1,
+    "Ecuador OPEN": 2.3,
+    "OPEN SHIMANO": 0.6,
+    "Sigchos Fest": 0.9,
+    "The Lost Line - Freestyle": 0.9
+   },
+   "p_holm": 0.5791205747499762
+  },
+  "detected": {
+   "n": 9629,
+   "a": 94.69,
+   "b": 94.97,
+   "diff": -0.28,
+   "ci_photo": [
+    -0.78,
+    0.22
+   ],
+   "ci_event": [
+    -2.19,
+    1.17
+   ],
+   "p_photo_gt0": 0.1283,
+   "discordant": [
+    288,
+    315
+   ],
+   "p_mcnemar": 0.28968209824920266,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": -2.7,
+    "3ra. Válida Copa Bike Parks, Pamba": -6.2,
+    "DOWNHILL CEVALLOS": -0.6,
+    "Downhill El Bosque Tercera Edición": -2.0,
+    "Downhill Lumbisi 2026": 0.0,
+    "Downhill Teleférico": 3.2,
+    "ENDURO RETO PIMAMPIRO 2026": -1.2,
+    "Ecuador OPEN": 0.0,
+    "OPEN SHIMANO": 0.3,
+    "Sigchos Fest": -0.5,
+    "The Lost Line - Freestyle": 1.0
+   },
+   "p_holm": 1.0
+  },
+  "time": {
+   "n": 12026,
+   "median_ms": -40.5,
+   "p25": null,
+   "p75": null,
+   "ci_median": [
+    -41.7,
+    -39.0
+   ],
+   "hosts": [
+    "A/abl",
+    "A/main",
+    "B/abl",
+    "B/main",
+    "C/abl",
+    "C/main",
+    "D/abl",
+    "D/main"
+   ],
+   "via": "vía producción (A − prod) − (B − prod)"
+  }
+ },
+ {
+  "a": "dfine_l_640+svtrv2_s",
+  "b": "yolo26m_1024+svtrv2_s",
+  "label": "detector: D-FINE-L frente a YOLO26m (mismo lector)",
+  "exact": {
+   "n": 9629,
+   "a": 80.55,
+   "b": 66.54,
+   "diff": 14.01,
+   "ci_photo": [
+    13.17,
+    14.87
+   ],
+   "ci_event": [
+    5.79,
+    20.78
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    1682,
+    333
+   ],
+   "p_mcnemar": 3.169741790304306e-216,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 4.5,
+    "3ra. Válida Copa Bike Parks, Pamba": 6.1,
+    "DOWNHILL CEVALLOS": 8.8,
+    "Downhill El Bosque Tercera Edición": 2.7,
+    "Downhill Lumbisi 2026": 3.9,
+    "Downhill Teleférico": 27.0,
+    "ENDURO RETO PIMAMPIRO 2026": 16.7,
+    "Ecuador OPEN": 3.5,
+    "OPEN SHIMANO": 26.5,
+    "Sigchos Fest": 19.7,
+    "The Lost Line - Freestyle": 5.4
+   },
+   "p_holm": 3.169741790304306e-215
+  },
+  "detected": {
+   "n": 9629,
+   "a": 94.97,
+   "b": 77.38,
+   "diff": 17.59,
+   "ci_photo": [
+    16.76,
+    18.43
+   ],
+   "ci_event": [
+    6.67,
+    26.72
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    1800,
+    106
+   ],
+   "p_mcnemar": 0.0,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 4.5,
+    "3ra. Válida Copa Bike Parks, Pamba": 9.8,
+    "DOWNHILL CEVALLOS": 10.5,
+    "Downhill El Bosque Tercera Edición": 4.1,
+    "Downhill Lumbisi 2026": 4.0,
+    "Downhill Teleférico": 38.6,
+    "ENDURO RETO PIMAMPIRO 2026": 17.4,
+    "Ecuador OPEN": 5.0,
+    "OPEN SHIMANO": 31.0,
+    "Sigchos Fest": 24.4,
+    "The Lost Line - Freestyle": 4.9
+   },
+   "p_holm": 0.0
+  },
+  "time": {
+   "n": 12026,
+   "median_ms": -16.5,
+   "p25": null,
+   "p75": null,
+   "ci_median": [
+    -17.2,
+    -15.7
+   ],
+   "hosts": [
+    "A/abl",
+    "A/main",
+    "B/abl",
+    "B/main",
+    "C/abl",
+    "C/main",
+    "D/abl",
+    "D/main"
+   ],
+   "via": "vía producción (A − prod) − (B − prod)"
+  }
+ },
+ {
+  "a": "yolo26m_1024+svtrv2_s",
+  "b": "yolo11m_1024_fx+svtrv2_s",
+  "label": "detector: YOLO26m frente a YOLO11m, receta común",
+  "exact": {
+   "n": 9629,
+   "a": 66.54,
+   "b": 60.22,
+   "diff": 6.31,
+   "ci_photo": [
+    5.49,
+    7.13
+   ],
+   "ci_event": [
+    2.72,
+    9.88
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    1136,
+    528
+   ],
+   "p_mcnemar": 3.2991354135679727e-51,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 4.7,
+    "3ra. Válida Copa Bike Parks, Pamba": 21.2,
+    "DOWNHILL CEVALLOS": 6.1,
+    "Downhill El Bosque Tercera Edición": 4.3,
+    "Downhill Lumbisi 2026": 0.0,
+    "Downhill Teleférico": 5.5,
+    "ENDURO RETO PIMAMPIRO 2026": 5.3,
+    "Ecuador OPEN": -2.3,
+    "OPEN SHIMANO": 11.4,
+    "Sigchos Fest": -5.2,
+    "The Lost Line - Freestyle": 1.0
+   },
+   "p_holm": 1.9794812481407836e-50
+  },
+  "detected": {
+   "n": 9629,
+   "a": 77.38,
+   "b": 69.73,
+   "diff": 7.65,
+   "ci_photo": [
+    6.88,
+    8.43
+   ],
+   "ci_event": [
+    3.98,
+    11.79
+   ],
+   "p_photo_gt0": 1.0,
+   "discordant": [
+    1126,
+    389
+   ],
+   "p_mcnemar": 3.9520945015228e-83,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": 5.1,
+    "3ra. Válida Copa Bike Parks, Pamba": 27.4,
+    "DOWNHILL CEVALLOS": 8.5,
+    "Downhill El Bosque Tercera Edición": 6.4,
+    "Downhill Lumbisi 2026": 3.2,
+    "Downhill Teleférico": 6.7,
+    "ENDURO RETO PIMAMPIRO 2026": 5.3,
+    "Ecuador OPEN": 2.7,
+    "OPEN SHIMANO": 10.9,
+    "Sigchos Fest": -8.0,
+    "The Lost Line - Freestyle": 1.3
+   },
+   "p_holm": 2.37125670091368e-82
+  },
+  "time": {
+   "n": 12027,
+   "median_ms": 2.3,
+   "p25": null,
+   "p75": null,
+   "ci_median": [
+    2.0,
+    2.6
+   ],
+   "hosts": [
+    "A/abl",
+    "A/main",
+    "B/abl",
+    "B/main",
+    "C/abl",
+    "C/main",
+    "D/abl",
+    "D/main"
+   ],
+   "via": "vía producción (A − prod) − (B − prod)"
+  }
+ },
+ {
+  "a": "yolo26m_1024+svtrv2_s",
+  "b": "yolo+parseq",
+  "label": "YOLO26m 1 clase + S frente a producción",
+  "exact": {
+   "n": 9629,
+   "a": 66.54,
+   "b": 69.45,
+   "diff": -2.91,
+   "ci_photo": [
+    -3.85,
+    -1.96
+   ],
+   "ci_event": [
+    -5.9,
+    1.12
+   ],
+   "p_photo_gt0": 0.0,
+   "discordant": [
+    946,
+    1226
+   ],
+   "p_mcnemar": 2.0402718961126885e-09,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": -0.5,
+    "3ra. Válida Copa Bike Parks, Pamba": 2.7,
+    "DOWNHILL CEVALLOS": -3.4,
+    "Downhill El Bosque Tercera Edición": 11.9,
+    "Downhill Lumbisi 2026": -2.7,
+    "Downhill Teleférico": -6.1,
+    "ENDURO RETO PIMAMPIRO 2026": -11.5,
+    "Ecuador OPEN": -0.8,
+    "OPEN SHIMANO": -8.0,
+    "Sigchos Fest": -14.6,
+    "The Lost Line - Freestyle": 0.3
+   },
+   "p_holm": 4.080543792225377e-09
+  },
+  "detected": {
+   "n": 9629,
+   "a": 77.38,
+   "b": 84.28,
+   "diff": -6.9,
+   "ci_photo": [
+    -7.72,
+    -6.08
+   ],
+   "ci_event": [
+    -11.01,
+    -2.05
+   ],
+   "p_photo_gt0": 0.0,
+   "discordant": [
+    510,
+    1174
+   ],
+   "p_mcnemar": 2.8011968250385495e-60,
+   "by_event": {
+    "2da. Válida Copa Bike Parks. Coto Bike Park": -0.9,
+    "3ra. Válida Copa Bike Parks, Pamba": 0.3,
+    "DOWNHILL CEVALLOS": -6.4,
+    "Downhill El Bosque Tercera Edición": 2.8,
+    "Downhill Lumbisi 2026": -2.3,
+    "Downhill Teleférico": -15.8,
+    "ENDURO RETO PIMAMPIRO 2026": -16.0,
+    "Ecuador OPEN": 1.2,
+    "OPEN SHIMANO": -11.5,
+    "Sigchos Fest": -19.2,
+    "The Lost Line - Freestyle": -1.6
+   },
+   "p_holm": 1.4005984125192748e-59
+  },
+  "time": {
+   "n": 12027,
+   "median_ms": 1.7,
+   "p25": -6.8,
+   "p75": 14.4,
+   "ci_median": [
+    1.5,
+    1.9
+   ],
+   "hosts": [
+    "A/main",
+    "B/main",
+    "C/main",
+    "D/main"
+   ],
+   "via": "directo"
+  }
+ }
+]
