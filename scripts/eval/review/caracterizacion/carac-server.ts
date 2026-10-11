@@ -121,7 +121,8 @@ function loadLog() {
     return
   }
   const [head, ...lines] = readFileSync(CSV, 'utf8').split('\n').filter(Boolean)
-  if (head.trim() !== HEADER.trim()) throw new Error(`log header differs from dimensiones.json: ${CSV}`)
+  if (head.trim() !== HEADER.trim())
+    throw new Error(`log header differs from dimensiones.json: ${CSV}`)
   for (const line of lines) {
     const fields = parseCsvLine(line)
     const row = Object.fromEntries(KEYS.map((k, i) => [k, fields[i] ?? ''])) as Decision
