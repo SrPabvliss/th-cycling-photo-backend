@@ -43,7 +43,7 @@ const TAXONOMY = JSON.parse(readFileSync(join(__dirname, 'motivos.json'), 'utf8'
 }
 
 const HEADER =
-  'at,photo_id,event_id,event,filename,tipo,truth,read,motivo,submotivo,marcas,note,truth_fix\n'
+  'at,photo_id,event_id,event,filename,tipo,truth,read,motivo,submotivo,marcas,note,truth_fix,has_fix\n'
 type Decision = Record<(typeof KEYS)[number], string>
 const KEYS = HEADER.trim().split(',') as [
   'at',
@@ -59,6 +59,7 @@ const KEYS = HEADER.trim().split(',') as [
   'marcas',
   'note',
   'truth_fix',
+  'has_fix',
 ]
 
 function csvField(value: string): string {
@@ -190,7 +191,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return res.end(readFileSync(path))
   }
   if (req.method === 'POST' && url.pathname === '/api/decision') {
-    const body = (await readBody(req)) as Partial<Decision>
+    const body = (await readBody(req)) as Partial<Decision> & { has_fix?: boolean }
     if (!body.photo_id || !UUID.test(body.photo_id)) return send(res, 400, { error: 'ids' })
     const p = sample.find((s) => s.id === body.photo_id)
     if (!p) return send(res, 400, { error: 'photo not in sample' })
@@ -210,8 +211,11 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     // Reference correction: the digits the reviewer now reads (empty = no bib), applied to the
     // reference later; every other motivo leaves it empty.
     const truthFix = String(body.truth_fix ?? '').trim()
-    if (motivo.fix && truthFix && !/^\d+(;\d+)*$/.test(truthFix)) return send(res, 400, { error: 'truth_fix' })
-    if (!motivo.fix && truthFix) return send(res, 400, { error: 'truth_fix' })
+    // A corrected reference may travel with any motivo: the label was wrong and, against the
+    // corrected label, the model still failed. has_fix marks a correction to an empty reference.
+    const hasFix = body.has_fix === true || Boolean(truthFix)
+    if (truthFix && !/^\d+(;\d+)*$/.test(truthFix)) return send(res, 400, { error: 'truth_fix' })
+    if (motivo.fix && !hasFix) return send(res, 400, { error: 'truth_fix' })
     const d: Decision = {
       at: new Date().toISOString(),
       photo_id: p.id,
@@ -226,6 +230,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       marcas: marcas.join(';'),
       note,
       truth_fix: truthFix,
+      has_fix: hasFix ? '1' : '',
     }
     appendDecision(d)
     return send(res, 200, d)
