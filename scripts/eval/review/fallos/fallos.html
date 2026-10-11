@@ -113,6 +113,7 @@ async function init() {
   for (const b of document.querySelectorAll('#motivos button')) b.addEventListener('click', () => pickMotivo(b.dataset.id))
   const tipos = [...new Set(all.map((p) => p.tipo))]
   $('filterTipo').insertAdjacentHTML('beforeend', tipos.map((t) => `<option value="${t}">${TIPOS[t] || t}</option>`).join(''))
+  $('filterTipo').insertAdjacentHTML('beforeend', '<option value="__fix_sin_motivo">revisar: referencia corregida pero el modelo sigue fallando, sin motivo</option>')
   const events = [...new Set(all.map((p) => p.event))].sort()
   $('filterEvent').insertAdjacentHTML('beforeend', events.map((e) => `<option value="${e}">${e}</option>`).join(''))
   $('filterTipo').value = store.get('tipo') || ''
@@ -124,7 +125,9 @@ function applyFilter() {
   const t = $('filterTipo').value
   const e = $('filterEvent').value
   store.set('tipo', t); store.set('event', e)
-  photos = all.filter((p) => (!t || p.tipo === t) && (!e || p.event === e))
+  const needsMotivo = (p) => p.decision && p.decision.motivo === 'referencia_errada' && (p.decision.truth_fix || '') !== (p.read || '')
+  photos = all.filter((p) => (t === '__fix_sin_motivo' ? needsMotivo(p) : !t || p.tipo === t) && (!e || p.event === e))
+  if (t === '__fix_sin_motivo') $('skip').checked = false
   const pending = photos.findIndex((p) => !p.decision)
   idx = pending >= 0 ? pending : 0
   show()
