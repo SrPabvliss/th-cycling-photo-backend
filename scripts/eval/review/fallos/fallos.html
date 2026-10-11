@@ -54,6 +54,7 @@
 <div id="viewport">
   <div id="layer"><img id="photo" alt=""><svg id="boxes" viewBox="0 0 1 1" preserveAspectRatio="none"><title>cajas detectadas</title></svg></div>
   <div id="badge"></div>
+  <div id="flag" style="position:absolute;top:10px;right:10px;padding:4px 10px;border-radius:4px;font-weight:600;background:#fff;color:#000;display:none">R · referencia errada</div>
   <div id="loading">cargando…</div>
 </div>
 <aside>
@@ -219,6 +220,7 @@ window.addEventListener('resize', fit)
 
 function renderMarcas() {
   for (const b of document.querySelectorAll('#marcas button')) b.classList.toggle('on', marcasOn.has(b.dataset.id))
+  $('flag').style.display = marcasOn.has('ref_errada') ? 'block' : 'none'
 }
 function toggleMarca(id) { if (marcasOn.has(id)) marcasOn.delete(id); else marcasOn.add(id); renderMarcas() }
 
@@ -276,6 +278,8 @@ function prev() { if (idx > 0) { idx--; show() } }
 
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return
+  // A focused select or checkbox in the header would swallow the key (a digit picks an event, space toggles): take it back.
+  if (mode !== 'note' && e.target !== document.body) { e.preventDefault(); e.target.blur?.() }
   if (mode === 'note') {
     if (e.key === 'Escape') setMode('motivo')
     else if (e.key === 'Enter') { e.preventDefault(); decide(chosen, '', $('note').value.trim()) }
@@ -298,8 +302,9 @@ document.addEventListener('keydown', (e) => {
     if (Number.isInteger(i) && chosen.sub[i]) { e.preventDefault(); decide(chosen, chosen.sub[i][0], '') }
   }
 })
-$('filterTipo').addEventListener('change', applyFilter)
-$('filterEvent').addEventListener('change', applyFilter)
+$('filterTipo').addEventListener('change', (e) => { applyFilter(); e.target.blur() })
+$('filterEvent').addEventListener('change', (e) => { applyFilter(); e.target.blur() })
+for (const c of ['skip', 'autozoom']) $(c).addEventListener('change', (e) => e.target.blur())
 init()
 </script>
 </body>
