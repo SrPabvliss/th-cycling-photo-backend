@@ -13325,3 +13325,4 @@ at,photo_id,event_id,filename,decision,digits_before,digits_after,reason,note
 2026-10-11T18:44:17.065789Z,86849691-fa2a-4743-a92d-b56680cd934e,2e18e58c-5220-4fd3-ab06-fd54c5677bf5,DH Freestyle S-229.jpg,corregido,,15,motivos-fallo-2026-10-11,antes: ilegible; leido por el ganador: 15
 2026-10-11T18:44:17.065789Z,1c527487-3438-44a7-81c5-a902bc3b598a,2e18e58c-5220-4fd3-ab06-fd54c5677bf5,DH Freestyle Srd-189.jpg,corregido,174,170,motivos-fallo-2026-10-11,antes: 174; leido por el ganador: 170
 2026-10-11T18:44:17.065789Z,59404f23-e16b-4600-be48-451ba35169c9,2e18e58c-5220-4fd3-ab06-fd54c5677bf5,DH Freestyle Srd-41.jpg,corregido,,88,motivos-fallo-2026-10-11,antes: sin placa; leido por el ganador: 88
+2026-10-11T19:46:34Z,7ea519bb-d829-4e99-858e-fe951d679d1e,8f397b4d-68dd-4efb-a4d7-3e96fc41fdda,DH TELEFERICO C - 2026-14.jpg,corregido,1,132,motivos-fallo-2026-10-11-revision,la correccion a 1 fue tecla suelta; placa dice 132 (cable tapa el 2); se restaura 132

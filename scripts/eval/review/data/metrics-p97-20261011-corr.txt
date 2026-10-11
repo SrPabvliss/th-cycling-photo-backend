@@ -45,7 +45,7 @@ SELECT 37164
  OPEN SHIMANO                                | rfdetr_l_896_c5+svtrv2_b |     1880 |           78.9
  OPEN SHIMANO                                | rfdetr_l_896+svtrv2_b    |     1880 |           87.3
  OPEN SHIMANO                                | yolo26m_c5_1024+svtrv2_b |     1880 |           69.8
- Downhill Teleférico                         | rfdetr_l_896_c5+svtrv2_b |     1693 |           60.8
+ Downhill Teleférico                         | rfdetr_l_896_c5+svtrv2_b |     1693 |           60.9
  Downhill Teleférico                         | rfdetr_l_896+svtrv2_b    |     1693 |           74.8
  Downhill Teleférico                         | yolo26m_c5_1024+svtrv2_b |     1693 |           50.2
 (33 rows)
