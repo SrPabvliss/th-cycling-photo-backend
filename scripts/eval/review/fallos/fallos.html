@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motivos de fallo</title>
+<style>
+  :root { --bg: #111317; --panel: #1b1e24; --line: #2c313a; --text: #e6e8eb; --muted: #9aa1ab; --out: #f85149; --ok: #3fb950; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  body { display: grid; grid-template-rows: auto 1fr; grid-template-columns: 1fr 360px; height: 100vh; }
+  header { grid-column: 1 / 3; display: flex; gap: 16px; align-items: center; padding: 8px 12px;
+    background: var(--panel); border-bottom: 1px solid var(--line); }
+  header select { background: var(--bg); color: var(--text); border: 1px solid var(--line); padding: 4px 6px; max-width: 300px; }
+  header .grow { flex: 1; }
+  .muted { color: var(--muted); }
+  #viewport { position: relative; overflow: hidden; cursor: grab; background: #000; }
+  #viewport.drag { cursor: grabbing; }
+  #layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #layer img { display: block; user-select: none; -webkit-user-drag: none; }
+  #layer svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #badge { position: absolute; top: 10px; left: 10px; padding: 4px 10px; border-radius: 4px; font-weight: 600; display: none; color: #000; }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); pointer-events: none; }
+  aside { background: var(--panel); border-left: 1px solid var(--line); padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; }
+  .pair { display: flex; justify-content: space-between; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; margin-bottom: 4px; }
+  .pair b { font-size: 22px; letter-spacing: .04em; }
+  .tipo { display: inline-block; padding: 2px 8px; border-radius: 4px; background: var(--bg); border: 1px solid var(--line); font-size: 12px; }
+  .keys button { display: flex; width: 100%; justify-content: space-between; margin-bottom: 6px; padding: 8px 10px; text-align: left; gap: 8px;
+    background: var(--bg); color: var(--text); border: 1px solid var(--line); border-left-width: 4px; border-radius: 4px; cursor: pointer; font: inherit; }
+  .keys button:hover { background: #22262e; }
+  .keys button.on { background: #2a3140; }
+  .keys kbd { font-family: ui-monospace, monospace; color: var(--muted); flex: none; }
+  input[type=text] { width: 100%; padding: 8px; font-size: 14px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; }
+  #error { display: none; background: var(--out); color: #fff; padding: 8px; border-radius: 4px; }
+  .help { font-size: 12px; color: var(--muted); }
+  .help div { display: flex; justify-content: space-between; }
+  label.toggle { display: flex; gap: 6px; align-items: center; }
+  #crumb { font-weight: 600; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <select id="filterTipo"><option value="">todos los tipos</option></select>
+  <select id="filterEvent"><option value="">todos los eventos</option></select>
+  <span id="progress" class="muted"></span>
+  <span class="grow"></span>
+  <label class="toggle"><input type="checkbox" id="skip" checked> saltar decididas</label>
+  <label class="toggle"><input type="checkbox" id="autozoom" checked> zoom a la placa</label>
+  <span id="position"></span>
+</header>
+<div id="viewport">
+  <div id="layer"><img id="photo" alt=""><svg id="boxes" viewBox="0 0 1 1" preserveAspectRatio="none"><title>cajas detectadas</title></svg></div>
+  <div id="badge"></div>
+  <div id="loading">cargando…</div>
+</div>
+<aside>
+  <section>
+    <h2>Fallo</h2>
+    <div class="pair"><span class="muted">referencia</span><b id="truth"></b></div>
+    <div class="pair"><span class="muted">leído</span><b id="read"></b></div>
+    <div><span class="tipo" id="tipo"></span> <span class="muted" id="boxinfo"></span></div>
+    <div class="muted" id="meta" style="margin-top:6px;font-size:12px"></div>
+  </section>
+  <section>
+    <h2>Marcas (no son motivo)</h2>
+    <div class="keys" id="marcas"></div>
+  </section>
+  <section class="keys" id="motivos">
+    <h2>Motivo</h2>
+  </section>
+  <section class="keys" id="submotivos" style="display:none">
+    <h2>Submotivo</h2>
+    <div id="crumb"></div>
+    <div id="sublist"></div>
+    <div class="help">Esc vuelve al motivo</div>
+  </section>
+  <section id="noteBox" style="display:none">
+    <h2>Nota</h2>
+    <input type="text" id="note" placeholder="nota y Enter (Esc cancela)">
+  </section>
+  <div id="error"></div>
+  <section class="help">
+    <h2>Navegación</h2>
+    <div><span>Foto anterior / siguiente</span><kbd>← →</kbd></div>
+    <div><span>Zoom a la placa</span><kbd>B</kbd></div>
+    <div><span>Ver foto completa</span><kbd>0</kbd></div>
+    <div><span>Zoom</span><kbd>rueda · arrastrar</kbd></div>
+  </section>
+</aside>
+<script>
+const $ = (id) => document.getElementById(id)
+const TIPOS = { no_detectada: 'no detectada', sustitucion: 'sustitución', digitos_de_mas: 'dígitos de más', digitos_de_menos: 'dígitos de menos', varias_lecturas: 'varias lecturas', lee_sin_placa: 'lee donde la referencia dice sin placa', ilegible_ref: 'ilegible en referencia' }
+let tax = { motivos: [], marcas: [] }
+let all = []
+let photos = []
+let idx = 0
+let mode = 'motivo'   // motivo | sub | note
+let chosen = null     // motivo elegido mientras se pide submotivo o nota
+let marcasOn = new Set()
+let ready = false
+let saving = false
+let view = { s: 1, x: 0, y: 0 }
+const store = { get(k) { try { return localStorage.getItem(k) } catch { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch {} } }
+
+async function init() {
+  tax = await (await fetch('/api/taxonomy')).json()
+  all = await (await fetch('/api/queue')).json()
+  $('motivos').insertAdjacentHTML('beforeend', tax.motivos.map((m) =>
+    `<button type="button" data-id="${m.id}" style="border-left-color:${m.color}"><span>${m.label}</span><kbd>${m.key}</kbd></button>`).join(''))
+  $('marcas').innerHTML = tax.marcas.map((m) =>
+    `<button type="button" data-id="${m.id}" style="border-left-color:var(--muted)"><span>${m.label}</span><kbd>${m.key.toUpperCase()}</kbd></button>`).join('')
+  for (const b of document.querySelectorAll('#motivos button')) b.addEventListener('click', () => pickMotivo(b.dataset.id))
+  for (const b of document.querySelectorAll('#marcas button')) b.addEventListener('click', () => toggleMarca(b.dataset.id))
+  const tipos = [...new Set(all.map((p) => p.tipo))]
+  $('filterTipo').insertAdjacentHTML('beforeend', tipos.map((t) => `<option value="${t}">${TIPOS[t] || t}</option>`).join(''))
+  const events = [...new Set(all.map((p) => p.event))].sort()
+  $('filterEvent').insertAdjacentHTML('beforeend', events.map((e) => `<option value="${e}">${e}</option>`).join(''))
+  $('filterTipo').value = store.get('tipo') || ''
+  $('filterEvent').value = store.get('event') || ''
+  applyFilter()
+}
+
+function applyFilter() {
+  const t = $('filterTipo').value
+  const e = $('filterEvent').value
+  store.set('tipo', t); store.set('event', e)
+  photos = all.filter((p) => (!t || p.tipo === t) && (!e || p.event === e))
+  const pending = photos.findIndex((p) => !p.decision)
+  idx = pending >= 0 ? pending : 0
+  show()
+}
+
+function progress() {
+  const done = photos.filter((p) => p.decision).length
+  $('progress').textContent = `${done} de ${photos.length} en el filtro · ${all.filter((p) => p.decision).length} de ${all.length} en total`
+}
+
+function show() {
+  const p = photos[idx]
+  if (!p) { $('position').textContent = 'sin fotos en el filtro'; return }
+  setMode('motivo'); marcasOn = new Set(); renderMarcas()
+  $('position').textContent = `foto ${idx + 1} de ${photos.length}`
+  $('truth').textContent = p.truth ? p.truth.replace(/;/g, ' ') : '—'
+  $('read').textContent = p.read ? p.read.replace(/;/g, ' ') : '—'
+  $('tipo').textContent = TIPOS[p.tipo] || p.tipo
+  $('boxinfo').textContent = p.boxes.length ? `${p.boxes.length} caja(s), conf. máx ${Math.max(...p.boxes.map((b) => b.confidence)).toFixed(2)}` : 'sin caja ≥ 0,50'
+  $('meta').textContent = `${p.event} · ${p.filename}`
+  const badge = $('badge')
+  if (p.decision) {
+    const d = p.decision
+    const m = tax.motivos.find((x) => x.id === d.motivo)
+    badge.style.display = 'block'; badge.style.background = m ? m.color : '#fff'
+    const sub = m && m.sub.find(([id]) => id === d.submotivo)
+    badge.textContent = `${m ? m.label : d.motivo}${sub ? ' · ' + sub[1] : ''}${d.marcas ? ' · ' + d.marcas : ''}${d.note ? ' · ' + d.note : ''}`
+    marcasOn = new Set(d.marcas.split(';').filter(Boolean)); renderMarcas()
+  } else badge.style.display = 'none'
+  $('loading').style.display = 'grid'
+  const img = $('photo')
+  ready = false
+  img.onload = () => { $('loading').style.display = 'none'; drawBoxes(p); fit(); if ($('autozoom').checked) zoomToPlate(); ready = true }
+  img.src = `/img/${p.event_id}/${p.id}.jpg`
+  for (const k of [1, 2, 3]) { const n = photos[idx + k]; if (n) new Image().src = `/img/${n.event_id}/${n.id}.jpg` }
+  progress()
+}
+
+function drawBoxes(p) {
+  $('boxes').innerHTML = p.boxes.map((b) => {
+    const [x1, y1, x2, y2] = b.bbox
+    return `<rect x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}" fill="none" stroke="#f85149" stroke-width="2" vector-effect="non-scaling-stroke"/>`
+  }).join('')
+}
+
+function apply() { $('layer').style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.s})` }
+
+function fit() {
+  const vp = $('viewport').getBoundingClientRect()
+  const img = $('photo')
+  const s = Math.min(vp.width / img.naturalWidth, vp.height / img.naturalHeight)
+  view = { s, x: (vp.width - img.naturalWidth * s) / 2, y: (vp.height - img.naturalHeight * s) / 2 }
+  apply()
+}
+
+function zoomToPlate() {
+  const p = photos[idx]
+  const img = $('photo')
+  if (!p.boxes.length) return
+  const boxes = p.boxes.map((b) => b.bbox)
+  const x1 = Math.min(...boxes.map((b) => b[0]))
+  const y1 = Math.min(...boxes.map((b) => b[1]))
+  const x2 = Math.max(...boxes.map((b) => b[2]))
+  const y2 = Math.max(...boxes.map((b) => b[3]))
+  const vp = $('viewport').getBoundingClientRect()
+  const w = (x2 - x1) * img.naturalWidth
+  const h = (y2 - y1) * img.naturalHeight
+  const s = Math.min(vp.width * 0.4 / w, vp.height * 0.4 / h, 6)
+  const cx = ((x1 + x2) / 2) * img.naturalWidth
+  const cy = ((y1 + y2) / 2) * img.naturalHeight
+  view = { s, x: vp.width / 2 - cx * s, y: vp.height / 2 - cy * s }
+  apply()
+}
+
+$('viewport').addEventListener('wheel', (e) => {
+  e.preventDefault()
+  const vp = $('viewport').getBoundingClientRect()
+  const mx = e.clientX - vp.left
+  const my = e.clientY - vp.top
+  const k = Math.exp(-e.deltaY * 0.0015)
+  view = { s: view.s * k, x: mx - (mx - view.x) * k, y: my - (my - view.y) * k }
+  apply()
+}, { passive: false })
+let dragStart = null
+$('viewport').addEventListener('mousedown', (e) => { dragStart = { x: e.clientX - view.x, y: e.clientY - view.y }; $('viewport').classList.add('drag') })
+window.addEventListener('mousemove', (e) => { if (dragStart) { view.x = e.clientX - dragStart.x; view.y = e.clientY - dragStart.y; apply() } })
+window.addEventListener('mouseup', () => { dragStart = null; $('viewport').classList.remove('drag') })
+window.addEventListener('resize', fit)
+
+function renderMarcas() {
+  for (const b of document.querySelectorAll('#marcas button')) b.classList.toggle('on', marcasOn.has(b.dataset.id))
+}
+function toggleMarca(id) { if (marcasOn.has(id)) marcasOn.delete(id); else marcasOn.add(id); renderMarcas() }
+
+function setMode(m) {
+  mode = m
+  $('motivos').style.display = m === 'motivo' ? 'block' : 'none'
+  $('submotivos').style.display = m === 'sub' ? 'block' : 'none'
+  $('noteBox').style.display = m === 'note' ? 'block' : 'none'
+  if (m === 'sub') {
+    $('crumb').textContent = chosen.label
+    $('sublist').innerHTML = chosen.sub.map(([id, label], i) =>
+      `<button type="button" data-id="${id}" style="border-left-color:${chosen.color}"><span>${label}</span><kbd>${i + 1}</kbd></button>`).join('')
+    for (const b of document.querySelectorAll('#sublist button')) b.addEventListener('click', () => decide(chosen, b.dataset.id, ''))
+  }
+  if (m === 'note') { $('note').value = ''; $('note').focus() }
+  if (m === 'motivo') { chosen = null; document.activeElement?.blur() }
+}
+
+function pickMotivo(id) {
+  chosen = tax.motivos.find((m) => m.id === id)
+  if (!chosen) return
+  if (chosen.sub.length) setMode('sub')
+  else if (chosen.note) setMode('note')
+  else decide(chosen, '', '')
+}
+
+async function decide(motivo, submotivo, note) {
+  if (!ready || saving) return
+  saving = true
+  const p = photos[idx]
+  const payload = { photo_id: p.id, motivo: motivo.id, submotivo, note, marcas: [...marcasOn].join(';') }
+  try {
+    const res = await fetch('/api/decision', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
+    if (!res.ok) throw new Error((await res.json()).error || res.status)
+    p.decision = await res.json()
+    $('error').style.display = 'none'
+    next()
+  } catch (err) {
+    $('error').textContent = `No se guardó (${err.message}). La foto sigue en pantalla.`
+    $('error').style.display = 'block'
+  } finally { saving = false }
+}
+
+function next() {
+  let j = idx + 1
+  if ($('skip').checked) while (j < photos.length && photos[j].decision) j++
+  if (j >= photos.length) {
+    const left = photos.findIndex((p) => !p.decision)
+    if (left >= 0) j = left
+    else { idx = photos.length - 1; show(); $('error').textContent = 'Filtro completo. Cambia el filtro arriba.'; $('error').style.display = 'block'; return }
+  }
+  idx = j; show()
+}
+function prev() { if (idx > 0) { idx--; show() } }
+
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  if (mode === 'note') {
+    if (e.key === 'Escape') setMode('motivo')
+    else if (e.key === 'Enter') { e.preventDefault(); decide(chosen, '', $('note').value.trim()) }
+    return
+  }
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
+  if (e.repeat && !['ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); return }
+  if (key === 'ArrowRight') { e.preventDefault(); idx = Math.min(idx + 1, photos.length - 1); show(); return }
+  if (key === 'ArrowLeft') { e.preventDefault(); prev(); return }
+  if (key === 'b') { e.preventDefault(); zoomToPlate(); return }
+  if (key === '0') { e.preventDefault(); fit(); return }
+  const marca = tax.marcas.find((m) => m.key === key)
+  if (marca) { e.preventDefault(); toggleMarca(marca.id); return }
+  if (mode === 'motivo') {
+    const m = tax.motivos.find((x) => x.key === key)
+    if (m) { e.preventDefault(); pickMotivo(m.id) }
+  } else if (mode === 'sub') {
+    if (key === 'Escape') { e.preventDefault(); setMode('motivo'); return }
+    const i = Number(key) - 1
+    if (Number.isInteger(i) && chosen.sub[i]) { e.preventDefault(); decide(chosen, chosen.sub[i][0], '') }
+  }
+})
+$('filterTipo').addEventListener('change', applyFilter)
+$('filterEvent').addEventListener('change', applyFilter)
+init()
+</script>
+</body>
+</html>

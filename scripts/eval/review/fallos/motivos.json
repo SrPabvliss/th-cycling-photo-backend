@@ -1,0 +1,93 @@
+{
+  "motivos": [
+    {
+      "id": "oclusion",
+      "key": "1",
+      "label": "Oclusión",
+      "color": "#f85149",
+      "sub": [
+        ["cable", "Cable de freno o funda"],
+        ["manubrio_horquilla", "Manubrio, potencia u horquilla"],
+        ["mano_cuerpo", "Mano, brazo o cuerpo del ciclista"],
+        ["llanta", "Llanta o rueda"],
+        ["otro_corredor", "Otro corredor u objeto externo"],
+        ["otro", "Otro"]
+      ]
+    },
+    {
+      "id": "posicion",
+      "key": "2",
+      "label": "Posición de la placa",
+      "color": "#d29922",
+      "sub": [
+        ["doblada", "Doblada o arqueada"],
+        ["oblicua", "Girada u oblicua a la cámara"],
+        ["al_reves", "Al revés o volteada"],
+        ["de_lado", "De lado o de perfil"],
+        ["suelta", "Caída, suelta o fuera de sitio"],
+        ["otro", "Otro"]
+      ]
+    },
+    {
+      "id": "captura",
+      "key": "3",
+      "label": "Condiciones de captura",
+      "color": "#58a6ff",
+      "sub": [
+        ["reflejo", "Reflejo, flash o sobreexposición"],
+        ["poca_luz", "Sombra o poca luz"],
+        ["barro", "Barro o suciedad"],
+        ["lluvia_polvo", "Lluvia, polvo o salpicadura"],
+        ["desenfoque", "Desenfoque o movimiento"],
+        ["otro", "Otro"]
+      ]
+    },
+    {
+      "id": "escala",
+      "key": "4",
+      "label": "Escala",
+      "color": "#3fb950",
+      "sub": [
+        ["lejana", "Placa pequeña o corredor lejano"],
+        ["parcial", "Placa parcialmente fuera del cuadro"],
+        ["otro", "Otro"]
+      ]
+    },
+    {
+      "id": "diseno",
+      "key": "5",
+      "label": "Diseño de la placa",
+      "color": "#bc8cff",
+      "sub": [
+        ["logos_texto", "Logos o texto junto al número"],
+        ["tipografia", "Tipografía ambigua"],
+        ["en_blanco", "Placa sin número"],
+        ["nombre", "Nombre u otro texto en vez de número"],
+        ["ceros", "Ceros iniciales"],
+        ["otro", "Otro"]
+      ]
+    },
+    {
+      "id": "sin_causa",
+      "key": "6",
+      "label": "Sin causa visible (fallo del modelo)",
+      "color": "#9aa1ab",
+      "sub": []
+    },
+    {
+      "id": "otro",
+      "key": "7",
+      "label": "Otro (con nota)",
+      "color": "#e6e8eb",
+      "sub": [],
+      "note": true
+    }
+  ],
+  "marcas": [
+    {
+      "id": "ref_errada",
+      "key": "r",
+      "label": "Referencia errada (etiqueta mal: placa legible marcada sin placa o ilegible, o número equivocado)"
+    }
+  ]
+}
