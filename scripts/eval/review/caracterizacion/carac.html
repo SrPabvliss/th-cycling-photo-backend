@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caracterización de eventos</title>
+<title>Caracterización de eventos (revisión)</title>
 <style>
   :root { --bg: #111317; --panel: #1b1e24; --line: #2c313a; --text: #e6e8eb; --muted: #9aa1ab; --out: #f85149; --ok: #3fb950; --star: #e3b341; }
   * { box-sizing: border-box; }
@@ -63,11 +63,11 @@
     <div id="meta" class="muted"></div>
     <div id="truth" class="muted"></div>
   </section>
-  <section>
-    <h2>Dimensiones</h2>
-    <div class="steps" id="steps"></div>
+  <section class="keys" id="overview">
+    <h2>Propuesta (Enter acepta · número edita)</h2>
+    <div id="dimlist"></div>
   </section>
-  <section class="keys" id="options">
+  <section class="keys" id="options" style="display:none">
     <div id="crumb"></div>
     <div id="optlist"></div>
   </section>
@@ -79,13 +79,13 @@
   <section id="summary"></section>
   <section class="help">
     <h2>Teclas</h2>
-    <div><span>Elegir opción</span><kbd>1 … n</kbd></div>
-    <div><span>Dimensión anterior</span><kbd>Retroceso</kbd></div>
+    <div><span>Aceptar y guardar</span><kbd>Enter</kbd></div>
+    <div><span>Editar dimensión</span><kbd>1 … 5</kbd> luego <kbd>1 … n</kbd></div>
+    <div><span>Volver sin cambiar</span><kbd>Esc</kbd></div>
     <div><span>Marcar representativa del evento</span><kbd>R</kbd></div>
     <div><span>Nota (se guarda con la foto)</span><kbd>N</kbd></div>
     <div><span>Foto anterior / siguiente</span><kbd>← →</kbd></div>
     <div><span>Zoom a la placa / foto completa</span><kbd>B / 0</kbd></div>
-    <div><span>Zoom</span><kbd>rueda · arrastrar</kbd></div>
   </section>
 </aside>
 <script>
@@ -94,11 +94,11 @@ let dims = []
 let all = []
 let photos = []
 let idx = 0
-let step = 0
-let answers = {}
+let values = {}      // current values of the photo on screen (proposal, decision or edits)
+let editing = null   // dimension being edited, or null for the overview
 let rep = false
 let note = ''
-let mode = 'dim'   // dim | note
+let mode = 'view'    // view | note
 let ready = false
 let saving = false
 let view = { s: 1, x: 0, y: 0 }
@@ -124,32 +124,34 @@ function applyFilter() {
 
 function progress() {
   const done = photos.filter((p) => p.decision).length
+  const edited = all.filter((p) => p.decision && p.decision.origen === 'editada').length
   const reps = all.filter((p) => p.decision && p.decision.representativa === '1').length
-  $('progress').textContent = `${done} de ${photos.length} en el filtro · ${all.filter((p) => p.decision).length} de ${all.length} en total · ${reps} representativas`
+  $('progress').textContent = `${done} de ${photos.length} en el filtro · ${all.filter((p) => p.decision).length} de ${all.length} en total · ${edited} editadas · ${reps} representativas`
 }
 
 function labelOf(dimId, optId) {
   const d = dims.find((x) => x.id === dimId)
-  const o = d && d.opciones.find(([id]) => id === optId)
-  return o ? o[1].split(' (')[0] : optId
+  const o = d?.opciones.find(([id]) => id === optId)
+  return o ? o[1].split(' (')[0] : optId || '—'
 }
 
 function show() {
   const p = photos[idx]
   if (!p) { $('position').textContent = 'sin fotos en el filtro'; return }
-  // A decided photo starts a fresh pass but keeps its flag and note, so R or N alone re-saves it.
-  answers = {}
-  step = 0
+  // Start from the saved decision, else from the proposal.
+  const src = p.decision || p.prelabel || {}
+  values = Object.fromEntries(dims.map((d) => [d.id, src[d.id] || '']))
   rep = Boolean(p.decision && p.decision.representativa === '1')
-  note = p.decision ? p.decision.note || '' : ''
-  setMode('dim')
+  note = p.decision ? p.decision.note || '' : (p.prelabel && p.prelabel.note) || ''
+  editing = null
+  setMode('view')
   $('position').textContent = `foto ${idx + 1} de ${photos.length}`
   $('meta').textContent = `${p.event} · ${p.filename}${p.criterio ? ` · elegida por: ${p.criterio}` : ''}`
-  $('truth').textContent = p.unreadable ? 'referencia: ilegible' : p.truth ? `referencia: ${p.truth.replace(/;/g, ' ')}` : 'referencia: sin dorsal'
+  $('truth').textContent = p.truth ? `referencia: ${p.truth.replace(/;/g, ' ')}` : 'referencia: sin dorsal'
   const badge = $('badge')
   if (p.decision) {
     badge.style.display = 'block'
-    badge.textContent = dims.map((d) => labelOf(d.id, p.decision[d.id])).join(' · ') + (p.decision.note ? ` · ${p.decision.note}` : '')
+    badge.textContent = `guardada (${p.decision.origen})`
   } else badge.style.display = 'none'
   $('star').style.display = rep ? 'block' : 'none'
   $('loading').style.display = 'grid'
@@ -159,22 +161,42 @@ function show() {
   img.src = `/img/${p.event_id}/${p.id}.jpg`
   for (const k of [1, 2, 3]) { const n = photos[idx + k]; if (n) new Image().src = `/img/${n.event_id}/${n.id}.jpg` }
   progress()
-  renderStep()
+  render()
 }
 
-function renderStep() {
-  $('steps').innerHTML = dims.map((d, i) => {
-    const cls = i < step ? 'done' : i === step ? 'now' : ''
-    const style = i === step ? `background:${d.color};border-color:${d.color}` : ''
-    return `<span class="${cls}" style="${style}">${d.label}${answers[d.id] ? `: ${labelOf(d.id, answers[d.id])}` : ''}</span>`
+function render() {
+  const p = photos[idx]
+  const pre = p.prelabel || {}
+  $('dimlist').innerHTML = dims.map((d, i) => {
+    const changed = values[d.id] !== (pre[d.id] || '')
+    return `<button type="button" data-i="${i}" style="border-left-color:${d.color}"><span><small style="color:${d.color}">${d.label}</small>${labelOf(d.id, values[d.id])}${changed ? ' <small>(editada)</small>' : ''}</span><kbd>${i + 1}</kbd></button>`
   }).join('')
-  const d = dims[step]
+  for (const b of document.querySelectorAll('#dimlist button')) b.addEventListener('click', () => edit(Number(b.dataset.i)))
+  $('summary').textContent = (rep ? '★ representativa. ' : '') + (note ? `Nota: ${note}` : '')
+}
+
+function edit(i) {
+  editing = i
+  const d = dims[i]
   $('crumb').textContent = d.label
   $('crumb').style.color = d.color
-  $('optlist').innerHTML = d.opciones.map(([id, label], i) =>
-    `<button type="button" data-id="${id}" style="border-left-color:${d.color}"><span>${label}</span><kbd>${i + 1}</kbd></button>`).join('')
+  $('optlist').innerHTML = d.opciones.map(([id, label], j) =>
+    `<button type="button" data-id="${id}" class="${values[d.id] === id ? 'on' : ''}" style="border-left-color:${d.color}"><span>${label}</span><kbd>${j + 1}</kbd></button>`).join('')
   for (const b of document.querySelectorAll('#optlist button')) b.addEventListener('click', () => pick(b.dataset.id))
-  $('summary').textContent = (rep ? '★ representativa. ' : '') + (note ? `Nota: ${note}` : '')
+  $('overview').style.display = 'none'
+  $('options').style.display = 'block'
+}
+
+function pick(id) {
+  values[dims[editing].id] = id
+  closeEdit()
+}
+
+function closeEdit() {
+  editing = null
+  $('options').style.display = 'none'
+  $('overview').style.display = 'block'
+  render()
 }
 
 function drawBoxes(p) {
@@ -230,38 +252,17 @@ window.addEventListener('resize', fit)
 
 function setMode(m) {
   mode = m
-  $('options').style.display = m === 'dim' ? 'block' : 'none'
   $('noteBox').style.display = m === 'note' ? 'block' : 'none'
   if (m === 'note') { $('note').value = note; $('note').focus(); $('note').select() }
-  if (m === 'dim') document.activeElement?.blur()
+  if (m === 'view') document.activeElement?.blur()
 }
 
-function pick(id) {
-  answers[dims[step].id] = id
-  if (step < dims.length - 1) { step++; renderStep(); return }
-  save(answers)
-}
-
-function back() {
-  if (step === 0) return
-  step--
-  delete answers[dims[step].id]
-  renderStep()
-}
-
-// Saves a full set of answers; for an already decided photo, R or N re-save its answers.
-function current() {
-  const p = photos[idx]
-  if (Object.keys(answers).length === dims.length) return answers
-  if (p.decision) return Object.fromEntries(dims.map((d) => [d.id, p.decision[d.id]]))
-  return null
-}
-
-async function save(a, advance = true) {
+async function save(advance = true) {
   if (!ready || saving) return
+  if (dims.some((d) => !values[d.id])) { $('error').textContent = 'Falta una dimensión.'; $('error').style.display = 'block'; return }
   saving = true
   const p = photos[idx]
-  const payload = { photo_id: p.id, ...a, representativa: rep, note }
+  const payload = { photo_id: p.id, ...values, representativa: rep, note }
   try {
     const res = await fetch('/api/decision', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
     if (!res.ok) throw new Error((await res.json()).error || res.status)
@@ -278,9 +279,8 @@ async function save(a, advance = true) {
 function toggleRep() {
   rep = !rep
   $('star').style.display = rep ? 'block' : 'none'
-  const a = current()
-  if (a) save(a, false)
-  else renderStep()
+  if (photos[idx].decision) save(false)
+  else render()
 }
 
 function next() {
@@ -300,14 +300,13 @@ document.addEventListener('keydown', (e) => {
   // A focused select or checkbox in the header would swallow the key: take it back.
   if (mode !== 'note' && e.target !== document.body) { e.preventDefault(); e.target.blur?.() }
   if (mode === 'note') {
-    if (e.key === 'Escape') setMode('dim')
+    if (e.key === 'Escape') setMode('view')
     else if (e.key === 'Enter') {
       e.preventDefault()
       note = $('note').value.trim()
-      setMode('dim')
-      const a = current()
-      if (a) save(a, false)
-      else renderStep()
+      setMode('view')
+      if (photos[idx].decision) save(false)
+      else render()
     }
     return
   }
@@ -315,13 +314,19 @@ document.addEventListener('keydown', (e) => {
   if (e.repeat && !['ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); return }
   if (key === 'ArrowRight') { e.preventDefault(); idx = Math.min(idx + 1, photos.length - 1); show(); return }
   if (key === 'ArrowLeft') { e.preventDefault(); prev(); return }
-  if (key === 'Backspace') { e.preventDefault(); back(); return }
   if (key === 'b') { e.preventDefault(); zoomToPlate(); return }
   if (key === '0') { e.preventDefault(); fit(); return }
   if (key === 'r') { e.preventDefault(); toggleRep(); return }
   if (key === 'n') { e.preventDefault(); setMode('note'); return }
+  if (editing !== null) {
+    if (key === 'Escape') { e.preventDefault(); closeEdit(); return }
+    const j = Number(key) - 1
+    if (Number.isInteger(j) && dims[editing].opciones[j]) { e.preventDefault(); pick(dims[editing].opciones[j][0]) }
+    return
+  }
+  if (key === 'Enter') { e.preventDefault(); save(true); return }
   const i = Number(key) - 1
-  if (Number.isInteger(i) && dims[step].opciones[i]) { e.preventDefault(); pick(dims[step].opciones[i][0]) }
+  if (Number.isInteger(i) && dims[i]) { e.preventDefault(); edit(i) }
 })
 $('filterEvent').addEventListener('change', (e) => { applyFilter(); e.target.blur() })
 $('skip').addEventListener('change', (e) => e.target.blur())

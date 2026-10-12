@@ -64,6 +64,8 @@ def main() -> None:
     o = []
     o.append("# Caracterización de los eventos por foto (criterio del autor)\n")
     o.append(f"Codificación manual del autor con la app `scripts/eval/review/caracterizacion/` (backend, rama `eswa/evaluacion`) sobre 10 fotos con dorsal legible por evento elegidas en los extremos de las medidas de píxeles (`seleccionar.py`, `muestra.csv`: más oscura, más clara, más quemada, menos y más saturada, menos y más nítida, placa más pequeña, más grande y más oblicua), en cinco dimensiones cerradas (`dimensiones.json`). Decisiones en `carac-decisiones.csv`, última línea por foto. {len(D)} de {len(sample)} fotos codificadas; {len(reps)} marcadas representativas. Entropía normalizada: 0 = todas las fotos del evento iguales en esa dimensión, 1 = reparto uniforme entre las opciones. Tabla generada por `tabular.py`.\n")
+    ed = sum(1 for d in D if d.get("origen") == "editada")
+    o.append(f"Etiquetas propuestas por el asistente (`prelabels.csv`) y revisadas por el autor: {ed} de {len(D)} editadas en al menos una dimensión.\n")
     o.append("## Moda por evento y dimensión (entre paréntesis, % de las fotos del evento)\n")
     o.append("| Evento | n | " + " | ".join(d["label"] for d in tax) + " |\n|---|---:|" + "---|" * len(tax))
     for e in events:

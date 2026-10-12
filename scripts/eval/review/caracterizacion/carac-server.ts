@@ -1,7 +1,8 @@
 /**
- * Local app to characterize the test events photo by photo: the author codes
- * every photo of a fixed sample (muestra.csv: per event, the 10 photos with a
- * legible bib that sit at the extremes of the pixel statistics, seleccionar.py)
+ * Local app to characterize the test events photo by photo. The sample
+ * (muestra.csv) holds, per event, the 10 photos with a legible bib that sit at
+ * the extremes of the pixel statistics (seleccionar.py); the assistant proposed
+ * a label per dimension (prelabels.csv) and the author accepts or edits it
  * on closed scales (dimensiones.json: light, surroundings,
  * visible weather, camera angle, distance) and may flag it as representative
  * of its event. No database; photos come from the reduced copies of
@@ -44,7 +45,7 @@ const TAXONOMY = JSON.parse(readFileSync(join(__dirname, 'dimensiones.json'), 'u
 const DIMS = TAXONOMY.dimensiones.map((d) => d.id)
 
 const FIXED = ['at', 'photo_id', 'event_id', 'event', 'filename'] as const
-const TAIL = ['representativa', 'note'] as const
+const TAIL = ['representativa', 'note', 'origen'] as const
 const KEYS = [...FIXED, ...DIMS, ...TAIL]
 const HEADER = `${KEYS.join(',')}\n`
 type Decision = Record<string, string>
@@ -100,6 +101,9 @@ function parseBoxes(s: string) {
     })
 }
 
+// Labels proposed by the assistant (prelabels.csv): the author accepts or edits them.
+const PRE = new Map(readCsv(join(__dirname, 'prelabels.csv')).map((r) => [r.photo_id, r]))
+
 const sample = readCsv(SAMPLE).map((r) => ({
   id: r.photo_id,
   event_id: r.event_id,
@@ -109,6 +113,7 @@ const sample = readCsv(SAMPLE).map((r) => ({
   truth: r.truth,
   boxes: parseBoxes(r.boxes),
   criterio: r.criterio ?? '',
+  prelabel: PRE.get(r.photo_id) ?? null,
 }))
 
 const latest = new Map<string, Decision>()
@@ -193,6 +198,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       filename: p.filename,
       representativa: body.representativa === true ? '1' : '',
       note: String(body.note ?? '').trim(),
+      origen: '',
     }
     // Every dimension must carry one of its options.
     for (const dim of TAXONOMY.dimensiones) {
@@ -200,6 +206,9 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       if (!dim.opciones.some(([id]) => id === v)) return send(res, 400, { error: dim.id })
       d[dim.id] = v
     }
+    // Provenance: accepted as proposed, or edited by the author in at least one dimension.
+    const pre = PRE.get(p.id)
+    d.origen = pre && TAXONOMY.dimensiones.every((dim) => pre[dim.id] === d[dim.id]) ? 'aceptada' : 'editada'
     appendDecision(d)
     return send(res, 200, d)
   }
