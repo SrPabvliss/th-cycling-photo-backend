@@ -89,6 +89,10 @@
         [
           "lateral_contrapicado",
           "Lateral, contrapicado o picado fuerte"
+        ],
+        [
+          "de_espaldas",
+          "De espaldas o trasera (placa oculta por el corredor)"
         ]
       ]
     },
