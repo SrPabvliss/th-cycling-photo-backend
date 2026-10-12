@@ -63,7 +63,7 @@ def main() -> None:
             w.writerow([d["photo_id"], d["event_id"], d["event"], d["filename"], *[d[x["id"]] for x in tax], d["note"]])
     o = []
     o.append("# Caracterización de los eventos por foto (criterio del autor)\n")
-    o.append(f"Codificación manual del autor con la app `scripts/eval/review/caracterizacion/` (backend, rama `eswa/evaluacion`) sobre 20 fotos incluidas al azar por evento (semilla 42, `muestra.csv`), en cinco dimensiones cerradas (`dimensiones.json`). Decisiones en `carac-decisiones.csv`, última línea por foto. {len(D)} de {len(sample)} fotos codificadas; {len(reps)} marcadas representativas. Entropía normalizada: 0 = todas las fotos del evento iguales en esa dimensión, 1 = reparto uniforme entre las opciones. Tabla generada por `tabular.py`.\n")
+    o.append(f"Codificación manual del autor con la app `scripts/eval/review/caracterizacion/` (backend, rama `eswa/evaluacion`) sobre 10 fotos con dorsal legible por evento elegidas en los extremos de las medidas de píxeles (`seleccionar.py`, `muestra.csv`: más oscura, más clara, más quemada, menos y más saturada, menos y más nítida, placa más pequeña, más grande y más oblicua), en cinco dimensiones cerradas (`dimensiones.json`). Decisiones en `carac-decisiones.csv`, última línea por foto. {len(D)} de {len(sample)} fotos codificadas; {len(reps)} marcadas representativas. Entropía normalizada: 0 = todas las fotos del evento iguales en esa dimensión, 1 = reparto uniforme entre las opciones. Tabla generada por `tabular.py`.\n")
     o.append("## Moda por evento y dimensión (entre paréntesis, % de las fotos del evento)\n")
     o.append("| Evento | n | " + " | ".join(d["label"] for d in tax) + " |\n|---|---:|" + "---|" * len(tax))
     for e in events:

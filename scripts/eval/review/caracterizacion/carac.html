@@ -144,7 +144,7 @@ function show() {
   note = p.decision ? p.decision.note || '' : ''
   setMode('dim')
   $('position').textContent = `foto ${idx + 1} de ${photos.length}`
-  $('meta').textContent = `${p.event} · ${p.filename}`
+  $('meta').textContent = `${p.event} · ${p.filename}${p.criterio ? ` · elegida por: ${p.criterio}` : ''}`
   $('truth').textContent = p.unreadable ? 'referencia: ilegible' : p.truth ? `referencia: ${p.truth.replace(/;/g, ' ')}` : 'referencia: sin dorsal'
   const badge = $('badge')
   if (p.decision) {

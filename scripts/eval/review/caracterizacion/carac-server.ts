@@ -1,7 +1,8 @@
 /**
  * Local app to characterize the test events photo by photo: the author codes
- * every photo of a fixed sample (muestra.csv, 20 random included photos per
- * event, seed 42) on closed scales (dimensiones.json: light, surroundings,
+ * every photo of a fixed sample (muestra.csv: per event, the 10 photos with a
+ * legible bib that sit at the extremes of the pixel statistics, seleccionar.py)
+ * on closed scales (dimensiones.json: light, surroundings,
  * visible weather, camera angle, distance) and may flag it as representative
  * of its event. No database; photos come from the reduced copies of
  * fetch-images.ts.
@@ -107,6 +108,7 @@ const sample = readCsv(SAMPLE).map((r) => ({
   unreadable: r.unreadable === 't',
   truth: r.truth,
   boxes: parseBoxes(r.boxes),
+  criterio: r.criterio ?? '',
 }))
 
 const latest = new Map<string, Decision>()

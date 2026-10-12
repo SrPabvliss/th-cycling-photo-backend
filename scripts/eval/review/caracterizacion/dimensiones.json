@@ -5,22 +5,10 @@
       "label": "Luz",
       "color": "#e3b341",
       "opciones": [
-        [
-          "sol_directo",
-          "Sol directo (sombras duras de borde nítido o zonas quemadas)"
-        ],
-        [
-          "nublado_difusa",
-          "Nublado o luz difusa (cielo abierto, sin sombras duras)"
-        ],
-        [
-          "sombra_bosque",
-          "Sombra de bosque o mixta (luz filtrada por árboles, sin sombras duras)"
-        ],
-        [
-          "noche_artificial",
-          "Noche o luz artificial"
-        ]
+        ["sol_directo", "Sol directo (sombras duras de borde nítido o zonas quemadas)"],
+        ["nublado_difusa", "Nublado o luz difusa (cielo abierto, sin sombras duras)"],
+        ["sombra_bosque", "Sombra de bosque o mixta (luz filtrada por árboles, sin sombras duras)"],
+        ["noche_artificial", "Noche o luz artificial"]
       ]
     },
     {
@@ -28,22 +16,10 @@
       "label": "Entorno",
       "color": "#3fb950",
       "opciones": [
-        [
-          "bosque",
-          "Bosque (árboles cierran el fondo)"
-        ],
-        [
-          "tierra_abierta",
-          "Tierra abierta, cárcava o ladera"
-        ],
-        [
-          "pasto_paramo",
-          "Pasto, páramo o matorral bajo"
-        ],
-        [
-          "urbano",
-          "Urbano, escaleras u obra"
-        ]
+        ["bosque", "Bosque (árboles cierran el fondo)"],
+        ["tierra_abierta", "Tierra abierta, cárcava o ladera"],
+        ["pasto_paramo", "Pasto, páramo o matorral bajo"],
+        ["urbano", "Urbano, escaleras u obra"]
       ]
     },
     {
@@ -51,26 +27,11 @@
       "label": "Clima visible",
       "color": "#58a6ff",
       "opciones": [
-        [
-          "seco",
-          "Seco (incluye suelo oscuro por humedad o sombra, sin brillo de agua)"
-        ],
-        [
-          "polvo",
-          "Polvo en el aire o sobre el corredor"
-        ],
-        [
-          "mojado_lluvia",
-          "Mojado o lluvia (brillo de agua, charco, salpicadura o ropa empapada)"
-        ],
-        [
-          "barro",
-          "Barro sobre bici, corredor o placa"
-        ],
-        [
-          "niebla",
-          "Niebla o bruma"
-        ]
+        ["seco", "Seco (incluye suelo oscuro por humedad o sombra, sin brillo de agua)"],
+        ["polvo", "Polvo en el aire o sobre el corredor"],
+        ["mojado_lluvia", "Mojado o lluvia (brillo de agua, charco, salpicadura o ropa empapada)"],
+        ["barro", "Barro sobre bici, corredor o placa"],
+        ["niebla", "Niebla o bruma"]
       ]
     },
     {
@@ -78,22 +39,10 @@
       "label": "Ángulo de cámara",
       "color": "#bc8cff",
       "opciones": [
-        [
-          "frontal",
-          "Frontal (placa de cara)"
-        ],
-        [
-          "tres_cuartos",
-          "Tres cuartos"
-        ],
-        [
-          "lateral_contrapicado",
-          "Lateral, contrapicado o picado fuerte"
-        ],
-        [
-          "de_espaldas",
-          "De espaldas o trasera (placa oculta por el corredor)"
-        ]
+        ["frontal", "Frontal (placa de cara)"],
+        ["tres_cuartos", "Tres cuartos"],
+        ["lateral_contrapicado", "Lateral, contrapicado o picado fuerte"],
+        ["de_espaldas", "De espaldas o trasera (placa oculta por el corredor)"]
       ]
     },
     {
@@ -101,18 +50,9 @@
       "label": "Distancia",
       "color": "#f78166",
       "opciones": [
-        [
-          "cerca",
-          "Cerca (corredor llena el cuadro)"
-        ],
-        [
-          "media",
-          "Media (corredor y entorno)"
-        ],
-        [
-          "lejos",
-          "Lejos (corredor pequeño en el paisaje)"
-        ]
+        ["cerca", "Cerca (corredor llena el cuadro)"],
+        ["media", "Media (corredor y entorno)"],
+        ["lejos", "Lejos (corredor pequeño en el paisaje)"]
       ]
     }
   ]
