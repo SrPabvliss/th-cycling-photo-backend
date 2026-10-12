@@ -208,7 +208,8 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     }
     // Provenance: accepted as proposed, or edited by the author in at least one dimension.
     const pre = PRE.get(p.id)
-    d.origen = pre && TAXONOMY.dimensiones.every((dim) => pre[dim.id] === d[dim.id]) ? 'aceptada' : 'editada'
+    d.origen =
+      pre && TAXONOMY.dimensiones.every((dim) => pre[dim.id] === d[dim.id]) ? 'aceptada' : 'editada'
     appendDecision(d)
     return send(res, 200, d)
   }
