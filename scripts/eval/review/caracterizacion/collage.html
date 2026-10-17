@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Collage de condiciones del conjunto</title>
+<style>
+  :root { color-scheme: dark; --bg:#0d1117; --panel:#161b22; --line:#30363d; --fg:#e6edf3; --muted:#8b949e; --pre:#e3b341; --fin:#3fb950; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.4 -apple-system, system-ui, sans-serif; background:var(--bg); color:var(--fg); display:grid; grid-template-columns: 1fr 340px; height:100vh; overflow:hidden; }
+  main { display:flex; flex-direction:column; overflow:hidden; }
+  header { display:flex; gap:10px; align-items:center; padding:8px 14px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; font-size:12px; }
+  header h1 { font-size:15px; margin:0 8px 0 0; }
+  header label { color:var(--muted); display:flex; gap:4px; align-items:center; }
+  header select, header input[type=text] { background:#0d1117; color:var(--fg); border:1px solid var(--line); border-radius:5px; padding:2px 5px; font:inherit; }
+  header button, aside button { background:#21262d; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:3px 9px; cursor:pointer; }
+  header button.primary { background:#1f6feb; border-color:#1f6feb; }
+  header a { color:#58a6ff; margin-left:auto; }
+  #stage { flex:1; overflow:auto; padding:24px; display:flex; align-items:flex-start; justify-content:center; background:#30363d; }
+  /* The figure itself: white paper, black text, as it would print. */
+  #fig { background:#fff; color:#000; padding:var(--pad); display:grid; grid-template-columns: max-content 1fr; gap:var(--gap) var(--gap); font-family: Helvetica, Arial, sans-serif; }
+  #fig.notitle .ftitle { display:none; }
+  #fig .ftitle { grid-column: 1 / -1; font-weight:700; font-size:calc(var(--cell) * .10); text-align:center; margin-bottom:calc(var(--gap) * .5); }
+  #fig .rowt { font-weight:700; font-size:calc(var(--cell) * .085); display:flex; align-items:center; padding-right:calc(var(--gap) * .5); cursor:text; }
+  #fig .rowt.hidden { display:none; }
+  #fig .row { display:flex; gap:var(--gap); }
+  #fig .row.center { justify-content:center; }
+  #fig .cell { width:var(--cell); display:flex; flex-direction:column; gap:calc(var(--cell) * .03); }
+  #fig .cell .ph { width:100%; aspect-ratio: var(--ar); overflow:hidden; position:relative; background:#ddd; cursor:grab; outline:2px solid transparent; }
+  #fig .cell .ph:hover { outline-color:#58a6ff; }
+  #fig .cell.sel .ph { outline-color:#1f6feb; }
+  #fig .cell .ph img { position:absolute; left:0; top:0; user-select:none; pointer-events:none; }
+  #fig .cell .ph .empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#777; font-size:12px; text-align:center; padding:6px; }
+  #fig .cell .cap { font-size:calc(var(--cell) * .075); text-align:center; line-height:1.2; cursor:text; }
+  #fig .cell .cap.ital { font-style:italic; }
+  #fig .cell.off { display:none; }
+  aside { background:var(--panel); border-left:1px solid var(--line); overflow:auto; padding:12px; }
+  aside h2 { font-size:14px; margin:0 0 8px; }
+  aside p { color:var(--muted); font-size:12px; margin:4px 0; }
+  aside .ctl { display:grid; grid-template-columns: 70px 1fr; gap:6px 8px; align-items:center; font-size:12px; margin:8px 0; }
+  aside input[type=text] { background:#0d1117; color:var(--fg); border:1px solid var(--line); border-radius:5px; padding:3px 6px; font:inherit; width:100%; }
+  aside input[type=range] { width:100%; }
+  #cands { display:grid; grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap:6px; margin-top:8px; }
+  #cands .c { border:2px solid var(--line); border-radius:6px; overflow:hidden; cursor:pointer; background:#000; position:relative; }
+  #cands .c img { display:block; width:100%; aspect-ratio: 3/4; object-fit:cover; }
+  #cands .c.on { border-color:#1f6feb; box-shadow:0 0 0 2px #1f6feb55; }
+  #cands .c.final { border-color:var(--fin); }
+  #cands .c .ev { position:absolute; bottom:0; left:0; right:0; font-size:9px; background:#000c; color:#ddd; padding:1px 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #toast { position:fixed; bottom:14px; right:354px; background:#1f6feb; color:#fff; padding:6px 12px; border-radius:6px; opacity:0; transition:opacity .2s; }
+  #toast.on { opacity:1; }
+  .hiddenlist { margin-top:12px; font-size:12px; }
+  .hiddenlist button { font-size:11px; margin:2px 2px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Collage de condiciones</h1>
+    <label>celda <select id="cellw"><option>160</option><option>200</option><option selected>240</option><option>280</option><option>320</option></select>px</label>
+    <label>proporción <select id="ar"><option value="1.3333">4:3</option><option value="1.5">3:2</option><option value="1">1:1</option><option value="1.7778">16:9</option><option value="0.75">3:4</option></select></label>
+    <label>filas <select id="align"><option value="left">a la izquierda</option><option value="center">centradas</option></select></label>
+    <label><input type="checkbox" id="showtitle"> título</label>
+    <label>título <input type="text" id="title" size="26"></label>
+    <button type="button" id="export">Exportar PNG</button>
+    <a href="/" target="_blank">← selección de candidatas</a>
+  </header>
+  <div id="stage"><div id="fig" style="--cell:240px; --gap:12px; --pad:24px; --ar:1.3333"></div></div>
+</main>
+<aside id="side">
+  <h2>Celda</h2>
+  <p>Clic en una celda para elegir su foto entre tus preseleccionadas. Arrastra dentro de la foto para encuadrar; rueda del ratón o deslizador para acercar. Clic en una etiqueta para editarla.</p>
+  <div id="panel"></div>
+</aside>
+<div id="toast"></div>
+<script>
+const $ = (s) => document.querySelector(s)
+const fig = $('#fig')
+let TAX = []
+let CANDS = []
+let STATE = new Map() // `${dim}|${opt}` -> row
+let selected = null // `${dim}|${opt}`
+const IMGS = new Map() // photo_id -> {img, w, h}
+
+// English defaults; the author edits them in place. One or two words each.
+const DEF_DIM = { luz: 'Lighting', entorno: 'Surroundings', clima: 'Weather', angulo: 'Camera angle', distancia: 'Distance' }
+const DEF_OPT = {
+  sol_directo: 'direct sun', nublado_difusa: 'overcast', sombra_bosque: 'forest shade', noche_artificial: 'night',
+  bosque: 'forest', tierra_abierta: 'open ground', pasto_paramo: 'grassland', urbano: 'urban',
+  seco: 'dry', polvo: 'dust', mojado_lluvia: 'wet', barro: 'mud', niebla: 'fog',
+  frontal: 'frontal', tres_cuartos: 'three-quarter', lateral_contrapicado: 'side', de_espaldas: 'rear',
+  cerca: 'close', media: 'medium', lejos: 'far',
+}
+
+function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.add('on'); setTimeout(() => e.classList.remove('on'), 900) }
+
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined)
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
+
+function key(d, o) { return `${d}|${o}` }
+function cell(d, o) {
+  const row = STATE.get(key(d, o))
+  const cands = candsOf(d, o)
+  const base = { dimension: d, opcion: o, photo_id: '', fx: 0.5, fy: 0.5, zoom: 1, label: DEF_OPT[o] ?? o, visible: cands.length > 0 }
+  if (!row) return base
+  return { ...base, photo_id: row.photo_id, fx: Number(row.fx), fy: Number(row.fy), zoom: Number(row.zoom), label: row.label || base.label, visible: row.visible !== '0' }
+}
+function rowTitle(d) { return STATE.get(key(d, ''))?.label || DEF_DIM[d] || d }
+function global(name, dflt) { const r = STATE.get(key('_global', name)); return r ? r.label : dflt }
+function candsOf(d, o) { return CANDS.filter((c) => c.dimension === d && c.opcion === o && (c.estado === 'preseleccionada' || c.estado === 'final')) }
+function candOf(d, o, pid) { return CANDS.find((c) => c.dimension === d && c.opcion === o && c.photo_id === pid) }
+
+async function save(c) {
+  const row = await api('/api/collage', c)
+  STATE.set(key(row.dimension, row.opcion), row)
+  toast('guardado')
+}
+async function saveGlobal(name, value) { await save({ dimension: '_global', opcion: name, label: value }) }
+
+// Default focal point: centre of the biggest bib box of the winning pair.
+function defaultFocus(c) {
+  const m = (c?.boxes ?? '').match(/:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/)
+  if (!m) return [0.5, 0.5]
+  return [(Number(m[1]) + Number(m[3])) / 2, (Number(m[2]) + Number(m[4])) / 2]
+}
+
+// Cover crop: the largest window of aspect `ar` inside the image, divided by
+// zoom, centred on (fx, fy) and clamped inside. Shared with collage.py.
+function crop(W, H, ar, fx, fy, zoom) {
+  let cw = Math.min(W, H * ar) / zoom
+  let ch = cw / ar
+  cw = Math.min(cw, W); ch = Math.min(ch, H)
+  let x = fx * W - cw / 2
+  let y = fy * H - ch / 2
+  x = Math.max(0, Math.min(W - cw, x)); y = Math.max(0, Math.min(H - ch, y))
+  return { x, y, cw, ch }
+}
+
+function loadImg(pid, eid) {
+  if (IMGS.has(pid)) return IMGS.get(pid).ready
+  const img = new Image()
+  const entry = { img, w: 0, h: 0 }
+  entry.ready = new Promise((ok) => { img.onload = () => { entry.w = img.naturalWidth; entry.h = img.naturalHeight; ok(entry) }; img.onerror = () => ok(entry) })
+  img.src = `/img/${eid}/${pid}.jpg`
+  IMGS.set(pid, entry)
+  return entry.ready
+}
+
+function ar() { return Number($('#ar').value) }
+
+function placeImage(ph, c) {
+  const im = ph.querySelector('img')
+  if (!im) return
+  const e = IMGS.get(c.photo_id)
+  if (!e || !e.w) return
+  const w = ph.clientWidth
+  const cr = crop(e.w, e.h, ar(), c.fx, c.fy, c.zoom)
+  const s = w / cr.cw
+  im.style.width = `${e.w * s}px`; im.style.height = `${e.h * s}px`
+  im.style.left = `${-cr.x * s}px`; im.style.top = `${-cr.y * s}px`
+}
+
+function render() {
+  fig.innerHTML = ''
+  fig.classList.toggle('notitle', !$('#showtitle').checked)
+  const t = document.createElement('div'); t.className = 'ftitle'; t.textContent = $('#title').value || 'Event photo conditions'; fig.appendChild(t)
+  for (const d of TAX) {
+    const opts = d.opciones.map(([o]) => o).filter((o) => candsOf(d.id, o).length || STATE.has(key(d.id, o)))
+    const anyVisible = opts.some((o) => cell(d.id, o).visible)
+    const rt = document.createElement('div'); rt.className = `rowt${anyVisible ? '' : ' hidden'}`; rt.textContent = rowTitle(d.id); rt.title = 'clic para editar'
+    rt.onclick = async () => { const v = prompt(`Título de la fila (${d.label})`, rowTitle(d.id)); if (v !== null) { await save({ dimension: d.id, opcion: '', label: v.trim() }); render() } }
+    fig.appendChild(rt)
+    const row = document.createElement('div'); row.className = `row${$('#align').value === 'center' ? ' center' : ''}`; if (!anyVisible) row.style.display = 'none'
+    for (const o of opts) {
+      const c = cell(d.id, o)
+      const el = document.createElement('div'); el.className = `cell${c.visible ? '' : ' off'}${selected === key(d.id, o) ? ' sel' : ''}`; el.dataset.k = key(d.id, o)
+      const ph = document.createElement('div'); ph.className = 'ph'
+      if (c.photo_id) {
+        const cand = candOf(d.id, o, c.photo_id)
+        const im = document.createElement('img'); im.alt = ''; ph.appendChild(im)
+        loadImg(c.photo_id, cand.event_id).then((e) => { im.src = e.img.src; placeImage(ph, c) })
+      } else {
+        const em = document.createElement('div'); em.className = 'empty'; em.textContent = `${candsOf(d.id, o).length} candidatas · elige una`; ph.appendChild(em)
+      }
+      ph.onclick = () => { selected = key(d.id, o); render(); panel() }
+      attachDrag(ph, d.id, o)
+      const cap = document.createElement('div'); cap.className = 'cap'; cap.textContent = c.label; cap.title = 'clic para editar'
+      cap.onclick = async () => { const v = prompt(`Etiqueta (${o})`, c.label); if (v !== null) { await save({ ...c, label: v.trim() }); render() } }
+      el.appendChild(ph); el.appendChild(cap); row.appendChild(el)
+    }
+    fig.appendChild(row)
+  }
+}
+
+// Drag to pan the crop; wheel to zoom. Saved on release.
+function attachDrag(ph, d, o) {
+  let start = null
+  let moved = false
+  ph.onpointerdown = (ev) => { const c = cell(d, o); if (!c.photo_id) return; start = { x: ev.clientX, y: ev.clientY, fx: c.fx, fy: c.fy }; moved = false; ph.setPointerCapture(ev.pointerId); ph.style.cursor = 'grabbing' }
+  ph.onpointermove = (ev) => {
+    if (!start) return
+    const c = cell(d, o); const e = IMGS.get(c.photo_id); if (!e || !e.w) return
+    const cr = crop(e.w, e.h, ar(), c.fx, c.fy, c.zoom)
+    const s = ph.clientWidth / cr.cw
+    const nfx = start.fx - (ev.clientX - start.x) / s / e.w
+    const nfy = start.fy - (ev.clientY - start.y) / s / e.h
+    if (Math.abs(ev.clientX - start.x) + Math.abs(ev.clientY - start.y) > 3) moved = true
+    placeImage(ph, { ...c, fx: nfx, fy: nfy })
+    ph.dataset.fx = nfx; ph.dataset.fy = nfy
+  }
+  ph.onpointerup = async (ev) => {
+    if (!start) return
+    ph.style.cursor = 'grab'; ph.releasePointerCapture(ev.pointerId)
+    const c = cell(d, o); start = null
+    if (moved) { await save({ ...c, fx: clamp01(Number(ph.dataset.fx)), fy: clamp01(Number(ph.dataset.fy)) }); selected = key(d, o); render(); panel() }
+  }
+  ph.onwheel = async (ev) => {
+    const c = cell(d, o); if (!c.photo_id) return
+    ev.preventDefault()
+    const z = Math.max(1, Math.min(4, c.zoom * (ev.deltaY < 0 ? 1.08 : 1 / 1.08)))
+    placeImage(ph, { ...c, zoom: z })
+    clearTimeout(ph.wt); ph.wt = setTimeout(async () => { await save({ ...c, zoom: Number(z.toFixed(3)) }); if (selected === key(d, o)) panel() }, 300)
+  }
+}
+function clamp01(v) { return Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0.5)) }
+
+function panel() {
+  const p = $('#panel')
+  if (!selected) { p.innerHTML = '<p>Ninguna celda seleccionada.</p>' + hiddenList(); return }
+  const [d, o] = selected.split('|')
+  const dim = TAX.find((x) => x.id === d)
+  const c = cell(d, o)
+  const cands = candsOf(d, o)
+  const cur = c.photo_id ? candOf(d, o, c.photo_id) : null
+  p.innerHTML = `
+    <p><b>${dim.label}</b> · ${dim.opciones.find(([id]) => id === o)[1]}</p>
+    <div class="ctl">
+      <span>etiqueta</span><input type="text" id="lab" value="${esc(c.label)}">
+      <span>zoom</span><input type="range" id="zoom" min="1" max="4" step="0.01" value="${c.zoom}">
+      <span>visible</span><span><input type="checkbox" id="vis" ${c.visible ? 'checked' : ''}> mostrar esta condición</span>
+      <span>foto</span><span style="color:var(--muted)">${cur ? `${esc(cur.event)} · ${esc(cur.filename)}` : 'ninguna'}</span>
+      <span></span><span><button type="button" id="recenter">recentrar en el dorsal</button> <button type="button" id="clear">quitar foto</button></span>
+    </div>
+    <p>${cands.length} candidatas preseleccionadas o finales (verde = final en la otra app):</p>
+    <div id="cands"></div>` + hiddenList()
+  $('#lab').onchange = async (ev) => { await save({ ...c, label: ev.target.value.trim() }); render() }
+  $('#zoom').oninput = (ev) => { const ph = fig.querySelector(`[data-k="${CSS.escape(selected)}"] .ph`); if (ph) placeImage(ph, { ...c, zoom: Number(ev.target.value) }) }
+  $('#zoom').onchange = async (ev) => { await save({ ...c, zoom: Number(ev.target.value) }); render() }
+  $('#vis').onchange = async (ev) => { await save({ ...c, visible: ev.target.checked }); render(); panel() }
+  $('#recenter').onclick = async () => { const [fx, fy] = defaultFocus(cur); await save({ ...c, fx, fy }); render() }
+  $('#clear').onclick = async () => { await save({ ...c, photo_id: '' }); render(); panel() }
+  const g = $('#cands')
+  for (const cand of cands) {
+    const el = document.createElement('div'); el.className = `c${cand.photo_id === c.photo_id ? ' on' : ''}${cand.estado === 'final' ? ' final' : ''}`
+    const im = document.createElement('img'); im.src = `/thumb/${cand.event_id}/${cand.photo_id}.jpg`; im.alt = ''; im.loading = 'lazy'
+    const ev = document.createElement('div'); ev.className = 'ev'; ev.textContent = shortEvent(cand.event)
+    el.appendChild(im); el.appendChild(ev)
+    el.onclick = async () => { const [fx, fy] = defaultFocus(cand); await save({ ...c, photo_id: cand.photo_id, fx, fy, zoom: 1, visible: true }); render(); panel() }
+    g.appendChild(el)
+  }
+  bindHidden()
+}
+function hiddenList() {
+  const hidden = []
+  for (const d of TAX) for (const [o] of d.opciones) { if (candsOf(d.id, o).length && !cell(d.id, o).visible) hidden.push([d.id, o]) }
+  if (!hidden.length) return ''
+  return `<div class="hiddenlist">Condiciones ocultas: ${hidden.map(([d, o]) => `<button type="button" data-show="${d}|${o}">${esc(DEF_OPT[o] ?? o)}</button>`).join('')}</div>`
+}
+function bindHidden() {
+  for (const b of document.querySelectorAll('[data-show]')) b.onclick = async () => { const [d, o] = b.dataset.show.split('|'); await save({ ...cell(d, o), visible: true }); render(); panel() }
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]) }
+const SHORT = [['lost line', 'Lost Line'], ['2da.', 'Coto'], ['cevallos', 'Cevallos'], ['lumbis', 'Lumbisí'], ['ecuador open', 'Ecuador OPEN'], ['pimampiro', 'Pimampiro'], ['3ra.', 'Pamba'], ['sigchos', 'Sigchos'], ['el bosque', 'El Bosque'], ['shimano', 'SHIMANO'], ['telef', 'Teleférico']]
+function shortEvent(e) { const l = e.toLowerCase(); const hit = SHORT.find(([k]) => l.includes(k)); return hit ? hit[1] : e }
+
+// Export: same layout drawn on a canvas at `scale` px per CSS px.
+async function exportPng() {
+  const scale = 4
+  const cellW = Number($('#cellw').value) * scale
+  const gap = 12 * scale
+  const pad = 24 * scale
+  const A = ar()
+  const cellH = cellW / A
+  const capH = cellW * 0.075 * 1.6
+  const titleH = $('#showtitle').checked ? cellW * 0.10 * 1.6 + gap * 0.5 : 0
+  const rows = TAX.map((d) => ({ title: rowTitle(d.id), cells: d.opciones.map(([o]) => cell(d.id, o)).filter((c) => c.visible && (candsOf(d.id, c.opcion).length || STATE.has(key(d.id, c.opcion)))) })).filter((r) => r.cells.length)
+  const ctxm = document.createElement('canvas').getContext('2d')
+  ctxm.font = `bold ${cellW * 0.085}px Helvetica, Arial, sans-serif`
+  const rowtW = Math.max(...rows.map((r) => ctxm.measureText(r.title).width)) + gap * 0.5
+  const maxCells = Math.max(...rows.map((r) => r.cells.length))
+  const W = pad * 2 + rowtW + gap + maxCells * cellW + (maxCells - 1) * gap
+  const rowH = cellH + cellW * 0.03 + capH
+  const H = pad * 2 + titleH + rows.length * rowH + (rows.length - 1) * gap
+  const cv = document.createElement('canvas'); cv.width = Math.round(W); cv.height = Math.round(H)
+  const ctx = cv.getContext('2d')
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#000'
+  let y = pad
+  if (titleH) { ctx.font = `bold ${cellW * 0.10}px Helvetica, Arial, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText($('#title').value || 'Event photo conditions', W / 2, y); y += titleH }
+  for (const r of rows) {
+    ctx.font = `bold ${cellW * 0.085}px Helvetica, Arial, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+    ctx.fillText(r.title, pad, y + cellH / 2)
+    const rowW = r.cells.length * cellW + (r.cells.length - 1) * gap
+    let x = pad + rowtW + gap + ($('#align').value === 'center' ? (maxCells * cellW + (maxCells - 1) * gap - rowW) / 2 : 0)
+    for (const c of r.cells) {
+      const e = IMGS.get(c.photo_id)
+      if (e && e.w) { const cr = crop(e.w, e.h, A, c.fx, c.fy, c.zoom); ctx.drawImage(e.img, cr.x, cr.y, cr.cw, cr.ch, x, y, cellW, cellH) } else { ctx.fillStyle = '#ddd'; ctx.fillRect(x, y, cellW, cellH); ctx.fillStyle = '#000' }
+      ctx.font = `${cellW * 0.075}px Helvetica, Arial, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'
+      ctx.fillText(c.label, x + cellW / 2, y + cellH + cellW * 0.03)
+      x += cellW + gap
+    }
+    y += rowH + gap
+  }
+  const a = document.createElement('a'); a.download = `collage-condiciones-${new Date().toISOString().slice(0, 10)}.png`; a.href = cv.toDataURL('image/png'); a.click()
+  toast('PNG exportado (vista previa; la versión de imprenta sale de collage.py)')
+}
+
+function applyGlobals() {
+  $('#cellw').value = global('cellw', '240'); $('#ar').value = global('ar', '1.3333'); $('#align').value = global('align', 'left')
+  $('#showtitle').checked = global('showtitle', '0') === '1'; $('#title').value = global('title', 'Event photo conditions')
+  fig.style.setProperty('--cell', `${$('#cellw').value}px`); fig.style.setProperty('--ar', $('#ar').value)
+}
+for (const id of ['cellw', 'ar', 'align', 'showtitle', 'title']) {
+  $(`#${id}`).onchange = async (ev) => {
+    const v = id === 'showtitle' ? (ev.target.checked ? '1' : '0') : ev.target.value
+    await saveGlobal(id, v); applyGlobals(); render(); panel()
+  }
+}
+$('#export').onclick = exportPng
+window.addEventListener('resize', () => { for (const el of fig.querySelectorAll('.cell')) { const [d, o] = el.dataset.k.split('|'); placeImage(el.querySelector('.ph'), cell(d, o)) } })
+
+async function main() {
+  const [tax, cands, state] = await Promise.all([api('/api/taxonomy'), api('/api/candidatos'), api('/api/collage')])
+  TAX = tax.dimensiones; CANDS = cands; STATE = new Map(state.map((r) => [key(r.dimension, r.opcion), r]))
+  applyGlobals(); render(); panel()
+}
+main()
+</script>
+</body>
+</html>
