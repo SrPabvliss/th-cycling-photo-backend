@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Representantes por dimensión</title>
+<style>
+  :root { color-scheme: dark; --bg:#0d1117; --panel:#161b22; --line:#30363d; --fg:#e6edf3; --muted:#8b949e; --pre:#e3b341; --fin:#3fb950; --des:#f85149; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.4 -apple-system, system-ui, sans-serif; background:var(--bg); color:var(--fg); display:grid; grid-template-columns: 290px 1fr; height:100vh; overflow:hidden; }
+  aside { background:var(--panel); border-right:1px solid var(--line); overflow:auto; padding:10px; }
+  aside h1 { font-size:15px; margin:4px 0 10px; }
+  .dim { margin-bottom:10px; }
+  .dim > div { font-weight:600; font-size:12px; text-transform:uppercase; color:var(--muted); margin:6px 0 2px; }
+  .opt { display:flex; justify-content:space-between; gap:6px; padding:5px 8px; border-radius:6px; cursor:pointer; }
+  .opt:hover { background:#1f2630; }
+  .opt.on { background:#1f6feb33; outline:1px solid #1f6feb; }
+  .opt .c { color:var(--muted); font-variant-numeric: tabular-nums; white-space:nowrap; }
+  .opt .c b.p { color:var(--pre); } .opt .c b.f { color:var(--fin); }
+  main { display:flex; flex-direction:column; overflow:hidden; }
+  header { display:flex; gap:10px; align-items:center; padding:8px 14px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
+  header h2 { font-size:15px; margin:0; }
+  header .rule { color:var(--muted); font-size:12px; flex-basis:100%; }
+  .filters button { background:#21262d; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:3px 9px; cursor:pointer; margin-right:4px; }
+  .filters button.on { background:#1f6feb; border-color:#1f6feb; }
+  .keys { color:var(--muted); font-size:12px; margin-left:auto; }
+  kbd { background:#21262d; border:1px solid var(--line); border-radius:4px; padding:0 5px; font-family: ui-monospace, monospace; }
+  #grid { flex:1; overflow:auto; padding:12px; display:grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap:10px; align-content:start; }
+  .card { position:relative; background:var(--panel); border:2px solid var(--line); border-radius:8px; overflow:hidden; cursor:pointer; }
+  .card.focus { border-color:#58a6ff; box-shadow:0 0 0 2px #58a6ff55; }
+  .card.preseleccionada { border-color:var(--pre); } .card.final { border-color:var(--fin); } .card.descartada { opacity:.35; }
+  .card img { display:block; width:100%; aspect-ratio: 2/3; object-fit:cover; background:#000; }
+  .card .cap { font-size:11px; color:var(--muted); padding:4px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card .tag { position:absolute; top:6px; left:6px; font-size:11px; font-weight:700; padding:1px 6px; border-radius:4px; background:#000c; }
+  .card.preseleccionada .tag { color:var(--pre); } .card.final .tag { color:var(--fin); } .card.descartada .tag { color:var(--des); }
+  .card .src { position:absolute; top:6px; right:6px; font-size:10px; padding:1px 5px; border-radius:4px; background:#000c; color:var(--muted); }
+  .card .note { position:absolute; bottom:24px; left:0; right:0; font-size:11px; background:#000c; padding:2px 6px; color:#f0c674; }
+  #viewer { position:fixed; inset:0; background:#000e; display:none; grid-template-columns: 1fr 300px; z-index:10; }
+  #viewer.on { display:grid; }
+  #viewer .im { display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  #viewer img { max-width:100%; max-height:100vh; object-fit:contain; }
+  #viewer .side { background:var(--panel); border-left:1px solid var(--line); padding:14px; overflow:auto; }
+  #viewer .side h3 { margin:0 0 6px; font-size:14px; }
+  #viewer .side p { margin:4px 0; color:var(--muted); font-size:12px; }
+  #viewer .btns button { display:block; width:100%; text-align:left; margin:5px 0; padding:7px 10px; border-radius:6px; border:1px solid var(--line); background:#21262d; color:var(--fg); cursor:pointer; }
+  #viewer .btns button.p { border-color:var(--pre); } #viewer .btns button.f { border-color:var(--fin); } #viewer .btns button.d { border-color:var(--des); }
+  #viewer textarea { width:100%; min-height:60px; background:#0d1117; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px; font:inherit; }
+  #toast { position:fixed; bottom:14px; right:14px; background:#1f6feb; color:#fff; padding:6px 12px; border-radius:6px; opacity:0; transition:opacity .2s; }
+  #toast.on { opacity:1; }
+</style>
+</head>
+<body>
+<aside id="side"><h1>Representantes por dimensión</h1></aside>
+<main>
+  <header>
+    <h2 id="title">—</h2>
+    <span class="filters" id="filters"></span>
+    <span class="keys">clic enfoca · <kbd>P</kbd> preselecciona · <kbd>F</kbd> final · <kbd>D</kbd> descarta · <kbd>0</kbd> quita · <kbd>N</kbd> nota · <kbd>Enter</kbd>/doble clic abre · <kbd>←</kbd><kbd>→</kbd> mueve</span>
+    <span class="rule" id="rule"></span>
+  </header>
+  <div id="grid"></div>
+</main>
+<div id="viewer">
+  <div class="im"><img id="vimg" alt=""></div>
+  <div class="side">
+    <h3 id="vtitle"></h3>
+    <p id="vmeta"></p>
+    <div class="btns">
+      <button type="button" class="p" data-e="preseleccionada">P · Preseleccionada</button>
+      <button type="button" class="f" data-e="final">F · Final</button>
+      <button type="button" class="d" data-e="descartada">D · Descartada</button>
+      <button type="button" data-e="ninguna">0 · Sin marca</button>
+    </div>
+    <p>Nota (se guarda con la marca actual al salir del campo):</p>
+    <textarea id="vnote"></textarea>
+    <p><kbd>Esc</kbd> cierra · <kbd>←</kbd><kbd>→</kbd> siguiente</p>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+let TAX
+let ALL = []
+let cur = null
+let filter = 'activas'
+let focus = -1
+const $ = (s) => document.querySelector(s)
+const lab = (dim, opt) => (TAX.dimensiones.find(d => d.id === dim).opciones.find(o => o[0] === opt) || [undefined, ''])[1]
+const shortLab = (dim, opt) => lab(dim, opt).split(' (')[0]
+const SHORT = [['lost line','Lost Line'],['2da.','Coto'],['cevallos','Cevallos'],['lumbis','Lumbisí'],['ecuador open','Ecuador OPEN'],['pimampiro','Pimampiro'],['3ra.','Pamba'],['sigchos','Sigchos'],['el bosque','El Bosque'],['shimano','SHIMANO'],['telef','Teleférico']]
+const ev = (e) => (SHORT.find(([k]) => e.toLowerCase().includes(k)) || [undefined, e])[1]
+
+async function load() {
+  TAX = await (await fetch('/api/taxonomy')).json()
+  ALL = await (await fetch('/api/candidatos')).json()
+  renderSide()
+  const h = location.hash.slice(1).split('|')
+  select(h[0] || TAX.dimensiones[0].id, h[1] || TAX.dimensiones[0].opciones[0][0])
+}
+function counts(dim, opt) {
+  const g = ALL.filter(c => c.dimension === dim && c.opcion === opt)
+  return { n: g.length, p: g.filter(c => c.estado === 'preseleccionada').length, f: g.filter(c => c.estado === 'final').length, d: g.filter(c => c.estado === 'descartada').length }
+}
+function renderSide() {
+  const side = $('#side')
+  for (const e of side.querySelectorAll('.dim')) e.remove()
+  for (const d of TAX.dimensiones) {
+    const box = document.createElement('div'); box.className = 'dim'
+    box.innerHTML = `<div>${d.label}</div>`
+    for (const [o] of d.opciones) {
+      const c = counts(d.id, o)
+      const el = document.createElement('div')
+      el.className = `opt${cur && cur.dim === d.id && cur.opt === o ? ' on' : ''}`
+      el.innerHTML = `<span>${shortLab(d.id, o)}</span><span class="c"><b class="p">${c.p}</b> / <b class="f">${c.f}</b> · ${c.n - c.d}</span>`
+      el.onclick = () => select(d.id, o)
+      box.appendChild(el)
+    }
+    side.appendChild(box)
+  }
+}
+function select(dim, opt) {
+  cur = { dim, opt }; focus = -1
+  location.hash = `${dim}|${opt}`
+  $('#title').textContent = `${TAX.dimensiones.find(d => d.id === dim).label} · ${shortLab(dim, opt)}`
+  $('#rule').textContent = lab(dim, opt)
+  renderSide(); renderFilters(); renderGrid()
+}
+function renderFilters() {
+  const c = counts(cur.dim, cur.opt)
+  const F = [['activas', `sin descartar (${c.n - c.d})`], ['preseleccionada', `preseleccionadas (${c.p})`], ['final', `finales (${c.f})`], ['descartada', `descartadas (${c.d})`], ['todas', `todas (${c.n})`]]
+  $('#filters').innerHTML = F.map(([k, t]) => `<button type="button" class="${filter === k ? 'on' : ''}" data-f="${k}">${t}</button>`).join('')
+  for (const b of $('#filters').querySelectorAll('button')) b.onclick = () => { filter = b.dataset.f; focus = -1; renderFilters(); renderGrid() }
+}
+function visible() {
+  const g = ALL.filter(c => c.dimension === cur.dim && c.opcion === cur.opt)
+  if (filter === 'activas') return g.filter(c => c.estado !== 'descartada')
+  if (filter === 'todas') return g
+  return g.filter(c => c.estado === filter)
+}
+function renderGrid() {
+  const grid = $('#grid'); grid.innerHTML = ''
+  visible().forEach((c, i) => {
+    const el = document.createElement('div')
+    el.className = `card ${c.estado}${i === focus ? ' focus' : ''}`
+    el.innerHTML = `<img loading="lazy" src="/thumb/${c.event_id}/${c.photo_id}.jpg"><span class="tag">${{ preseleccionada: 'PRE', final: 'FINAL', descartada: 'X' }[c.estado] || ''}</span><span class="src">${c.origen === 'etiquetada' ? 'etiq.' : 'píxeles'}</span>${c.note ? `<div class="note">${c.note}</div>` : ''}<div class="cap">${ev(c.event)} · ${c.filename}</div>`
+    el.onclick = () => { focus = i; paintFocus() }
+    el.ondblclick = () => { focus = i; openViewer() }
+    grid.appendChild(el)
+  })
+}
+function paintFocus() {
+  document.querySelectorAll('.card').forEach((el, i) => { el.classList.toggle('focus', i === focus) })
+  const el = document.querySelectorAll('.card')[focus]
+  if (el) el.scrollIntoView({ block: 'nearest' })
+}
+async function mark(c, estado, note) {
+  const body = { photo_id: c.photo_id, dimension: c.dimension, opcion: c.opcion, estado, note: note ?? c.note ?? '' }
+  const r = await fetch('/api/decision', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+  if (!r.ok) return toast('error al guardar')
+  const d = await r.json()
+  c.estado = d.estado; c.note = d.note
+  toast(`${ev(c.event)} ${c.filename}: ${estado}`)
+  renderSide(); renderFilters()
+  const keep = $('#viewer').classList.contains('on')
+  if (keep) paintViewer()
+  // a photo that leaves the current filter disappears; keep the focus on the next card
+  const vis = visible()
+  renderGrid()
+  if (focus >= vis.length) focus = vis.length - 1
+  paintFocus()
+}
+function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 1500) }
+function focused() { const v = visible(); return focus >= 0 && focus < v.length ? v[focus] : null }
+function openViewer() { if (!focused()) return; $('#viewer').classList.add('on'); paintViewer() }
+function paintViewer() {
+  const c = focused(); if (!c) return
+  $('#vimg').src = `/img/${c.event_id}/${c.photo_id}.jpg`
+  $('#vtitle').textContent = `${ev(c.event)} · ${c.filename}`
+  $('#vmeta').textContent = `${$('#title').textContent} · estado: ${c.estado} · origen: ${c.origen} · dorsal ${c.truth} · ${focus + 1} de ${visible().length}`
+  $('#vnote').value = c.note || ''
+}
+for (const b of $('#viewer').querySelectorAll('.btns button')) b.onclick = () => { const c = focused(); if (c) mark(c, b.dataset.e) }
+$('#vnote').onblur = () => { const c = focused(); if (c && $('#vnote').value.trim() !== (c.note || '')) mark(c, c.estado, $('#vnote').value) }
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { if (e.key === 'Escape') e.target.blur(); return }
+  const v = visible(); const c = focused()
+  const inViewer = $('#viewer').classList.contains('on')
+  if (e.key === 'Escape') { $('#viewer').classList.remove('on'); return }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    e.preventDefault()
+    focus = Math.max(0, Math.min(v.length - 1, focus + (e.key === 'ArrowRight' ? 1 : -1)))
+    paintFocus(); if (inViewer) paintViewer(); return
+  }
+  if (e.key === 'Enter' && c) { openViewer(); return }
+  if (!c) return
+  const k = e.key.toLowerCase()
+  if (k === 'p') mark(c, 'preseleccionada')
+  else if (k === 'f') mark(c, 'final')
+  else if (k === 'd') mark(c, 'descartada')
+  else if (k === '0') mark(c, 'ninguna')
+  else if (k === 'n') { const n = prompt('Nota para esta foto:', c.note || ''); if (n !== null) mark(c, c.estado, n) }
+})
+load()
+</script>
+</body>
+</html>
