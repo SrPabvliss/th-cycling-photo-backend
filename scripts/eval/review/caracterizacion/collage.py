@@ -70,7 +70,7 @@ def main() -> None:
     def g(name: str, dflt: str) -> str:
         return state.get(("_global", name), {}).get("label") or dflt
 
-    ar = float(g("ar", "1.3333"))
+    ar = float(g("ar", "0.75"))
     align = g("align", "left")
     show_title = g("showtitle", "0") == "1"
     title = g("title", "Event photo conditions")

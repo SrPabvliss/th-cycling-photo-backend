@@ -15,12 +15,14 @@
   header button, aside button { background:#21262d; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:3px 9px; cursor:pointer; }
   header button.primary { background:#1f6feb; border-color:#1f6feb; }
   header a { color:#58a6ff; margin-left:auto; }
-  #stage { flex:1; overflow:auto; padding:24px; display:flex; align-items:flex-start; justify-content:center; background:#30363d; }
+  #stage { flex:1; overflow:auto; padding:24px; background:#30363d; }
   /* The figure itself: white paper, black text, as it would print. */
-  #fig { background:#fff; color:#000; padding:var(--pad); display:grid; grid-template-columns: max-content 1fr; gap:var(--gap) var(--gap); font-family: Helvetica, Arial, sans-serif; }
+  #fig { background:#fff; color:#000; padding:var(--pad); width:max-content; margin:0 auto; display:grid; grid-template-columns: max-content 1fr; gap:var(--gap) var(--gap); font-family: Helvetica, Arial, sans-serif; }
   #fig.notitle .ftitle { display:none; }
   #fig .ftitle { grid-column: 1 / -1; font-weight:700; font-size:calc(var(--cell) * .10); text-align:center; margin-bottom:calc(var(--gap) * .5); }
-  #fig .rowt { font-weight:700; font-size:calc(var(--cell) * .085); display:flex; align-items:center; padding-right:calc(var(--gap) * .5); cursor:text; }
+  #fig .rowt { font-weight:700; font-size:calc(var(--cell) * .085); display:flex; flex-direction:column; justify-content:center; align-items:flex-start; padding-right:calc(var(--gap) * .5); cursor:text; }
+  #fig .es { font-weight:400; font-style:italic; color:#999; font-size:.7em; line-height:1.1; }
+  #fig.noes .es { display:none; }
   #fig .rowt.hidden { display:none; }
   #fig .row { display:flex; gap:var(--gap); }
   #fig .row.center { justify-content:center; }
@@ -55,15 +57,16 @@
 <main>
   <header>
     <h1>Collage de condiciones</h1>
-    <label>celda <select id="cellw"><option>160</option><option>200</option><option selected>240</option><option>280</option><option>320</option></select>px</label>
-    <label>proporción <select id="ar"><option value="1.3333">4:3</option><option value="1.5">3:2</option><option value="1">1:1</option><option value="1.7778">16:9</option><option value="0.75">3:4</option></select></label>
+    <label>celda <select id="cellw"><option value="auto" selected>ajustar al ancho</option><option>160</option><option>200</option><option>240</option><option>280</option><option>320</option></select></label>
+    <label>proporción <select id="ar"><option value="0.75">3:4 (vertical)</option><option value="0.8">4:5</option><option value="0.6667">2:3</option><option value="1">1:1</option><option value="1.3333">4:3</option><option value="1.5">3:2</option></select></label>
     <label>filas <select id="align"><option value="left">a la izquierda</option><option value="center">centradas</option></select></label>
     <label><input type="checkbox" id="showtitle"> título</label>
+    <label><input type="checkbox" id="showes" checked> español de apoyo (solo pantalla)</label>
     <label>título <input type="text" id="title" size="26"></label>
     <button type="button" id="export">Exportar PNG</button>
     <a href="/" target="_blank">← selección de candidatas</a>
   </header>
-  <div id="stage"><div id="fig" style="--cell:240px; --gap:12px; --pad:24px; --ar:1.3333"></div></div>
+  <div id="stage"><div id="fig" style="--cell:240px; --gap:12px; --pad:24px; --ar:0.75"></div></div>
 </main>
 <aside id="side">
   <h2>Celda</h2>
@@ -168,7 +171,7 @@ function render() {
   for (const d of TAX) {
     const opts = d.opciones.map(([o]) => o).filter((o) => candsOf(d.id, o).length || STATE.has(key(d.id, o)))
     const anyVisible = opts.some((o) => cell(d.id, o).visible)
-    const rt = document.createElement('div'); rt.className = `rowt${anyVisible ? '' : ' hidden'}`; rt.textContent = rowTitle(d.id); rt.title = 'clic para editar'
+    const rt = document.createElement('div'); rt.className = `rowt${anyVisible ? '' : ' hidden'}`; rt.textContent = rowTitle(d.id); rt.title = 'clic para editar'; rt.appendChild(es(d.label))
     rt.onclick = async () => { const v = prompt(`Título de la fila (${d.label})`, rowTitle(d.id)); if (v !== null) { await save({ dimension: d.id, opcion: '', label: v.trim() }); render() } }
     fig.appendChild(rt)
     const row = document.createElement('div'); row.className = `row${$('#align').value === 'center' ? ' center' : ''}`; if (!anyVisible) row.style.display = 'none'
@@ -185,12 +188,14 @@ function render() {
       }
       ph.onclick = () => { selected = key(d.id, o); render(); panel() }
       attachDrag(ph, d.id, o)
-      const cap = document.createElement('div'); cap.className = 'cap'; cap.textContent = c.label; cap.title = 'clic para editar'
+      const cap = document.createElement('div'); cap.className = 'cap'; cap.textContent = c.label; cap.title = 'clic para editar'; cap.appendChild(es(optEs(d, o)))
       cap.onclick = async () => { const v = prompt(`Etiqueta (${o})`, c.label); if (v !== null) { await save({ ...c, label: v.trim() }); render() } }
       el.appendChild(ph); el.appendChild(cap); row.appendChild(el)
     }
     fig.appendChild(row)
   }
+  fitCell()
+  for (const el of fig.querySelectorAll('.cell')) { const [dd, oo] = el.dataset.k.split('|'); placeImage(el.querySelector('.ph'), cell(dd, oo)) }
 }
 
 // Drag to pan the crop; wheel to zoom. Saved on release.
@@ -223,6 +228,8 @@ function attachDrag(ph, d, o) {
     clearTimeout(ph.wt); ph.wt = setTimeout(async () => { await save({ ...c, zoom: Number(z.toFixed(3)) }); if (selected === key(d, o)) panel() }, 300)
   }
 }
+function es(text) { const e = document.createElement('div'); e.className = 'es'; e.textContent = text; return e }
+function optEs(d, o) { const hit = d.opciones.find(([id]) => id === o); return hit ? hit[1].split(' (')[0] : o }
 function clamp01(v) { return Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0.5)) }
 
 function panel() {
@@ -277,7 +284,7 @@ function shortEvent(e) { const l = e.toLowerCase(); const hit = SHORT.find(([k])
 // Export: same layout drawn on a canvas at `scale` px per CSS px.
 async function exportPng() {
   const scale = 4
-  const cellW = Number($('#cellw').value) * scale
+  const cellW = ($('#cellw').value === 'auto' ? 300 : Number($('#cellw').value)) * scale
   const gap = 12 * scale
   const pad = 24 * scale
   const A = ar()
@@ -316,18 +323,30 @@ async function exportPng() {
 }
 
 function applyGlobals() {
-  $('#cellw').value = global('cellw', '240'); $('#ar').value = global('ar', '1.3333'); $('#align').value = global('align', 'left')
+  $('#cellw').value = global('cellw', 'auto'); $('#ar').value = global('ar', '1.3333'); $('#align').value = global('align', 'left')
   $('#showtitle').checked = global('showtitle', '0') === '1'; $('#title').value = global('title', 'Event photo conditions')
-  fig.style.setProperty('--cell', `${$('#cellw').value}px`); fig.style.setProperty('--ar', $('#ar').value)
+  $('#showes').checked = global('showes', '1') === '1'; fig.classList.toggle('noes', !$('#showes').checked)
+  fig.style.setProperty('--ar', $('#ar').value); fitCell()
 }
-for (const id of ['cellw', 'ar', 'align', 'showtitle', 'title']) {
+// Cell width: fixed, or the widest that fits the stage with the longest row.
+function fitCell() {
+  const v = $('#cellw').value
+  if (v !== 'auto') { fig.style.setProperty('--cell', `${v}px`); return }
+  const stage = $('#stage')
+  const maxCells = Math.max(1, ...TAX.map((d) => d.opciones.filter(([o]) => cell(d.id, o).visible && (candsOf(d.id, o).length || STATE.has(key(d.id, o)))).length))
+  const rowt = Math.max(0, ...[...fig.querySelectorAll('.rowt:not(.hidden)')].map((e) => e.offsetWidth)) || 140
+  const avail = stage.clientWidth - 48 - 48 - rowt - 12 * maxCells
+  const w = Math.max(120, Math.min(420, Math.floor(avail / maxCells)))
+  fig.style.setProperty('--cell', `${w}px`)
+}
+for (const id of ['cellw', 'ar', 'align', 'showtitle', 'showes', 'title']) {
   $(`#${id}`).onchange = async (ev) => {
-    const v = id === 'showtitle' ? (ev.target.checked ? '1' : '0') : ev.target.value
+    const v = id === 'showtitle' || id === 'showes' ? (ev.target.checked ? '1' : '0') : ev.target.value
     await saveGlobal(id, v); applyGlobals(); render(); panel()
   }
 }
 $('#export').onclick = exportPng
-window.addEventListener('resize', () => { for (const el of fig.querySelectorAll('.cell')) { const [d, o] = el.dataset.k.split('|'); placeImage(el.querySelector('.ph'), cell(d, o)) } })
+window.addEventListener('resize', () => { fitCell(); for (const el of fig.querySelectorAll('.cell')) { const [d, o] = el.dataset.k.split('|'); placeImage(el.querySelector('.ph'), cell(d, o)) } })
 
 async function main() {
   const [tax, cands, state] = await Promise.all([api('/api/taxonomy'), api('/api/candidatos'), api('/api/collage')])
