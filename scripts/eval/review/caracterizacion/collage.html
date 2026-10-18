@@ -27,7 +27,7 @@
   #fig .row { display:flex; gap:var(--gap); }
   #fig .row.center { justify-content:center; }
   #fig .cell { width:var(--cell); display:flex; flex-direction:column; gap:calc(var(--cell) * .03); }
-  #fig .cell .ph { width:100%; aspect-ratio: var(--ar); overflow:hidden; position:relative; background:#ddd; cursor:grab; outline:2px solid transparent; }
+  #fig .cell .ph { width:100%; aspect-ratio: var(--ar); overflow:hidden; position:relative; background:#fff; cursor:grab; outline:2px solid transparent; }
   #fig .cell .ph:hover { outline-color:#58a6ff; }
   #fig .cell.sel .ph { outline-color:#1f6feb; }
   #fig .cell .ph img { position:absolute; left:0; top:0; user-select:none; pointer-events:none; }
@@ -131,12 +131,13 @@ function defaultFocus(c) {
 // Cover crop: the largest window of aspect `ar` inside the image, divided by
 // zoom, centred on (fx, fy) and clamped inside. Shared with collage.py.
 function crop(W, H, ar, fx, fy, zoom) {
-  let cw = Math.min(W, H * ar) / zoom
-  let ch = cw / ar
-  cw = Math.min(cw, W); ch = Math.min(ch, H)
+  const cw = Math.min(W, H * ar) / zoom
+  const ch = cw / ar
   let x = fx * W - cw / 2
   let y = fy * H - ch / 2
-  x = Math.max(0, Math.min(W - cw, x)); y = Math.max(0, Math.min(H - ch, y))
+  // Inside the image when the window fits; centred on the image when it is larger (zoom < 1).
+  x = cw <= W ? Math.max(0, Math.min(W - cw, x)) : (W - cw) / 2
+  y = ch <= H ? Math.max(0, Math.min(H - ch, y)) : (H - ch) / 2
   return { x, y, cw, ch }
 }
 
@@ -223,7 +224,7 @@ function attachDrag(ph, d, o) {
   ph.onwheel = async (ev) => {
     const c = cell(d, o); if (!c.photo_id) return
     ev.preventDefault()
-    const z = Math.max(1, Math.min(4, c.zoom * (ev.deltaY < 0 ? 1.08 : 1 / 1.08)))
+    const z = Math.max(0.5, Math.min(4, c.zoom * (ev.deltaY < 0 ? 1.08 : 1 / 1.08)))
     placeImage(ph, { ...c, zoom: z })
     clearTimeout(ph.wt); ph.wt = setTimeout(async () => { await save({ ...c, zoom: Number(z.toFixed(3)) }); if (selected === key(d, o)) panel() }, 300)
   }
@@ -244,7 +245,7 @@ function panel() {
     <p><b>${dim.label}</b> · ${dim.opciones.find(([id]) => id === o)[1]}</p>
     <div class="ctl">
       <span>etiqueta</span><input type="text" id="lab" value="${esc(c.label)}">
-      <span>zoom</span><input type="range" id="zoom" min="1" max="4" step="0.01" value="${c.zoom}">
+      <span>zoom</span><input type="range" id="zoom" min="0.5" max="4" step="0.01" value="${c.zoom}"> <small style="color:var(--muted)">&lt; 1 aleja y deja bandas blancas</small>
       <span>visible</span><span><input type="checkbox" id="vis" ${c.visible ? 'checked' : ''}> mostrar esta condición</span>
       <span>foto</span><span style="color:var(--muted)">${cur ? `${esc(cur.event)} · ${esc(cur.filename)}` : 'ninguna'}</span>
       <span></span><span><button type="button" id="recenter">recentrar en el dorsal</button> <button type="button" id="clear">quitar foto</button></span>
@@ -323,7 +324,7 @@ async function exportPng() {
 }
 
 function applyGlobals() {
-  $('#cellw').value = global('cellw', 'auto'); $('#ar').value = global('ar', '1.3333'); $('#align').value = global('align', 'left')
+  $('#cellw').value = global('cellw', 'auto'); $('#ar').value = global('ar', '0.75'); $('#align').value = global('align', 'left')
   $('#showtitle').checked = global('showtitle', '0') === '1'; $('#title').value = global('title', 'Event photo conditions')
   $('#showes').checked = global('showes', '1') === '1'; fig.classList.toggle('noes', !$('#showes').checked)
   fig.style.setProperty('--ar', $('#ar').value); fitCell()

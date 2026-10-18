@@ -46,9 +46,9 @@ def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.Im
 def crop_box(w: int, h: int, ar: float, fx: float, fy: float, zoom: float) -> tuple[float, float, float, float]:
     cw = min(w, h * ar) / zoom
     ch = cw / ar
-    cw, ch = min(cw, w), min(ch, h)
-    x = min(max(0.0, fx * w - cw / 2), w - cw)
-    y = min(max(0.0, fy * h - ch / 2), h - ch)
+    # Inside the image when the window fits; centred on the image when larger (zoom < 1, white bands).
+    x = min(max(0.0, fx * w - cw / 2), w - cw) if cw <= w else (w - cw) / 2
+    y = min(max(0.0, fy * h - ch / 2), h - ch) if ch <= h else (h - ch) / 2
     return x, y, x + cw, y + ch
 
 
@@ -124,7 +124,12 @@ def main() -> None:
             src = Path(a.cache) / c["event_id"] / f"{c['photo_id']}.jpg"
             ph = Image.open(src).convert("RGB")
             box = crop_box(ph.width, ph.height, ar, float(s["fx"]), float(s["fy"]), float(s["zoom"]))
-            tile = ph.resize((cell_w, cell_h), Image.LANCZOS, box=box)
+            tile = Image.new("RGB", (cell_w, cell_h), "white")
+            x0, y0, x1, y1 = box
+            sx = cell_w / (x1 - x0)
+            inner = (max(0.0, x0), max(0.0, y0), min(ph.width, x1), min(ph.height, y1))
+            part = ph.resize((max(1, round((inner[2] - inner[0]) * sx)), max(1, round((inner[3] - inner[1]) * sx))), Image.LANCZOS, box=inner)
+            tile.paste(part, (round((inner[0] - x0) * sx), round((inner[1] - y0) * sx)))
             im.paste(tile, (round(x), round(y)))
             dr.text((x + cell_w / 2, y + cell_h + cell_w * 0.03), s["label"], font=cap_f, fill="black", anchor="mt")
             x += cell_w + gap
