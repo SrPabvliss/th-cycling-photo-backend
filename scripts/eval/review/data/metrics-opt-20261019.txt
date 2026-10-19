@@ -1,0 +1,216 @@
+SELECT 40
+CREATE TABLE
+INSERT 0 7
+SELECT 123880
+
+== Exactitud por par (fotos revisadas e incluidas; ilegibles aparte) ==
+           pair           | photos | with_bib | photo_exact | exact_with_bib | det_recall | wrong_read | missed | false_read_no_bib | unreadable | read_on_unreadable 
+--------------------------+--------+----------+-------------+----------------+------------+------------+--------+-------------------+------------+--------------------
+ dfine_l_640+svtrv2_s     |  12049 |     9629 |        81.1 |           78.8 |       92.2 |       13.3 |    7.9 |               9.4 |        339 |               40.7
+ rfdetr_l_896_c5+svtrv2_b |  12049 |     9629 |        79.3 |           75.9 |       85.3 |        9.4 |   14.7 |               7.3 |        339 |               23.0
+ rfdetr_l_896+parseq_v2   |  12049 |     9629 |        77.9 |           74.7 |       93.1 |       18.4 |    6.9 |               9.3 |        339 |               41.6
+ rfdetr_l_896+svtrv2_b    |  12049 |     9629 |        83.9 |           82.2 |       93.1 |       10.9 |    6.9 |               9.3 |        339 |               41.6
+ rfdetr_l_896+svtrv2_s    |  12049 |     9629 |        82.0 |           79.7 |       93.1 |       13.3 |    7.0 |               9.0 |        339 |               38.1
+ yolo11m_1024_fx+svtrv2_s |  12049 |     9629 |        66.6 |           59.8 |       68.7 |        8.8 |   31.4 |               6.2 |        339 |               20.4
+ yolo26m_1024+parseq_v2   |  12049 |     9629 |        68.0 |           61.6 |       74.0 |       12.3 |   26.0 |               6.6 |        339 |               17.4
+ yolo26m_1024+svtrv2_s    |  12049 |     9629 |        70.5 |           64.7 |       74.0 |        9.3 |   26.0 |               6.4 |        339 |               16.5
+ yolo26m_c5_1024+svtrv2_b |  12049 |     9629 |        76.9 |           72.8 |       80.8 |        8.1 |   19.2 |               6.8 |        339 |               21.8
+ yolo+parseq              |  12049 |     9629 |        73.8 |           70.0 |       84.1 |       14.1 |   15.9 |              11.1 |        339 |               35.7
+(10 rows)
+
+
+== Exactitud por evento y par (fotos con dorsal) ==
+                    event                    |           pair           | with_bib | exact_with_bib 
+---------------------------------------------+--------------------------+----------+----------------
+ The Lost Line - Freestyle                   | dfine_l_640+svtrv2_s     |     1161 |           87.4
+ The Lost Line - Freestyle                   | rfdetr_l_896_c5+svtrv2_b |     1161 |           89.6
+ The Lost Line - Freestyle                   | rfdetr_l_896+parseq_v2   |     1161 |           84.4
+ The Lost Line - Freestyle                   | rfdetr_l_896+svtrv2_b    |     1161 |           92.2
+ The Lost Line - Freestyle                   | rfdetr_l_896+svtrv2_s    |     1161 |           89.1
+ The Lost Line - Freestyle                   | yolo11m_1024_fx+svtrv2_s |     1161 |           82.6
+ The Lost Line - Freestyle                   | yolo26m_1024+parseq_v2   |     1161 |           79.6
+ The Lost Line - Freestyle                   | yolo26m_1024+svtrv2_s    |     1161 |           84.0
+ The Lost Line - Freestyle                   | yolo26m_c5_1024+svtrv2_b |     1161 |           88.7
+ The Lost Line - Freestyle                   | yolo+parseq              |     1161 |           82.2
+ 2da. Válida Copa Bike Parks. Coto Bike Park | dfine_l_640+svtrv2_s     |      985 |           90.5
+ 2da. Válida Copa Bike Parks. Coto Bike Park | rfdetr_l_896_c5+svtrv2_b |      985 |           82.3
+ 2da. Válida Copa Bike Parks. Coto Bike Park | rfdetr_l_896+parseq_v2   |      985 |           85.8
+ 2da. Válida Copa Bike Parks. Coto Bike Park | rfdetr_l_896+svtrv2_b    |      985 |           88.2
+ 2da. Válida Copa Bike Parks. Coto Bike Park | rfdetr_l_896+svtrv2_s    |      985 |           87.9
+ 2da. Válida Copa Bike Parks. Coto Bike Park | yolo11m_1024_fx+svtrv2_s |      985 |           81.6
+ 2da. Válida Copa Bike Parks. Coto Bike Park | yolo26m_1024+parseq_v2   |      985 |           84.7
+ 2da. Válida Copa Bike Parks. Coto Bike Park | yolo26m_1024+svtrv2_s    |      985 |           85.3
+ 2da. Válida Copa Bike Parks. Coto Bike Park | yolo26m_c5_1024+svtrv2_b |      985 |           87.0
+ 2da. Válida Copa Bike Parks. Coto Bike Park | yolo+parseq              |      985 |           86.9
+ DOWNHILL CEVALLOS                           | dfine_l_640+svtrv2_s     |      825 |           80.6
+ DOWNHILL CEVALLOS                           | rfdetr_l_896_c5+svtrv2_b |      825 |           81.9
+ DOWNHILL CEVALLOS                           | rfdetr_l_896+parseq_v2   |      825 |           79.4
+ DOWNHILL CEVALLOS                           | rfdetr_l_896+svtrv2_b    |      825 |           84.4
+ DOWNHILL CEVALLOS                           | rfdetr_l_896+svtrv2_s    |      825 |           79.8
+ DOWNHILL CEVALLOS                           | yolo11m_1024_fx+svtrv2_s |      825 |           66.1
+ DOWNHILL CEVALLOS                           | yolo26m_1024+parseq_v2   |      825 |           69.2
+ DOWNHILL CEVALLOS                           | yolo26m_1024+svtrv2_s    |      825 |           71.4
+ DOWNHILL CEVALLOS                           | yolo26m_c5_1024+svtrv2_b |      825 |           74.1
+ DOWNHILL CEVALLOS                           | yolo+parseq              |      825 |           77.1
+ Downhill Lumbisi 2026                       | dfine_l_640+svtrv2_s     |      743 |           76.6
+ Downhill Lumbisi 2026                       | rfdetr_l_896_c5+svtrv2_b |      743 |           81.7
+ Downhill Lumbisi 2026                       | rfdetr_l_896+parseq_v2   |      743 |           72.8
+ Downhill Lumbisi 2026                       | rfdetr_l_896+svtrv2_b    |      743 |           83.6
+ Downhill Lumbisi 2026                       | rfdetr_l_896+svtrv2_s    |      743 |           77.4
+ Downhill Lumbisi 2026                       | yolo11m_1024_fx+svtrv2_s |      743 |           73.1
+ Downhill Lumbisi 2026                       | yolo26m_1024+parseq_v2   |      743 |           68.2
+ Downhill Lumbisi 2026                       | yolo26m_1024+svtrv2_s    |      743 |           71.9
+ Downhill Lumbisi 2026                       | yolo26m_c5_1024+svtrv2_b |      743 |           82.0
+ Downhill Lumbisi 2026                       | yolo+parseq              |      743 |           77.3
+ Ecuador OPEN                                | dfine_l_640+svtrv2_s     |      260 |           72.3
+ ENDURO RETO PIMAMPIRO 2026                  | dfine_l_640+svtrv2_s     |      419 |           84.7
+ ENDURO RETO PIMAMPIRO 2026                  | rfdetr_l_896_c5+svtrv2_b |      419 |           86.2
+ Ecuador OPEN                                | rfdetr_l_896_c5+svtrv2_b |      260 |           70.8
+ Ecuador OPEN                                | rfdetr_l_896+parseq_v2   |      260 |           69.6
+ ENDURO RETO PIMAMPIRO 2026                  | rfdetr_l_896+parseq_v2   |      419 |           81.6
+ ENDURO RETO PIMAMPIRO 2026                  | rfdetr_l_896+svtrv2_b    |      419 |           87.6
+ Ecuador OPEN                                | rfdetr_l_896+svtrv2_b    |      260 |           78.5
+ Ecuador OPEN                                | rfdetr_l_896+svtrv2_s    |      260 |           76.2
+ ENDURO RETO PIMAMPIRO 2026                  | rfdetr_l_896+svtrv2_s    |      419 |           83.3
+ ENDURO RETO PIMAMPIRO 2026                  | yolo11m_1024_fx+svtrv2_s |      419 |           66.6
+ Ecuador OPEN                                | yolo11m_1024_fx+svtrv2_s |      260 |           72.3
+ Ecuador OPEN                                | yolo26m_1024+parseq_v2   |      260 |           70.0
+ ENDURO RETO PIMAMPIRO 2026                  | yolo26m_1024+parseq_v2   |      419 |           68.3
+ Ecuador OPEN                                | yolo26m_1024+svtrv2_s    |      260 |           71.5
+ ENDURO RETO PIMAMPIRO 2026                  | yolo26m_1024+svtrv2_s    |      419 |           68.3
+ ENDURO RETO PIMAMPIRO 2026                  | yolo26m_c5_1024+svtrv2_b |      419 |           78.5
+ Ecuador OPEN                                | yolo26m_c5_1024+svtrv2_b |      260 |           78.5
+ Ecuador OPEN                                | yolo+parseq              |      260 |           74.6
+ ENDURO RETO PIMAMPIRO 2026                  | yolo+parseq              |      419 |           82.1
+ 3ra. Válida Copa Bike Parks, Pamba          | dfine_l_640+svtrv2_s     |      736 |           77.2
+ 3ra. Válida Copa Bike Parks, Pamba          | rfdetr_l_896_c5+svtrv2_b |      736 |           71.3
+ 3ra. Válida Copa Bike Parks, Pamba          | rfdetr_l_896+parseq_v2   |      736 |           65.1
+ 3ra. Válida Copa Bike Parks, Pamba          | rfdetr_l_896+svtrv2_b    |      736 |           74.7
+ 3ra. Válida Copa Bike Parks, Pamba          | rfdetr_l_896+svtrv2_s    |      736 |           72.8
+ 3ra. Válida Copa Bike Parks, Pamba          | yolo11m_1024_fx+svtrv2_s |      736 |           48.9
+ 3ra. Válida Copa Bike Parks, Pamba          | yolo26m_1024+parseq_v2   |      736 |           65.1
+ 3ra. Válida Copa Bike Parks, Pamba          | yolo26m_1024+svtrv2_s    |      736 |           71.2
+ 3ra. Válida Copa Bike Parks, Pamba          | yolo26m_c5_1024+svtrv2_b |      736 |           75.0
+ 3ra. Válida Copa Bike Parks, Pamba          | yolo+parseq              |      736 |           70.1
+ Sigchos Fest                                | dfine_l_640+svtrv2_s     |      213 |           71.4
+ Sigchos Fest                                | rfdetr_l_896_c5+svtrv2_b |      213 |           66.7
+ Sigchos Fest                                | rfdetr_l_896+parseq_v2   |      213 |           67.6
+ Sigchos Fest                                | rfdetr_l_896+svtrv2_b    |      213 |           71.8
+ Sigchos Fest                                | rfdetr_l_896+svtrv2_s    |      213 |           68.5
+ Sigchos Fest                                | yolo11m_1024_fx+svtrv2_s |      213 |           54.9
+ Sigchos Fest                                | yolo26m_1024+parseq_v2   |      213 |           45.1
+ Sigchos Fest                                | yolo26m_1024+svtrv2_s    |      213 |           49.3
+ Sigchos Fest                                | yolo26m_c5_1024+svtrv2_b |      213 |           64.3
+ Sigchos Fest                                | yolo+parseq              |      213 |           66.2
+ Downhill El Bosque Tercera Edición          | dfine_l_640+svtrv2_s     |      714 |           66.8
+ Downhill El Bosque Tercera Edición          | rfdetr_l_896_c5+svtrv2_b |      714 |           57.8
+ Downhill El Bosque Tercera Edición          | rfdetr_l_896+parseq_v2   |      714 |           55.3
+ Downhill El Bosque Tercera Edición          | rfdetr_l_896+svtrv2_b    |      714 |           64.7
+ Downhill El Bosque Tercera Edición          | rfdetr_l_896+svtrv2_s    |      714 |           63.7
+ Downhill El Bosque Tercera Edición          | yolo11m_1024_fx+svtrv2_s |      714 |           61.8
+ Downhill El Bosque Tercera Edición          | yolo26m_1024+parseq_v2   |      714 |           55.6
+ Downhill El Bosque Tercera Edición          | yolo26m_1024+svtrv2_s    |      714 |           62.2
+ Downhill El Bosque Tercera Edición          | yolo26m_c5_1024+svtrv2_b |      714 |           60.9
+ Downhill El Bosque Tercera Edición          | yolo+parseq              |      714 |           57.0
+ OPEN SHIMANO                                | dfine_l_640+svtrv2_s     |     1880 |           84.8
+ OPEN SHIMANO                                | rfdetr_l_896_c5+svtrv2_b |     1880 |           79.6
+ OPEN SHIMANO                                | rfdetr_l_896+parseq_v2   |     1880 |           81.0
+ OPEN SHIMANO                                | rfdetr_l_896+svtrv2_b    |     1880 |           87.4
+ OPEN SHIMANO                                | rfdetr_l_896+svtrv2_s    |     1880 |           87.7
+ OPEN SHIMANO                                | yolo11m_1024_fx+svtrv2_s |     1880 |           48.4
+ OPEN SHIMANO                                | yolo26m_1024+parseq_v2   |     1880 |           55.7
+ OPEN SHIMANO                                | yolo26m_1024+svtrv2_s    |     1880 |           58.4
+ OPEN SHIMANO                                | yolo26m_c5_1024+svtrv2_b |     1880 |           72.0
+ OPEN SHIMANO                                | yolo+parseq              |     1880 |           68.3
+ Downhill Teleférico                         | dfine_l_640+svtrv2_s     |     1693 |           65.6
+ Downhill Teleférico                         | rfdetr_l_896_c5+svtrv2_b |     1693 |           62.0
+ Downhill Teleférico                         | rfdetr_l_896+parseq_v2   |     1693 |           65.6
+ Downhill Teleférico                         | rfdetr_l_896+svtrv2_b    |     1693 |           75.4
+ Downhill Teleférico                         | rfdetr_l_896+svtrv2_s    |     1693 |           71.6
+ Downhill Teleférico                         | yolo11m_1024_fx+svtrv2_s |     1693 |           36.3
+ Downhill Teleférico                         | yolo26m_1024+parseq_v2   |     1693 |           36.1
+ Downhill Teleférico                         | yolo26m_1024+svtrv2_s    |     1693 |           38.3
+ Downhill Teleférico                         | yolo26m_c5_1024+svtrv2_b |     1693 |           52.5
+ Downhill Teleférico                         | yolo+parseq              |     1693 |           49.1
+(110 rows)
+
+
+== Tiempo por foto y par, ms (sin frías): servicio, decodificación, detección (biblioteca + red), red sola, OCR ==
+           pair           |   n   | total_p50 | total_p95 | decode_p50 | det_p50 | model_p50 | det_lib_pre_p50 | ocr_p50 | http_p50 
+--------------------------+-------+-----------+-----------+------------+---------+-----------+-----------------+---------+----------
+ dfine_l_640+svtrv2_s     | 12373 |       133 |       243 |         64 |      53 |      49.0 |               4 |    12.4 |      287
+ rfdetr_l_896_c5+svtrv2_b | 12373 |       133 |       262 |         64 |      39 |      29.0 |              10 |    17.0 |      287
+ rfdetr_l_896+parseq_v2   | 12373 |       118 |       230 |         64 |      39 |      29.0 |              10 |    13.6 |      273
+ rfdetr_l_896+svtrv2_b    | 12373 |       121 |       233 |         64 |      39 |      29.0 |              10 |    16.7 |      275
+ rfdetr_l_896+svtrv2_s    | 12373 |       117 |       229 |         64 |      39 |      29.0 |              10 |    12.5 |      271
+ yolo11m_1024_fx+svtrv2_s | 12373 |       100 |       207 |         64 |      23 |      15.2 |               8 |    12.5 |      253
+ yolo26m_1024+parseq_v2   | 12373 |       102 |       208 |         64 |      23 |      15.3 |               8 |    13.7 |      254
+ yolo26m_1024+svtrv2_s    | 12373 |       100 |       207 |         64 |      23 |      15.3 |               8 |    12.5 |      253
+ yolo26m_c5_1024+svtrv2_b | 12373 |       105 |       215 |         64 |      25 |      15.4 |              10 |    16.7 |      258
+ yolo+parseq              | 12373 |       101 |       210 |         64 |      22 |      15.0 |               7 |    13.7 |      254
+(10 rows)
+
+
+== Diferencia pareada por foto frente a producción (yolo+parseq), ms, mediana [p25, p75] del total_ms ==
+           pair           |   n   | delta_p50 | delta_p25 | delta_p75 
+--------------------------+-------+-----------+-----------+-----------
+ dfine_l_640+svtrv2_s     | 12373 |        30 |        27 |        36
+ rfdetr_l_896_c5+svtrv2_b | 12372 |        22 |        18 |        37
+ rfdetr_l_896+parseq_v2   | 12373 |        17 |        14 |        21
+ rfdetr_l_896+svtrv2_b    | 12373 |        19 |        16 |        24
+ rfdetr_l_896+svtrv2_s    | 12373 |        16 |        13 |        20
+ yolo11m_1024_fx+svtrv2_s | 12373 |        -1 |        -5 |         2
+ yolo26m_1024+parseq_v2   | 12372 |         1 |        -3 |         3
+ yolo26m_1024+svtrv2_s    | 12373 |         0 |        -4 |         2
+ yolo26m_c5_1024+svtrv2_b | 12373 |         5 |         1 |         8
+(9 rows)
+
+
+== Tiempo por cuenta (host) y par: total_ms p50 ==
+ account |           pair           |  n   | total_p50 | decode_p50 
+---------+--------------------------+------+-----------+------------
+ A       | dfine_l_640+svtrv2_s     | 2551 |       120 |         50
+ A       | rfdetr_l_896_c5+svtrv2_b | 2551 |       114 |         50
+ A       | rfdetr_l_896+parseq_v2   | 2551 |       104 |         50
+ A       | rfdetr_l_896+svtrv2_b    | 2551 |       107 |         50
+ A       | rfdetr_l_896+svtrv2_s    | 2551 |       103 |         50
+ A       | yolo11m_1024_fx+svtrv2_s | 2551 |        88 |         50
+ A       | yolo26m_1024+parseq_v2   | 2551 |        90 |         50
+ A       | yolo26m_1024+svtrv2_s    | 2551 |        88 |         50
+ A       | yolo26m_c5_1024+svtrv2_b | 2551 |        94 |         50
+ A       | yolo+parseq              | 2551 |        88 |         50
+ B       | dfine_l_640+svtrv2_s     | 4591 |       137 |         68
+ B       | rfdetr_l_896_c5+svtrv2_b | 4591 |       140 |         67
+ B       | rfdetr_l_896+parseq_v2   | 4591 |       121 |         67
+ B       | rfdetr_l_896+svtrv2_b    | 4591 |       125 |         67
+ B       | rfdetr_l_896+svtrv2_s    | 4591 |       121 |         67
+ B       | yolo11m_1024_fx+svtrv2_s | 4591 |       101 |         67
+ B       | yolo26m_1024+parseq_v2   | 4591 |       104 |         67
+ B       | yolo26m_1024+svtrv2_s    | 4591 |       103 |         67
+ B       | yolo26m_c5_1024+svtrv2_b | 4591 |       109 |         67
+ B       | yolo+parseq              | 4591 |       104 |         67
+ C       | dfine_l_640+svtrv2_s     | 3055 |       188 |        112
+ C       | rfdetr_l_896_c5+svtrv2_b | 3055 |       187 |        112
+ C       | rfdetr_l_896+parseq_v2   | 3055 |       175 |        112
+ C       | rfdetr_l_896+svtrv2_b    | 3055 |       176 |        111
+ C       | rfdetr_l_896+svtrv2_s    | 3055 |       172 |        112
+ C       | yolo11m_1024_fx+svtrv2_s | 3055 |       148 |        112
+ C       | yolo26m_1024+parseq_v2   | 3055 |       150 |        111
+ C       | yolo26m_1024+svtrv2_s    | 3055 |       149 |        111
+ C       | yolo26m_c5_1024+svtrv2_b | 3055 |       156 |        111
+ C       | yolo+parseq              | 3055 |       152 |        111
+ D       | dfine_l_640+svtrv2_s     | 2191 |       127 |         61
+ D       | rfdetr_l_896_c5+svtrv2_b | 2191 |       125 |         61
+ D       | rfdetr_l_896+parseq_v2   | 2191 |       113 |         61
+ D       | rfdetr_l_896+svtrv2_b    | 2191 |       116 |         61
+ D       | rfdetr_l_896+svtrv2_s    | 2191 |       112 |         61
+ D       | yolo11m_1024_fx+svtrv2_s | 2191 |        96 |         61
+ D       | yolo26m_1024+parseq_v2   | 2191 |        97 |         61
+ D       | yolo26m_1024+svtrv2_s    | 2191 |        96 |         61
+ D       | yolo26m_c5_1024+svtrv2_b | 2191 |       100 |         61
+ D       | yolo+parseq              | 2191 |        97 |         61
+(40 rows)
+
+DROP TABLE
+DROP TABLE
+DROP TABLE

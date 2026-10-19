@@ -4,7 +4,7 @@
 -- max-F1, production its deployed one, :det for any other), reader abstention :ocr.
 -- Usage: OUT=/tmp/x.csv psql ... -v lo=28 -v hi=63 -v det=0.25 -v dfine=0.5 -v ocr=0 -f scripts/eval/export-per-photo.sql
 create temp table tmp_pairs as
-select ru.id as run_id, (regexp_match(ru.label, '\m(?:abl-)?([A-F])\M'))[1] as account, case when ru.label like '%abl-%' then 'abl' else 'main' end as series, ru.label, ru.detector || '+' || ru.ocr as pair, ru.detector, ru.ocr
+select ru.id as run_id, (regexp_match(ru.label, '\m(?:abl-|opt-)?([A-F])\M'))[1] as account, case when ru.label like '%abl-%' then 'abl' when ru.label like '%opt-%' then 'opt' else 'main' end as series, ru.label, ru.detector || '+' || ru.ocr as pair, ru.detector, ru.ocr
 from eval.runs ru where ru.id between :lo and :hi and ru.label like 'encadenado%';  -- series letter A-F = Modal account and container lineage; 'muestra' runs excluded
 
 create temp table tmp_thr (detector text primary key, thr real);

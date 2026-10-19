@@ -9,7 +9,7 @@
 -- Usage: psql ... -v det=0.25 -v dfine=0.5 -v ocr=0 -v lo=28 -v hi=47 -f scripts/eval/metrics-chained.sql
 
 create temp table if not exists tmp_pairs as
-select ru.id as run_id, substr(ru.label, 12, 1) as account, ru.detector || '+' || ru.ocr as pair
+select ru.id as run_id, (regexp_match(ru.label, '\m(?:abl-|opt-)?([A-F])\M'))[1] as account, ru.detector || '+' || ru.ocr as pair  -- 'opt-' = P-112 optimized service pass
 from eval.runs ru where ru.id between :lo and :hi;
 
 -- Operating threshold per detector: the one that maximizes F1 on each
