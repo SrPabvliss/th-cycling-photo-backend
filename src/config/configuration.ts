@@ -14,6 +14,9 @@ export default () => {
 
   const { AI_PIPELINE_BASE_URL, AI_PIPELINE_TIMEOUT_MS } = process.env
 
+  const { YUPANA_BASE_URL, YUPANA_PRODUCER_KEY, YUPANA_SERVICE_KEY, YUPANA_TIMEOUT_MS } =
+    process.env
+
   const {
     PAYPHONE_ENVIRONMENT,
     PAYPHONE_TOKEN,
@@ -132,6 +135,12 @@ export default () => {
     aiPipeline: {
       baseUrl: AI_PIPELINE_BASE_URL || 'http://localhost:8001',
       timeoutMs: Number.parseInt(AI_PIPELINE_TIMEOUT_MS || '30000', 10),
+    },
+    yupana: {
+      baseUrl: YUPANA_BASE_URL || '',
+      producerKey: YUPANA_PRODUCER_KEY || '',
+      serviceKey: YUPANA_SERVICE_KEY || '',
+      timeoutMs: Number.parseInt(YUPANA_TIMEOUT_MS || '5000', 10),
     },
     payphone: {
       environment: PAYPHONE_ENVIRONMENT,

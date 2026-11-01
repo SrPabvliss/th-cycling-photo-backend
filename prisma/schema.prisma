@@ -1204,3 +1204,36 @@ model EventPayoutMethod {
   @@index([event_id, is_active])
   @@map("event_payout_methods")
 }
+
+enum YupanaOutboxKind {
+  usage_report
+  photo_declaration
+
+  @@map("yupana_outbox_kind")
+}
+
+enum YupanaOutboxStatus {
+  pending
+  sent
+  rejected
+
+  @@map("yupana_outbox_status")
+}
+
+model YupanaOutboxItem {
+  id               String             @id @default(uuid()) @db.Uuid
+  kind             YupanaOutboxKind
+  item_key         String             @unique @db.VarChar(120)
+  photo_id         String?            @db.Uuid
+  payload          Json
+  status           YupanaOutboxStatus @default(pending)
+  attempts         Int                @default(0)
+  last_error       String?            @db.Text
+  rejection_reason String?            @db.VarChar(80)
+  created_at       DateTime           @default(now()) @db.Timestamptz
+  sent_at          DateTime?          @db.Timestamptz
+
+  @@index([status, kind, created_at], map: "idx_yupana_outbox_items_pending")
+  @@index([photo_id, kind], map: "idx_yupana_outbox_items_photo")
+  @@map("yupana_outbox_items")
+}

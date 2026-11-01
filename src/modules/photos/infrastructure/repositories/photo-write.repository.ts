@@ -11,10 +11,11 @@ export class PhotoWriteRepository implements IPhotoWriteRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Persists a photo entity (create or update). */
-  async save(photo: Photo): Promise<Photo> {
+  async save(photo: Photo, tx?: Prisma.TransactionClient): Promise<Photo> {
+    const client = tx ?? this.prisma
     const data = PhotoMapper.toPersistence(photo)
 
-    const saved = await this.prisma.photo.upsert({
+    const saved = await client.photo.upsert({
       where: { id: photo.id },
       create: data,
       update: data,
@@ -23,15 +24,16 @@ export class PhotoWriteRepository implements IPhotoWriteRepository {
     return PhotoMapper.toEntity(saved)
   }
 
-  /** Batch-inserts photos, silently skipping duplicates by storage_key. Returns count of created records. */
-  async saveMany(photos: Photo[], tx?: Prisma.TransactionClient): Promise<number> {
+  /** Batch-inserts photos, silently skipping duplicates by storage_key. Returns the ids actually created. */
+  async saveMany(photos: Photo[], tx?: Prisma.TransactionClient): Promise<string[]> {
     const client = tx ?? this.prisma
     const data = photos.map(PhotoMapper.toPersistence)
-    const result = await client.photo.createMany({
+    const created = await client.photo.createManyAndReturn({
       data,
       skipDuplicates: true,
+      select: { id: true },
     })
-    return result.count
+    return created.map((row) => row.id)
   }
 
   // Conditional UPDATE so concurrent batches cannot both pass the cap.
@@ -50,8 +52,9 @@ export class PhotoWriteRepository implements IPhotoWriteRepository {
   }
 
   /** Hard-deletes a photo by ID. */
-  async delete(id: string): Promise<void> {
-    await this.prisma.photo.delete({ where: { id } })
+  async delete(id: string, tx?: Prisma.TransactionClient): Promise<void> {
+    const client = tx ?? this.prisma
+    await client.photo.delete({ where: { id } })
   }
 
   /** Bulk-updates photo_category_id on multiple photos. Returns count of updated records. */

@@ -5,7 +5,8 @@
   },
   "tags": {
     "Events": "Eventos",
-    "Photos": "Fotos"
+    "Photos": "Fotos",
+    "Costs": "Costos"
   },
   "translations": {
     "Create a new event": "Crear un nuevo evento",
@@ -54,6 +55,12 @@
     "Photo classified successfully": "Foto clasificada exitosamente",
     "Photo not found": "Foto no encontrada",
     "Invalid file type or validation failed": "Tipo de archivo inválido o error de validación",
-    "Photo UUID": "UUID de la foto"
+    "Photo UUID": "UUID de la foto",
+    "Operating cost summary of a month, by layer and provider": "Resumen del costo operativo de un mes, por capa y proveedor",
+    "Health of the cost service: statements, rejections, prices, staleness": "Salud del servicio de costos: extractos, rechazos, precios y atrasos",
+    "Operating cost of each event in a month": "Costo operativo de cada evento en un mes",
+    "Operating cost of one event across every month": "Costo operativo de un evento en todos sus meses",
+    "Operating cost of one photo with the basis of each charge": "Costo operativo de una foto con la base de cada cargo",
+    "The data of the yupana answer, unchanged; its schema is published by yupana": "Los datos de la respuesta de yupana, sin cambios; su esquema lo publica yupana"
   }
 }

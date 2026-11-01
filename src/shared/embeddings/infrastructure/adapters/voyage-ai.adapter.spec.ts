@@ -41,6 +41,28 @@ describe('VoyageAIEmbeddingAdapter', () => {
     })
   })
 
+  it('returns the pixels Voyage billed when the response carries them', async () => {
+    mockMultimodalEmbed.mockResolvedValueOnce({
+      data: [{ embedding: [0.1] }],
+      usage: { totalTokens: 3046, image_pixels: 1705600 },
+    })
+
+    const result = await adapter.generateImageEmbedding('data:image/jpeg;base64,test')
+
+    expect(result.imagePixels).toBe(1705600)
+  })
+
+  it('returns no pixel count when the response does not carry one', async () => {
+    mockMultimodalEmbed.mockResolvedValueOnce({
+      data: [{ embedding: [0.1] }],
+      usage: { totalTokens: 3046 },
+    })
+
+    const result = await adapter.generateImageEmbedding('data:image/jpeg;base64,test')
+
+    expect(result.imagePixels).toBeNull()
+  })
+
   it('should throw AppException when no embedding is returned', async () => {
     mockMultimodalEmbed.mockResolvedValueOnce({
       data: [],

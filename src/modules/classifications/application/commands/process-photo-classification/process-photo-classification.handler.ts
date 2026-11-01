@@ -15,6 +15,8 @@ import {
   type IStorageAdapter,
   STORAGE_ADAPTER,
 } from '@shared/storage/domain/ports/storage-adapter.port'
+import { type IYupanaOutboxRepository, YUPANA_OUTBOX_REPOSITORY } from '@shared/yupana/domain/ports'
+import { YupanaUsageReport } from '@shared/yupana/domain/yupana-usage-report'
 import {
   CROP_UPLOAD_URLS_SERVICE,
   type ICropUploadUrlsService,
@@ -43,6 +45,8 @@ export class ProcessPhotoClassificationHandler
     private readonly writeRepo: IPhotoClassificationWriteRepository,
     @Inject(CROP_UPLOAD_URLS_SERVICE)
     private readonly cropUrlsService: ICropUploadUrlsService,
+    @Inject(YUPANA_OUTBOX_REPOSITORY)
+    private readonly yupanaOutbox: IYupanaOutboxRepository,
   ) {}
 
   async execute(command: ProcessPhotoClassificationCommand): Promise<void> {
@@ -77,6 +81,8 @@ export class ProcessPhotoClassificationHandler
         cropUploadUrls,
       })
 
+      await this.reportModalCall(photo.id, photo.eventId, response.modalCallId)
+
       const completedAt = new Date()
       const persistInput = PipelineResponseMapper.toPersistInput(
         photo.id,
@@ -93,6 +99,8 @@ export class ProcessPhotoClassificationHandler
         `✔ ${photo.id} processed bibs=${response.bibReadings.length} colors=${response.colorAnalyses.length} totalMs=${response.timings.totalMs}`,
       )
     } catch (error) {
+      await this.reportFailedModalCall(photo.id, photo.eventId, error)
+
       if (error instanceof AppException && RETRYABLE_AI_ERRORS.has(error.messageKey)) {
         // Photo stays in 'processing'; BullMQ will retry.
         throw error
@@ -122,5 +130,30 @@ export class ProcessPhotoClassificationHandler
 
       throw error
     }
+  }
+
+  private async reportFailedModalCall(
+    photoId: string,
+    eventId: string,
+    error: unknown,
+  ): Promise<void> {
+    if (!(error instanceof AppException)) return
+    const callId = error.context?.modalCallId
+    if (typeof callId !== 'string') return
+    await this.reportModalCall(photoId, eventId, callId)
+  }
+
+  private async reportModalCall(
+    photoId: string,
+    eventId: string,
+    callId: string | null,
+  ): Promise<void> {
+    if (!callId) return
+    const entry = YupanaUsageReport.modalCall({ photoId, eventId, callId, occurredAt: new Date() })
+    if (!entry) {
+      this.logger.warn(`Modal answered photo ${photoId} with an unexpected call id: ${callId}`)
+      return
+    }
+    await this.yupanaOutbox.enqueue([entry])
   }
 }

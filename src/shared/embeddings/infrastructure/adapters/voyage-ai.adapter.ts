@@ -29,10 +29,16 @@ export class VoyageAIEmbeddingAdapter implements IEmbeddingAdapter {
       return {
         embedding,
         totalTokens: response.usage?.totalTokens ?? 0,
+        imagePixels: VoyageAIEmbeddingAdapter.readImagePixels(response.usage),
       }
     } catch (error) {
       if (error instanceof AppException) throw error
       throw AppException.externalService('VoyageAI', error instanceof Error ? error : undefined)
     }
+  }
+
+  private static readImagePixels(usage: object | undefined): number | null {
+    if (!usage || !('image_pixels' in usage)) return null
+    return typeof usage.image_pixels === 'number' ? usage.image_pixels : null
   }
 }

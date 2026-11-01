@@ -15,6 +15,7 @@ import { JwtAuthGuard } from './modules/auth/infrastructure/guards/jwt-auth.guar
 import { CartModule } from './modules/cart/cart.module'
 import { ClassificationsModule } from './modules/classifications/classifications.module'
 import { ContractsModule } from './modules/contracts/contracts.module'
+import { CostsModule } from './modules/costs/costs.module'
 import { DeliveriesModule } from './modules/deliveries/deliveries.module'
 import { EventAssetsModule } from './modules/event-assets/event-assets.module'
 import { EventTypesModule } from './modules/event-types/event-types.module'
@@ -42,6 +43,7 @@ import { RequestIdMiddleware } from './shared/http/middleware/request-id.middlew
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
 import { PaymentGatewaysModule } from './shared/payment-gateways'
 import { StorageModule } from './shared/storage/storage.module'
+import { YupanaModule } from './shared/yupana/yupana.module'
 
 @Module({
   imports: [
@@ -93,9 +95,11 @@ import { StorageModule } from './shared/storage/storage.module'
     NotificationsModule,
     EmbeddingsModule,
     AiPipelineModule,
+    YupanaModule,
     CartModule,
     ClassificationsModule,
     ContractsModule,
+    CostsModule,
     DeliveriesModule,
     EventAssetsModule,
     EventTypesModule,

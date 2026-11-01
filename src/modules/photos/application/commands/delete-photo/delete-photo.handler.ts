@@ -18,7 +18,9 @@ import {
 } from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
+import { type IYupanaPhotoDeclarer, YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
 import { DeletePhotoCommand } from './delete-photo.command'
 
 @CommandHandler(DeletePhotoCommand)
@@ -34,6 +36,8 @@ export class DeletePhotoHandler implements ICommandHandler<DeletePhotoCommand> {
     @Inject(PREVIEW_LINK_READ_REPOSITORY) private readonly previewRead: IPreviewLinkReadRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly freeze: FreezeStateService,
+    private readonly prisma: PrismaService,
+    @Inject(YUPANA_PHOTO_DECLARER) private readonly yupanaDeclarer: IYupanaPhotoDeclarer,
   ) {}
 
   async execute(command: DeletePhotoCommand): Promise<void> {
@@ -52,7 +56,10 @@ export class DeletePhotoHandler implements ICommandHandler<DeletePhotoCommand> {
     }
 
     // DB first: cascade removes processings, detections, bibs, colors, corrections, cart items, embedding.
-    await this.photoWrite.delete(photo.id)
+    await this.prisma.$transaction(async (tx) => {
+      await this.photoWrite.delete(photo.id, tx)
+      await this.yupanaDeclarer.declareRemoved(photo, tx)
+    })
 
     // Best-effort object cleanup (the row is already gone; log and continue on failure).
     await this.deleteObject(photo.storageKey)

@@ -1,6 +1,7 @@
 export interface EmbeddingResult {
   embedding: number[]
   totalTokens: number
+  imagePixels: number | null
 }
 
 export interface IEmbeddingAdapter {

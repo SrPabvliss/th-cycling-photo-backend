@@ -173,6 +173,23 @@ export class EnvironmentVariables {
   @IsNumber()
   AI_PIPELINE_TIMEOUT_MS?: number
 
+  // Yupana
+  @IsOptional()
+  @IsString()
+  YUPANA_BASE_URL?: string
+
+  @IsOptional()
+  @IsString()
+  YUPANA_PRODUCER_KEY?: string
+
+  @IsOptional()
+  @IsString()
+  YUPANA_SERVICE_KEY?: string
+
+  @IsOptional()
+  @IsNumber()
+  YUPANA_TIMEOUT_MS?: number
+
   // Payphone
   @IsEnum(['test', 'production'])
   PAYPHONE_ENVIRONMENT: string

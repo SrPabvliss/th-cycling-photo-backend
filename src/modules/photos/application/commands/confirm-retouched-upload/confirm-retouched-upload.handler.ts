@@ -19,7 +19,9 @@ import {
 } from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
+import { type IYupanaPhotoDeclarer, YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
 import { nanoid } from 'nanoid'
 import { ConfirmRetouchedUploadCommand } from './confirm-retouched-upload.command'
 
@@ -38,6 +40,8 @@ export class ConfirmRetouchedUploadHandler
     private readonly eventEmitter: EventEmitter2,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly freeze: FreezeStateService,
+    private readonly prisma: PrismaService,
+    @Inject(YUPANA_PHOTO_DECLARER) private readonly yupanaDeclarer: IYupanaPhotoDeclarer,
   ) {}
 
   async execute(command: ConfirmRetouchedUploadCommand): Promise<{ confirmed: boolean }> {
@@ -77,7 +81,10 @@ export class ConfirmRetouchedUploadHandler
       BigInt(command.fileSize),
       command.retouchedById,
     )
-    await this.photoWriteRepo.save(photo)
+    await this.prisma.$transaction(async (tx) => {
+      await this.photoWriteRepo.save(photo, tx)
+      await this.yupanaDeclarer.declareResized(photo, tx)
+    })
 
     // Register slug → storage key in KV (fire-and-forget)
     this.kv.write(retouchedSlug, command.objectKey).catch((err: unknown) => {

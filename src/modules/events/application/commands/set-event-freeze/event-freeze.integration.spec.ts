@@ -54,6 +54,7 @@ import { KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import { STORAGE_ADAPTER } from '@shared/storage/domain/ports'
+import { YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
 import configuration from '../../../../../config/configuration'
 import { validate } from '../../../../../config/env.validation'
 
@@ -165,6 +166,14 @@ describe('event freeze — the gallery/order boundary', () => {
         CheckoutCartHandler,
         ConfirmOrderPaymentHandler,
         SendDeliveryHandler,
+        {
+          provide: YUPANA_PHOTO_DECLARER,
+          useValue: {
+            declareStored: async () => undefined,
+            declareResized: async () => undefined,
+            declareRemoved: async () => undefined,
+          },
+        },
         ConfirmPhotoBatchHandler,
         DeletePhotoHandler,
         ApplyBibCorrectionHandler,
