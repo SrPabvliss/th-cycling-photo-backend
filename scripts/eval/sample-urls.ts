@@ -11,6 +11,7 @@
  * Usage: npx tsx scripts/eval/sample-urls.ts --per-event 30 --out /tmp/p112-sample.json
  */
 import { config } from 'dotenv'
+
 config({ path: '.env.development' })
 
 import { writeFileSync } from 'node:fs'
@@ -48,7 +49,13 @@ if (!B2_APPLICATION_KEY_ID || !B2_APPLICATION_KEY || !B2_BUCKET_NAME) {
   process.exit(1)
 }
 
-const pool = new Pool({ host: DB_HOST, port: Number(DB_PORT), user: DB_USER, password: DB_PASSWORD, database: DB_NAME })
+const pool = new Pool({
+  host: DB_HOST,
+  port: Number(DB_PORT),
+  user: DB_USER,
+  password: DB_PASSWORD,
+  database: DB_NAME,
+})
 const s3 = new S3Client({
   region: B2_REGION,
   endpoint: `https://s3.${B2_REGION}.backblazeb2.com`,
@@ -74,12 +81,18 @@ async function main() {
   )
   const sample = []
   for (const r of rows) {
-    const url = await getSignedUrl(s3, new GetObjectCommand({ Bucket: B2_BUCKET_NAME, Key: r.storage_key }), { expiresIn: 3600 })
+    const url = await getSignedUrl(
+      s3,
+      new GetObjectCommand({ Bucket: B2_BUCKET_NAME, Key: r.storage_key }),
+      { expiresIn: 3600 },
+    )
     sample.push({ photo_id: r.photo_id, event: r.event, url, truth: r.truth })
   }
   writeFileSync(out, JSON.stringify(sample))
   const withBib = sample.filter((s) => s.truth.length > 0).length
-  console.log(`${sample.length} photos (${withBib} with a reference bib) from ${new Set(sample.map((s) => s.event)).size} events -> ${out}`)
+  console.log(
+    `${sample.length} photos (${withBib} with a reference bib) from ${new Set(sample.map((s) => s.event)).size} events -> ${out}`,
+  )
   await pool.end()
 }
 
