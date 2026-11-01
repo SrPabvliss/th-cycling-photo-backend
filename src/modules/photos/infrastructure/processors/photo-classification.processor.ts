@@ -25,7 +25,8 @@ export class PhotoClassificationProcessor extends WorkerHost {
     const { photoId } = job.data
     this.logger.log(`Processing photo-classification ${photoId} (attempt ${job.attemptsMade + 1})`)
     try {
-      await this.commandBus.execute(new ProcessPhotoClassificationCommand(photoId))
+      const isFinalAttempt = job.attemptsMade + 1 >= (job.opts?.attempts ?? 1)
+      await this.commandBus.execute(new ProcessPhotoClassificationCommand(photoId, isFinalAttempt))
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.logger.error(`✘ ${photoId}: ${message}`)

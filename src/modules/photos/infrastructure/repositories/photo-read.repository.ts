@@ -592,6 +592,23 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   }
 
   /** Counts photos inside `scope` (all of them for an unrestricted/platform caller). */
+  async getFailedPhotoIds(eventId: string, photoIds: string[] | null): Promise<string[]> {
+    const rows = await this.prisma.photo.findMany({
+      where: {
+        event_id: eventId,
+        status: PhotoStatus.failed,
+        ...(photoIds ? { id: { in: photoIds } } : {}),
+      },
+      select: { id: true },
+      orderBy: { uploaded_at: 'asc' },
+    })
+    return rows.map((row) => row.id)
+  }
+
+  async countFailedByEvent(eventId: string): Promise<number> {
+    return this.prisma.photo.count({ where: { event_id: eventId, status: PhotoStatus.failed } })
+  }
+
   async countAll(scope: EventScope): Promise<number> {
     return this.prisma.photo.count({ where: { event: scope.toPrisma() } })
   }

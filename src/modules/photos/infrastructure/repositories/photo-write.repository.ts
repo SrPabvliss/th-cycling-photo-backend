@@ -77,4 +77,24 @@ export class PhotoWriteRepository implements IPhotoWriteRepository {
       data: { requires_retouch: value },
     })
   }
+
+  async markStalledAsFailed(olderThan: Date, excludeIds: string[]): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
+      WITH stalled AS (
+        UPDATE photos
+           SET status = 'failed', processed_at = now()
+         WHERE status = 'processing'
+           AND COALESCE(processing_started_at, uploaded_at) < ${olderThan}
+           AND NOT (id = ANY(${excludeIds}::uuid[]))
+        RETURNING id, COALESCE(processing_started_at, uploaded_at) AS attempt_started_at
+      ), failures AS (
+        INSERT INTO photo_processings
+          (id, photo_id, schema_version, status, total_ms, model_versions, started_at, completed_at, error_message)
+        SELECT gen_random_uuid(), id, 'unknown', 'failed', 0, '{}'::jsonb, attempt_started_at, now(), 'photo.processing_stalled'
+          FROM stalled
+      )
+      SELECT id::text AS id FROM stalled
+    `
+    return rows.map((row) => row.id)
+  }
 }

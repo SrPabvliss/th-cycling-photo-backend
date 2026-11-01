@@ -182,7 +182,7 @@ describe('ProcessPhotoClassificationHandler', () => {
     )
   })
 
-  it('on service_unavailable: rethrows without persistFailure', async () => {
+  it('retryable error before the final attempt only rethrows', async () => {
     const photo = okPhoto()
     photoReadRepo.findById.mockResolvedValue(photo)
     adapter.classify.mockRejectedValue(
@@ -193,10 +193,34 @@ describe('ProcessPhotoClassificationHandler', () => {
       ),
     )
     await expect(
-      handler.execute(new ProcessPhotoClassificationCommand('photo-1')),
+      handler.execute(new ProcessPhotoClassificationCommand('photo-1', false)),
     ).rejects.toMatchObject({ messageKey: 'ai_pipeline.service_unavailable' })
     expect(writeRepo.persistFailure).not.toHaveBeenCalled()
     expect(photo.markFailed).not.toHaveBeenCalled()
+  })
+
+  it('retryable error on the final attempt persists failure and marks failed', async () => {
+    const photo = okPhoto()
+    photoReadRepo.findById.mockResolvedValue(photo)
+    adapter.classify.mockRejectedValue(
+      new AppException(
+        'ai_pipeline.service_unavailable' as any,
+        502 as any,
+        'EXTERNAL_SERVICE' as any,
+        false,
+        { reason: 'timeout' },
+      ),
+    )
+    await expect(
+      handler.execute(new ProcessPhotoClassificationCommand('photo-1', true)),
+    ).rejects.toMatchObject({ messageKey: 'ai_pipeline.service_unavailable' })
+    expect(writeRepo.persistFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        photoId: photo.id,
+        errorMessage: expect.stringContaining('ai_pipeline.service_unavailable (timeout)'),
+      }),
+    )
+    expect(photo.markFailed).toHaveBeenCalled()
   })
 
   it('reports the Modal call to yupana when the pipeline answered with a call id', async () => {

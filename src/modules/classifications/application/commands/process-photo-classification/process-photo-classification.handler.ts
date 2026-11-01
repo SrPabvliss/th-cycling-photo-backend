@@ -101,14 +101,18 @@ export class ProcessPhotoClassificationHandler
     } catch (error) {
       await this.reportFailedModalCall(photo.id, photo.eventId, error)
 
-      if (error instanceof AppException && RETRYABLE_AI_ERRORS.has(error.messageKey)) {
+      const retryable = error instanceof AppException && RETRYABLE_AI_ERRORS.has(error.messageKey)
+      if (retryable && !command.isFinalAttempt) {
         // Photo stays in 'processing'; BullMQ will retry.
         throw error
       }
 
       const errorMessage = error instanceof Error ? error.message : String(error)
+      const reason = error instanceof AppException ? error.context?.reason : undefined
       const messageKey =
-        error instanceof AppException ? error.messageKey : 'photo.processing_unexpected_error'
+        error instanceof AppException
+          ? `${error.messageKey}${reason ? ` (${String(reason)})` : ''}`
+          : 'photo.processing_unexpected_error'
 
       try {
         await this.writeRepo.persistFailure({

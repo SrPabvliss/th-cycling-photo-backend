@@ -25,7 +25,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
 
   constructor(config: ConfigService) {
     this.baseUrl = config.getOrThrow<string>('aiPipeline.baseUrl')
-    this.timeoutMs = config.get<number>('aiPipeline.timeoutMs', 15_000)
+    this.timeoutMs = config.get<number>('aiPipeline.timeoutMs', 120_000)
   }
 
   async classify(request: ClassificationPipelineRequest): Promise<ClassificationPipelineResponse> {
@@ -57,29 +57,20 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         signal: AbortSignal.timeout(this.timeoutMs),
       })
     } catch (error) {
-      this.logger.error(
-        `AI pipeline network failure: ${error instanceof Error ? error.message : String(error)}`,
-      )
-      throw new AppException(
-        'ai_pipeline.service_unavailable',
-        HttpStatus.BAD_GATEWAY,
-        ErrorCode.EXTERNAL_SERVICE,
-        false,
-        { cause: error instanceof Error ? error.message : String(error) },
-      )
+      throw this.unavailable(error, null)
     }
 
     const modalCallId = response.headers.get(MODAL_CALL_ID_HEADER)
 
     if (response.status >= 500) {
       const body = await response.text().catch(() => 'no body')
-      this.logger.error(`AI pipeline 5xx ${response.status}: ${body}`)
+      this.logger.error(`AI pipeline answered ${response.status}: ${body}`)
       throw new AppException(
         'ai_pipeline.service_unavailable',
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { httpStatus: response.status, body, modalCallId },
+        { reason: 'http_5xx', httpStatus: response.status, body, modalCallId },
       )
     }
 
@@ -95,7 +86,12 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
       )
     }
 
-    const json = await response.json().catch(() => null)
+    let json: unknown = null
+    try {
+      json = await response.json()
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw this.unavailable(error, modalCallId)
+    }
 
     const parsed = PipelineResponseV1Schema.safeParse(json)
     if (!parsed.success) {
@@ -203,6 +199,21 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
       ),
       modelVersions: raw.model_versions,
     }
+  }
+
+  private unavailable(error: unknown, modalCallId: string | null): AppException {
+    const cause = error instanceof Error ? error.message : String(error)
+    const timedOut =
+      error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
+    if (timedOut) this.logger.error(`AI pipeline timed out after ${this.timeoutMs}ms`)
+    else this.logger.error(`AI pipeline network failure: ${cause}`)
+    return new AppException(
+      'ai_pipeline.service_unavailable',
+      HttpStatus.BAD_GATEWAY,
+      ErrorCode.EXTERNAL_SERVICE,
+      false,
+      { reason: timedOut ? 'timeout' : 'network', cause, modalCallId },
+    )
   }
 
   async healthCheck(): Promise<HealthCheckResponse> {
