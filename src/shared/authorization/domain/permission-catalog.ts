@@ -104,6 +104,8 @@ export const PERMISSIONS = {
   'contract.read': E(true, false, 'contracts'),
   'contract.issue': E(true, false, 'contracts'),
   'contract.revoke': E(true, false, 'contracts'),
+  // operating costs (yupana)
+  'cost.read': E(true, false, 'costs'),
 } as const satisfies Record<string, PermissionMeta>
 
 export type PermissionKey = keyof typeof PERMISSIONS

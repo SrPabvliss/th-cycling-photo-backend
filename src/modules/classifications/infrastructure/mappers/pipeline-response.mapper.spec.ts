@@ -58,6 +58,7 @@ const sampleResponse: ClassificationPipelineResponse = {
     },
   ],
   modelVersions: { detection: 'yolo', ocr: 'parseq', color: 'gemini' },
+  modalCallId: null,
 }
 
 describe('PipelineResponseMapper', () => {

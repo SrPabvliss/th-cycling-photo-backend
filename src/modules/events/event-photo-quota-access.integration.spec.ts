@@ -20,6 +20,7 @@ import { PermissionRepository } from '@shared/authorization/infrastructure/repos
 import { KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
+import { YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
 import configuration from '../../config/configuration'
 import { validate } from '../../config/env.validation'
 
@@ -78,6 +79,14 @@ describe('event photo quota access', () => {
         { provide: getQueueToken('embedding-generation'), useValue: { addBulk: async () => [] } },
         { provide: getQueueToken('photo-classification'), useValue: { addBulk: async () => [] } },
         FreezeStateService,
+        {
+          provide: YUPANA_PHOTO_DECLARER,
+          useValue: {
+            declareStored: async () => undefined,
+            declareResized: async () => undefined,
+            declareRemoved: async () => undefined,
+          },
+        },
         ConfirmPhotoBatchHandler,
         GetEventDetailHandler,
       ],

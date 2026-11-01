@@ -12,6 +12,7 @@ import {
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
+import { type IYupanaPhotoDeclarer, YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
 import type { Queue } from 'bullmq'
 import type { ConfirmBatchProjection } from '../../projections'
 import { ConfirmPhotoBatchCommand } from './confirm-photo-batch.command'
@@ -29,6 +30,7 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly prisma: PrismaService,
     private readonly freeze: FreezeStateService,
+    @Inject(YUPANA_PHOTO_DECLARER) private readonly yupanaDeclarer: IYupanaPhotoDeclarer,
   ) {}
 
   /**
@@ -70,7 +72,8 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     const confirmed = await this.prisma.$transaction(async (tx) => {
       // Insert first, then charge the rows actually written — skipDuplicates
       // means a retried batch must not burn quota it never used.
-      const inserted = await this.photoWriteRepo.saveMany(photos, tx)
+      const insertedIds = new Set(await this.photoWriteRepo.saveMany(photos, tx))
+      const inserted = insertedIds.size
       if (inserted === 0) return 0
 
       const claimed = await this.photoWriteRepo.claimPhotoQuota(command.eventId, inserted, tx)
@@ -85,6 +88,11 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
           remaining: Math.max(0, (quota ?? 0) - used),
         })
       }
+
+      await this.yupanaDeclarer.declareStored(
+        photos.filter((photo) => insertedIds.has(photo.id)),
+        tx,
+      )
 
       return inserted
     })

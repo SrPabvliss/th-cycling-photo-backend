@@ -1,11 +1,13 @@
 import type { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Event } from '@events/domain/entities'
 import type { IEventReadRepository } from '@events/domain/ports'
+import type { Photo } from '@photos/domain/entities'
 import type { IPhotoWriteRepository } from '@photos/domain/ports'
 import { AuditContext } from '@shared/application'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
+import type { IYupanaPhotoDeclarer } from '@shared/yupana/domain/ports'
 import type { PhotoBatchItem } from './confirm-photo-batch.command'
 import { ConfirmPhotoBatchCommand } from './confirm-photo-batch.command'
 import { ConfirmPhotoBatchHandler } from './confirm-photo-batch.handler'
@@ -20,6 +22,8 @@ describe('ConfirmPhotoBatchHandler', () => {
   let authz: jest.Mocked<IAuthorizationService>
   let prisma: { $transaction: jest.Mock; event: { findUniqueOrThrow: jest.Mock } }
   let freeze: jest.Mocked<FreezeStateService>
+  let yupanaDeclarer: jest.Mocked<IYupanaPhotoDeclarer>
+  const insertAll = async (photos: Photo[]) => photos.map((photo) => photo.id)
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
   const audit = new AuditContext('u1')
@@ -109,6 +113,12 @@ describe('ConfirmPhotoBatchHandler', () => {
       assertNotFrozen: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<FreezeStateService>
 
+    yupanaDeclarer = {
+      declareStored: jest.fn().mockResolvedValue(undefined),
+      declareResized: jest.fn().mockResolvedValue(undefined),
+      declareRemoved: jest.fn().mockResolvedValue(undefined),
+    }
+
     handler = new ConfirmPhotoBatchHandler(
       eventReadRepo,
       photoWriteRepo,
@@ -118,6 +128,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       authz,
       prisma as any,
       freeze,
+      yupanaDeclarer,
     )
   })
 
@@ -180,7 +191,7 @@ describe('ConfirmPhotoBatchHandler', () => {
 
   it('should call saveMany with Photo entities and return confirmed count', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
-    photoWriteRepo.saveMany.mockResolvedValueOnce(2)
+    photoWriteRepo.saveMany.mockImplementationOnce(insertAll)
 
     const command = new ConfirmPhotoBatchCommand(
       eventId,
@@ -210,7 +221,7 @@ describe('ConfirmPhotoBatchHandler', () => {
 
   it('should enqueue embedding generation for each confirmed photo', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
-    photoWriteRepo.saveMany.mockResolvedValueOnce(2)
+    photoWriteRepo.saveMany.mockImplementationOnce(insertAll)
 
     const command = new ConfirmPhotoBatchCommand(
       eventId,
@@ -241,7 +252,7 @@ describe('ConfirmPhotoBatchHandler', () => {
 
   it('should return confirmed: 0 when all photos are duplicates', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
-    photoWriteRepo.saveMany.mockResolvedValueOnce(0)
+    photoWriteRepo.saveMany.mockResolvedValueOnce([])
 
     const command = new ConfirmPhotoBatchCommand(eventId, [validBatchItem], audit)
     const result = await handler.execute(command)
@@ -251,7 +262,7 @@ describe('ConfirmPhotoBatchHandler', () => {
 
   it('rejects the whole batch when the event photo quota would be exceeded', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
-    photoWriteRepo.saveMany.mockResolvedValue(2)
+    photoWriteRepo.saveMany.mockImplementation(insertAll)
     photoWriteRepo.claimPhotoQuota.mockResolvedValue(false)
     prisma.event.findUniqueOrThrow.mockResolvedValue({ photo_quota: 10, photos_uploaded: 9 })
 

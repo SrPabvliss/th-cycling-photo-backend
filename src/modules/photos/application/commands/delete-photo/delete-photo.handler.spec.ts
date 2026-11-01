@@ -78,6 +78,13 @@ describe('DeletePhotoHandler', () => {
       assertNotFrozen: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<FreezeStateService>
 
+    const prisma = { $transaction: jest.fn((fn) => fn({})) }
+    const yupanaDeclarer = {
+      declareStored: jest.fn().mockResolvedValue(undefined),
+      declareResized: jest.fn().mockResolvedValue(undefined),
+      declareRemoved: jest.fn().mockResolvedValue(undefined),
+    }
+
     handler = new DeletePhotoHandler(
       photoRead,
       photoWrite,
@@ -87,6 +94,8 @@ describe('DeletePhotoHandler', () => {
       previewRead,
       authz,
       freeze,
+      prisma as any,
+      yupanaDeclarer,
     )
   })
 
@@ -150,7 +159,7 @@ describe('DeletePhotoHandler', () => {
     photoRead.findByIdInScope.mockResolvedValueOnce(makePhoto())
     await handler.execute(command)
     expect(authz.assert).toHaveBeenCalledWith('user-001', 'photo.delete', 'event-001')
-    expect(photoWrite.delete).toHaveBeenCalledWith('photo-001')
+    expect(photoWrite.delete).toHaveBeenCalledWith('photo-001', expect.anything())
     expect(storage.delete).toHaveBeenCalledWith('events/e1/original/photo-001.jpg')
     expect(storage.delete).toHaveBeenCalledTimes(1)
     expect(kv.delete).toHaveBeenCalledWith('slug-abc')
@@ -176,6 +185,6 @@ describe('DeletePhotoHandler', () => {
     storage.delete.mockRejectedValueOnce(new Error('B2 down'))
     kv.delete.mockRejectedValueOnce(new Error('KV down'))
     await expect(handler.execute(command)).resolves.toBeUndefined()
-    expect(photoWrite.delete).toHaveBeenCalledWith('photo-001')
+    expect(photoWrite.delete).toHaveBeenCalledWith('photo-001', expect.anything())
   })
 })

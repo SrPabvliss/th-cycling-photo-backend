@@ -112,6 +112,13 @@ describe('ConfirmRetouchedUploadHandler', () => {
       assertNotFrozen: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<FreezeStateService>
 
+    const prisma = { $transaction: jest.fn((fn) => fn({})) }
+    const yupanaDeclarer = {
+      declareStored: jest.fn().mockResolvedValue(undefined),
+      declareResized: jest.fn().mockResolvedValue(undefined),
+      declareRemoved: jest.fn().mockResolvedValue(undefined),
+    }
+
     handler = new ConfirmRetouchedUploadHandler(
       photoReadRepo,
       photoWriteRepo,
@@ -121,6 +128,8 @@ describe('ConfirmRetouchedUploadHandler', () => {
       eventEmitter as any,
       authz,
       freeze,
+      prisma as any,
+      yupanaDeclarer,
     )
   })
 
@@ -188,6 +197,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
         retouchedStorageKey: objectKey,
         retouchedFileSize: 5000n,
       }),
+      expect.anything(),
     )
   })
 
@@ -209,6 +219,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
         retouchedStorageKey: newKey,
         retouchedFileSize: 6000n,
       }),
+      expect.anything(),
     )
   })
 

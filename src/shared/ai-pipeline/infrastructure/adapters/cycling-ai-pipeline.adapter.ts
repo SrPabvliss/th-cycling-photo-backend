@@ -15,6 +15,7 @@ import type {
 import { HealthResponseV1Schema, PipelineResponseV1Schema } from './schemas-runtime'
 
 const SUPPORTED_SCHEMA_VERSIONS = new Set(['1.0', '1.1', '1.2'])
+const MODAL_CALL_ID_HEADER = 'modal-function-call-id'
 
 @Injectable()
 export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter {
@@ -68,6 +69,8 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
       )
     }
 
+    const modalCallId = response.headers.get(MODAL_CALL_ID_HEADER)
+
     if (response.status >= 500) {
       const body = await response.text().catch(() => 'no body')
       this.logger.error(`AI pipeline 5xx ${response.status}: ${body}`)
@@ -76,7 +79,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { httpStatus: response.status, body },
+        { httpStatus: response.status, body, modalCallId },
       )
     }
 
@@ -88,7 +91,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         HttpStatus.UNPROCESSABLE_ENTITY,
         ErrorCode.BUSINESS_RULE,
         false,
-        { httpStatus: response.status, body },
+        { httpStatus: response.status, body, modalCallId },
       )
     }
 
@@ -105,7 +108,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { issue: firstIssue },
+        { issue: firstIssue, modalCallId },
       )
     }
     const raw = parsed.data
@@ -116,7 +119,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { received: raw.schema_version, expected: '1.0 | 1.1 | 1.2' },
+        { received: raw.schema_version, expected: '1.0 | 1.1 | 1.2', modalCallId },
       )
     }
 
@@ -126,7 +129,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { sent: request.imageId, received: raw.image_id },
+        { sent: request.imageId, received: raw.image_id, modalCallId },
       )
     }
 
@@ -144,6 +147,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
     return {
       schemaVersion: raw.schema_version,
       imageId: raw.image_id,
+      modalCallId,
       detections: raw.detections.map(
         (d): DetectionDto => ({
           className: d.class_name,

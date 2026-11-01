@@ -81,6 +81,7 @@ export interface ClassificationPipelineResponse {
   timings: StageTimingsDto
   stageResults: StageResultDto[]
   modelVersions: { detection: string; ocr: string; color: string }
+  modalCallId: string | null
 }
 
 export interface HealthCheckResponse {
