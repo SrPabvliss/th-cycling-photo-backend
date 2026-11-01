@@ -88,8 +88,26 @@ case "$DB_NAME" in
     ;;
 esac
 
+case "$DB_NAME:$DB_PORT" in
+  *eswa*|*:5499)
+    echo "Refusing to run: '$DB_NAME' on port $DB_PORT is the frozen ESWA evaluation copy." >&2
+    exit 1
+    ;;
+esac
+
 export PGPASSWORD="$DB_PASSWORD"
 PSQL_ADMIN=(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -v ON_ERROR_STOP=1 -qtA)
+
+# P-33: the article experiment keeps its runs in the `eval` schema. Never drop
+# a database that still holds them unless the caller says so explicitly.
+EVAL_RUNS="$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -qtA \
+  -c "select count(*) from eval.runs" 2>/dev/null || true)"
+if [ -n "$EVAL_RUNS" ] && [ "$EVAL_RUNS" != "0" ] && [ "${ALLOW_EVAL_DROP:-}" != "1" ]; then
+  echo "Refusing to run: $DB_NAME holds $EVAL_RUNS rows in eval.runs (ESWA experiment)." >&2
+  echo "The frozen copy lives in cycling_photo_eswa on port 5499. If that copy is" >&2
+  echo "verified and you mean to drop this one, rerun with ALLOW_EVAL_DROP=1." >&2
+  exit 1
+fi
 
 echo "Target: $DB_NAME on $DB_HOST:$DB_PORT"
 mkdir -p "$BACKUP_DIR"
