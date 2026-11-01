@@ -1,4 +1,5 @@
 export { FindSimilarPhotosQuery } from './find-similar-photos/find-similar-photos.query'
+export { GetClassificationFailuresQuery } from './get-classification-failures/get-classification-failures.query'
 export { GetPendingRetouchQuery } from './get-pending-retouch/get-pending-retouch.query'
 export { GetPhotoDetailQuery } from './get-photo-detail/get-photo-detail.query'
 export { GetPhotoDetailBySlugQuery } from './get-photo-detail-by-slug/get-photo-detail-by-slug.query'

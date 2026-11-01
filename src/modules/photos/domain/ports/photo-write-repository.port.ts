@@ -14,6 +14,8 @@ export interface IPhotoWriteRepository {
     scope: EventScope,
   ): Promise<number>
   setRequiresRetouch(photoId: string, value: boolean): Promise<void>
+  /** Fails every `processing` photo whose attempt started before `olderThan` (upload time when it never recorded one), except `excludeIds`; writes one `photo_processings` failure row per photo and returns their ids. */
+  markStalledAsFailed(olderThan: Date, excludeIds: string[]): Promise<string[]>
 }
 
 export const PHOTO_WRITE_REPOSITORY = Symbol('PHOTO_WRITE_REPOSITORY')

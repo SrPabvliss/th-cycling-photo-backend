@@ -247,4 +247,59 @@ describe('CyclingAiPipelineAdapter', () => {
     expect(r.bibReadings[0].cropPath).toBeNull()
     expect(r.colorAnalyses[0].cropPath).toBeNull()
   })
+  describe('failure reasons', () => {
+    const request = { imageId: singleCyclist.image_id, imageUrl: 'https://x/y.jpg' }
+    const named = (name: string, message = name) => Object.assign(new Error(message), { name })
+
+    it('timeout maps to service_unavailable with reason timeout', async () => {
+      fetchMock.mockRejectedValueOnce(
+        named('TimeoutError', 'The operation was aborted due to timeout'),
+      )
+      await expect(adapter.classify(request)).rejects.toMatchObject({
+        messageKey: 'ai_pipeline.service_unavailable',
+        context: expect.objectContaining({ reason: 'timeout' }),
+      })
+    })
+
+    it('network error maps to reason network', async () => {
+      fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'))
+      await expect(adapter.classify(request)).rejects.toMatchObject({
+        messageKey: 'ai_pipeline.service_unavailable',
+        context: expect.objectContaining({ reason: 'network' }),
+      })
+    })
+
+    it('5xx carries reason http_5xx and httpStatus', async () => {
+      fetchMock.mockResolvedValueOnce(buildResponse({ error: 'down' }, false, 503))
+      await expect(adapter.classify(request)).rejects.toMatchObject({
+        messageKey: 'ai_pipeline.service_unavailable',
+        context: expect.objectContaining({ reason: 'http_5xx', httpStatus: 503 }),
+      })
+    })
+
+    it('body read timeout is retryable and keeps the call id', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ...buildResponse(singleCyclist, true, 200, { 'modal-function-call-id': MODAL_CALL_ID }),
+        json: async () => {
+          throw named('TimeoutError', 'The operation was aborted due to timeout')
+        },
+      } as unknown as Response)
+      await expect(adapter.classify(request)).rejects.toMatchObject({
+        messageKey: 'ai_pipeline.service_unavailable',
+        context: expect.objectContaining({ reason: 'timeout', modalCallId: MODAL_CALL_ID }),
+      })
+    })
+
+    it('malformed JSON body is still invalid_response_shape', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ...buildResponse(singleCyclist),
+        json: async () => {
+          throw new SyntaxError('Unexpected token < in JSON')
+        },
+      } as unknown as Response)
+      await expect(adapter.classify(request)).rejects.toMatchObject({
+        messageKey: 'ai_pipeline.invalid_response_shape',
+      })
+    })
+  })
 })

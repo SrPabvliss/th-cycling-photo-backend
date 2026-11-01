@@ -25,10 +25,13 @@ import {
   GenerateRetouchedPresignedUrlCommand,
   GenerateRetouchedPresignedUrlDto,
   MarkPhotoReviewedCommand,
+  ReclassifyPhotosCommand,
+  ReclassifyPhotosDto,
   SetPhotoRetouchFlagCommand,
   SetPhotoRetouchFlagDto,
 } from '@photos/application/commands'
 import {
+  ClassificationFailuresProjection,
   ConfirmBatchProjection,
   DownloadUrlProjection,
   GalleryFacetsProjection,
@@ -37,11 +40,13 @@ import {
   PhotoListProjection,
   PhotoViewProjection,
   PresignedUrlProjection,
+  ReclassifyPhotosResultProjection,
   ReviewQueueItemProjection,
   SimilarPhotoProjection,
 } from '@photos/application/projections'
 import {
   FindSimilarPhotosQuery,
+  GetClassificationFailuresQuery,
   GetPendingRetouchQuery,
   GetPhotoDetailBySlugQuery,
   GetPhotoDetailQuery,
@@ -89,6 +94,48 @@ export class PhotosController {
     @CurrentUser() user: ICurrentUser,
   ) {
     return this.queryBus.execute(new GetResumePointQuery(eventId, Number(limit) || 50, user.userId))
+  }
+
+  /** How many photos of the event failed classification, for the gallery notice. */
+  @RequirePermission('photo.classification.retry')
+  @AllowedWhenFrozen()
+  @Get('events/:eventId/photos/classification-failures')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.photo' })
+  @ApiOperation({ summary: 'Count the photos of an event that failed classification' })
+  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Failed photo count',
+    type: ClassificationFailuresProjection,
+  })
+  async getClassificationFailures(
+    @Param('eventId') eventId: string,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.queryBus.execute(new GetClassificationFailuresQuery(eventId, user.userId))
+  }
+
+  /** Sends the event's failed photos (all, or the given ones) back to classification. */
+  @RequirePermission('photo.classification.retry')
+  @BlocksWhenFrozen()
+  @Post('events/:eventId/photos/reclassify')
+  @HttpCode(200)
+  @SuccessMessage('photo.classification_retry_enqueued')
+  @ApiOperation({ summary: 'Send failed photos of an event back to classification' })
+  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Photos sent back to classification',
+    type: ReclassifyPhotosResultProjection,
+  })
+  async reclassifyPhotos(
+    @Param('eventId') eventId: string,
+    @Body() reclassifyPhotosDto: ReclassifyPhotosDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new ReclassifyPhotosCommand(eventId, reclassifyPhotosDto.photoIds ?? null, user.userId),
+    )
   }
 
   /** Returns a download manifest with presigned URLs for all event photos. */

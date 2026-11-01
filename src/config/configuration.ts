@@ -134,7 +134,7 @@ export default () => {
     },
     aiPipeline: {
       baseUrl: AI_PIPELINE_BASE_URL || 'http://localhost:8001',
-      timeoutMs: Number.parseInt(AI_PIPELINE_TIMEOUT_MS || '30000', 10),
+      timeoutMs: Number.parseInt(AI_PIPELINE_TIMEOUT_MS || '120000', 10),
     },
     yupana: {
       baseUrl: YUPANA_BASE_URL || '',

@@ -48,6 +48,7 @@ export const PERMISSIONS = {
   'photo.retouch.read': E(true, true, 'photos'), // Ruling 22 (TIT-38 Task 13 fix report): retouch queries carry no EventScope filtering
   'photo.retouch.upload': E(false, true, 'photos'),
   'photo.retouch.flag': E(false, true, 'photos'),
+  'photo.classification.retry': E(false, true, 'photos'),
   // photo categories
   'photo_category.create': E(false, false, 'catalogs'),
   'photo_category.event.assign': E(false, true, 'catalogs'),

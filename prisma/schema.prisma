@@ -484,6 +484,7 @@ model Photo {
   captured_at  DateTime? @db.Timestamptz
   uploaded_at  DateTime  @default(now()) @db.Timestamptz
   processed_at DateTime? @db.Timestamptz
+  processing_started_at DateTime? @db.Timestamptz
   reviewed_at  DateTime? @db.Timestamptz
 
   embedding Unsupported("vector(1024)")?

@@ -112,6 +112,7 @@ export function toPersistence(entity: Photo): Prisma.PhotoUncheckedCreateInput {
     captured_at: entity.capturedAt,
     uploaded_at: entity.uploadedAt,
     processed_at: entity.processedAt,
+    processing_started_at: entity.processingStartedAt,
     reviewed_at: entity.reviewedAt,
     created_by_id: entity.createdById,
     photo_category_id: entity.photoCategoryId,
@@ -141,6 +142,7 @@ export function toEntity(record: PrismaPhoto): Photo {
     retouchedAt: record.retouched_at,
     retouchedById: record.retouched_by_id,
     photoCategoryId: record.photo_category_id,
+    processingStartedAt: record.processing_started_at,
   })
 }
 

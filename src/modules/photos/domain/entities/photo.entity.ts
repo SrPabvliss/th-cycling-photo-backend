@@ -36,6 +36,7 @@ export class Photo {
     public retouchedAt: Date | null,
     public retouchedById: string | null,
     public photoCategoryId: number | null,
+    public processingStartedAt: Date | null = null,
   ) {}
 
   static create(data: {
@@ -79,6 +80,7 @@ export class Photo {
 
   markProcessing(): void {
     this.status = PhotoStatus.PROCESSING
+    this.processingStartedAt = new Date()
   }
 
   markProcessed(width: number | null, height: number | null): void {
@@ -158,6 +160,7 @@ export class Photo {
     retouchedAt: Date | null
     retouchedById?: string | null
     photoCategoryId?: number | null
+    processingStartedAt?: Date | null
   }): Photo {
     return new Photo(
       data.id,
@@ -180,6 +183,7 @@ export class Photo {
       data.retouchedAt,
       data.retouchedById ?? null,
       data.photoCategoryId ?? null,
+      data.processingStartedAt ?? null,
     )
   }
 }

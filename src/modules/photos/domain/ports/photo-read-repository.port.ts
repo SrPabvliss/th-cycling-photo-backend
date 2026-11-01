@@ -88,6 +88,9 @@ export interface IPhotoReadRepository {
   findSimilar(photoId: string, eventId: string, limit: number): Promise<SimilarPhotoProjection[]>
   getPhotoViewBySlug(slug: string, scope: EventScope): Promise<PhotoViewProjection | null>
   countAll(scope: EventScope): Promise<number>
+  /** Ids of the event's `failed` photos, restricted to `photoIds` when given. */
+  getFailedPhotoIds(eventId: string, photoIds: string[] | null): Promise<string[]>
+  countFailedByEvent(eventId: string): Promise<number>
   /** Photos still awaiting an operator decision: anything not yet `reviewed`. */
   countPendingReview(scope: EventScope): Promise<number>
   sumAllFileSize(scope: EventScope): Promise<number>
