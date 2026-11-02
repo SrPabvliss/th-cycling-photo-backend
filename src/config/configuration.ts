@@ -38,6 +38,8 @@ export default () => {
     CLOUDFLARE_KV_NAMESPACE_ID,
     CLOUDFLARE_API_TOKEN,
     CLOUDFLARE_HMAC_SECRET,
+    CLOUDFLARE_ANALYTICS_TOKEN,
+    CDN_TRANSFORMATIONS_DATASET,
   } = process.env
 
   const { WATERMARK_BASE_URL, PREVIEW_BASE_URL, DELIVERY_BASE_URL } = process.env
@@ -88,6 +90,8 @@ export default () => {
       kvNamespaceId: CLOUDFLARE_KV_NAMESPACE_ID,
       apiToken: CLOUDFLARE_API_TOKEN,
       hmacSecret: CLOUDFLARE_HMAC_SECRET,
+      analyticsToken: CLOUDFLARE_ANALYTICS_TOKEN || '',
+      transformationsDataset: CDN_TRANSFORMATIONS_DATASET || '',
     },
     voyageAi: {
       apiKey: VOYAGE_API_KEY,

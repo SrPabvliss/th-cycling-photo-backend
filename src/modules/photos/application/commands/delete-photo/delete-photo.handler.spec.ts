@@ -9,6 +9,7 @@ import type { IAuthorizationService } from '@shared/authorization/domain/ports/a
 import type { IKvStorageAdapter } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports'
+import type { ICdnRetiredSlugRepository } from '@shared/yupana/domain/ports'
 import { DeletePhotoCommand } from './delete-photo.command'
 import { DeletePhotoHandler } from './delete-photo.handler'
 
@@ -21,6 +22,7 @@ describe('DeletePhotoHandler', () => {
   let orderRead: jest.Mocked<IOrderReadRepository>
   let previewRead: jest.Mocked<IPreviewLinkReadRepository>
   let authz: jest.Mocked<IAuthorizationService>
+  let cdnRetiredSlugs: jest.Mocked<ICdnRetiredSlugRepository>
   const unrestrictedScope = EventScope.unrestricted()
 
   const command = new DeletePhotoCommand('photo-001', 'user-001')
@@ -85,6 +87,8 @@ describe('DeletePhotoHandler', () => {
       declareRemoved: jest.fn().mockResolvedValue(undefined),
     }
 
+    cdnRetiredSlugs = { retire: jest.fn().mockResolvedValue(undefined) }
+
     handler = new DeletePhotoHandler(
       photoRead,
       photoWrite,
@@ -96,6 +100,7 @@ describe('DeletePhotoHandler', () => {
       freeze,
       prisma as any,
       yupanaDeclarer,
+      cdnRetiredSlugs,
     )
   })
 
@@ -186,5 +191,44 @@ describe('DeletePhotoHandler', () => {
     kv.delete.mockRejectedValueOnce(new Error('KV down'))
     await expect(handler.execute(command)).resolves.toBeUndefined()
     expect(photoWrite.delete).toHaveBeenCalledWith('photo-001', expect.anything())
+  })
+
+  it('retires the photo slugs in the same transaction as the delete', async () => {
+    const tx = { marker: 'tx' }
+    const prisma = { $transaction: jest.fn((fn) => fn(tx)) }
+    const yupanaDeclarer = {
+      declareStored: jest.fn(),
+      declareResized: jest.fn(),
+      declareRemoved: jest.fn().mockResolvedValue(undefined),
+    }
+    handler = new DeletePhotoHandler(
+      photoRead,
+      photoWrite,
+      storage,
+      kv,
+      orderRead,
+      previewRead,
+      authz,
+      { assertNotFrozen: jest.fn().mockResolvedValue(undefined) } as any,
+      prisma as any,
+      yupanaDeclarer,
+      cdnRetiredSlugs,
+    )
+    photoRead.findByIdInScope.mockResolvedValueOnce(
+      makePhoto({
+        retouchedPublicSlug: 'slug-ret',
+        retouchedStorageKey: 'events/e1/retouched/r.jpg',
+      }),
+    )
+
+    await handler.execute(command)
+
+    expect(cdnRetiredSlugs.retire).toHaveBeenCalledWith(
+      [
+        { slug: 'slug-abc', photoId: 'photo-001', eventId: 'event-001' },
+        { slug: 'slug-ret', photoId: 'photo-001', eventId: 'event-001' },
+      ],
+      tx,
+    )
   })
 })

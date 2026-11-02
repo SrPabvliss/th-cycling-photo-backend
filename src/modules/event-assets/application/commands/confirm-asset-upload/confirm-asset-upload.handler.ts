@@ -10,6 +10,11 @@ import {
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
+import { CdnSubject } from '@shared/yupana/domain/cdn-subject'
+import {
+  CDN_RETIRED_SLUG_REPOSITORY,
+  type ICdnRetiredSlugRepository,
+} from '@shared/yupana/domain/ports'
 import { EventAsset } from '../../../domain/entities'
 import {
   EVENT_ASSET_READ_REPOSITORY,
@@ -31,6 +36,8 @@ export class ConfirmAssetUploadHandler implements ICommandHandler<ConfirmAssetUp
     @Inject(KV_STORAGE_ADAPTER) private readonly kvStorage: IKvStorageAdapter,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly freeze: FreezeStateService,
+    @Inject(CDN_RETIRED_SLUG_REPOSITORY)
+    private readonly cdnRetiredSlugs: ICdnRetiredSlugRepository,
   ) {}
 
   async execute(command: ConfirmAssetUploadCommand): Promise<EntityIdProjection> {
@@ -52,6 +59,13 @@ export class ConfirmAssetUploadHandler implements ICommandHandler<ConfirmAssetUp
     // Delete old file from B2 + drop its KV slug if replacing an existing asset
     const existing = await this.readRepo.findByEventAndType(command.eventId, command.assetType)
     if (existing && existing.storageKey !== command.storageKey) {
+      await this.cdnRetiredSlugs.retire([
+        {
+          slug: existing.publicSlug,
+          photoId: CdnSubject.forAsset(existing.id),
+          eventId: existing.eventId,
+        },
+      ])
       await this.storage.delete(existing.storageKey)
       await this.kvStorage.delete(existing.publicSlug).catch((err) => {
         this.logger.error(`Failed to delete stale KV slug ${existing.publicSlug} — continuing`, err)

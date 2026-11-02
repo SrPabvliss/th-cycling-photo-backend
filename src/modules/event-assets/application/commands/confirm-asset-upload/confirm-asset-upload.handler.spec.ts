@@ -6,6 +6,8 @@ import type { IAuthorizationService } from '@shared/authorization/domain/ports/a
 import type { IKvStorageAdapter } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports'
+import type { ICdnRetiredSlugRepository } from '@shared/yupana/domain/ports'
+import { EventAsset } from '../../../domain/entities'
 import type { IEventAssetReadRepository, IEventAssetWriteRepository } from '../../../domain/ports'
 import { ConfirmAssetUploadCommand } from './confirm-asset-upload.command'
 import { ConfirmAssetUploadHandler } from './confirm-asset-upload.handler'
@@ -18,6 +20,7 @@ describe('ConfirmAssetUploadHandler', () => {
   let storage: jest.Mocked<IStorageAdapter>
   let kvStorage: jest.Mocked<IKvStorageAdapter>
   let authz: jest.Mocked<IAuthorizationService>
+  let cdnRetiredSlugs: jest.Mocked<ICdnRetiredSlugRepository>
   const unrestrictedScope = EventScope.unrestricted()
 
   const buildEvent = () =>
@@ -74,6 +77,8 @@ describe('ConfirmAssetUploadHandler', () => {
       assertNotFrozen: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<FreezeStateService>
 
+    cdnRetiredSlugs = { retire: jest.fn().mockResolvedValue(undefined) }
+
     handler = new ConfirmAssetUploadHandler(
       eventReadRepo,
       readRepo,
@@ -82,6 +87,7 @@ describe('ConfirmAssetUploadHandler', () => {
       kvStorage,
       authz,
       freeze,
+      cdnRetiredSlugs,
     )
   })
 
@@ -144,5 +150,39 @@ describe('ConfirmAssetUploadHandler', () => {
     expect(authz.assert).toHaveBeenCalledWith('user-1', 'event_asset.confirm', 'event-uuid')
     expect(writeRepo.save).toHaveBeenCalled()
     expect(result.id).toBeDefined()
+  })
+
+  it('retires the replaced cover slug as an asset subject', async () => {
+    eventReadRepo.findByIdInScope.mockResolvedValue(buildEvent())
+    readRepo.findByEventAndType.mockResolvedValue(
+      EventAsset.fromPersistence({
+        id: 'asset-old',
+        eventId: 'event-uuid',
+        assetType: 'cover_image',
+        storageKey: 'events/event-uuid/assets/cover_image/old.jpg',
+        publicSlug: 'old-cover-slug',
+        fileSize: 512n,
+        mimeType: 'image/jpeg',
+        focalX: 0.5,
+        focalY: 0.5,
+        uploadedAt: new Date('2026-10-01T00:00:00Z'),
+      }),
+    )
+    writeRepo.save.mockImplementation(async (asset) => asset)
+
+    await handler.execute(
+      new ConfirmAssetUploadCommand(
+        'event-uuid',
+        'cover_image',
+        'events/event-uuid/assets/cover_image/new.jpg',
+        1024n,
+        'image/jpeg',
+        'user-1',
+      ),
+    )
+
+    expect(cdnRetiredSlugs.retire).toHaveBeenCalledWith([
+      { slug: 'old-cover-slug', photoId: 'asset:asset-old', eventId: 'event-uuid' },
+    ])
   })
 })

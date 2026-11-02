@@ -1238,3 +1238,34 @@ model YupanaOutboxItem {
   @@index([photo_id, kind], map: "idx_yupana_outbox_items_photo")
   @@map("yupana_outbox_items")
 }
+
+model CdnTransformationSighting {
+  id              String   @id @default(uuid()) @db.Uuid
+  month           String   @db.Char(7)
+  combination_key String   @db.Char(64)
+  kind            String   @db.VarChar(10)
+  slug            String   @db.VarChar(30)
+  first_seen_on   DateTime @db.Date
+  created_at      DateTime @default(now()) @db.Timestamptz
+
+  @@unique([month, combination_key], map: "uq_cdn_transformation_sightings_month_key")
+  @@index([first_seen_on], map: "idx_cdn_transformation_sightings_day")
+  @@map("cdn_transformation_sightings")
+}
+
+model CdnRetiredSlug {
+  slug       String   @id @db.VarChar(30)
+  photo_id   String   @db.VarChar(80)
+  event_id   String   @db.Uuid
+  retired_at DateTime @default(now()) @db.Timestamptz
+
+  @@map("cdn_retired_slugs")
+}
+
+model CdnTransformationReportDay {
+  day              DateTime @id @db.Date
+  new_combinations Int
+  processed_at     DateTime @default(now()) @db.Timestamptz
+
+  @@map("cdn_transformation_report_days")
+}

@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AppException } from '@shared/domain'
+import type { IYupanaOutboxRepository } from '@shared/yupana/domain/ports'
+import { YupanaUsageReport } from '@shared/yupana/domain/yupana-usage-report'
 import type { IMailer, MailMessage } from '../../domain/ports'
 
 interface CloudflareSendResult {
@@ -8,6 +10,7 @@ interface CloudflareSendResult {
   delivered?: string[]
   queued?: string[]
   permanent_bounces?: string[]
+  suppressed_recipients?: string[]
 }
 
 interface CloudflareSendResponse {
@@ -24,7 +27,10 @@ export class CloudflareApiMailerAdapter implements IMailer {
   private readonly from: string
   private readonly replyTo: string
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly yupanaOutbox: IYupanaOutboxRepository,
+  ) {
     const accountId = config.getOrThrow<string>('cloudflare.accountId')
     this.endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/email/sending/send`
     this.token = config.getOrThrow<string>('mail.password')
@@ -82,6 +88,8 @@ export class CloudflareApiMailerAdapter implements IMailer {
       )
     }
 
+    await this.recordSend(message.to, payload.result)
+
     const permanentBounces = payload.result?.permanent_bounces ?? []
     if (permanentBounces.length > 0) {
       this.logger.error(
@@ -91,6 +99,18 @@ export class CloudflareApiMailerAdapter implements IMailer {
         'CloudflareApiMailer',
         new Error(`Cloudflare mail API reported permanent bounce: ${permanentBounces.join(', ')}`),
       )
+    }
+  }
+
+  private async recordSend(to: string, result: CloudflareSendResult | undefined): Promise<void> {
+    if ((result?.suppressed_recipients ?? []).includes(to)) return
+    const messageId = result?.message_id ?? null
+    try {
+      await this.yupanaOutbox.enqueue([
+        YupanaUsageReport.emailSend({ messageId, occurredAt: new Date() }),
+      ])
+    } catch {
+      this.logger.error(`Failed to record the email send ${messageId ?? 'without id'} for yupana`)
     }
   }
 

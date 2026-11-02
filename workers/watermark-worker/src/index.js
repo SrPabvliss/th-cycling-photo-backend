@@ -1,4 +1,5 @@
 import { AwsClient } from 'aws4fetch'
+import { combinationKey, recordTransformation } from './transformation-record.js'
 import { eventIdFromObjectPath, gravityFromQuery, resolveWatermarkUrl } from './watermark-url.js'
 
 // ─── Preset maps ───────────────────────────────────────────────────────────
@@ -139,7 +140,7 @@ async function fetchOriginal(slug, env) {
 }
 
 /** Resolves slug → B2 path, signs request, applies cf.image preset transform. */
-async function fetchWithPreset(slug, presetOptions, env, gravity) {
+async function fetchWithPreset(slug, presetOptions, env, gravity, { kind, preset }) {
   const objectPath = await env.IMAGE_MAP.get(slug)
   if (!objectPath) return new Response('Not Found', { status: 404 })
 
@@ -151,10 +152,11 @@ async function fetchWithPreset(slug, presetOptions, env, gravity) {
   const originUrl = getB2Url(env, objectPath)
   const signedReq = await b2.sign(originUrl)
 
+  const image = { ...options, 'origin-auth': 'share-publicly' }
   const response = await fetch(originUrl, {
     headers: signedReq.headers,
     cf: {
-      image: { ...options, 'origin-auth': 'share-publicly' },
+      image,
       cacheEverything: true,
       cacheTtl: 604800,
       // The subrequest URL is the same B2 object whatever the crop, so the origin has to carry the
@@ -169,6 +171,7 @@ async function fetchWithPreset(slug, presetOptions, env, gravity) {
       : new Response('Bad Gateway', { status: 502 })
   }
 
+  recordTransformation(env, { key: await combinationKey(originUrl, image), kind, slug, preset })
   return sanitizeResponse(response)
 }
 
@@ -187,32 +190,33 @@ async function fetchWatermarked(slug, env) {
   const publicUrl = `https://${env.PUBLIC_DOMAIN}/gallery/${slug}.jpg`
   const qrUrl = `https://${env.QR_WORKER_HOST}/?url=${encodeURIComponent(publicUrl)}&v=2`
 
+  const image = {
+    width: 800,
+    quality: parseInt(env.DEFAULT_QUALITY, 10) || 40,
+    format: 'jpeg',
+    draw: [
+      {
+        url: watermarkUrl,
+        repeat: true,
+        opacity: parseFloat(env.WATERMARK_OPACITY) || 0.3,
+        width: parseInt(env.WATERMARK_TILE_WIDTH, 10) || DEFAULT_WATERMARK_TILE_WIDTH,
+      },
+      {
+        url: qrUrl,
+        bottom: 15,
+        left: 15,
+        width: 130,
+        height: 130,
+        opacity: 1.0,
+        background: '#ffffff',
+      },
+    ],
+    'origin-auth': 'share-publicly',
+  }
   const response = await fetch(originUrl, {
     headers: signedReq.headers,
     cf: {
-      image: {
-        width: 800,
-        quality: parseInt(env.DEFAULT_QUALITY, 10) || 40,
-        format: 'jpeg',
-        draw: [
-          {
-            url: watermarkUrl,
-            repeat: true,
-            opacity: parseFloat(env.WATERMARK_OPACITY) || 0.3,
-            width: parseInt(env.WATERMARK_TILE_WIDTH, 10) || DEFAULT_WATERMARK_TILE_WIDTH,
-          },
-          {
-            url: qrUrl,
-            bottom: 15,
-            left: 15,
-            width: 130,
-            height: 130,
-            opacity: 1.0,
-            background: '#ffffff',
-          },
-        ],
-        'origin-auth': 'share-publicly',
-      },
+      image,
       cacheEverything: true,
       cacheTtl: 604800,
     },
@@ -225,6 +229,12 @@ async function fetchWatermarked(slug, env) {
       : new Response('Bad Gateway', { status: 502 })
   }
 
+  recordTransformation(env, {
+    key: await combinationKey(originUrl, image),
+    kind: 'gallery',
+    slug,
+    preset: 'gallery',
+  })
   return sanitizeResponse(response)
 }
 
@@ -288,7 +298,7 @@ export default {
       if (preset) {
         const presetOptions = INTERNAL_PRESETS[preset]
         if (!presetOptions) return new Response('Not Found', { status: 404 })
-        return fetchWithPreset(slug, presetOptions, env, null)
+        return fetchWithPreset(slug, presetOptions, env, null, { kind: 'internal', preset })
       }
       return fetchOriginal(slug, env)
     }
@@ -298,7 +308,10 @@ export default {
       if (preset) {
         const presetOptions = ASSET_PRESETS[preset]
         if (!presetOptions) return new Response('Not Found', { status: 404 })
-        return fetchWithPreset(slug, presetOptions, env, gravityFromQuery(url.searchParams))
+        return fetchWithPreset(slug, presetOptions, env, gravityFromQuery(url.searchParams), {
+          kind: 'asset',
+          preset,
+        })
       }
       return fetchOriginal(slug, env)
     }

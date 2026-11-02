@@ -12,14 +12,25 @@ describe('CloudflareApiMailerAdapter', () => {
     'mail.replyTo': 'info@titantv.com.ec',
   }
 
+  let enqueue: jest.Mock
+
+  beforeEach(() => {
+    enqueue = jest.fn().mockResolvedValue(undefined)
+  })
+
   const buildAdapter = (overrides: Record<string, unknown> = {}) => {
     const values = { ...baseConfig, ...overrides }
     const configService = {
       getOrThrow: jest.fn((key: string) => values[key]),
       get: jest.fn((key: string, fallback?: unknown) => values[key] ?? fallback),
     }
-    return new CloudflareApiMailerAdapter(configService as never)
+    return new CloudflareApiMailerAdapter(configService as never, { enqueue } as never)
   }
+
+  const recordedItemKeys = () =>
+    enqueue.mock.calls.flatMap(([entries]: [{ itemKey: string }[]]) =>
+      entries.map((entry) => entry.itemKey),
+    )
 
   const message = {
     to: 'real@customer.com',
@@ -122,5 +133,77 @@ describe('CloudflareApiMailerAdapter', () => {
 
     const loggedText = logSpy.mock.calls.map((call) => call.join(' ')).join(' ')
     expect(loggedText).not.toContain('secret-reset-link')
+  })
+
+  it('records one email send when Cloudflare accepts the message', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        success: true,
+        result: { message_id: '<abc@titantv.com.ec>', queued: ['real@customer.com'] },
+      }),
+    ) as never
+
+    await buildAdapter().send(message)
+
+    expect(recordedItemKeys()).toEqual(['email:<abc@titantv.com.ec>'])
+  })
+
+  it('records the send and still throws when the recipient bounced permanently', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        success: true,
+        result: { message_id: '<abc@titantv.com.ec>', permanent_bounces: ['real@customer.com'] },
+      }),
+    ) as never
+
+    await expect(buildAdapter().send(message)).rejects.toThrow()
+    expect(recordedItemKeys()).toEqual(['email:<abc@titantv.com.ec>'])
+  })
+
+  it('records nothing for a suppressed recipient', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        success: true,
+        result: {
+          message_id: '<abc@titantv.com.ec>',
+          suppressed_recipients: ['real@customer.com'],
+        },
+      }),
+    ) as never
+
+    await buildAdapter().send(message)
+
+    expect(enqueue).not.toHaveBeenCalled()
+  })
+
+  it('records nothing when Cloudflare answers success false', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ success: false, errors: [{ message: 'rejected' }] }, 200),
+      ) as never
+
+    await expect(buildAdapter().send(message)).rejects.toThrow()
+    expect(enqueue).not.toHaveBeenCalled()
+  })
+
+  it('records nothing when the request fails', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down')) as never
+
+    await expect(buildAdapter().send(message)).rejects.toThrow()
+    expect(enqueue).not.toHaveBeenCalled()
+  })
+
+  it('delivers without throwing when the outbox write fails', async () => {
+    enqueue.mockRejectedValue(new Error('database down'))
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined)
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        success: true,
+        result: { message_id: '<abc@titantv.com.ec>', delivered: ['real@customer.com'] },
+      }),
+    ) as never
+
+    await expect(buildAdapter().send(message)).resolves.toBeUndefined()
   })
 })

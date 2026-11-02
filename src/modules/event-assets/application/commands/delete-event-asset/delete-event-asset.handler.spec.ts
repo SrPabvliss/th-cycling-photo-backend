@@ -6,6 +6,7 @@ import type { IAuthorizationService } from '@shared/authorization/domain/ports/a
 import type { IKvStorageAdapter } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports'
+import type { ICdnRetiredSlugRepository } from '@shared/yupana/domain/ports'
 import { EventAsset } from '../../../domain/entities'
 import type { IEventAssetReadRepository, IEventAssetWriteRepository } from '../../../domain/ports'
 import { DeleteEventAssetCommand } from './delete-event-asset.command'
@@ -19,6 +20,7 @@ describe('DeleteEventAssetHandler', () => {
   let storage: jest.Mocked<IStorageAdapter>
   let kvStorage: jest.Mocked<IKvStorageAdapter>
   let authz: jest.Mocked<IAuthorizationService>
+  let cdnRetiredSlugs: jest.Mocked<ICdnRetiredSlugRepository>
   const unrestrictedScope = EventScope.unrestricted()
 
   const buildEvent = () =>
@@ -87,6 +89,8 @@ describe('DeleteEventAssetHandler', () => {
       assertNotFrozen: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<FreezeStateService>
 
+    cdnRetiredSlugs = { retire: jest.fn().mockResolvedValue(undefined) }
+
     handler = new DeleteEventAssetHandler(
       eventReadRepo,
       readRepo,
@@ -95,6 +99,7 @@ describe('DeleteEventAssetHandler', () => {
       kvStorage,
       authz,
       freeze,
+      cdnRetiredSlugs,
     )
   })
 
@@ -148,5 +153,16 @@ describe('DeleteEventAssetHandler', () => {
     expect(storage.delete).toHaveBeenCalledWith(asset.storageKey)
     expect(writeRepo.delete).toHaveBeenCalledWith(asset.id)
     expect(kvStorage.delete).toHaveBeenCalledWith(asset.publicSlug)
+  })
+
+  it('retires the deleted asset slug as an asset subject', async () => {
+    eventReadRepo.findByIdInScope.mockResolvedValue(buildEvent())
+    readRepo.findByEventAndType.mockResolvedValue(buildAsset())
+
+    await handler.execute(command)
+
+    expect(cdnRetiredSlugs.retire).toHaveBeenCalledWith([
+      { slug: 'slug-abc', photoId: 'asset:asset-1', eventId: 'event-uuid' },
+    ])
   })
 })
