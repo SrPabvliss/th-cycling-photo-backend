@@ -39,7 +39,8 @@
     "test:cov": "jest --coverage --selectProjects unit",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --selectProjects unit --runInBand",
     "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' NODE_ENV=test jest --config ./test/jest-e2e.json --forceExit --runInBand",
-    "prepare": "husky"
+    "prepare": "husky",
+    "yupana:backfill": "tsx scripts/yupana-backfill.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.999.0",

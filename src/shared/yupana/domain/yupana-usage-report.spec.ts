@@ -115,4 +115,56 @@ describe('YupanaUsageReport', () => {
     expect(entry.itemKey.startsWith('email:sha256:')).toBe(true)
     expect(entry.payload.report_id).toBe(entry.itemKey)
   })
+
+  it('keeps a given report id on the Voyage and Modal call reports', () => {
+    const voyage = YupanaUsageReport.voyagePixels({
+      reportId: 'backfill:voyage:ph',
+      photoId,
+      eventId,
+      imagePixels: 10,
+      occurredAt,
+    })
+    const call = YupanaUsageReport.modalCall({
+      reportId: 'backfill:call:pr',
+      photoId,
+      eventId,
+      callId: 'fc-01KYSTV7CSHH9KXXV7YAHM3EVA',
+      occurredAt,
+    })
+
+    expect(voyage.payload.report_id).toBe('backfill:voyage:ph')
+    expect(voyage.itemKey).toBe('backfill:voyage:ph')
+    expect(call?.payload.report_id).toBe('backfill:call:pr')
+  })
+
+  it('reports container telemetry as a version 3 attribution report', () => {
+    const entry = YupanaUsageReport.modalAttribution({
+      reportId: 'backfill:request:pr',
+      containerId: 'bf-01KYSTV7CSHH9KXXV7YAHM3EVA',
+      activity: 'request',
+      startedAt: new Date('2026-07-15T10:00:00.000Z'),
+      endedAt: new Date('2026-07-15T10:00:05.000Z'),
+      served: ['fc-01KYSTV7CSHH9KXXV7YAHM3EVA'],
+    })
+
+    expect(entry.kind).toBe('usage_report')
+    expect(entry.photoId).toBeNull()
+    expect(entry.itemKey).toBe('backfill:request:pr')
+    expect(entry.payload).toEqual({
+      report_id: 'backfill:request:pr',
+      schema_version: 3,
+      occurred_at: '2026-07-15T10:00:00.000Z',
+      provider: 'modal',
+      kind: 'attribution',
+      measurement_status: 'complete',
+      payload: {
+        meter: 'gpu.container_seconds',
+        activity: 'request',
+        container_id: 'bf-01KYSTV7CSHH9KXXV7YAHM3EVA',
+        started_at: '2026-07-15T10:00:00.000Z',
+        ended_at: '2026-07-15T10:00:05.000Z',
+        served: ['fc-01KYSTV7CSHH9KXXV7YAHM3EVA'],
+      },
+    })
+  })
 })
