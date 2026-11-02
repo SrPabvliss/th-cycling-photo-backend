@@ -9,6 +9,11 @@ import {
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
+import { CdnSubject } from '@shared/yupana/domain/cdn-subject'
+import {
+  CDN_RETIRED_SLUG_REPOSITORY,
+  type ICdnRetiredSlugRepository,
+} from '@shared/yupana/domain/ports'
 import {
   EVENT_ASSET_READ_REPOSITORY,
   EVENT_ASSET_WRITE_REPOSITORY,
@@ -29,6 +34,8 @@ export class DeleteEventAssetHandler implements ICommandHandler<DeleteEventAsset
     @Inject(KV_STORAGE_ADAPTER) private readonly kvStorage: IKvStorageAdapter,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly freeze: FreezeStateService,
+    @Inject(CDN_RETIRED_SLUG_REPOSITORY)
+    private readonly cdnRetiredSlugs: ICdnRetiredSlugRepository,
   ) {}
 
   async execute(command: DeleteEventAssetCommand): Promise<void> {
@@ -44,6 +51,9 @@ export class DeleteEventAssetHandler implements ICommandHandler<DeleteEventAsset
     const asset = await this.readRepo.findByEventAndType(command.eventId, command.assetType)
     if (!asset) throw AppException.notFound('EventAsset', command.assetType)
 
+    await this.cdnRetiredSlugs.retire([
+      { slug: asset.publicSlug, photoId: CdnSubject.forAsset(asset.id), eventId: asset.eventId },
+    ])
     await this.storage.delete(asset.storageKey)
     await this.writeRepo.delete(asset.id)
 

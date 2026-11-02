@@ -24,7 +24,12 @@ import { KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import { STORAGE_ADAPTER } from '@shared/storage/domain/ports'
-import { YUPANA_OUTBOX_REPOSITORY, YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
+import {
+  CDN_RETIRED_SLUG_REPOSITORY,
+  YUPANA_OUTBOX_REPOSITORY,
+  YUPANA_PHOTO_DECLARER,
+} from '@shared/yupana/domain/ports'
+import { CdnRetiredSlugRepository } from '@shared/yupana/infrastructure/repositories/cdn-retired-slug.repository'
 import { YupanaOutboxRepository } from '@shared/yupana/infrastructure/repositories/yupana-outbox.repository'
 import { YupanaPhotoDeclarerService } from '@shared/yupana/infrastructure/services/yupana-photo-declarer.service'
 import configuration from '../../config/configuration'
@@ -66,6 +71,7 @@ describe('photo size declarations for yupana', () => {
         },
         { provide: YUPANA_OUTBOX_REPOSITORY, useClass: YupanaOutboxRepository },
         { provide: YUPANA_PHOTO_DECLARER, useClass: YupanaPhotoDeclarerService },
+        { provide: CDN_RETIRED_SLUG_REPOSITORY, useClass: CdnRetiredSlugRepository },
         {
           provide: AUTHORIZATION_SERVICE,
           useValue: {

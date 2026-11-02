@@ -7,6 +7,7 @@ import type { IAuthorizationService } from '@shared/authorization/domain/ports/a
 import type { IKvStorageAdapter } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
+import type { ICdnRetiredSlugRepository } from '@shared/yupana/domain/ports'
 import { ConfirmRetouchedUploadCommand } from './confirm-retouched-upload.command'
 import { ConfirmRetouchedUploadHandler } from './confirm-retouched-upload.handler'
 
@@ -19,6 +20,8 @@ describe('ConfirmRetouchedUploadHandler', () => {
   let kvStorage: jest.Mocked<IKvStorageAdapter>
   let eventEmitter: { emit: jest.Mock }
   let authz: jest.Mocked<IAuthorizationService>
+  let cdnRetiredSlugs: jest.Mocked<ICdnRetiredSlugRepository>
+  let tx: { marker: string }
   const scope = EventScope.unrestricted()
 
   const eventId = '550e8400-e29b-41d4-a716-446655440000'
@@ -112,7 +115,9 @@ describe('ConfirmRetouchedUploadHandler', () => {
       assertNotFrozen: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<FreezeStateService>
 
-    const prisma = { $transaction: jest.fn((fn) => fn({})) }
+    tx = { marker: 'tx' }
+    const prisma = { $transaction: jest.fn((fn) => fn(tx)) }
+    cdnRetiredSlugs = { retire: jest.fn().mockResolvedValue(undefined) }
     const yupanaDeclarer = {
       declareStored: jest.fn().mockResolvedValue(undefined),
       declareResized: jest.fn().mockResolvedValue(undefined),
@@ -130,6 +135,7 @@ describe('ConfirmRetouchedUploadHandler', () => {
       freeze,
       prisma as any,
       yupanaDeclarer,
+      cdnRetiredSlugs,
     )
   })
 
@@ -220,6 +226,27 @@ describe('ConfirmRetouchedUploadHandler', () => {
         retouchedFileSize: 6000n,
       }),
       expect.anything(),
+    )
+  })
+
+  it('retires the replaced retouched slug inside the save transaction', async () => {
+    const oldKey = `events/${eventId}/retouched/old-uuid-retouched.jpg`
+    const photo = createPhoto(oldKey)
+    photoReadRepo.findByIdInScope.mockResolvedValueOnce(photo)
+    photoWriteRepo.save.mockResolvedValueOnce(photo)
+
+    await handler.execute(
+      new ConfirmRetouchedUploadCommand(
+        'photo-001',
+        `events/${eventId}/retouched/new-uuid-retouched.jpg`,
+        6000,
+        'operator-001',
+      ),
+    )
+
+    expect(cdnRetiredSlugs.retire).toHaveBeenCalledWith(
+      [{ slug: 'retouched-slug', photoId: 'photo-001', eventId }],
+      tx,
     )
   })
 

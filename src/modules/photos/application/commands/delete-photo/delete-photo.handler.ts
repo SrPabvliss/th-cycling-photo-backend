@@ -20,7 +20,12 @@ import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/d
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
-import { type IYupanaPhotoDeclarer, YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
+import {
+  CDN_RETIRED_SLUG_REPOSITORY,
+  type ICdnRetiredSlugRepository,
+  type IYupanaPhotoDeclarer,
+  YUPANA_PHOTO_DECLARER,
+} from '@shared/yupana/domain/ports'
 import { DeletePhotoCommand } from './delete-photo.command'
 
 @CommandHandler(DeletePhotoCommand)
@@ -38,6 +43,8 @@ export class DeletePhotoHandler implements ICommandHandler<DeletePhotoCommand> {
     private readonly freeze: FreezeStateService,
     private readonly prisma: PrismaService,
     @Inject(YUPANA_PHOTO_DECLARER) private readonly yupanaDeclarer: IYupanaPhotoDeclarer,
+    @Inject(CDN_RETIRED_SLUG_REPOSITORY)
+    private readonly cdnRetiredSlugs: ICdnRetiredSlugRepository,
   ) {}
 
   async execute(command: DeletePhotoCommand): Promise<void> {
@@ -59,6 +66,12 @@ export class DeletePhotoHandler implements ICommandHandler<DeletePhotoCommand> {
     await this.prisma.$transaction(async (tx) => {
       await this.photoWrite.delete(photo.id, tx)
       await this.yupanaDeclarer.declareRemoved(photo, tx)
+      await this.cdnRetiredSlugs.retire(
+        [photo.publicSlug, photo.retouchedPublicSlug]
+          .filter((slug): slug is string => slug !== null)
+          .map((slug) => ({ slug, photoId: photo.id, eventId: photo.eventId })),
+        tx,
+      )
     })
 
     // Best-effort object cleanup (the row is already gone; log and continue on failure).

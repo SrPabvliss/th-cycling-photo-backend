@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Min,
   validateSync,
 } from 'class-validator'
@@ -84,6 +85,15 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   CLOUDFLARE_HMAC_SECRET?: string
+
+  // Cloudflare Analytics Engine (CDN transformations reported to yupana)
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_ANALYTICS_TOKEN?: string
+
+  @IsOptional()
+  @Matches(/^[a-z][a-z0-9_]{0,62}$/)
+  CDN_TRANSFORMATIONS_DATASET?: string
 
   // Voyage AI
   @IsOptional()

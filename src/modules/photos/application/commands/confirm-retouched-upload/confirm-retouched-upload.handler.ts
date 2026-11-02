@@ -21,7 +21,12 @@ import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/d
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
-import { type IYupanaPhotoDeclarer, YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
+import {
+  CDN_RETIRED_SLUG_REPOSITORY,
+  type ICdnRetiredSlugRepository,
+  type IYupanaPhotoDeclarer,
+  YUPANA_PHOTO_DECLARER,
+} from '@shared/yupana/domain/ports'
 import { nanoid } from 'nanoid'
 import { ConfirmRetouchedUploadCommand } from './confirm-retouched-upload.command'
 
@@ -42,6 +47,8 @@ export class ConfirmRetouchedUploadHandler
     private readonly freeze: FreezeStateService,
     private readonly prisma: PrismaService,
     @Inject(YUPANA_PHOTO_DECLARER) private readonly yupanaDeclarer: IYupanaPhotoDeclarer,
+    @Inject(CDN_RETIRED_SLUG_REPOSITORY)
+    private readonly cdnRetiredSlugs: ICdnRetiredSlugRepository,
   ) {}
 
   async execute(command: ConfirmRetouchedUploadCommand): Promise<{ confirmed: boolean }> {
@@ -73,6 +80,8 @@ export class ConfirmRetouchedUploadHandler
       })
     }
 
+    const replacedSlug = photo.retouchedPublicSlug
+
     // Generate slug and register in KV
     const retouchedSlug = nanoid()
     photo.setRetouched(
@@ -84,6 +93,12 @@ export class ConfirmRetouchedUploadHandler
     await this.prisma.$transaction(async (tx) => {
       await this.photoWriteRepo.save(photo, tx)
       await this.yupanaDeclarer.declareResized(photo, tx)
+      if (replacedSlug) {
+        await this.cdnRetiredSlugs.retire(
+          [{ slug: replacedSlug, photoId: photo.id, eventId: photo.eventId }],
+          tx,
+        )
+      }
     })
 
     // Register slug → storage key in KV (fire-and-forget)

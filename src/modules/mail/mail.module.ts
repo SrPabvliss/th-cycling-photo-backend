@@ -1,6 +1,8 @@
 import { BullModule } from '@nestjs/bullmq'
 import { Module } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import type { IYupanaOutboxRepository } from '@shared/yupana/domain/ports'
+import { YUPANA_OUTBOX_REPOSITORY } from '@shared/yupana/domain/ports'
 import { MailService } from './application/services/mail.service'
 import { MAILER, TEMPLATE_RENDERER } from './domain/ports'
 import { CloudflareApiMailerAdapter } from './infrastructure/adapters/cloudflare-api-mailer.adapter'
@@ -16,16 +18,16 @@ import { HtmlTemplateRenderer } from './infrastructure/renderers/html-template.r
     EmailDeliveryProcessor,
     {
       provide: MAILER,
-      useFactory: (config: ConfigService) => {
+      useFactory: (config: ConfigService, yupanaOutbox: IYupanaOutboxRepository) => {
         const transport = config.get<string>('mail.transport', 'api')
         const redirectTo = config.get<string>('mail.redirectTo', '')
         const transportAdapter =
           transport === 'smtp'
             ? new SmtpMailerAdapter(config)
-            : new CloudflareApiMailerAdapter(config)
+            : new CloudflareApiMailerAdapter(config, yupanaOutbox)
         return new MailRedirectDecorator(transportAdapter, redirectTo)
       },
-      inject: [ConfigService],
+      inject: [ConfigService, YUPANA_OUTBOX_REPOSITORY],
     },
     { provide: TEMPLATE_RENDERER, useClass: HtmlTemplateRenderer },
   ],
