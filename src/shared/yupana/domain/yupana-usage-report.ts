@@ -16,6 +16,7 @@ interface UnitReportInput {
 
 export class YupanaUsageReport {
   static readonly SCHEMA_VERSION = 2
+  static readonly ATTRIBUTION_SCHEMA_VERSION = 3
   static readonly MODAL_CALL_ID_PATTERN = /^fc-[0-9A-HJKMNP-TV-Z]{26}$/
   static readonly ITEM_KEY_MAX_LENGTH = 120
 
@@ -39,6 +40,7 @@ export class YupanaUsageReport {
   }
 
   static voyagePixels(input: {
+    reportId?: string
     photoId: string
     eventId: string
     imagePixels: number | null
@@ -47,6 +49,7 @@ export class YupanaUsageReport {
     const pixels = input.imagePixels
     const observed = pixels !== null && pixels >= 0
     return YupanaUsageReport.unit({
+      reportId: input.reportId,
       photoId: input.photoId,
       provider: 'voyage',
       meter: 'embedding.image_pixels',
@@ -59,6 +62,7 @@ export class YupanaUsageReport {
   }
 
   static modalCall(input: {
+    reportId?: string
     photoId: string
     eventId: string
     callId: string
@@ -66,6 +70,7 @@ export class YupanaUsageReport {
   }): YupanaOutboxEntry | null {
     if (!YupanaUsageReport.MODAL_CALL_ID_PATTERN.test(input.callId)) return null
     return YupanaUsageReport.unit({
+      reportId: input.reportId,
       photoId: input.photoId,
       provider: 'modal',
       meter: 'gpu.function_call',
@@ -79,6 +84,37 @@ export class YupanaUsageReport {
       },
       occurredAt: input.occurredAt,
     })
+  }
+
+  static modalAttribution(input: {
+    reportId: string
+    containerId: string
+    activity: 'stage' | 'request'
+    startedAt: Date
+    endedAt: Date
+    served: string[]
+  }): YupanaOutboxEntry {
+    return {
+      kind: YupanaOutboxKind.usage_report,
+      itemKey: input.reportId,
+      photoId: null,
+      payload: {
+        report_id: input.reportId,
+        schema_version: YupanaUsageReport.ATTRIBUTION_SCHEMA_VERSION,
+        occurred_at: input.startedAt.toISOString(),
+        provider: 'modal',
+        kind: 'attribution',
+        measurement_status: 'complete',
+        payload: {
+          meter: 'gpu.container_seconds',
+          activity: input.activity,
+          container_id: input.containerId,
+          started_at: input.startedAt.toISOString(),
+          ended_at: input.endedAt.toISOString(),
+          served: input.served,
+        },
+      },
+    }
   }
 
   static cdnTransformations(input: {
