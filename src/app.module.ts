@@ -12,6 +12,7 @@ import configuration from './config/configuration'
 import { validate } from './config/env.validation'
 import { AuthModule } from './modules/auth/auth.module'
 import { JwtAuthGuard } from './modules/auth/infrastructure/guards/jwt-auth.guard'
+import { BillingModule } from './modules/billing/billing.module'
 import { CartModule } from './modules/cart/cart.module'
 import { ClassificationsModule } from './modules/classifications/classifications.module'
 import { ContractsModule } from './modules/contracts/contracts.module'
@@ -42,6 +43,7 @@ import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
 import { PaymentGatewaysModule } from './shared/payment-gateways'
+import { RikuchiyModule } from './shared/rikuchiy/rikuchiy.module'
 import { StorageModule } from './shared/storage/storage.module'
 import { YupanaModule } from './shared/yupana/yupana.module'
 
@@ -96,6 +98,7 @@ import { YupanaModule } from './shared/yupana/yupana.module'
     EmbeddingsModule,
     AiPipelineModule,
     YupanaModule,
+    RikuchiyModule,
     CartModule,
     ClassificationsModule,
     ContractsModule,
@@ -116,6 +119,7 @@ import { YupanaModule } from './shared/yupana/yupana.module'
     PreviewsModule,
     TenantsModule,
     UsersModule,
+    BillingModule,
     AuthModule,
   ],
   controllers: [AppController],

@@ -200,6 +200,19 @@ export class EnvironmentVariables {
   @IsNumber()
   YUPANA_TIMEOUT_MS?: number
 
+  // Rikuchiy
+  @IsOptional()
+  @IsString()
+  RIKUCHIY_BASE_URL?: string
+
+  @IsOptional()
+  @IsString()
+  RIKUCHIY_SERVICE_KEY?: string
+
+  @IsOptional()
+  @IsNumber()
+  RIKUCHIY_TIMEOUT_MS?: number
+
   // Payphone
   @IsEnum(['test', 'production'])
   PAYPHONE_ENVIRONMENT: string

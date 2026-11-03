@@ -31,13 +31,18 @@ describe('ConfirmOrderPaymentHandler', () => {
     const notifications = { emitOrderPaid: jest.fn() } as unknown as jest.Mocked<
       Pick<NotificationsService, 'emitOrderPaid'>
     >
+    const fakeTx = { fakeTx: true }
+    const prisma = { $transaction: jest.fn(async (work: (tx: unknown) => unknown) => work(fakeTx)) }
+    const invoiceRequester = { request: jest.fn(), withdraw: jest.fn() }
     const handler = new ConfirmOrderPaymentHandler(
       writeRepo as never,
       readRepo as never,
       authz,
       notifications as never,
+      prisma as never,
+      invoiceRequester as never,
     )
-    return { readRepo, writeRepo, authz, notifications, handler }
+    return { readRepo, writeRepo, authz, notifications, handler, fakeTx, invoiceRequester }
   }
 
   it('throws when the order does not exist', async () => {
@@ -69,7 +74,7 @@ describe('ConfirmOrderPaymentHandler', () => {
   })
 
   it('confirms payment, persists the order, and re-fetches detail with the same scope', async () => {
-    const { readRepo, writeRepo, authz, handler } = buildHandler()
+    const { readRepo, writeRepo, authz, handler, fakeTx, invoiceRequester } = buildHandler()
     const order = buildPendingOrder()
     readRepo.findByIdInScope.mockResolvedValue(order)
     writeRepo.save.mockResolvedValue(order)
@@ -78,7 +83,8 @@ describe('ConfirmOrderPaymentHandler', () => {
 
     expect(authz.assert).toHaveBeenCalledWith('admin-1', 'order.confirm_payment', 'event-1')
     expect(order.status).toBe('paid')
-    expect(writeRepo.save).toHaveBeenCalledWith(order)
+    expect(writeRepo.save).toHaveBeenCalledWith(order, fakeTx)
+    expect(invoiceRequester.request).toHaveBeenCalledWith(order.id, fakeTx)
     expect(readRepo.getDetail).toHaveBeenCalledWith(order.id, unrestrictedScope)
     expect(result).toEqual({ id: order.id })
   })

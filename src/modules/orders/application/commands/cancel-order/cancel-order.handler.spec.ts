@@ -22,6 +22,8 @@ describe('CancelOrderHandler', () => {
   let writeRepo: { save: jest.Mock }
   let authz: jest.Mocked<IAuthorizationService>
   let handler: CancelOrderHandler
+  const fakeTx = { fakeTx: true }
+  let invoiceRequester: { request: jest.Mock; withdraw: jest.Mock }
 
   beforeEach(() => {
     readRepo = { findByIdInScope: jest.fn() }
@@ -31,7 +33,15 @@ describe('CancelOrderHandler', () => {
       assert: jest.fn().mockResolvedValue(undefined),
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as jest.Mocked<IAuthorizationService>
-    handler = new CancelOrderHandler(writeRepo as never, readRepo as never, authz)
+    const prisma = { $transaction: jest.fn(async (work: (tx: unknown) => unknown) => work(fakeTx)) }
+    invoiceRequester = { request: jest.fn(), withdraw: jest.fn() }
+    handler = new CancelOrderHandler(
+      writeRepo as never,
+      readRepo as never,
+      authz,
+      prisma as never,
+      invoiceRequester as never,
+    )
   })
 
   it('throws NOT_FOUND when the order does not exist', async () => {
@@ -75,7 +85,8 @@ describe('CancelOrderHandler', () => {
 
     expect(authz.assert).toHaveBeenCalledWith('user-1', 'order.cancel', 'event-1')
     expect(order.status).toBe('cancelled')
-    expect(writeRepo.save).toHaveBeenCalledWith(order)
+    expect(writeRepo.save).toHaveBeenCalledWith(order, fakeTx)
+    expect(invoiceRequester.withdraw).toHaveBeenCalledWith(order.id, fakeTx)
     expect(result).toEqual({ id: order.id })
   })
 })

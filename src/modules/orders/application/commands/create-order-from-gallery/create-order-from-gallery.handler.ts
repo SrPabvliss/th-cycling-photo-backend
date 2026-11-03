@@ -61,6 +61,14 @@ export class CreateOrderFromGalleryHandler
       snapProvinceId: snapData.provinceId,
       snapCantonId: snapData.cantonId,
       snapCategoryName: command.snapCategoryName,
+      snapBillingAccountId: null,
+      snapBillingIdType: null,
+      snapBillingIdNumber: null,
+      snapBillingLegalName: null,
+      snapBillingEmail: null,
+      snapBillingAddress: null,
+      snapInvoiceConsentAt: null,
+      snapInvoiceConsentIp: null,
     })
 
     // 5. Save order items (photo associations)

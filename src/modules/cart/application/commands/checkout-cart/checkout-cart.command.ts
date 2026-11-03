@@ -11,5 +11,6 @@ export class CheckoutCartCommand {
     public readonly userId: string,
     public readonly items: CheckoutCartItem[],
     public readonly method: PaymentMethodType,
+    public readonly billingAccountId: string,
   ) {}
 }

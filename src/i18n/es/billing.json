@@ -1,0 +1,8 @@
+{
+  "identification_malformed": "El número de identificación no tiene el formato correcto",
+  "identification_invalid": "El número de identificación no es válido",
+  "legal_name_invalid": "Escribe el nombre o la razón social en una sola línea",
+  "address_invalid": "Escribe la dirección en una sola línea",
+  "account_not_found": "Elige una cuenta de facturación antes de continuar",
+  "invoice_consent_required": "Acepta recibir tu factura electrónica antes de continuar"
+}

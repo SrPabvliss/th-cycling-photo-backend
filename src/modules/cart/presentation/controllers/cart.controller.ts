@@ -142,6 +142,7 @@ export class CartController {
         snapCategoryName: i.snapCategoryName ?? null,
       })),
       dto.method,
+      dto.billingAccountId,
     )
     return this.commandBus.execute(command)
   }

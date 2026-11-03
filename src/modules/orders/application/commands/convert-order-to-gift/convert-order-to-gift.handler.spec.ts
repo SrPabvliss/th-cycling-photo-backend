@@ -29,8 +29,17 @@ describe('ConvertOrderToGiftHandler', () => {
       assert: jest.fn().mockResolvedValue(undefined),
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as unknown as jest.Mocked<IAuthorizationService>
-    const handler = new ConvertOrderToGiftHandler(writeRepo as never, readRepo as never, authz)
-    return { readRepo, writeRepo, authz, handler }
+    const fakeTx = { fakeTx: true }
+    const prisma = { $transaction: jest.fn(async (work: (tx: unknown) => unknown) => work(fakeTx)) }
+    const invoiceRequester = { request: jest.fn(), withdraw: jest.fn() }
+    const handler = new ConvertOrderToGiftHandler(
+      writeRepo as never,
+      readRepo as never,
+      authz,
+      prisma as never,
+      invoiceRequester as never,
+    )
+    return { readRepo, writeRepo, authz, handler, fakeTx, invoiceRequester }
   }
 
   it('throws when the order does not exist', async () => {
@@ -62,7 +71,7 @@ describe('ConvertOrderToGiftHandler', () => {
   })
 
   it('converts the order and saves it', async () => {
-    const { readRepo, writeRepo, authz, handler } = buildHandler()
+    const { readRepo, writeRepo, authz, handler, fakeTx, invoiceRequester } = buildHandler()
     const order = buildPaidOrder()
     readRepo.findByIdInScope.mockResolvedValue(order)
     writeRepo.save.mockResolvedValue(order)
@@ -72,7 +81,8 @@ describe('ConvertOrderToGiftHandler', () => {
     expect(authz.assert).toHaveBeenCalledWith('admin-1', 'order.convert_to_gift', 'event-1')
     expect(order.status).toBe('gifted')
     expect(order.paidAt).toBeNull()
-    expect(writeRepo.save).toHaveBeenCalledWith(order)
+    expect(writeRepo.save).toHaveBeenCalledWith(order, fakeTx)
+    expect(invoiceRequester.withdraw).toHaveBeenCalledWith(order.id, fakeTx)
     expect(result).toEqual({ id: order.id })
   })
 })

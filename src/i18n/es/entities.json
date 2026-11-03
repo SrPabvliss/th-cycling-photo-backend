@@ -31,5 +31,6 @@
   "payoutMethod": "Método de cobro",
   "tenant": "Tenant",
   "tenant_contract": "Contrato de organizador",
-  "payout_method": "Método de cobro"
+  "payout_method": "Método de cobro",
+  "billing_account": "Cuenta de facturación"
 }

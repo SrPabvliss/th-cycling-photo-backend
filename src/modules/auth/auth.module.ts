@@ -98,6 +98,6 @@ const QueryHandlers = [GetMeHandler, GetEmailVerificationStatusHandler]
     { provide: USER_PROMPT_SNOOZE_REPOSITORY, useClass: UserPromptSnoozeRepository },
     EmailVerificationSendGuard,
   ],
-  exports: [JwtAuthGuard, JwtModule, AUTH_USER_REPOSITORY],
+  exports: [JwtAuthGuard, JwtModule, AUTH_USER_REPOSITORY, CONSENT_REPOSITORY],
 })
 export class AuthModule {}

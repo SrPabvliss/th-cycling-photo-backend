@@ -12,6 +12,11 @@ import {
   type IAuthorizationService,
 } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
+import {
+  type IInvoiceRequester,
+  RIKUCHIY_INVOICE_REQUESTER,
+} from '@shared/rikuchiy/domain/ports/invoice-requester.port'
 import { ConvertOrderToGiftCommand } from './convert-order-to-gift.command'
 
 @CommandHandler(ConvertOrderToGiftCommand)
@@ -23,6 +28,8 @@ export class ConvertOrderToGiftHandler implements ICommandHandler<ConvertOrderTo
     private readonly readRepo: IOrderReadRepository,
     @Inject(AUTHORIZATION_SERVICE)
     private readonly authz: IAuthorizationService,
+    private readonly prisma: PrismaService,
+    @Inject(RIKUCHIY_INVOICE_REQUESTER) private readonly invoiceRequester: IInvoiceRequester,
   ) {}
 
   async execute(command: ConvertOrderToGiftCommand): Promise<EntityIdProjection> {
@@ -32,7 +39,10 @@ export class ConvertOrderToGiftHandler implements ICommandHandler<ConvertOrderTo
     await this.authz.assert(command.audit.userId, 'order.convert_to_gift', order.eventId)
 
     order.convertToGift(command.audit.userId)
-    await this.writeRepo.save(order)
+    await this.prisma.$transaction(async (tx) => {
+      await this.writeRepo.save(order, tx)
+      await this.invoiceRequester.withdraw(order.id, tx)
+    })
 
     return { id: order.id }
   }
