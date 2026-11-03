@@ -17,6 +17,8 @@ export default () => {
   const { YUPANA_BASE_URL, YUPANA_PRODUCER_KEY, YUPANA_SERVICE_KEY, YUPANA_TIMEOUT_MS } =
     process.env
 
+  const { RIKUCHIY_BASE_URL, RIKUCHIY_SERVICE_KEY, RIKUCHIY_TIMEOUT_MS } = process.env
+
   const {
     PAYPHONE_ENVIRONMENT,
     PAYPHONE_TOKEN,
@@ -145,6 +147,11 @@ export default () => {
       producerKey: YUPANA_PRODUCER_KEY || '',
       serviceKey: YUPANA_SERVICE_KEY || '',
       timeoutMs: Number.parseInt(YUPANA_TIMEOUT_MS || '5000', 10),
+    },
+    rikuchiy: {
+      baseUrl: RIKUCHIY_BASE_URL || '',
+      serviceKey: RIKUCHIY_SERVICE_KEY || '',
+      timeoutMs: Number.parseInt(RIKUCHIY_TIMEOUT_MS || '5000', 10),
     },
     payphone: {
       environment: PAYPHONE_ENVIRONMENT,

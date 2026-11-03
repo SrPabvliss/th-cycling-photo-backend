@@ -7,6 +7,19 @@ import { CheckoutCartHandler } from './checkout-cart.handler'
 const BUYER = 'buyer-1'
 const EVENT = 'event-1'
 const CART_ID = 'cart-1'
+const BILLING_ACCOUNT_ID = 'billing-account-1'
+const CONSENT_AT = new Date('2026-11-03T15:00:00Z')
+
+const billingAccount = {
+  id: BILLING_ACCOUNT_ID,
+  userId: BUYER,
+  idType: 'ruc',
+  idNumber: '1790012345001',
+  legalName: 'Ciclismo Andes S.A.',
+  email: 'contabilidad@andes.ec',
+  address: 'Av. Amazonas, Quito',
+  isDefault: true,
+}
 
 function buildExistingDraft(): Order {
   const order = Order.createDraft({
@@ -40,9 +53,12 @@ function buildHandler(
     openDraft?: Order | null
     cartEvents?: typeof DEFAULT_CART_EVENTS
     remainingItemCount?: number
+    billingAccount?: typeof billingAccount | null
+    consent?: { acceptedAt: Date; ip: string | null } | null
   } = {},
 ) {
   const savedOrders: Order[] = []
+  const savedSnaps: unknown[] = []
   const notifications = { emitOrderCreated: jest.fn() }
 
   const cartReadRepo = {
@@ -67,10 +83,14 @@ function buildHandler(
     async (
       _userId: string,
       _eventId: string,
-      build: (existing: Order | null, tx: unknown) => Promise<{ order: Order; items: unknown[] }>,
+      build: (
+        existing: Order | null,
+        tx: unknown,
+      ) => Promise<{ order: Order; items: unknown[]; snap: unknown }>,
     ) => {
       const existing = options.openDraft ?? null
-      const { order, items } = await build(existing, fakeTx)
+      const { order, items, snap } = await build(existing, fakeTx)
+      savedSnaps.push(snap)
       await replaceItems(order.id, items)
       savedOrders.push(order)
       return order
@@ -97,6 +117,24 @@ function buildHandler(
     expireOpenByOrderId: jest.fn((_orderId: string, _tx?: unknown) => Promise.resolve()),
   }
 
+  const billingAccountRepository = {
+    findActiveById: jest.fn(() =>
+      Promise.resolve(
+        options.billingAccount === undefined ? billingAccount : options.billingAccount,
+      ),
+    ),
+  }
+
+  const consentRepository = {
+    findActive: jest.fn(() =>
+      Promise.resolve(
+        options.consent === undefined
+          ? { acceptedAt: CONSENT_AT, ip: '190.1.1.1' }
+          : options.consent,
+      ),
+    ),
+  }
+
   const handler = new CheckoutCartHandler(
     cartReadRepo as never,
     cartWriteRepo as never,
@@ -104,11 +142,15 @@ function buildHandler(
     authUserRepo as never,
     transactionWriteRepo as never,
     notifications as never,
+    billingAccountRepository as never,
+    consentRepository as never,
   )
 
   return {
     handler,
     savedOrders,
+    savedSnaps,
+    billingAccountRepository,
     notifications,
     cartReadRepo,
     cartWriteRepo,
@@ -119,6 +161,60 @@ function buildHandler(
 }
 
 describe('CheckoutCartHandler', () => {
+  const transferCheckout = () =>
+    new CheckoutCartCommand(
+      BUYER,
+      [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
+      'transfer',
+      BILLING_ACCOUNT_ID,
+    )
+
+  const messageKeyOf = async (promise: Promise<unknown>) =>
+    promise.then(
+      () => 'no error',
+      (error: { messageKey?: string }) => error.messageKey,
+    )
+
+  it('refuses a billing account that is not the buyer active one', async () => {
+    const { handler, orderWriteRepo, billingAccountRepository } = buildHandler({
+      billingAccount: null,
+    })
+
+    expect(await messageKeyOf(handler.execute(transferCheckout()))).toBe(
+      'billing.account_not_found',
+    )
+    expect(billingAccountRepository.findActiveById).toHaveBeenCalledWith(BILLING_ACCOUNT_ID, BUYER)
+    expect(orderWriteRepo.lockAndUpsertDraft).not.toHaveBeenCalled()
+  })
+
+  it('refuses a buyer without the electronic invoice consent', async () => {
+    const { handler, orderWriteRepo } = buildHandler({ consent: null })
+
+    expect(await messageKeyOf(handler.execute(transferCheckout()))).toBe(
+      'billing.invoice_consent_required',
+    )
+    expect(orderWriteRepo.lockAndUpsertDraft).not.toHaveBeenCalled()
+  })
+
+  it('freezes the billing account and the consent on the order', async () => {
+    const { handler, savedSnaps } = buildHandler()
+
+    await handler.execute(transferCheckout())
+
+    expect(savedSnaps[0]).toEqual(
+      expect.objectContaining({
+        snapBillingAccountId: BILLING_ACCOUNT_ID,
+        snapBillingIdType: 'ruc',
+        snapBillingIdNumber: '1790012345001',
+        snapBillingLegalName: 'Ciclismo Andes S.A.',
+        snapBillingEmail: 'contabilidad@andes.ec',
+        snapBillingAddress: 'Av. Amazonas, Quito',
+        snapInvoiceConsentAt: CONSENT_AT,
+        snapInvoiceConsentIp: '190.1.1.1',
+      }),
+    )
+  })
+
   it('creates pending orders and notifies the operator when the buyer picks transfer', async () => {
     const { handler, savedOrders, notifications } = buildHandler()
 
@@ -127,6 +223,7 @@ describe('CheckoutCartHandler', () => {
         BUYER,
         [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
         'transfer',
+        BILLING_ACCOUNT_ID,
       ),
     )
 
@@ -143,6 +240,7 @@ describe('CheckoutCartHandler', () => {
         BUYER,
         [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
         'transfer',
+        BILLING_ACCOUNT_ID,
       ),
     )
 
@@ -157,6 +255,7 @@ describe('CheckoutCartHandler', () => {
         BUYER,
         [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
         'card',
+        BILLING_ACCOUNT_ID,
       ),
     )
 
@@ -173,6 +272,7 @@ describe('CheckoutCartHandler', () => {
         BUYER,
         [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
         'card',
+        BILLING_ACCOUNT_ID,
       ),
     )
 
@@ -188,6 +288,7 @@ describe('CheckoutCartHandler', () => {
         BUYER,
         [{ eventId: EVENT, bibNumber: 'NEW-7', snapCategoryName: null }],
         'card',
+        BILLING_ACCOUNT_ID,
       ),
     )
 
@@ -211,6 +312,7 @@ describe('CheckoutCartHandler', () => {
         BUYER,
         [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
         'card',
+        BILLING_ACCOUNT_ID,
       ),
     )
 
@@ -231,6 +333,7 @@ describe('CheckoutCartHandler', () => {
         BUYER,
         [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
         'transfer',
+        BILLING_ACCOUNT_ID,
       ),
     )
 
@@ -251,6 +354,7 @@ describe('CheckoutCartHandler', () => {
         BUYER,
         [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
         'card',
+        BILLING_ACCOUNT_ID,
       ),
     )
 
@@ -270,6 +374,7 @@ describe('CheckoutCartHandler', () => {
           ],
           PaymentMethod.CARD,
         ),
+        BILLING_ACCOUNT_ID,
       ),
     ).rejects.toMatchObject({ messageKey: 'cart.single_event_only' })
   })
@@ -285,6 +390,7 @@ describe('CheckoutCartHandler', () => {
         BUYER,
         [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
         PaymentMethod.TRANSFER,
+        BILLING_ACCOUNT_ID,
       ),
     )
 
@@ -300,6 +406,7 @@ describe('CheckoutCartHandler', () => {
         BUYER,
         [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
         PaymentMethod.TRANSFER,
+        BILLING_ACCOUNT_ID,
       ),
     )
 

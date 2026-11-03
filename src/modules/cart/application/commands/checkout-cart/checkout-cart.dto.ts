@@ -46,4 +46,8 @@ export class CheckoutCartDto {
   @ApiProperty({ enum: Object.values(PaymentMethod) })
   @IsIn(Object.values(PaymentMethod))
   method: PaymentMethodType
+
+  @ApiProperty({ description: 'Billing account the invoice is issued to', format: 'uuid' })
+  @IsUUID('4')
+  billingAccountId: string
 }

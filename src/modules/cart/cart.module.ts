@@ -1,4 +1,5 @@
 import { AuthModule } from '@auth/auth.module'
+import { BillingModule } from '@billing/billing.module'
 import { AddToCartHandler } from '@cart/application/commands/add-to-cart/add-to-cart.handler'
 import { CheckoutCartHandler } from '@cart/application/commands/checkout-cart/checkout-cart.handler'
 import { MergeCartHandler } from '@cart/application/commands/merge-cart/merge-cart.handler'
@@ -29,6 +30,7 @@ const QueryHandlers = [GetCartHandler]
   imports: [
     CqrsModule,
     forwardRef(() => AuthModule),
+    BillingModule,
     forwardRef(() => OrdersModule),
     forwardRef(() => PhotosModule),
     PaymentsModule,

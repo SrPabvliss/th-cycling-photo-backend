@@ -9,4 +9,12 @@ describe('consent.constants', () => {
   it('does not force the tenant terms on everyone', () => {
     expect(REQUIRED_CONSENT_TYPES).not.toContain(CONSENT_TYPE.TERMS_TENANT)
   })
+
+  it('versions the electronic invoice consent on its own', () => {
+    expect(POLICY_VERSIONS[CONSENT_TYPE.ELECTRONIC_INVOICE]).toBe('2026-11-02')
+  })
+
+  it('does not ask every user for the electronic invoice consent at login', () => {
+    expect(REQUIRED_CONSENT_TYPES).not.toContain(CONSENT_TYPE.ELECTRONIC_INVOICE)
+  })
 })

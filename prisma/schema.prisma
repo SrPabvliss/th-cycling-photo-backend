@@ -283,6 +283,7 @@ model User {
   phones                   UserPhone[]
   customer_profile         CustomerProfile?
   consents                 UserConsent[]
+  billing_accounts         BillingAccount[]
   prompt_snoozes           UserPromptSnooze[]
 
   events_created            Event[]               @relation("EventCreatedBy")
@@ -401,23 +402,23 @@ model UserPromptSnooze {
 }
 
 model Event {
-  id             String      @id @default(uuid()) @db.Uuid
-  name           String      @db.VarChar(200)
-  slug           String      @unique @db.VarChar(250)
-  start_date     DateTime    @db.Date
-  end_date       DateTime    @db.Date
-  event_type_id  Int
-  province_id    Int?
-  canton_id      Int?
-  status         EventStatus @default(active)
+  id              String      @id @default(uuid()) @db.Uuid
+  name            String      @db.VarChar(200)
+  slug            String      @unique @db.VarChar(250)
+  start_date      DateTime    @db.Date
+  end_date        DateTime    @db.Date
+  event_type_id   Int
+  province_id     Int?
+  canton_id       Int?
+  status          EventStatus @default(active)
   photo_quota     Int?
-  photos_uploaded Int @default(0)
-  is_frozen Boolean   @default(false)
-  frozen_at DateTime? @db.Timestamptz
-  pricing_config Json?
-  created_at     DateTime    @default(now()) @db.Timestamptz
-  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz
-  deleted_at     DateTime?   @db.Timestamptz
+  photos_uploaded Int         @default(0)
+  is_frozen       Boolean     @default(false)
+  frozen_at       DateTime?   @db.Timestamptz
+  pricing_config  Json?
+  created_at      DateTime    @default(now()) @db.Timestamptz
+  updated_at      DateTime    @default(now()) @updatedAt @db.Timestamptz
+  deleted_at      DateTime?   @db.Timestamptz
 
   created_by_id String? @db.Uuid
   updated_by_id String? @db.Uuid
@@ -481,11 +482,11 @@ model Photo {
   retouched_file_size   BigInt?
   retouched_at          DateTime? @db.Timestamptz
 
-  captured_at  DateTime? @db.Timestamptz
-  uploaded_at  DateTime  @default(now()) @db.Timestamptz
-  processed_at DateTime? @db.Timestamptz
+  captured_at           DateTime? @db.Timestamptz
+  uploaded_at           DateTime  @default(now()) @db.Timestamptz
+  processed_at          DateTime? @db.Timestamptz
   processing_started_at DateTime? @db.Timestamptz
-  reviewed_at  DateTime? @db.Timestamptz
+  reviewed_at           DateTime? @db.Timestamptz
 
   embedding Unsupported("vector(1024)")?
 
@@ -696,41 +697,51 @@ model PreviewLinkPhoto {
 }
 
 model Order {
-  id                  String         @id @default(uuid()) @db.Uuid
-  preview_link_id     String?        @db.Uuid
-  event_id            String         @db.Uuid
-  user_id             String         @db.Uuid
-  status              OrderStatus    @default(pending)
-  payment_method      PaymentMethod? @map("payment_method")
-  bib_number          String?        @db.VarChar(20)
-  subtotal            Decimal?       @db.Decimal(10, 2)
-  snap_currency       String?        @db.VarChar(3)
-  snap_pricing_config Json?
-  notes               String?        @db.Text
-  snap_first_name     String?        @db.VarChar(100)
-  snap_last_name      String?        @db.VarChar(100)
-  snap_email          String?        @db.VarChar(255)
-  snap_phone          String?        @db.VarChar(20)
-  snap_country_id     Int?
-  snap_province_id    Int?
-  snap_canton_id      Int?
-  snap_category_name  String?        @db.VarChar(100)
-  created_at          DateTime       @default(now()) @db.Timestamptz
-  notified_at         DateTime?      @db.Timestamptz
-  paid_at             DateTime?      @db.Timestamptz
-  delivered_at        DateTime?      @db.Timestamptz
-  cancelled_at        DateTime?      @db.Timestamptz
-  notified_by_id      String?        @db.Uuid
-  confirmed_by_id     String?        @db.Uuid
+  id                      String         @id @default(uuid()) @db.Uuid
+  preview_link_id         String?        @db.Uuid
+  event_id                String         @db.Uuid
+  user_id                 String         @db.Uuid
+  status                  OrderStatus    @default(pending)
+  payment_method          PaymentMethod? @map("payment_method")
+  bib_number              String?        @db.VarChar(20)
+  subtotal                Decimal?       @db.Decimal(10, 2)
+  snap_currency           String?        @db.VarChar(3)
+  snap_pricing_config     Json?
+  notes                   String?        @db.Text
+  snap_first_name         String?        @db.VarChar(100)
+  snap_last_name          String?        @db.VarChar(100)
+  snap_email              String?        @db.VarChar(255)
+  snap_phone              String?        @db.VarChar(20)
+  snap_country_id         Int?
+  snap_province_id        Int?
+  snap_canton_id          Int?
+  snap_category_name      String?        @db.VarChar(100)
+  snap_billing_account_id String?        @db.Uuid
+  snap_billing_id_type    BillingIdType?
+  snap_billing_id_number  String?        @db.VarChar(20)
+  snap_billing_legal_name String?        @db.VarChar(300)
+  snap_billing_email      String?        @db.VarChar(255)
+  snap_billing_address    String?        @db.VarChar(300)
+  snap_invoice_consent_at DateTime?      @db.Timestamptz
+  snap_invoice_consent_ip String?        @db.VarChar(45)
+  created_at              DateTime       @default(now()) @db.Timestamptz
+  notified_at             DateTime?      @db.Timestamptz
+  paid_at                 DateTime?      @db.Timestamptz
+  delivered_at            DateTime?      @db.Timestamptz
+  cancelled_at            DateTime?      @db.Timestamptz
+  notified_by_id          String?        @db.Uuid
+  confirmed_by_id         String?        @db.Uuid
 
   preview_link               PreviewLink?              @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
   event                      Event                     @relation(fields: [event_id], references: [id], onDelete: Restrict)
   user                       User                      @relation("OrderUser", fields: [user_id], references: [id], onDelete: Restrict)
   notified_by                User?                     @relation("OrderNotifiedBy", fields: [notified_by_id], references: [id], onDelete: Restrict)
   confirmed_by               User?                     @relation("OrderConfirmedBy", fields: [confirmed_by_id], references: [id], onDelete: Restrict)
+  billing_account            BillingAccount?           @relation(fields: [snap_billing_account_id], references: [id], onDelete: Restrict)
   items                      OrderItem[]
   delivery_link              DeliveryLink?
   payment_transaction_orders PaymentTransactionOrder[]
+  rikuchiy_outbox_items      RikuchiyOutboxItem[]
 
   @@index([preview_link_id])
   @@index([event_id])
@@ -844,20 +855,49 @@ model UserPhone {
 }
 
 model UserConsent {
-  id             String   @id @default(uuid()) @db.Uuid
-  user_id        String   @db.Uuid
-  type           String   @db.VarChar(40)
-  policy_version String   @db.VarChar(20)
-  accepted_at    DateTime @default(now()) @db.Timestamptz
-  ip             String?  @db.VarChar(45)
-  user_agent     String?  @db.VarChar(500)
-  created_at     DateTime @default(now()) @db.Timestamptz
+  id             String    @id @default(uuid()) @db.Uuid
+  user_id        String    @db.Uuid
+  type           String    @db.VarChar(40)
+  policy_version String    @db.VarChar(20)
+  accepted_at    DateTime  @default(now()) @db.Timestamptz
+  ip             String?   @db.VarChar(45)
+  user_agent     String?   @db.VarChar(500)
+  created_at     DateTime  @default(now()) @db.Timestamptz
+  revoked_at     DateTime? @db.Timestamptz
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, type, policy_version])
   @@index([user_id])
   @@map("user_consents")
+}
+
+enum BillingIdType {
+  ruc
+  national_id
+  passport
+
+  @@map("billing_id_type")
+}
+
+model BillingAccount {
+  id         String        @id @default(uuid()) @db.Uuid
+  user_id    String        @db.Uuid
+  id_type    BillingIdType
+  id_number  String        @db.VarChar(20)
+  legal_name String        @db.VarChar(300)
+  email      String        @db.VarChar(255)
+  address    String?       @db.VarChar(300)
+  is_default Boolean       @default(false)
+  created_at DateTime      @default(now()) @db.Timestamptz
+  deleted_at DateTime?     @db.Timestamptz
+
+  user   User    @relation(fields: [user_id], references: [id], onDelete: Restrict)
+  orders Order[]
+
+  @@index([user_id])
+  // Unique partial index (user_id) WHERE is_default AND deleted_at IS NULL created via raw SQL
+  @@map("billing_accounts")
 }
 
 model CustomerProfile {
@@ -948,12 +988,12 @@ model Notification {
 // ─── Authorization ──────────────────────────────────────────────────────────
 
 model Tenant {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String   @db.VarChar(200)
-  is_platform Boolean  @default(false)
-  event_quota Int      @default(0)
+  id                        String   @id @default(uuid()) @db.Uuid
+  name                      String   @db.VarChar(200)
+  is_platform               Boolean  @default(false)
+  event_quota               Int      @default(0)
   default_event_photo_quota Int?
-  created_at  DateTime @default(now()) @db.Timestamptz
+  created_at                DateTime @default(now()) @db.Timestamptz
 
   public_name           String?   @db.VarChar(200)
   watermark_storage_key String?   @db.VarChar(500)
@@ -1070,23 +1110,23 @@ enum ContractStatus {
 }
 
 model TenantContract {
-  id               String         @id @default(uuid()) @db.Uuid
-  user_id          String         @db.Uuid
-  tenant_id        String?        @db.Uuid
-  commercial_name  String         @db.VarChar(200)
-  events_total     Int
-  photos_per_event Int?
-  status           ContractStatus @default(pending)
-  token_hash       String         @unique @db.VarChar(64)
-  valid_until      DateTime       @db.Timestamptz
-  terms_version    String         @db.VarChar(20)
-  issued_by_id     String?        @db.Uuid
-  is_backfill      Boolean        @default(false)
-  accepted_at      DateTime?      @db.Timestamptz
-  accepted_ip      String?        @db.VarChar(45)
-  accepted_user_agent String?     @db.VarChar(500)
-  revoked_at       DateTime?      @db.Timestamptz
-  created_at       DateTime       @default(now()) @db.Timestamptz
+  id                  String         @id @default(uuid()) @db.Uuid
+  user_id             String         @db.Uuid
+  tenant_id           String?        @db.Uuid
+  commercial_name     String         @db.VarChar(200)
+  events_total        Int
+  photos_per_event    Int?
+  status              ContractStatus @default(pending)
+  token_hash          String         @unique @db.VarChar(64)
+  valid_until         DateTime       @db.Timestamptz
+  terms_version       String         @db.VarChar(20)
+  issued_by_id        String?        @db.Uuid
+  is_backfill         Boolean        @default(false)
+  accepted_at         DateTime?      @db.Timestamptz
+  accepted_ip         String?        @db.VarChar(45)
+  accepted_user_agent String?        @db.VarChar(500)
+  revoked_at          DateTime?      @db.Timestamptz
+  created_at          DateTime       @default(now()) @db.Timestamptz
 
   user      User    @relation("ContractHolder", fields: [user_id], references: [id], onDelete: Restrict)
   issued_by User?   @relation("ContractIssuer", fields: [issued_by_id], references: [id], onDelete: SetNull)
@@ -1268,4 +1308,40 @@ model CdnTransformationReportDay {
   processed_at     DateTime @default(now()) @db.Timestamptz
 
   @@map("cdn_transformation_report_days")
+}
+
+enum RikuchiyOutboxKind {
+  emit
+
+  @@map("rikuchiy_outbox_kind")
+}
+
+enum RikuchiyOutboxStatus {
+  pending
+  sent
+  rejected
+  suppressed
+
+  @@map("rikuchiy_outbox_status")
+}
+
+model RikuchiyOutboxItem {
+  id               String               @id @default(uuid()) @db.Uuid
+  order_id         String               @db.Uuid
+  kind             RikuchiyOutboxKind
+  emission_id      String               @unique @db.Uuid
+  payload          Json
+  status           RikuchiyOutboxStatus @default(pending)
+  attempts         Int                  @default(0)
+  last_error       String?              @db.Text
+  rejection_reason String?              @db.VarChar(300)
+  tax_document_id  String?              @db.Uuid
+  created_at       DateTime             @default(now()) @db.Timestamptz
+  sent_at          DateTime?            @db.Timestamptz
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Restrict)
+
+  @@unique([order_id, kind])
+  @@index([status, created_at], map: "idx_rikuchiy_outbox_items_pending")
+  @@map("rikuchiy_outbox_items")
 }

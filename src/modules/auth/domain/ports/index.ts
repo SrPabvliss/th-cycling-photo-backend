@@ -3,6 +3,7 @@ export {
   type IAuthUserRepository,
 } from './auth-user-repository.port'
 export {
+  type ActiveConsent,
   CONSENT_REPOSITORY,
   type IConsentRepository,
 } from './consent-repository.port'

@@ -1,0 +1,8 @@
+{
+  "identification_malformed": "The identification number is not well formed",
+  "identification_invalid": "The identification number is not valid",
+  "legal_name_invalid": "Write the name or legal name on a single line",
+  "address_invalid": "Write the address on a single line",
+  "account_not_found": "Choose a billing account before continuing",
+  "invoice_consent_required": "Accept to receive your electronic invoice before continuing"
+}

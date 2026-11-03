@@ -31,5 +31,6 @@
   "payoutMethod": "Payout method",
   "tenant": "Tenant",
   "tenant_contract": "Organizer contract",
-  "payout_method": "Payout method"
+  "payout_method": "Payout method",
+  "billing_account": "Billing account"
 }

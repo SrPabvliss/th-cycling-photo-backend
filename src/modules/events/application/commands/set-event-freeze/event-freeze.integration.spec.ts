@@ -1,5 +1,9 @@
-import { AUTH_USER_REPOSITORY } from '@auth/domain/ports'
+import { CONSENT_TYPE, POLICY_VERSIONS } from '@auth/domain/constants/consent.constants'
+import { AUTH_USER_REPOSITORY, CONSENT_REPOSITORY } from '@auth/domain/ports'
 import { AuthUserRepository } from '@auth/infrastructure/repositories/auth-user.repository'
+import { ConsentRepository } from '@auth/infrastructure/repositories/consent.repository'
+import { BILLING_ACCOUNT_REPOSITORY } from '@billing/domain/ports'
+import { BillingAccountRepository } from '@billing/infrastructure/repositories/billing-account.repository'
 import { CheckoutCartCommand } from '@cart/application/commands/checkout-cart/checkout-cart.command'
 import { CheckoutCartHandler } from '@cart/application/commands/checkout-cart/checkout-cart.handler'
 import { CART_READ_REPOSITORY, CART_WRITE_REPOSITORY } from '@cart/domain/ports'
@@ -53,8 +57,10 @@ import { AUTHORIZATION_SERVICE } from '@shared/authorization/domain/ports/author
 import { KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
+import { RIKUCHIY_INVOICE_REQUESTER } from '@shared/rikuchiy/domain/ports'
 import { STORAGE_ADAPTER } from '@shared/storage/domain/ports'
-import { YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
+import { CDN_RETIRED_SLUG_REPOSITORY, YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
+import { CdnRetiredSlugRepository } from '@shared/yupana/infrastructure/repositories/cdn-retired-slug.repository'
 import configuration from '../../../../../config/configuration'
 import { validate } from '../../../../../config/env.validation'
 
@@ -64,6 +70,7 @@ describe('event freeze — the gallery/order boundary', () => {
   let createFromGallery: CreateOrderFromGalleryHandler
   let checkoutCart: CheckoutCartHandler
   let confirmPayment: ConfirmOrderPaymentHandler
+  let billingAccountId: string
   let sendDelivery: SendDeliveryHandler
   let confirmBatch: ConfirmPhotoBatchHandler
   let deletePhoto: DeletePhotoHandler
@@ -163,6 +170,13 @@ describe('event freeze — the gallery/order boundary', () => {
         },
         { provide: MailService, useValue: { enqueue: async () => undefined } },
         CreateOrderFromGalleryHandler,
+        { provide: CDN_RETIRED_SLUG_REPOSITORY, useClass: CdnRetiredSlugRepository },
+        { provide: BILLING_ACCOUNT_REPOSITORY, useClass: BillingAccountRepository },
+        { provide: CONSENT_REPOSITORY, useClass: ConsentRepository },
+        {
+          provide: RIKUCHIY_INVOICE_REQUESTER,
+          useValue: { request: async () => undefined, withdraw: async () => undefined },
+        },
         CheckoutCartHandler,
         ConfirmOrderPaymentHandler,
         SendDeliveryHandler,
@@ -211,6 +225,26 @@ describe('event freeze — the gallery/order boundary', () => {
         permission_template_id: tenantTpl.id,
         tenant_id: tenant.id,
         customer_profile: { create: { country_id: country.id } },
+      },
+    })
+    billingAccountId = (
+      await prisma.billingAccount.create({
+        data: {
+          user_id: user.id,
+          id_type: 'national_id',
+          id_number: '1710034065',
+          legal_name: 'Ana Rider',
+          email: user.email,
+          is_default: true,
+        },
+      })
+    ).id
+    await prisma.userConsent.create({
+      data: {
+        user_id: user.id,
+        type: CONSENT_TYPE.ELECTRONIC_INVOICE,
+        policy_version: POLICY_VERSIONS[CONSENT_TYPE.ELECTRONIC_INVOICE],
+        ip: '190.1.1.1',
       },
     })
 
@@ -296,6 +330,7 @@ describe('event freeze — the gallery/order boundary', () => {
             where: { id: { in: txLinks.map((t) => t.payment_transaction_id) } },
           }),
         () => prisma.order.deleteMany({ where: { id: { in: createdOrderIds } } }),
+        () => prisma.billingAccount.deleteMany({ where: { id: billingAccountId } }),
         () =>
           prisma.cart.deleteMany({
             where: { id: { in: [cart?.id].filter(Boolean) as string[] } },
@@ -358,6 +393,7 @@ describe('event freeze — the gallery/order boundary', () => {
         buyer.id,
         [{ eventId: ev.id, bibNumber: null, snapCategoryName: null }],
         PaymentMethod.TRANSFER,
+        billingAccountId,
       ),
     )
     expect(checkout.orders).toHaveLength(1)

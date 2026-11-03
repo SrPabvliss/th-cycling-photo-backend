@@ -11,10 +11,11 @@ export class OrderWriteRepository implements IOrderWriteRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Persists an order entity (create or update). */
-  async save(order: Order): Promise<Order> {
+  async save(order: Order, tx?: Prisma.TransactionClient): Promise<Order> {
     const data = OrderMapper.toPersistence(order)
+    const client = tx ?? this.prisma
 
-    const saved = await this.prisma.order.upsert({
+    const saved = await client.order.upsert({
       where: { id: order.id },
       create: data,
       update: data,
@@ -31,25 +32,11 @@ export class OrderWriteRepository implements IOrderWriteRepository {
       where: { id: order.id },
       create: {
         ...data,
-        snap_first_name: snap.snapFirstName,
-        snap_last_name: snap.snapLastName,
-        snap_email: snap.snapEmail,
-        snap_phone: snap.snapPhone,
-        snap_country_id: snap.snapCountryId,
-        snap_province_id: snap.snapProvinceId,
-        snap_canton_id: snap.snapCantonId,
-        snap_category_name: snap.snapCategoryName,
+        ...OrderWriteRepository.snapColumns(snap),
       },
       update: {
         ...data,
-        snap_first_name: snap.snapFirstName,
-        snap_last_name: snap.snapLastName,
-        snap_email: snap.snapEmail,
-        snap_phone: snap.snapPhone,
-        snap_country_id: snap.snapCountryId,
-        snap_province_id: snap.snapProvinceId,
-        snap_canton_id: snap.snapCantonId,
-        snap_category_name: snap.snapCategoryName,
+        ...OrderWriteRepository.snapColumns(snap),
       },
     })
 
@@ -106,25 +93,11 @@ export class OrderWriteRepository implements IOrderWriteRepository {
         where: { id: order.id },
         create: {
           ...data,
-          snap_first_name: snap.snapFirstName,
-          snap_last_name: snap.snapLastName,
-          snap_email: snap.snapEmail,
-          snap_phone: snap.snapPhone,
-          snap_country_id: snap.snapCountryId,
-          snap_province_id: snap.snapProvinceId,
-          snap_canton_id: snap.snapCantonId,
-          snap_category_name: snap.snapCategoryName,
+          ...OrderWriteRepository.snapColumns(snap),
         },
         update: {
           ...data,
-          snap_first_name: snap.snapFirstName,
-          snap_last_name: snap.snapLastName,
-          snap_email: snap.snapEmail,
-          snap_phone: snap.snapPhone,
-          snap_country_id: snap.snapCountryId,
-          snap_province_id: snap.snapProvinceId,
-          snap_canton_id: snap.snapCantonId,
-          snap_category_name: snap.snapCategoryName,
+          ...OrderWriteRepository.snapColumns(snap),
         },
       })
 
@@ -158,5 +131,26 @@ export class OrderWriteRepository implements IOrderWriteRepository {
         }),
       ),
     )
+  }
+
+  private static snapColumns(snap: OrderSnapData) {
+    return {
+      snap_first_name: snap.snapFirstName,
+      snap_last_name: snap.snapLastName,
+      snap_email: snap.snapEmail,
+      snap_phone: snap.snapPhone,
+      snap_country_id: snap.snapCountryId,
+      snap_province_id: snap.snapProvinceId,
+      snap_canton_id: snap.snapCantonId,
+      snap_category_name: snap.snapCategoryName,
+      snap_billing_account_id: snap.snapBillingAccountId,
+      snap_billing_id_type: snap.snapBillingIdType,
+      snap_billing_id_number: snap.snapBillingIdNumber,
+      snap_billing_legal_name: snap.snapBillingLegalName,
+      snap_billing_email: snap.snapBillingEmail,
+      snap_billing_address: snap.snapBillingAddress,
+      snap_invoice_consent_at: snap.snapInvoiceConsentAt,
+      snap_invoice_consent_ip: snap.snapInvoiceConsentIp,
+    }
   }
 }
