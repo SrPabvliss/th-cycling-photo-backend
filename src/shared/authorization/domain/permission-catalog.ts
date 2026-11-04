@@ -62,6 +62,7 @@ export const PERMISSIONS = {
   'order.deliver': E(false, true, 'orders'),
   'order.delivery.regenerate': E(false, true, 'orders'),
   'order.cancel': E(false, true, 'orders'),
+  'order.invoice.manage': E(false, true, 'orders'),
   'order.gift': E(true, true, 'orders'),
   'order.convert_to_gift': E(true, true, 'orders'),
   'order.convert_to_sale': E(true, true, 'orders'),

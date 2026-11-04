@@ -48,4 +48,19 @@ describe('HtmlTemplateRenderer', () => {
     expect(result.html).toContain('5 ago 2026')
     expect(result.html).not.toContain('{{')
   })
+
+  it('should greet neutrally in the invoice-rejected template when the name is empty', () => {
+    const result = renderer.render('invoice-rejected', {
+      firstName: '',
+      eventName: 'Gran Fondo',
+      orderRef: 'abcd1234',
+      reason: '39: RUC invalido',
+      correctUrl: 'https://titantv.com.ec/account/orders/abcd1234',
+      logoUrl: 'https://titantv.com.ec/brand/logo-email.png',
+    })
+
+    expect(result.html).toContain('>Hola,<')
+    expect(result.html).not.toContain('Hola ,')
+    expect(result.html).not.toContain('{{')
+  })
 })

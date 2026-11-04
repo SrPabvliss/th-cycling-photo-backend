@@ -10,6 +10,14 @@ const ID_NUMBER_PATTERNS: Record<BillingIdTypeValue, RegExp> = {
 const MAX_TEXT_LENGTH = 300
 const LINE_BREAK = /[\r\n]/
 
+export interface BuyerBillingInput {
+  idType: BillingIdTypeValue
+  idNumber: string
+  legalName: string
+  email: string
+  address: string | null
+}
+
 export class BillingAccount {
   private constructor(
     public readonly id: string,
@@ -33,18 +41,29 @@ export class BillingAccount {
     address: string | null
     isDefault: boolean
   }): BillingAccount {
+    const buyer = BillingAccount.normalizeBuyer(data)
     return new BillingAccount(
       crypto.randomUUID(),
       data.userId,
-      data.idType,
-      BillingAccount.normalizeIdNumber(data.idType, data.idNumber),
-      BillingAccount.normalizeLegalName(data.legalName),
-      data.email.trim().toLowerCase(),
-      BillingAccount.normalizeAddress(data.address),
+      buyer.idType,
+      buyer.idNumber,
+      buyer.legalName,
+      buyer.email,
+      buyer.address,
       data.isDefault,
       new Date(),
       null,
     )
+  }
+
+  static normalizeBuyer(input: BuyerBillingInput): BuyerBillingInput {
+    return {
+      idType: input.idType,
+      idNumber: BillingAccount.normalizeIdNumber(input.idType, input.idNumber),
+      legalName: BillingAccount.normalizeLegalName(input.legalName),
+      email: input.email.trim().toLowerCase(),
+      address: BillingAccount.normalizeAddress(input.address),
+    }
   }
 
   static fromPersistence(data: {

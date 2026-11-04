@@ -2,12 +2,13 @@ import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import type {
   MyOrderCustomerState,
-  MyOrderDetailProjection,
   MyOrderDownloadRaw,
   MyOrderListProjection,
   MyOrdersSummaryProjection,
+  OrderBillingProjection,
   OrderListProjection,
   OrdersStatsProjection,
+  RawMyOrderDetailProjection,
   RawOrderDetailProjection,
   RetouchCompletedOrderProjection,
 } from '@orders/application/projections'
@@ -83,6 +84,30 @@ function toCustomerState(status: string): MyOrderCustomerState {
   return 'in_process'
 }
 
+function toOrderBilling(order: {
+  snap_billing_id_type: string | null
+  snap_billing_id_number: string | null
+  snap_billing_legal_name: string | null
+  snap_billing_email: string | null
+  snap_billing_address: string | null
+}): OrderBillingProjection | null {
+  if (
+    !order.snap_billing_id_type ||
+    !order.snap_billing_id_number ||
+    !order.snap_billing_legal_name ||
+    !order.snap_billing_email
+  ) {
+    return null
+  }
+  return {
+    idType: order.snap_billing_id_type,
+    idNumber: order.snap_billing_id_number,
+    legalName: order.snap_billing_legal_name,
+    email: order.snap_billing_email,
+    address: order.snap_billing_address,
+  }
+}
+
 @Injectable()
 export class OrderReadRepository implements IOrderReadRepository {
   constructor(
@@ -120,6 +145,7 @@ export class OrderReadRepository implements IOrderReadRepository {
       where.status = { not: OrderStatus.DRAFT }
     }
     if (filters.search) where.OR = this.buildSearchOr(filters.search)
+    if (filters.invoiceState) where.invoice_state = this.invoiceStateFilter(filters.invoiceState)
 
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
@@ -187,6 +213,11 @@ export class OrderReadRepository implements IOrderReadRepository {
         subtotal: true,
         snap_currency: true,
         payment_method: true,
+        snap_billing_id_type: true,
+        snap_billing_id_number: true,
+        snap_billing_legal_name: true,
+        snap_billing_email: true,
+        snap_billing_address: true,
         user: {
           select: {
             first_name: true,
@@ -242,6 +273,7 @@ export class OrderReadRepository implements IOrderReadRepository {
       subtotal: record.subtotal !== null ? record.subtotal.toString() : null,
       snapCurrency: record.snap_currency,
       paymentMethod: record.payment_method,
+      billing: toOrderBilling(record),
       previewLinkToken: record.preview_link?.token ?? null,
       retouchProgress: {
         total: record.items.length,
@@ -295,6 +327,11 @@ export class OrderReadRepository implements IOrderReadRepository {
     return (result._sum.subtotal ?? 0).toString()
   }
 
+  private invoiceStateFilter(invoiceState: string): Prisma.EnumOrderInvoiceStateFilter {
+    if (invoiceState === 'in_process') return { in: ['requested', 'in_process'] }
+    return { equals: invoiceState as Prisma.EnumOrderInvoiceStateFilter['equals'] }
+  }
+
   /** Builds the case-insensitive search fragment shared by the list and the stats queries. */
   private buildSearchOr(term: string): Prisma.OrderWhereInput['OR'] {
     return [
@@ -325,6 +362,9 @@ export class OrderReadRepository implements IOrderReadRepository {
       event: scope.toPrisma(),
       ...(filters.eventId ? { event_id: filters.eventId } : {}),
       ...(filters.search ? { OR: this.buildSearchOr(filters.search) } : {}),
+      ...(filters.invoiceState
+        ? { invoice_state: this.invoiceStateFilter(filters.invoiceState) }
+        : {}),
     }
 
     const [statusGroups, openAmountAgg, awaitingDeliveryCount, revenueAgg] = await Promise.all([
@@ -538,7 +578,7 @@ export class OrderReadRepository implements IOrderReadRepository {
     )
   }
 
-  async getMyDetail(userId: string, orderId: string): Promise<MyOrderDetailProjection | null> {
+  async getMyDetail(userId: string, orderId: string): Promise<RawMyOrderDetailProjection | null> {
     const order = await this.prisma.order.findFirst({
       where: { id: orderId, user_id: userId, status: { not: OrderStatus.DRAFT } },
       select: {
@@ -547,6 +587,11 @@ export class OrderReadRepository implements IOrderReadRepository {
         created_at: true,
         subtotal: true,
         snap_currency: true,
+        snap_billing_id_type: true,
+        snap_billing_id_number: true,
+        snap_billing_legal_name: true,
+        snap_billing_email: true,
+        snap_billing_address: true,
         event: { select: { name: true } },
         items: {
           orderBy: { photo: { id: 'asc' } },
@@ -566,11 +611,19 @@ export class OrderReadRepository implements IOrderReadRepository {
       snapCurrency: order.snap_currency,
       canDownload: DOWNLOADABLE_STATUSES.includes(order.status),
       canCancel: IN_PROCESS_STATUSES.includes(order.status),
+      billing: toOrderBilling(order),
       photos: order.items.map((item) => ({
         id: item.photo.id,
         galleryUrl: this.cdn.galleryUrl(item.photo.public_slug),
       })),
     }
+  }
+
+  async existsOwnedBy(userId: string, orderId: string): Promise<boolean> {
+    const count = await this.prisma.order.count({
+      where: { id: orderId, user_id: userId, status: { not: OrderStatus.DRAFT } },
+    })
+    return count > 0
   }
 
   async getMyDownloadFiles(userId: string, orderId: string): Promise<MyOrderDownloadRaw[] | null> {

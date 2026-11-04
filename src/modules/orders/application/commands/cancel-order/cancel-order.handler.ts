@@ -38,7 +38,7 @@ export class CancelOrderHandler implements ICommandHandler<CancelOrderCommand> {
     order.cancel()
     await this.prisma.$transaction(async (tx) => {
       await this.writeRepo.save(order, tx)
-      await this.invoiceRequester.withdraw(order.id, tx)
+      await this.invoiceRequester.withdraw(order.id, 'cancelled', tx)
     })
 
     return { id: order.id }

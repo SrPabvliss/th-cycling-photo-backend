@@ -6,6 +6,10 @@ import { CancelOrderCommand } from '@orders/application/commands/cancel-order/ca
 import { CancelOrderHandler } from '@orders/application/commands/cancel-order/cancel-order.handler'
 import { ConfirmOrderPaymentCommand } from '@orders/application/commands/confirm-order-payment/confirm-order-payment.command'
 import { ConfirmOrderPaymentHandler } from '@orders/application/commands/confirm-order-payment/confirm-order-payment.handler'
+import { ConvertOrderToGiftCommand } from '@orders/application/commands/convert-order-to-gift/convert-order-to-gift.command'
+import { ConvertOrderToGiftHandler } from '@orders/application/commands/convert-order-to-gift/convert-order-to-gift.handler'
+import { ConvertOrderToSaleCommand } from '@orders/application/commands/convert-order-to-sale/convert-order-to-sale.command'
+import { ConvertOrderToSaleHandler } from '@orders/application/commands/convert-order-to-sale/convert-order-to-sale.handler'
 import { ORDER_READ_REPOSITORY, ORDER_WRITE_REPOSITORY } from '@orders/domain/ports'
 import * as OrderMapper from '@orders/infrastructure/mappers/order.mapper'
 import { OrderWriteRepository } from '@orders/infrastructure/repositories/order-write.repository'
@@ -15,11 +19,14 @@ import { AUTHORIZATION_SERVICE } from '@shared/authorization/domain/ports/author
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import {
   INVOICE_SOURCE_READER,
+  ORDER_TAX_DOCUMENT_REPOSITORY,
   RIKUCHIY_INVOICE_REQUESTER,
   RIKUCHIY_OUTBOX_REPOSITORY,
 } from '@shared/rikuchiy/domain/ports'
 import { InvoiceSourceReader } from '@shared/rikuchiy/infrastructure/repositories/invoice-source.reader'
+import { OrderTaxDocumentRepository } from '@shared/rikuchiy/infrastructure/repositories/order-tax-document.repository'
 import { RikuchiyOutboxRepository } from '@shared/rikuchiy/infrastructure/repositories/rikuchiy-outbox.repository'
+import { OrderInvoiceStateRefresher } from '@shared/rikuchiy/infrastructure/services/order-invoice-state-refresher.service'
 import { RikuchiyInvoiceRequesterService } from '@shared/rikuchiy/infrastructure/services/rikuchiy-invoice-requester.service'
 import configuration from '../../config/configuration'
 import { validate } from '../../config/env.validation'
@@ -68,10 +75,14 @@ describe('invoice requests when an order becomes a sale', () => {
         },
         { provide: NotificationsService, useValue: { emitOrderPaid: () => undefined } },
         { provide: RIKUCHIY_OUTBOX_REPOSITORY, useClass: RikuchiyOutboxRepository },
+        { provide: ORDER_TAX_DOCUMENT_REPOSITORY, useClass: OrderTaxDocumentRepository },
+        OrderInvoiceStateRefresher,
         { provide: INVOICE_SOURCE_READER, useClass: InvoiceSourceReader },
         { provide: RIKUCHIY_INVOICE_REQUESTER, useClass: RikuchiyInvoiceRequesterService },
         ConfirmOrderPaymentHandler,
         CancelOrderHandler,
+        ConvertOrderToGiftHandler,
+        ConvertOrderToSaleHandler,
       ],
     }).compile()
 
@@ -193,7 +204,7 @@ describe('invoice requests when an order becomes a sale', () => {
     expect((payload.lines as unknown[]).length).toBe(2)
   })
 
-  it('never queues a second emission for the same order', async () => {
+  it('never queues a second pending emission', async () => {
     const orderId = await createOrder({ withBilling: true })
     await confirm(orderId)
 
@@ -213,21 +224,137 @@ describe('invoice requests when an order becomes a sale', () => {
     expect(rows.map((row) => row.status)).toEqual(['suppressed'])
   })
 
-  it('leaves an emission already sent untouched when the order is cancelled', async () => {
+  const markEmissionsSent = (orderId: string) =>
+    prisma.rikuchiyOutboxItem.updateMany({
+      where: { order_id: orderId, kind: 'emit', status: 'pending' },
+      data: { status: 'sent', sent_at: new Date() },
+    })
+
+  const cancel = (orderId: string) =>
+    module.get(CancelOrderHandler).execute(new CancelOrderCommand(orderId, admin.userId))
+
+  const annulmentsOf = async (orderId: string) =>
+    (await rowsOf(orderId)).filter((row) => row.kind === 'annul')
+
+  it('annuls an emission already sent when the order is cancelled', async () => {
+    const orderId = await createOrder({ withBilling: true })
+    await confirm(orderId)
+    await markEmissionsSent(orderId)
+
+    await cancel(orderId)
+
+    const annulments = await annulmentsOf(orderId)
+    expect(annulments).toHaveLength(1)
+    expect(annulments[0].status).toBe('pending')
+    expect(annulments[0].external_ref).toBe(orderId)
+    expect(annulments[0].payload).toMatchObject({ reason: 'Pedido cancelado' })
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } })
+    expect(order.invoice_state).toBe('in_process')
+  })
+
+  it('suppresses a pending correction and annuls the sent emission', async () => {
+    const orderId = await createOrder({ withBilling: true })
+    await confirm(orderId)
+    await markEmissionsSent(orderId)
+    const requester = module.get(RIKUCHIY_INVOICE_REQUESTER)
+    await prisma.$transaction((tx) => requester.request(orderId, tx))
+    expect((await rowsOf(orderId)).map((row) => row.status).sort()).toEqual(['pending', 'sent'])
+
+    await cancel(orderId)
+
+    const rows = await rowsOf(orderId)
+    expect(rows.find((row) => row.kind === 'emit' && row.status !== 'sent')?.status).toBe(
+      'suppressed',
+    )
+    expect(await annulmentsOf(orderId)).toHaveLength(1)
+  })
+
+  it('writes nothing when the only emission was rejected at intake', async () => {
     const orderId = await createOrder({ withBilling: true })
     await confirm(orderId)
     await prisma.rikuchiyOutboxItem.updateMany({
       where: { order_id: orderId },
-      data: { status: 'sent', sent_at: new Date() },
+      data: { status: 'rejected' },
     })
 
-    await module.get(CancelOrderHandler).execute(new CancelOrderCommand(orderId, admin.userId))
+    await cancel(orderId)
 
-    expect((await rowsOf(orderId)).map((row) => row.status)).toEqual(['sent'])
-    const outbox = module.get(RIKUCHIY_OUTBOX_REPOSITORY)
-    expect(await prisma.$transaction((tx) => outbox.suppressPending(orderId, tx))).toBe(
-      'already_sent',
+    expect(await annulmentsOf(orderId)).toHaveLength(0)
+  })
+
+  it('annuls with the gift reason when the order becomes a gift', async () => {
+    const orderId = await createOrder({ withBilling: true })
+    await confirm(orderId)
+    await markEmissionsSent(orderId)
+
+    await module
+      .get(ConvertOrderToGiftHandler)
+      .execute(new ConvertOrderToGiftCommand(orderId, admin))
+
+    const annulments = await annulmentsOf(orderId)
+    expect(annulments).toHaveLength(1)
+    expect(annulments[0].payload).toMatchObject({ reason: 'Pedido convertido en cortesía' })
+  })
+
+  it('sells again under a new reference after an annulment', async () => {
+    const orderId = await createOrder({ withBilling: true })
+    await confirm(orderId)
+    await markEmissionsSent(orderId)
+    await module
+      .get(ConvertOrderToGiftHandler)
+      .execute(new ConvertOrderToGiftCommand(orderId, admin))
+
+    await module
+      .get(ConvertOrderToSaleHandler)
+      .execute(new ConvertOrderToSaleCommand(orderId, admin))
+
+    const emissions = (await rowsOf(orderId)).filter(
+      (row) => row.kind === 'emit' && row.status === 'pending',
     )
+    expect(emissions).toHaveLength(1)
+    expect(emissions[0].external_ref).toBe(`${orderId}-2`)
+    expect(emissions[0].payload).toMatchObject({ sale: { externalRef: `${orderId}-2` } })
+  })
+
+  it('does not annul twice a sale already annulled when its re-sale is cancelled', async () => {
+    const orderId = await createOrder({ withBilling: true })
+    await confirm(orderId)
+    await markEmissionsSent(orderId)
+    const requester = module.get(RIKUCHIY_INVOICE_REQUESTER)
+    await prisma.$transaction((tx) => requester.request(orderId, tx))
+    await markEmissionsSent(orderId)
+    await module
+      .get(ConvertOrderToGiftHandler)
+      .execute(new ConvertOrderToGiftCommand(orderId, admin))
+    await module
+      .get(ConvertOrderToSaleHandler)
+      .execute(new ConvertOrderToSaleCommand(orderId, admin))
+
+    await cancel(orderId)
+
+    expect(await annulmentsOf(orderId)).toHaveLength(1)
+  })
+
+  it('sells again under the original reference when the only annulment was rejected', async () => {
+    const orderId = await createOrder({ withBilling: true })
+    await confirm(orderId)
+    await markEmissionsSent(orderId)
+    await module
+      .get(ConvertOrderToGiftHandler)
+      .execute(new ConvertOrderToGiftCommand(orderId, admin))
+    await prisma.rikuchiyOutboxItem.updateMany({
+      where: { order_id: orderId, kind: 'annul' },
+      data: { status: 'rejected' },
+    })
+
+    await module
+      .get(ConvertOrderToSaleHandler)
+      .execute(new ConvertOrderToSaleCommand(orderId, admin))
+
+    const pending = (await rowsOf(orderId)).filter(
+      (row) => row.kind === 'emit' && row.status === 'pending',
+    )
+    expect(pending.map((row) => row.external_ref)).toEqual([orderId])
   })
 
   it('queues nothing for an order without billing data', async () => {

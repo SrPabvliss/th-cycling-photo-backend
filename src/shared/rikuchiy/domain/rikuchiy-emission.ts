@@ -25,7 +25,14 @@ export class RikuchiyEmission {
   static readonly LINE_CODE = 'FOTO'
   static readonly LINE_DESCRIPTION = 'Fotografía digital'
 
-  static build(source: InvoiceSource, emissionId: string): EmissionBuild {
+  static externalRefOf(orderId: string, annulmentCount: number): string {
+    return annulmentCount === 0 ? orderId : `${orderId}-${annulmentCount + 1}`
+  }
+
+  static build(
+    source: InvoiceSource,
+    emission: { emissionId: string; externalRef: string },
+  ): EmissionBuild {
     const subtotalCents =
       source.subtotal === null ? null : RikuchiyEmission.toCents(source.subtotal)
     if (!SALE_STATUSES.has(source.status) || subtotalCents === null || subtotalCents <= 0) {
@@ -50,16 +57,9 @@ export class RikuchiyEmission {
     return {
       kind: 'payload',
       payload: {
-        emissionId,
-        sale: { app: RikuchiyEmission.APP, externalRef: source.orderId },
-        buyer: {
-          idType: SRI_ID_TYPE[source.billing.idType],
-          idNumber: source.billing.idNumber,
-          legalName: source.billing.legalName,
-          address: source.billing.address,
-          email: source.billing.email,
-          phone: null,
-        },
+        emissionId: emission.emissionId,
+        sale: { app: RikuchiyEmission.APP, externalRef: emission.externalRef },
+        buyer: RikuchiyEmission.buyerOf(source.billing),
         lines: source.items.map((item) => RikuchiyEmission.lineOf(item)),
         additionalInfo: [
           { name: 'Evento', value: source.eventName },
@@ -71,6 +71,25 @@ export class RikuchiyEmission {
         consent: { givenAt: source.consent.givenAt.toISOString(), ip: source.consent.ip },
       },
     }
+  }
+
+  static buyerOf(billing: NonNullable<InvoiceSource['billing']>): RikuchiyEmissionPayload['buyer'] {
+    return {
+      idType: SRI_ID_TYPE[billing.idType],
+      idNumber: billing.idNumber,
+      legalName: billing.legalName,
+      address: billing.address,
+      email: billing.email,
+      phone: null,
+    }
+  }
+
+  static correct(
+    previous: RikuchiyEmissionPayload,
+    buyer: RikuchiyEmissionPayload['buyer'],
+    emissionId: string,
+  ): RikuchiyEmissionPayload {
+    return { ...previous, emissionId, buyer }
   }
 
   private static lineOf(item: InvoiceSource['items'][number]): RikuchiyEmissionLine {

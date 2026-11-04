@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import {
@@ -6,9 +6,13 @@ import {
   ConfirmOrderPaymentCommand,
   ConvertOrderToGiftCommand,
   ConvertOrderToSaleCommand,
+  CorrectOrderBillingCommand,
+  CorrectOrderBillingDto,
   GiftOrderCommand,
   NotifyPaymentInfoCommand,
   RegenerateDeliveryCommand,
+  ResendOrderTaxDocumentCommand,
+  RetryOrderAnnulmentCommand,
   SendDeliveryCommand,
 } from '@orders/application/commands'
 import {
@@ -16,12 +20,14 @@ import {
   OrderListProjection,
   OrderPaymentConfirmedProjection,
   OrdersStatsProjection,
+  TaxDocumentFilesProjection,
 } from '@orders/application/projections'
 import {
   GetOrderDetailQuery,
   GetOrdersListDto,
   GetOrdersListQuery,
   GetOrdersStatsQuery,
+  GetOrderTaxDocumentFilesQuery,
 } from '@orders/application/queries'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
@@ -56,6 +62,7 @@ export class OrdersController {
         eventId: dto.eventId,
         status: dto.status,
         search: dto.search,
+        invoiceState: dto.invoiceState,
       },
       user.userId,
     )
@@ -94,6 +101,30 @@ export class OrdersController {
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
   async findOne(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
     return this.queryBus.execute(new GetOrderDetailQuery(id, user.userId))
+  }
+
+  @RequirePermission('order.read')
+  @Get(':id/tax-documents/:taxDocumentId/files')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.tax_document' })
+  @ApiOperation({ summary: 'Get signed download URLs for the XML and PDF of a tax document' })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiParam({ name: 'taxDocumentId', description: 'Tax document UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Signed file URLs',
+    type: TaxDocumentFilesProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order or tax document not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'The files are not ready yet' })
+  @ApiEnvelopeErrorResponse({ status: 502, description: 'The invoicing service is unavailable' })
+  async findTaxDocumentFiles(
+    @Param('id') id: string,
+    @Param('taxDocumentId') taxDocumentId: string,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.queryBus.execute(
+      new GetOrderTaxDocumentFilesQuery(id, taxDocumentId, user.userId, 'admin'),
+    )
   }
 
   @RequirePermission('order.notify_payment')
@@ -248,5 +279,79 @@ export class OrdersController {
   @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not cancellable' })
   async cancel(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
     return this.commandBus.execute(new CancelOrderCommand(id, user.userId))
+  }
+
+  @RequirePermission('order.invoice.manage')
+  @AllowedWhenFrozen()
+  @Post(':id/tax-documents/:taxDocumentId/resends')
+  @SuccessMessage('order.invoice_resent')
+  @ApiOperation({ summary: 'Ask the invoicing service to resend a tax document to the buyer' })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiParam({ name: 'taxDocumentId', description: 'Tax document UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Resend accepted',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order or tax document not found' })
+  @ApiEnvelopeErrorResponse({ status: 409, description: 'The document cannot be resent' })
+  @ApiEnvelopeErrorResponse({ status: 502, description: 'The invoicing service is unavailable' })
+  async resendTaxDocument(
+    @Param('id') id: string,
+    @Param('taxDocumentId') taxDocumentId: string,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new ResendOrderTaxDocumentCommand(id, taxDocumentId, user.userId),
+    )
+  }
+
+  @RequirePermission('order.invoice.manage')
+  @AllowedWhenFrozen()
+  @Post(':id/invoice/annulment-retries')
+  @SuccessMessage('order.invoice_annulment_retried')
+  @ApiOperation({ summary: 'Retry the annulment of an invoice whose credit note was rejected' })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Annulment queued again',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
+  @ApiEnvelopeErrorResponse({ status: 409, description: 'The annulment cannot be retried now' })
+  async retryAnnulment(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new RetryOrderAnnulmentCommand(id, user.userId))
+  }
+
+  @RequirePermission('order.invoice.manage')
+  @AllowedWhenFrozen()
+  @Patch(':id/billing')
+  @SuccessMessage('order.invoice_correction_sent')
+  @ApiOperation({ summary: 'Correct the billing data of a rejected invoice' })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Corrected emission queued',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
+  @ApiEnvelopeErrorResponse({ status: 409, description: 'The invoice cannot be corrected now' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Billing data is invalid' })
+  async correctBilling(
+    @Param('id') id: string,
+    @Body() correctOrderBillingDto: CorrectOrderBillingDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new CorrectOrderBillingCommand(
+        id,
+        user.userId,
+        correctOrderBillingDto.idType,
+        correctOrderBillingDto.idNumber,
+        correctOrderBillingDto.legalName,
+        correctOrderBillingDto.email,
+        correctOrderBillingDto.address ?? null,
+      ),
+    )
   }
 }

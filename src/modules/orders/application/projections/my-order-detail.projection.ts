@@ -1,4 +1,6 @@
+import { MyOrderInvoiceProjection } from './my-order-invoice.projection'
 import type { MyOrderCustomerState } from './my-order-list.projection'
+import { OrderBillingProjection } from './order-billing.projection'
 
 export class MyOrderPhotoProjection {
   /** Photo UUID */
@@ -26,4 +28,10 @@ export class MyOrderDetailProjection {
   canCancel: boolean
   /** Photos with watermarked URLs */
   photos: MyOrderPhotoProjection[]
+  /** Billing snapshot taken when the order was placed */
+  billing: OrderBillingProjection | null
+  /** Electronic invoice follow-up as the buyer sees it */
+  invoice: MyOrderInvoiceProjection | null
 }
+
+export type RawMyOrderDetailProjection = Omit<MyOrderDetailProjection, 'invoice'>

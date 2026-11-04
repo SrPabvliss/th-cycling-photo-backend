@@ -68,4 +68,5 @@ export const ROLE_INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   'operator GET /orders',
   'operator GET /orders/stats',
   'operator GET /orders/:id',
+  'operator GET /orders/:id/tax-documents/:taxDocumentId/files',
 ])
