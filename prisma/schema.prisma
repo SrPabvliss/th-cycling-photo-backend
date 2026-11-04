@@ -732,17 +732,22 @@ model Order {
   notified_by_id          String?        @db.Uuid
   confirmed_by_id         String?        @db.Uuid
 
-  preview_link               PreviewLink?              @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
-  event                      Event                     @relation(fields: [event_id], references: [id], onDelete: Restrict)
-  user                       User                      @relation("OrderUser", fields: [user_id], references: [id], onDelete: Restrict)
-  notified_by                User?                     @relation("OrderNotifiedBy", fields: [notified_by_id], references: [id], onDelete: Restrict)
-  confirmed_by               User?                     @relation("OrderConfirmedBy", fields: [confirmed_by_id], references: [id], onDelete: Restrict)
-  billing_account            BillingAccount?           @relation(fields: [snap_billing_account_id], references: [id], onDelete: Restrict)
-  items                      OrderItem[]
-  delivery_link              DeliveryLink?
-  payment_transaction_orders PaymentTransactionOrder[]
-  rikuchiy_outbox_items      RikuchiyOutboxItem[]
+  preview_link                  PreviewLink?              @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
+  event                         Event                     @relation(fields: [event_id], references: [id], onDelete: Restrict)
+  user                          User                      @relation("OrderUser", fields: [user_id], references: [id], onDelete: Restrict)
+  notified_by                   User?                     @relation("OrderNotifiedBy", fields: [notified_by_id], references: [id], onDelete: Restrict)
+  confirmed_by                  User?                     @relation("OrderConfirmedBy", fields: [confirmed_by_id], references: [id], onDelete: Restrict)
+  billing_account               BillingAccount?           @relation(fields: [snap_billing_account_id], references: [id], onDelete: Restrict)
+  items                         OrderItem[]
+  delivery_link                 DeliveryLink?
+  payment_transaction_orders    PaymentTransactionOrder[]
+  rikuchiy_outbox_items         RikuchiyOutboxItem[]
+  order_tax_documents           OrderTaxDocument[]
+  invoice_state                 OrderInvoiceState         @default(none)
+  invoice_synced_at             DateTime?                 @db.Timestamptz
+  invoice_rejection_notified_at DateTime?                 @db.Timestamptz
 
+  @@index([invoice_state], map: "idx_orders_invoice_state")
   @@index([preview_link_id])
   @@index([event_id])
   @@index([user_id])
@@ -1312,6 +1317,7 @@ model CdnTransformationReportDay {
 
 enum RikuchiyOutboxKind {
   emit
+  annul
 
   @@map("rikuchiy_outbox_kind")
 }
@@ -1336,12 +1342,45 @@ model RikuchiyOutboxItem {
   last_error       String?              @db.Text
   rejection_reason String?              @db.VarChar(300)
   tax_document_id  String?              @db.Uuid
+  external_ref     String               @db.VarChar(100)
+  outcome          String?              @db.VarChar(20)
   created_at       DateTime             @default(now()) @db.Timestamptz
   sent_at          DateTime?            @db.Timestamptz
 
   order Order @relation(fields: [order_id], references: [id], onDelete: Restrict)
 
-  @@unique([order_id, kind])
   @@index([status, created_at], map: "idx_rikuchiy_outbox_items_pending")
+  // Unique partial index rikuchiy_outbox_items_one_pending_per_kind (order_id, kind) WHERE status = 'pending' created via raw SQL
   @@map("rikuchiy_outbox_items")
+}
+
+enum OrderInvoiceState {
+  none
+  requested
+  in_process
+  authorized
+  rejected
+  annulled
+
+  @@map("order_invoice_state")
+}
+
+model OrderTaxDocument {
+  id            String    @id @db.Uuid
+  order_id      String    @db.Uuid
+  external_ref  String    @db.VarChar(100)
+  type          String    @db.VarChar(20)
+  state         String    @db.VarChar(20)
+  number        String    @db.VarChar(17)
+  access_key    String    @db.VarChar(49)
+  issue_date    DateTime  @db.Date
+  authorized_at DateTime? @db.Timestamptz
+  sri_messages  Json
+  deliveries    Json
+  synced_at     DateTime  @db.Timestamptz
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Restrict)
+
+  @@index([order_id])
+  @@map("order_tax_documents")
 }

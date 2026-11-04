@@ -26,13 +26,19 @@ describe('RikuchiyEmission', () => {
   })
 
   const payloadOf = (invoiceSource: InvoiceSource) => {
-    const build = RikuchiyEmission.build(invoiceSource, 'emission-1')
+    const build = RikuchiyEmission.build(invoiceSource, {
+      emissionId: 'emission-1',
+      externalRef: invoiceSource.orderId,
+    })
     if (build.kind !== 'payload') throw new Error(`expected a payload, got ${build.reason}`)
     return build.payload
   }
 
   const skipReasonOf = (invoiceSource: InvoiceSource) => {
-    const build = RikuchiyEmission.build(invoiceSource, 'emission-1')
+    const build = RikuchiyEmission.build(invoiceSource, {
+      emissionId: 'emission-1',
+      externalRef: invoiceSource.orderId,
+    })
     return build.kind === 'skip' ? build.reason : 'payload'
   }
 
@@ -138,5 +144,20 @@ describe('RikuchiyEmission', () => {
       { filename: 'b.jpg', unitPrice: '0.20' },
     ]
     expect(payloadOf(source({ items, subtotal: '0.30' })).total).toBe('0.30')
+  })
+
+  it('derives the sale reference from the annulments already made', () => {
+    expect(RikuchiyEmission.externalRefOf(ORDER_ID, 0)).toBe(ORDER_ID)
+    expect(RikuchiyEmission.externalRefOf(ORDER_ID, 1)).toBe(`${ORDER_ID}-2`)
+    expect(RikuchiyEmission.externalRefOf(ORDER_ID, 2)).toBe(`${ORDER_ID}-3`)
+  })
+
+  it('writes the received sale reference into the payload', () => {
+    const build = RikuchiyEmission.build(source(), {
+      emissionId: 'emission-1',
+      externalRef: `${ORDER_ID}-2`,
+    })
+    if (build.kind !== 'payload') throw new Error('expected a payload')
+    expect(build.payload.sale.externalRef).toBe(`${ORDER_ID}-2`)
   })
 })

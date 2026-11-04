@@ -16,5 +16,12 @@
   "not_draft": "La orden ya no es un borrador",
   "not_cancellable_by_owner": "Solo puedes cancelar una orden que aún está en proceso",
   "payment_in_progress": "Tienes un pago en proceso, espera unos minutos antes de cancelar",
-  "not_downloadable": "Esta orden todavía no tiene fotos para descargar"
+  "not_downloadable": "Esta orden todavía no tiene fotos para descargar",
+  "invoice_files_not_ready": "La factura todavía se está preparando, inténtalo en unos minutos.",
+  "invoice_resent": "Factura reenviada",
+  "invoice_not_resendable": "Esta factura no se puede reenviar.",
+  "invoice_not_correctable": "Esta factura no se puede corregir ahora.",
+  "invoice_correction_sent": "Datos enviados para corregir la factura",
+  "invoice_annulment_not_retryable": "Esta anulación no se puede reintentar.",
+  "invoice_annulment_retried": "Anulación reenviada"
 }

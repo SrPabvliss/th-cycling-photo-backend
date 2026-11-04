@@ -4,10 +4,12 @@ import {
   type IEventPayoutMethodRepository,
 } from '@events/domain/ports'
 import { EventPayoutMethodRepository } from '@events/infrastructure/repositories/event-payout-method.repository'
+import { MailService } from '@mail/application/services/mail.service'
 import { ConfigModule } from '@nestjs/config'
 import { Test, type TestingModule } from '@nestjs/testing'
 import { ORDER_READ_REPOSITORY } from '@orders/domain/ports'
 import { OrderReadRepository } from '@orders/infrastructure/repositories/order-read.repository'
+import { OrderInvoiceSyncService } from '@orders/infrastructure/services/order-invoice-sync.service'
 import { AUTHORIZATION_SERVICE } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AUTHORIZATION_CACHE } from '@shared/authorization/domain/ports/authorization-cache.port'
 import { PERMISSION_REPOSITORY } from '@shared/authorization/domain/ports/permission-repository.port'
@@ -16,6 +18,14 @@ import { RequestScopedAuthorizationCache } from '@shared/authorization/infrastru
 import { PermissionRepository } from '@shared/authorization/infrastructure/repositories/permission.repository'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
+import {
+  ORDER_TAX_DOCUMENT_REPOSITORY,
+  RIKUCHIY_CLIENT,
+  RIKUCHIY_OUTBOX_REPOSITORY,
+} from '@shared/rikuchiy/domain/ports'
+import { OrderTaxDocumentRepository } from '@shared/rikuchiy/infrastructure/repositories/order-tax-document.repository'
+import { RikuchiyOutboxRepository } from '@shared/rikuchiy/infrastructure/repositories/rikuchiy-outbox.repository'
+import { OrderInvoiceStateRefresher } from '@shared/rikuchiy/infrastructure/services/order-invoice-state-refresher.service'
 import { TenantPayoutMethod } from '@tenants/domain/entities/tenant-payout-method.entity'
 import { TenantPayoutMethodRepository } from '@tenants/infrastructure/repositories/tenant-payout-method.repository'
 import configuration from '../../../../../config/configuration'
@@ -55,6 +65,15 @@ describe('order payout snapshot', () => {
         { provide: ORDER_READ_REPOSITORY, useClass: OrderReadRepository },
         { provide: EVENT_PAYOUT_METHOD_REPOSITORY, useClass: EventPayoutMethodRepository },
         TenantPayoutMethodRepository,
+        { provide: RIKUCHIY_OUTBOX_REPOSITORY, useClass: RikuchiyOutboxRepository },
+        { provide: ORDER_TAX_DOCUMENT_REPOSITORY, useClass: OrderTaxDocumentRepository },
+        {
+          provide: RIKUCHIY_CLIENT,
+          useValue: { getSaleDocuments: jest.fn(), isConfigured: () => false },
+        },
+        { provide: MailService, useValue: { enqueue: jest.fn() } },
+        OrderInvoiceStateRefresher,
+        OrderInvoiceSyncService,
         GetOrderDetailHandler,
         {
           provide: CdnUrlBuilder,

@@ -41,7 +41,7 @@ export class ConvertOrderToGiftHandler implements ICommandHandler<ConvertOrderTo
     order.convertToGift(command.audit.userId)
     await this.prisma.$transaction(async (tx) => {
       await this.writeRepo.save(order, tx)
-      await this.invoiceRequester.withdraw(order.id, tx)
+      await this.invoiceRequester.withdraw(order.id, 'gifted', tx)
     })
 
     return { id: order.id }

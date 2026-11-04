@@ -38,11 +38,16 @@ describe('rikuchiy outbox repository', () => {
     prisma = module.get(PrismaService)
     repository = module.get(RikuchiyOutboxRepository)
     tenantId = (
-      await prisma.tenant.create({ data: { name: 'Rikuchiy Outbox', is_platform: false } })
+      await prisma.tenant.create({
+        data: { name: 'Rikuchiy Outbox', is_platform: false },
+      })
     ).id
     userId = (
       await prisma.user.create({
-        data: { email: `outbox-${randomUUID()}@test.local`, password_hash: 'x' },
+        data: {
+          email: `outbox-${randomUUID()}@test.local`,
+          password_hash: 'x',
+        },
       })
     ).id
     eventId = (
@@ -63,7 +68,9 @@ describe('rikuchiy outbox repository', () => {
 
   afterAll(async () => {
     if (prisma) {
-      await prisma.rikuchiyOutboxItem.deleteMany({ where: { order_id: { in: orderIds } } })
+      await prisma.rikuchiyOutboxItem.deleteMany({
+        where: { order_id: { in: orderIds } },
+      })
       await prisma.order.deleteMany({ where: { id: { in: orderIds } } })
       await prisma.event.deleteMany({ where: { id: eventId } })
       await prisma.user.deleteMany({ where: { id: userId } })
@@ -74,11 +81,19 @@ describe('rikuchiy outbox repository', () => {
   })
 
   async function enqueueForNewOrder(): Promise<string> {
-    const order = await prisma.order.create({ data: { event_id: eventId, user_id: userId } })
+    const order = await prisma.order.create({
+      data: { event_id: eventId, user_id: userId },
+    })
     orderIds.push(order.id)
     await prisma.$transaction((tx) =>
       repository.enqueue(
-        { orderId: order.id, emissionId: randomUUID(), payload: payload(order.id) },
+        {
+          orderId: order.id,
+          emissionId: randomUUID(),
+          kind: 'emit',
+          externalRef: order.id,
+          payload: payload(order.id),
+        },
         tx,
       ),
     )
@@ -86,7 +101,9 @@ describe('rikuchiy outbox repository', () => {
   }
 
   const rowOf = (orderId: string) =>
-    prisma.rikuchiyOutboxItem.findFirstOrThrow({ where: { order_id: orderId } })
+    prisma.rikuchiyOutboxItem.findFirstOrThrow({
+      where: { order_id: orderId },
+    })
 
   it('hands out pending emissions oldest first', async () => {
     const first = await enqueueForNewOrder()
@@ -97,7 +114,27 @@ describe('rikuchiy outbox repository', () => {
     )
 
     expect(pending.map((item) => item.orderId)).toEqual([first, second])
-    expect(pending[0].payload.sale.externalRef).toBe(first)
+    expect((pending[0].payload as RikuchiyEmissionPayload).sale.externalRef).toBe(first)
+  })
+
+  it('holds back a row while an older row of the same order is pending', async () => {
+    const orderId = await enqueueForNewOrder()
+    await prisma.$transaction((tx) =>
+      repository.enqueue(
+        {
+          orderId,
+          emissionId: randomUUID(),
+          kind: 'annul',
+          externalRef: orderId,
+          payload: { emissionId: randomUUID(), reason: 'Pedido cancelado' },
+        },
+        tx,
+      ),
+    )
+
+    const pending = (await repository.findPending(500)).filter((item) => item.orderId === orderId)
+
+    expect(pending.map((item) => item.kind)).toEqual(['emit'])
   })
 
   it('records a sent emission with its tax document and stops handing it out', async () => {
@@ -105,7 +142,7 @@ describe('rikuchiy outbox repository', () => {
     const { id } = await rowOf(orderId)
     const taxDocumentId = randomUUID()
 
-    await repository.markSent(id, taxDocumentId)
+    await repository.markSent(id, { taxDocumentId, outcome: null })
 
     const row = await rowOf(orderId)
     expect(row.status).toBe('sent')
@@ -142,24 +179,162 @@ describe('rikuchiy outbox repository', () => {
     const { id } = await rowOf(orderId)
     await prisma.$transaction((tx) => repository.suppressPending(orderId, tx))
 
-    const marked = await repository.markSent(id, randomUUID())
+    const marked = await repository.markSent(id, {
+      taxDocumentId: randomUUID(),
+      outcome: null,
+    })
 
     expect(marked).toBe(false)
     expect((await rowOf(orderId)).status).toBe('suppressed')
   })
 
-  it('revives a suppressed emission when the order becomes a sale again', async () => {
+  it('records the acceptance of an emission withdrawn while it was in flight', async () => {
+    const orderId = await enqueueForNewOrder()
+    const { id } = await rowOf(orderId)
+    await prisma.$transaction((tx) => repository.suppressPending(orderId, tx))
+    const taxDocumentId = randomUUID()
+
+    await prisma.$transaction((tx) =>
+      repository.markWithdrawnSent(id, { taxDocumentId, outcome: null }, tx),
+    )
+
+    const row = await rowOf(orderId)
+    expect(row.status).toBe('sent')
+    expect(row.tax_document_id).toBe(taxDocumentId)
+    expect(row.sent_at).toBeInstanceOf(Date)
+    const [found] = await repository.findByOrder(orderId)
+    expect(found.sentAt).toEqual(row.sent_at)
+  })
+
+  it('leaves a pending emission alone when recording a withdrawn acceptance', async () => {
+    const orderId = await enqueueForNewOrder()
+    const { id } = await rowOf(orderId)
+
+    await prisma.$transaction((tx) =>
+      repository.markWithdrawnSent(id, { taxDocumentId: randomUUID(), outcome: null }, tx),
+    )
+
+    expect((await rowOf(orderId)).status).toBe('pending')
+  })
+
+  it('reports an emission already sent instead of suppressing it', async () => {
+    const orderId = await enqueueForNewOrder()
+    const { id } = await rowOf(orderId)
+    await repository.markSent(id, { taxDocumentId: randomUUID(), outcome: null })
+
+    const result = await prisma.$transaction((tx) => repository.suppressPending(orderId, tx))
+
+    expect(result).toBe('already_sent')
+    expect((await rowOf(orderId)).status).toBe('sent')
+  })
+
+  it('does not revive a suppressed emission: a new pending row is added', async () => {
     const orderId = await enqueueForNewOrder()
     await prisma.$transaction((tx) => repository.suppressPending(orderId, tx))
     const emissionId = randomUUID()
 
-    await prisma.$transaction((tx) =>
-      repository.enqueue({ orderId, emissionId, payload: payload(orderId) }, tx),
+    const queued = await prisma.$transaction((tx) =>
+      repository.enqueue(
+        {
+          orderId,
+          emissionId,
+          kind: 'emit',
+          externalRef: orderId,
+          payload: payload(orderId),
+        },
+        tx,
+      ),
     )
 
-    const rows = await prisma.rikuchiyOutboxItem.findMany({ where: { order_id: orderId } })
+    const rows = await prisma.rikuchiyOutboxItem.findMany({
+      where: { order_id: orderId },
+      orderBy: { created_at: 'asc' },
+    })
+    expect(queued).toBe(true)
+    expect(rows.map((row) => row.status)).toEqual(['suppressed', 'pending'])
+    expect(rows[1].emission_id).toBe(emissionId)
+  })
+
+  it('keeps a single pending row per order and kind', async () => {
+    const orderId = await enqueueForNewOrder()
+
+    const queued = await prisma.$transaction((tx) =>
+      repository.enqueue(
+        {
+          orderId,
+          emissionId: randomUUID(),
+          kind: 'emit',
+          externalRef: orderId,
+          payload: payload(orderId),
+        },
+        tx,
+      ),
+    )
+
+    const rows = await prisma.rikuchiyOutboxItem.findMany({
+      where: { order_id: orderId },
+    })
+    expect(queued).toBe(false)
     expect(rows).toHaveLength(1)
     expect(rows[0].status).toBe('pending')
-    expect(rows[0].emission_id).toBe(emissionId)
+  })
+
+  it('accepts a new emission once the previous one left pending', async () => {
+    const orderId = await enqueueForNewOrder()
+    const { id } = await rowOf(orderId)
+    await repository.markSent(id, {
+      taxDocumentId: randomUUID(),
+      outcome: null,
+    })
+
+    const queued = await prisma.$transaction((tx) =>
+      repository.enqueue(
+        {
+          orderId,
+          emissionId: randomUUID(),
+          kind: 'emit',
+          externalRef: `${orderId}-2`,
+          payload: payload(orderId),
+        },
+        tx,
+      ),
+    )
+
+    const rows = await repository.findByOrder(orderId)
+    expect(queued).toBe(true)
+    expect(rows.map((row) => row.status)).toEqual(['sent', 'pending'])
+    expect(rows[1].externalRef).toBe(`${orderId}-2`)
+  })
+
+  it('stores the external reference and the annulment outcome', async () => {
+    const orderId = await enqueueForNewOrder()
+    const creditNoteId = randomUUID()
+    await prisma.$transaction((tx) =>
+      repository.enqueue(
+        {
+          orderId,
+          emissionId: randomUUID(),
+          kind: 'annul',
+          externalRef: `${orderId}-2`,
+          payload: { emissionId: 'x', reason: 'Pedido cancelado' },
+        },
+        tx,
+      ),
+    )
+    const annulment = await prisma.rikuchiyOutboxItem.findFirstOrThrow({
+      where: { order_id: orderId, kind: 'annul' },
+    })
+
+    await repository.markSent(annulment.id, {
+      taxDocumentId: creditNoteId,
+      outcome: 'credit_note',
+    })
+
+    const row = await prisma.rikuchiyOutboxItem.findUniqueOrThrow({
+      where: { id: annulment.id },
+    })
+    expect(row.external_ref).toBe(`${orderId}-2`)
+    expect(row.outcome).toBe('credit_note')
+    expect(row.tax_document_id).toBe(creditNoteId)
   })
 })

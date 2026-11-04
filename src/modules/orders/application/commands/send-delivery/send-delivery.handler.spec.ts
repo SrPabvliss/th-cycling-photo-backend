@@ -61,6 +61,8 @@ function buildDetail(overrides: Partial<OrderDetailProjection> = {}): OrderDetai
       { id: 'photo-3', filename: 'c.jpg', publicSlug: 'c', thumbnailUrl: '', fullUrl: '' },
     ],
     deliveryLink: null,
+    billing: null,
+    invoice: null,
     ...overrides,
   }
 }

@@ -1,12 +1,17 @@
-import { Controller, Get, Param, Patch, Query } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
-import { CancelMyOrderCommand } from '@orders/application/commands'
+import {
+  CancelMyOrderCommand,
+  CorrectMyOrderBillingCommand,
+  CorrectOrderBillingDto,
+} from '@orders/application/commands'
 import {
   MyOrderDetailProjection,
   MyOrderDownloadsProjection,
   MyOrderListProjection,
   MyOrdersSummaryProjection,
+  TaxDocumentFilesProjection,
 } from '@orders/application/projections'
 import {
   GetMyOrderDetailQuery,
@@ -14,6 +19,7 @@ import {
   GetMyOrdersListDto,
   GetMyOrdersListQuery,
   GetMyOrdersSummaryQuery,
+  GetOrderTaxDocumentFilesQuery,
 } from '@orders/application/queries'
 import { EntityIdProjection, Pagination } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
@@ -89,6 +95,30 @@ export class OrderAccountController {
   }
 
   @Authenticated()
+  @Get(':id/tax-documents/:taxDocumentId/files')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.tax_document' })
+  @ApiOperation({ summary: 'Get signed download URLs for the XML and PDF of my tax document' })
+  @ApiParam({ name: 'id', description: 'Order UUID' })
+  @ApiParam({ name: 'taxDocumentId', description: 'Tax document UUID' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Signed file URLs',
+    type: TaxDocumentFilesProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order or tax document not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'The files are not ready yet' })
+  @ApiEnvelopeErrorResponse({ status: 502, description: 'The invoicing service is unavailable' })
+  async taxDocumentFiles(
+    @CurrentUser() user: ICurrentUser,
+    @Param('id') id: string,
+    @Param('taxDocumentId') taxDocumentId: string,
+  ) {
+    return this.queryBus.execute(
+      new GetOrderTaxDocumentFilesQuery(id, taxDocumentId, user.userId, 'buyer'),
+    )
+  }
+
+  @Authenticated()
   @Patch(':id/cancel')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Cancel one of my orders while it is still in process' })
@@ -102,5 +132,36 @@ export class OrderAccountController {
   @ApiEnvelopeErrorResponse({ status: 422, description: 'Order cannot be cancelled' })
   async cancelMine(@CurrentUser() user: ICurrentUser, @Param('id') id: string) {
     return this.commandBus.execute(new CancelMyOrderCommand(user.userId, id))
+  }
+
+  @Authenticated()
+  @Patch(':id/billing')
+  @SuccessMessage('order.invoice_correction_sent')
+  @ApiOperation({ summary: 'Correct the billing data of my rejected invoice' })
+  @ApiParam({ name: 'id', description: 'Order UUID' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Corrected emission queued',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
+  @ApiEnvelopeErrorResponse({ status: 409, description: 'The invoice cannot be corrected now' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Billing data is invalid' })
+  async correctMyBilling(
+    @CurrentUser() user: ICurrentUser,
+    @Param('id') id: string,
+    @Body() correctOrderBillingDto: CorrectOrderBillingDto,
+  ) {
+    return this.commandBus.execute(
+      new CorrectMyOrderBillingCommand(
+        user.userId,
+        id,
+        correctOrderBillingDto.idType,
+        correctOrderBillingDto.idNumber,
+        correctOrderBillingDto.legalName,
+        correctOrderBillingDto.email,
+        correctOrderBillingDto.address ?? null,
+      ),
+    )
   }
 }

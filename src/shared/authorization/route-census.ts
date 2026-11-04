@@ -249,6 +249,12 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
   { method: 'GET', path: '/orders/stats', legacyMarker: 'admin', permission: 'order.stats.read' },
   { method: 'GET', path: '/orders/:id', legacyMarker: 'admin', permission: 'order.read' },
   {
+    method: 'GET',
+    path: '/orders/:id/tax-documents/:taxDocumentId/files',
+    legacyMarker: 'admin',
+    permission: 'order.read',
+  },
+  {
     method: 'PATCH',
     path: '/orders/:id/notify-payment-info',
     legacyMarker: 'admin',
@@ -284,6 +290,24 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
     path: '/orders/:id/regenerate-delivery',
     legacyMarker: 'admin',
     permission: 'order.delivery.regenerate',
+  },
+  {
+    method: 'POST',
+    path: '/orders/:id/tax-documents/:taxDocumentId/resends',
+    legacyMarker: 'admin',
+    permission: 'order.invoice.manage',
+  },
+  {
+    method: 'POST',
+    path: '/orders/:id/invoice/annulment-retries',
+    legacyMarker: 'admin',
+    permission: 'order.invoice.manage',
+  },
+  {
+    method: 'PATCH',
+    path: '/orders/:id/billing',
+    legacyMarker: 'admin',
+    permission: 'order.invoice.manage',
   },
   {
     method: 'PATCH',

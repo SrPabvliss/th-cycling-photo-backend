@@ -1,10 +1,10 @@
 import type {
-  MyOrderDetailProjection,
   MyOrderDownloadRaw,
   MyOrderListProjection,
   MyOrdersSummaryProjection,
   OrderListProjection,
   OrdersStatsProjection,
+  RawMyOrderDetailProjection,
   RawOrderDetailProjection,
   RetouchCompletedOrderProjection,
 } from '@orders/application/projections'
@@ -18,6 +18,7 @@ export type OrderListFilters = {
   eventId?: string
   status?: string
   search?: string
+  invoiceState?: string
 }
 
 export const ORDER_TABS: ReadonlyArray<{
@@ -65,7 +66,9 @@ export interface IOrderReadRepository {
   findOrdersFullyRetouchedByPhoto(photoId: string): Promise<RetouchCompletedOrderProjection[]>
   getPhotoIdsByOrderIds(orderIds: string[]): Promise<string[]>
   getMyList(userId: string, pagination: Pagination): Promise<PaginatedResult<MyOrderListProjection>>
-  getMyDetail(userId: string, orderId: string): Promise<MyOrderDetailProjection | null>
+  getMyDetail(userId: string, orderId: string): Promise<RawMyOrderDetailProjection | null>
+  /** True when the order belongs to the user and is not a draft. */
+  existsOwnedBy(userId: string, orderId: string): Promise<boolean>
   getMyDownloadFiles(userId: string, orderId: string): Promise<MyOrderDownloadRaw[] | null>
   getMySummary(userId: string): Promise<MyOrdersSummaryProjection>
   /** True when a payment transaction for this order is still initiated or confirming. */

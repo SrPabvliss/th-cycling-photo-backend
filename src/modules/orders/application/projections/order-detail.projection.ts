@@ -1,4 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { OrderBillingProjection } from './order-billing.projection'
+import { OrderInvoiceProjection } from './order-invoice.projection'
 
 export class OrderPayoutMethodProjection {
   @ApiProperty() provider: string
@@ -33,7 +35,7 @@ export class OrderDeliveryLinkProjection {
  * What the repository can read. The message needs the public delivery base URL, which is
  * configuration, so only the query handler can finish the projection.
  */
-export type RawOrderDetailProjection = Omit<OrderDetailProjection, 'deliveryLink'> & {
+export type RawOrderDetailProjection = Omit<OrderDetailProjection, 'deliveryLink' | 'invoice'> & {
   deliveryLink: Omit<OrderDeliveryLinkProjection, 'whatsappTemplate'> | null
 }
 
@@ -85,4 +87,8 @@ export class OrderDetailProjection {
   photos: OrderPhotoProjection[]
   /** Delivery link (null if not yet generated) */
   deliveryLink: OrderDeliveryLinkProjection | null
+  /** Billing snapshot taken when the order was placed (null when the buyer asked for no invoice) */
+  billing: OrderBillingProjection | null
+  /** Electronic invoice follow-up (null when no invoice was ever requested) */
+  invoice: OrderInvoiceProjection | null
 }

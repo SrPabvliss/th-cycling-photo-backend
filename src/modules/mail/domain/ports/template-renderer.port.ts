@@ -2,6 +2,7 @@ export type MailTemplate =
   | 'password-reset'
   | 'password-changed'
   | 'order-delivered'
+  | 'invoice-rejected'
   | 'email-verification-code'
   | 'email-changed-notice'
   | 'tenant-contract-invitation'

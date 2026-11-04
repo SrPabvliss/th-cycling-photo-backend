@@ -82,7 +82,7 @@ describe('ConvertOrderToGiftHandler', () => {
     expect(order.status).toBe('gifted')
     expect(order.paidAt).toBeNull()
     expect(writeRepo.save).toHaveBeenCalledWith(order, fakeTx)
-    expect(invoiceRequester.withdraw).toHaveBeenCalledWith(order.id, fakeTx)
+    expect(invoiceRequester.withdraw).toHaveBeenCalledWith(order.id, 'gifted', fakeTx)
     expect(result).toEqual({ id: order.id })
   })
 })

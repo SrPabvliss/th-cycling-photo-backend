@@ -86,7 +86,7 @@ describe('CancelOrderHandler', () => {
     expect(authz.assert).toHaveBeenCalledWith('user-1', 'order.cancel', 'event-1')
     expect(order.status).toBe('cancelled')
     expect(writeRepo.save).toHaveBeenCalledWith(order, fakeTx)
-    expect(invoiceRequester.withdraw).toHaveBeenCalledWith(order.id, fakeTx)
+    expect(invoiceRequester.withdraw).toHaveBeenCalledWith(order.id, 'cancelled', fakeTx)
     expect(result).toEqual({ id: order.id })
   })
 })

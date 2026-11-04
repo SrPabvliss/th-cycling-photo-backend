@@ -32,5 +32,6 @@
   "tenant": "Tenant",
   "tenant_contract": "Organizer contract",
   "payout_method": "Payout method",
-  "billing_account": "Billing account"
+  "billing_account": "Billing account",
+  "tax_document": "Tax document"
 }

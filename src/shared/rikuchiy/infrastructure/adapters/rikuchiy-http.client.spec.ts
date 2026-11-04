@@ -7,7 +7,9 @@ describe('RikuchiyHttpClient', () => {
   const originalFetch = global.fetch
 
   const config = (values: Record<string, unknown>) =>
-    ({ get: (key: string, fallback?: unknown) => values[key] ?? fallback }) as ConfigService
+    ({
+      get: (key: string, fallback?: unknown) => values[key] ?? fallback,
+    }) as ConfigService
 
   const settings = {
     'rikuchiy.baseUrl': 'http://rikuchiy.local/',
@@ -17,7 +19,11 @@ describe('RikuchiyHttpClient', () => {
   const configured = config(settings)
 
   const respond = (status: number, body: unknown) =>
-    fetchMock.mockResolvedValueOnce({ ok: status < 300, status, json: async () => body })
+    fetchMock.mockResolvedValueOnce({
+      ok: status < 300,
+      status,
+      json: async () => body,
+    })
 
   const payload: RikuchiyEmissionPayload = {
     emissionId: 'e-1',
@@ -78,13 +84,16 @@ describe('RikuchiyHttpClient', () => {
   })
 
   it.each([400, 409, 422])('rejects the emission when rikuchiy answers %i', async (status) => {
-    respond(status, { error: { code: 'BUSINESS_RULE', message: 'Identificación inválida' } })
+    respond(status, {
+      error: { code: 'BUSINESS_RULE', message: 'Identificación inválida' },
+    })
 
     const outcome = await new RikuchiyHttpClient(configured).emit(payload)
 
     expect(outcome).toEqual({
       kind: 'rejected',
       reason: `${status} BUSINESS_RULE: Identificación inválida`,
+      message: 'Identificación inválida',
     })
   })
 
@@ -130,7 +139,10 @@ describe('RikuchiyHttpClient', () => {
 
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('http://rikuchiy.local/identifications/validation')
-    expect(JSON.parse(init.body)).toEqual({ idType: '05', idNumber: '1710034066' })
+    expect(JSON.parse(init.body)).toEqual({
+      idType: '05',
+      idNumber: '1710034066',
+    })
     expect(check).toEqual({ valid: false, reason: 'invalid_check_digit' })
   })
 
@@ -151,5 +163,199 @@ describe('RikuchiyHttpClient', () => {
 
     expect(check).toBeNull()
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('answers every follow-up call as unavailable without calling rikuchiy when it is not configured', async () => {
+    const client = new RikuchiyHttpClient(config({}))
+
+    expect(await client.getSaleDocuments('order-1')).toBeNull()
+    expect(await client.getDocumentFiles('td-1')).toEqual({ kind: 'unavailable' })
+    expect(await client.resend('td-1', { id: 'u-1', name: 'Ana' })).toBe('unavailable')
+    expect(
+      await client.annul('order-1', { emissionId: 'a-1', reason: 'Pedido cancelado' }),
+    ).toEqual({
+      kind: 'retry',
+      reason: 'rikuchiy is not configured',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  describe('annul', () => {
+    const annulment = { emissionId: 'a-1', reason: 'Pedido cancelado' }
+
+    it('posts the annulment to the sale of the row', async () => {
+      respond(200, { data: { outcome: 'cancelled' } })
+
+      const result = await new RikuchiyHttpClient(configured).annul('order-1-2', annulment)
+
+      const [url, init] = fetchMock.mock.calls[0]
+      expect(url).toBe('http://rikuchiy.local/sales/cycling-photo/order-1-2/annulment')
+      expect(init.method).toBe('POST')
+      expect(JSON.parse(init.body)).toEqual(annulment)
+      expect(result).toEqual({
+        kind: 'accepted',
+        outcome: 'cancelled',
+        creditNoteId: null,
+      })
+    })
+
+    it('reads the credit note id from a 202 credit_note answer', async () => {
+      respond(202, { data: { outcome: 'credit_note', id: 'cn-1' } })
+
+      const result = await new RikuchiyHttpClient(configured).annul('order-1', annulment)
+
+      expect(result).toEqual({
+        kind: 'accepted',
+        outcome: 'credit_note',
+        creditNoteId: 'cn-1',
+      })
+    })
+
+    it('retries an annulment answered 409', async () => {
+      respond(409, {
+        error: { code: 'CONFLICT', message: 'no invoice for the sale' },
+      })
+
+      const result = await new RikuchiyHttpClient(configured).annul('order-1', annulment)
+
+      expect(result.kind).toBe('retry')
+    })
+
+    it.each([400, 422])('rejects an annulment answered %i', async (status) => {
+      respond(status, { error: { code: 'BUSINESS_RULE', message: 'x' } })
+
+      const result = await new RikuchiyHttpClient(configured).annul('order-1', annulment)
+
+      expect(result).toEqual({
+        kind: 'rejected',
+        reason: `${status} BUSINESS_RULE: x`,
+        message: 'x',
+      })
+    })
+  })
+
+  describe('reads and resends', () => {
+    it('reads the documents of a sale', async () => {
+      respond(200, {
+        data: [
+          {
+            id: 'td-1',
+            type: 'invoice',
+            state: 'authorized',
+            number: '001-001-000000123',
+            accessKey: '2610202601180272781600110010010000001231234567811',
+            issueDate: '2026-10-26',
+            authorizedAt: '2026-10-26T13:41:22.000Z',
+            attentionReason: null,
+            sriMessages: [],
+            deliveries: [],
+          },
+        ],
+        meta: { requestId: 'r' },
+      })
+
+      const documents = await new RikuchiyHttpClient(configured).getSaleDocuments('order-1')
+
+      const [url, init] = fetchMock.mock.calls[0]
+      expect(url).toBe('http://rikuchiy.local/sales/cycling-photo/order-1/tax-documents')
+      expect(init.method).toBe('GET')
+      expect(init.headers.Authorization).toBe('Bearer rik_x')
+      expect(documents).toEqual([
+        {
+          id: 'td-1',
+          externalRef: 'order-1',
+          type: 'invoice',
+          state: 'authorized',
+          number: '001-001-000000123',
+          accessKey: '2610202601180272781600110010010000001231234567811',
+          issueDate: '2026-10-26',
+          authorizedAt: new Date('2026-10-26T13:41:22.000Z'),
+          sriMessages: [],
+          deliveries: [],
+          syncedAt: null,
+        },
+      ])
+    })
+
+    it.each([
+      500, 403,
+    ])('returns null when rikuchiy does not answer the sale read (%i)', async (status) => {
+      respond(status, { error: { code: 'X', message: 'x' } })
+
+      expect(await new RikuchiyHttpClient(configured).getSaleDocuments('order-1')).toBeNull()
+    })
+
+    it('returns null when rikuchiy times out on the sale read', async () => {
+      fetchMock.mockRejectedValueOnce(new Error('timeout'))
+
+      expect(await new RikuchiyHttpClient(configured).getSaleDocuments('order-1')).toBeNull()
+    })
+
+    it('reads the signed files of a document', async () => {
+      respond(200, {
+        data: {
+          xml: { url: 'https://b2/x.xml', expiresAt: '2026-10-26T13:50:00.000Z' },
+          pdf: { url: 'https://b2/x.pdf', expiresAt: '2026-10-26T13:50:00.000Z' },
+        },
+      })
+
+      const result = await new RikuchiyHttpClient(configured).getDocumentFiles('td-1')
+
+      expect(fetchMock.mock.calls[0][0]).toBe('http://rikuchiy.local/tax-documents/td-1/files')
+      expect(result).toEqual({
+        kind: 'files',
+        xml: { url: 'https://b2/x.xml', expiresAt: '2026-10-26T13:50:00.000Z' },
+        pdf: { url: 'https://b2/x.pdf', expiresAt: '2026-10-26T13:50:00.000Z' },
+      })
+    })
+
+    it('maps 409 on files to not_stored', async () => {
+      respond(409, { error: { code: 'CONFLICT', message: 'x' } })
+
+      expect(await new RikuchiyHttpClient(configured).getDocumentFiles('td-1')).toEqual({
+        kind: 'not_stored',
+      })
+    })
+
+    it.each([404, 500])('maps %i on files to unavailable', async (status) => {
+      respond(status, { error: { code: 'X', message: 'x' } })
+
+      expect(await new RikuchiyHttpClient(configured).getDocumentFiles('td-1')).toEqual({
+        kind: 'unavailable',
+      })
+    })
+
+    it('accepts a resend as an operator', async () => {
+      respond(202, { data: {} })
+
+      const result = await new RikuchiyHttpClient(configured).resend('td-1', {
+        id: 'admin-7',
+        name: 'Franklin',
+      })
+
+      const [url, init] = fetchMock.mock.calls[0]
+      expect(url).toBe('http://rikuchiy.local/tax-documents/td-1/resends')
+      expect(JSON.parse(init.body)).toEqual({
+        requestedBy: { kind: 'operator', id: 'admin-7', name: 'Franklin' },
+        email: null,
+      })
+      expect(result).toBe('accepted')
+    })
+
+    it('maps 409 on a resend to not_resendable', async () => {
+      respond(409, { error: { code: 'CONFLICT', message: 'x' } })
+
+      expect(await new RikuchiyHttpClient(configured).resend('td-1', { id: 'a', name: 'b' })).toBe(
+        'not_resendable',
+      )
+    })
+
+    it('maps any other resend failure to unavailable', async () => {
+      respond(500, { error: { code: 'X', message: 'x' } })
+
+      expect(await new RikuchiyHttpClient(configured).resend('td-1', { id: 'a', name: 'b' })).toBe(
+        'unavailable',
+      )
+    })
   })
 })

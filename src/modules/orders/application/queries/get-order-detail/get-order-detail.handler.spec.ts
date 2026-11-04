@@ -41,13 +41,22 @@ const inactivePayphoneMethod = EventPayoutMethod.fromPersistence({
 })
 
 describe('GetOrderDetailHandler', () => {
-  let readRepo: jest.Mocked<Pick<IOrderReadRepository, 'getDetail'>>
+  let readRepo: jest.Mocked<Pick<IOrderReadRepository, 'getDetail' | 'findByIdInScope'>>
+  let rikuchiyOutboxRepository: { findByOrder: jest.Mock }
+  let orderTaxDocumentRepository: { findByOrder: jest.Mock }
+  let orderInvoiceSyncService: { syncOrder: jest.Mock }
   let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'can'>>
   let payoutRepo: jest.Mocked<Pick<IEventPayoutMethodRepository, 'findByEventId'>>
   let handler: GetOrderDetailHandler
 
   beforeEach(() => {
-    readRepo = { getDetail: jest.fn() }
+    readRepo = {
+      getDetail: jest.fn(),
+      findByIdInScope: jest.fn().mockResolvedValue({ id: 'order-1' }),
+    }
+    rikuchiyOutboxRepository = { findByOrder: jest.fn().mockResolvedValue([]) }
+    orderTaxDocumentRepository = { findByOrder: jest.fn().mockResolvedValue([]) }
+    orderInvoiceSyncService = { syncOrder: jest.fn().mockResolvedValue(null) }
     authz = { resolveEventScope: jest.fn(), can: jest.fn().mockResolvedValue(false) }
     payoutRepo = { findByEventId: jest.fn() }
     handler = new GetOrderDetailHandler(
@@ -55,6 +64,9 @@ describe('GetOrderDetailHandler', () => {
       authz as never,
       payoutRepo as never,
       { getOrThrow: () => 'https://titan.tv/delivery' } as never,
+      rikuchiyOutboxRepository as never,
+      orderTaxDocumentRepository as never,
+      orderInvoiceSyncService as never,
     )
   })
 
