@@ -9,6 +9,7 @@ import {
   ORDER_WRITE_REPOSITORY,
 } from '@orders/domain/ports'
 import { PaymentMethod } from '@orders/domain/value-objects/payment-method.vo'
+import { PaymentReceiverResolver } from '@payments/application/services/payment-receiver-resolver.service'
 import {
   type IPaymentTransactionWriteRepository,
   PAYMENT_TRANSACTION_WRITE_REPOSITORY,
@@ -25,6 +26,7 @@ export class ChoosePaymentMethodHandler implements ICommandHandler<ChoosePayment
     @Inject(PAYMENT_TRANSACTION_WRITE_REPOSITORY)
     private readonly transactionWriteRepo: IPaymentTransactionWriteRepository,
     private readonly notifications: NotificationsService,
+    private readonly receiverResolver: PaymentReceiverResolver,
   ) {}
 
   async execute(command: ChoosePaymentMethodCommand): Promise<{ orderIds: string[] }> {
@@ -36,6 +38,15 @@ export class ChoosePaymentMethodHandler implements ICommandHandler<ChoosePayment
     const found = orders as NonNullable<(typeof orders)[number]>[]
     if (found.some((order) => order.userId !== command.buyerUserId)) {
       throw AppException.forbidden('payment.order_not_yours')
+    }
+
+    if (command.method === PaymentMethod.CARD) {
+      const eventIds = [...new Set(found.map((order) => order.eventId))]
+      for (const eventId of eventIds) {
+        if (!(await this.receiverResolver.acceptsCard(eventId))) {
+          throw AppException.businessRule('payment.card_unavailable')
+        }
+      }
     }
 
     const promoted: Order[] = []

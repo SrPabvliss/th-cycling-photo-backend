@@ -30,7 +30,7 @@ function buildDraftOrder(id: string, userId: string): Order {
   return Object.assign(order, { id })
 }
 
-function buildHandler(orders: Order[]) {
+function buildHandler(orders: Order[], acceptsCard = true) {
   const saved: Order[] = []
   const readRepo = {
     findById: jest.fn((id: string) => Promise.resolve(orders.find((o) => o.id === id) ?? null)),
@@ -58,12 +58,17 @@ function buildHandler(orders: Order[]) {
     emitOrderCreated: jest.fn(),
   }
 
+  const receiverResolver = {
+    acceptsCard: jest.fn().mockResolvedValue(acceptsCard),
+  }
+
   return {
     handler: new ChoosePaymentMethodHandler(
       writeRepo as never,
       readRepo as never,
       transactionWriteRepo as never,
       notifications as never,
+      receiverResolver as never,
     ),
     saved,
     readRepo,
@@ -109,6 +114,16 @@ describe('ChoosePaymentMethodHandler', () => {
         new ChoosePaymentMethodCommand(['order-1', 'ghost'], PaymentMethod.CARD, BUYER),
       ),
     ).rejects.toThrow()
+  })
+
+  it('refuses to switch to card when the event has no usable Payphone account', async () => {
+    const orders = [buildDraftOrder('order-1', BUYER)]
+    const { handler, saved } = buildHandler(orders, false)
+
+    await expect(
+      handler.execute(new ChoosePaymentMethodCommand(['order-1'], PaymentMethod.CARD, BUYER)),
+    ).rejects.toMatchObject({ messageKey: 'payment.card_unavailable' })
+    expect(saved).toHaveLength(0)
   })
 
   it('promotes a draft to pending when the buyer switches to transfer', async () => {

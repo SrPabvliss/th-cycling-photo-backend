@@ -1,3 +1,4 @@
+import { PaymentReceiverResolver } from '@payments/application/services/payment-receiver-resolver.service'
 import { SellerAccountSuspension } from '@payments/application/services/seller-account-suspension.service'
 import { PaymentAmountCalculator } from '@payments/domain/services/payment-amount-calculator.service'
 import { PaymentMode } from '@payments/domain/value-objects/payment-mode.vo'
@@ -109,8 +110,7 @@ function buildHandler({
   const scheduler = { schedule: jest.fn() }
   const handler = new CreatePaymentIntentHandler(
     contextRepo as never,
-    payoutRepo as never,
-    eventPayoutRepo as never,
+    new PaymentReceiverResolver(payoutRepo as never, eventPayoutRepo as never, {} as never),
     transactionRepo as never,
     registry as never,
     new PaymentAmountCalculator(),
@@ -172,8 +172,7 @@ describe('CreatePaymentIntentHandler', () => {
     scheduler = { schedule: jest.fn() }
     handler = new CreatePaymentIntentHandler(
       contextRepo as never,
-      payoutRepo as never,
-      eventPayoutRepo as never,
+      new PaymentReceiverResolver(payoutRepo as never, eventPayoutRepo as never, {} as never),
       transactionRepo as never,
       registry as never,
       new PaymentAmountCalculator(),

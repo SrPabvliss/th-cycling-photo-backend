@@ -2,6 +2,7 @@
   "negative_amount": "Amount cannot be negative",
   "account_not_verified": "The photographer has not finished setting up payments",
   "account_not_found": "No payment account is configured for this event",
+  "card_unavailable": "This event does not take card payments. Choose bank transfer.",
   "order_context_missing": "Order information not found",
   "invalid_phone": "The phone number format is not valid",
   "phone_not_registered": "This number is not registered with Payphone",

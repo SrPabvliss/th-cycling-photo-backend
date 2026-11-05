@@ -23,6 +23,7 @@ import {
   type OrderSnapData,
 } from '@orders/domain/ports'
 import { PaymentMethod } from '@orders/domain/value-objects/payment-method.vo'
+import { PaymentReceiverResolver } from '@payments/application/services/payment-receiver-resolver.service'
 import {
   type IPaymentTransactionWriteRepository,
   PAYMENT_TRANSACTION_WRITE_REPOSITORY,
@@ -48,6 +49,7 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
     @Inject(BILLING_ACCOUNT_REPOSITORY)
     private readonly billingAccountRepository: IBillingAccountRepository,
     @Inject(CONSENT_REPOSITORY) private readonly consentRepository: IConsentRepository,
+    private readonly receiverResolver: PaymentReceiverResolver,
   ) {}
 
   async execute(command: CheckoutCartCommand): Promise<CheckoutResultProjection> {
@@ -70,6 +72,14 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
     for (const item of command.items) {
       if (!cartEventMap.has(item.eventId)) {
         throw AppException.businessRule('cart.event_not_in_cart')
+      }
+    }
+
+    if (command.method === PaymentMethod.CARD) {
+      for (const item of command.items) {
+        if (!(await this.receiverResolver.acceptsCard(item.eventId))) {
+          throw AppException.businessRule('payment.card_unavailable')
+        }
       }
     }
 

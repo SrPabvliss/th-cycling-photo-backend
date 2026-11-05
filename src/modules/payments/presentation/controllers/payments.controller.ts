@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common'
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import {
@@ -8,11 +8,15 @@ import {
   CreatePaymentIntentDto,
 } from '@payments/application/commands'
 import {
+  EventPaymentOptionsProjection,
   PaymentIntentProjection,
   PaymentResultProjection,
   PaymentTransactionProjection,
 } from '@payments/application/projections'
-import { GetPaymentTransactionQuery } from '@payments/application/queries'
+import {
+  GetEventPaymentOptionsQuery,
+  GetPaymentTransactionQuery,
+} from '@payments/application/queries'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
 import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
@@ -58,6 +62,19 @@ export class PaymentsController {
     return this.commandBus.execute(
       new ConfirmPaymentTransactionCommand(dto.clientTransactionId, String(dto.id), user.userId),
     )
+  }
+
+  @RequirePermission('payment.intent.create')
+  @Get('events/:eventId/options')
+  @ApiOperation({ summary: 'Payment methods the buyer can use for an event' })
+  @ApiParam({ name: 'eventId', description: 'Event the buyer is checking out' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Payment methods available for the event',
+    type: EventPaymentOptionsProjection,
+  })
+  async getEventPaymentOptions(@Param('eventId', ParseUUIDPipe) eventId: string) {
+    return this.queryBus.execute(new GetEventPaymentOptionsQuery(eventId))
   }
 
   @RequirePermission('payment.transaction.read')

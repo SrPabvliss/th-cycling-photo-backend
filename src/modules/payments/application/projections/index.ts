@@ -1,3 +1,4 @@
+export { EventPaymentOptionsProjection } from './event-payment-options.projection'
 export { PaymentAccountProjection } from './payment-account.projection'
 export { PaymentDeliveryProjection } from './payment-delivery.projection'
 export { PaymentIntentProjection } from './payment-intent.projection'
