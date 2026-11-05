@@ -7,8 +7,12 @@ import {
   ConfirmPaymentTransactionHandler,
   CreatePaymentIntentHandler,
 } from '@payments/application/commands'
-import { GetPaymentTransactionHandler } from '@payments/application/queries'
+import {
+  GetEventPaymentOptionsHandler,
+  GetPaymentTransactionHandler,
+} from '@payments/application/queries'
 import { PaymentConfirmationScheduler } from '@payments/application/services/payment-confirmation-scheduler.service'
+import { PaymentReceiverResolver } from '@payments/application/services/payment-receiver-resolver.service'
 import { PaymentSystemActor } from '@payments/application/services/payment-system-actor.service'
 import { SellerAccountSuspension } from '@payments/application/services/seller-account-suspension.service'
 import {
@@ -38,6 +42,8 @@ import { TenantsModule } from '../tenants/tenants.module'
   providers: [
     PaymentAmountCalculator,
     GetPaymentTransactionHandler,
+    GetEventPaymentOptionsHandler,
+    PaymentReceiverResolver,
     CreatePaymentIntentHandler,
     ConfirmPaymentTransactionHandler,
     PaymentConfirmationScheduler,
@@ -48,6 +54,6 @@ import { TenantsModule } from '../tenants/tenants.module'
     { provide: PAYMENT_TRANSACTION_WRITE_REPOSITORY, useClass: PaymentTransactionWriteRepository },
     { provide: ORDER_PAYMENT_CONTEXT_REPOSITORY, useClass: OrderPaymentContextRepository },
   ],
-  exports: [PAYMENT_TRANSACTION_WRITE_REPOSITORY],
+  exports: [PAYMENT_TRANSACTION_WRITE_REPOSITORY, PaymentReceiverResolver],
 })
 export class PaymentsModule {}

@@ -1,13 +1,13 @@
-import {
-  EVENT_PAYOUT_METHOD_REPOSITORY,
-  type IEventPayoutMethodRepository,
-} from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import type { PaymentIntentProjection } from '@payments/application/projections'
 import { PaymentConfirmationScheduler } from '@payments/application/services/payment-confirmation-scheduler.service'
+import {
+  PaymentReceiverResolver,
+  type ReceiverAccount,
+} from '@payments/application/services/payment-receiver-resolver.service'
 import { SellerAccountSuspension } from '@payments/application/services/seller-account-suspension.service'
 import { PaymentTransaction } from '@payments/domain/entities'
 import {
@@ -22,13 +22,7 @@ import { PaymentMode, type PaymentModeType } from '@payments/domain/value-object
 import { CredentialCipher } from '@shared/crypto'
 import { AppException } from '@shared/domain'
 import { PAYMENT_GATEWAY_REGISTRY, type PaymentGatewayRegistry } from '@shared/payment-gateways'
-import type { PayoutProviderType } from '@tenants/domain/value-objects/payout-provider.vo'
-import { PayoutProvider } from '@tenants/domain/value-objects/payout-provider.vo'
 import { nanoid } from 'nanoid'
-import {
-  type ITenantPayoutMethodRepository,
-  TENANT_PAYOUT_METHOD_REPOSITORY,
-} from '../../../../tenants/domain/ports/tenant-payout-method-repository.port'
 import { CreatePaymentIntentCommand } from './create-payment-intent.command'
 
 const PAYABLE_STATUSES: string[] = [
@@ -38,23 +32,12 @@ const PAYABLE_STATUSES: string[] = [
 ]
 const CURRENCY = 'USD'
 
-interface ReceiverAccount {
-  provider: PayoutProviderType
-  mode: PaymentModeType | null
-  receiverIdentifier: string | null
-  credentialsEncrypted: string | null
-  isUsable: boolean
-}
-
 @CommandHandler(CreatePaymentIntentCommand)
 export class CreatePaymentIntentHandler implements ICommandHandler<CreatePaymentIntentCommand> {
   constructor(
     @Inject(ORDER_PAYMENT_CONTEXT_REPOSITORY)
     private readonly contextRepo: IOrderPaymentContextRepository,
-    @Inject(TENANT_PAYOUT_METHOD_REPOSITORY)
-    private readonly payoutRepo: ITenantPayoutMethodRepository,
-    @Inject(EVENT_PAYOUT_METHOD_REPOSITORY)
-    private readonly eventPayoutRepo: IEventPayoutMethodRepository,
+    private readonly receiverResolver: PaymentReceiverResolver,
     @Inject(PAYMENT_TRANSACTION_WRITE_REPOSITORY)
     private readonly transactionRepo: IPaymentTransactionWriteRepository,
     @Inject(PAYMENT_GATEWAY_REGISTRY)
@@ -171,43 +154,12 @@ export class CreatePaymentIntentHandler implements ICommandHandler<CreatePayment
     const eventIds = [...new Set(contexts.map((context) => context.eventId))]
 
     const accounts = await Promise.all(
-      eventIds.map((eventId) => this.resolveReceiverForEvent(eventId, sellerTenantId)),
+      eventIds.map((eventId) => this.receiverResolver.resolveForEvent(eventId, sellerTenantId)),
     )
 
     const receiverKeys = new Set(accounts.map((account) => account?.receiverIdentifier ?? null))
     if (receiverKeys.size > 1) throw AppException.businessRule('payment.mixed_receivers')
 
     return accounts[0]
-  }
-
-  private async resolveReceiverForEvent(
-    eventId: string,
-    sellerTenantId: string,
-  ): Promise<ReceiverAccount | null> {
-    const eventOnlyAccount = await this.findEventOnlyPayphone(eventId)
-    return eventOnlyAccount ?? this.payoutRepo.findActivePayphoneForTenant(sellerTenantId)
-  }
-
-  private async findEventOnlyPayphone(eventId: string): Promise<ReceiverAccount | null> {
-    const methods = await this.eventPayoutRepo.findByEventId(eventId)
-    const firstActivePayphone = methods.find(
-      (method) => method.provider === PayoutProvider.PAYPHONE && method.isActive,
-    )
-    if (!firstActivePayphone || firstActivePayphone.sourcePayoutMethodId !== null) return null
-
-    if (
-      firstActivePayphone.mode !== PaymentMode.SPLIT_RECEIVER ||
-      !firstActivePayphone.receiverIdentifier
-    ) {
-      throw AppException.businessRule('payment.account_not_verified')
-    }
-
-    return {
-      provider: firstActivePayphone.provider,
-      mode: firstActivePayphone.mode,
-      receiverIdentifier: firstActivePayphone.receiverIdentifier,
-      credentialsEncrypted: null,
-      isUsable: true,
-    }
   }
 }

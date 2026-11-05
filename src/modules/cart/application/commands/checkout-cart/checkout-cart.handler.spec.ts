@@ -55,6 +55,7 @@ function buildHandler(
     remainingItemCount?: number
     billingAccount?: typeof billingAccount | null
     consent?: { acceptedAt: Date; ip: string | null } | null
+    acceptsCard?: boolean
   } = {},
 ) {
   const savedOrders: Order[] = []
@@ -135,6 +136,10 @@ function buildHandler(
     ),
   }
 
+  const receiverResolver = {
+    acceptsCard: jest.fn(() => Promise.resolve(options.acceptsCard ?? true)),
+  }
+
   const handler = new CheckoutCartHandler(
     cartReadRepo as never,
     cartWriteRepo as never,
@@ -144,6 +149,7 @@ function buildHandler(
     notifications as never,
     billingAccountRepository as never,
     consentRepository as never,
+    receiverResolver as never,
   )
 
   return {
@@ -262,6 +268,37 @@ describe('CheckoutCartHandler', () => {
     expect(savedOrders[0].status).toBe(OrderStatus.DRAFT)
     expect(savedOrders[0].paymentMethod).toBe('card')
     expect(notifications.emitOrderCreated).not.toHaveBeenCalled()
+  })
+
+  it('refuses a card checkout for an event with no usable Payphone account, creating nothing', async () => {
+    const { handler, savedOrders } = buildHandler({ acceptsCard: false })
+
+    await expect(
+      handler.execute(
+        new CheckoutCartCommand(
+          BUYER,
+          [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
+          'card',
+          BILLING_ACCOUNT_ID,
+        ),
+      ),
+    ).rejects.toMatchObject({ messageKey: 'payment.card_unavailable' })
+    expect(savedOrders).toHaveLength(0)
+  })
+
+  it('lets a transfer checkout through for an event with no usable Payphone account', async () => {
+    const { handler, savedOrders } = buildHandler({ acceptsCard: false })
+
+    await handler.execute(
+      new CheckoutCartCommand(
+        BUYER,
+        [{ eventId: EVENT, bibNumber: null, snapCategoryName: null }],
+        'transfer',
+        BILLING_ACCOUNT_ID,
+      ),
+    )
+
+    expect(savedOrders[0].status).toBe(OrderStatus.PENDING)
   })
 
   it('leaves the cart alone when the buyer picks card, so a closed modal or a reload keeps the photos', async () => {

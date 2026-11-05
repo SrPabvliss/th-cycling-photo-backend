@@ -2,6 +2,7 @@
   "negative_amount": "El monto no puede ser negativo",
   "account_not_verified": "El fotógrafo aún no configuró sus cobros",
   "account_not_found": "No hay una cuenta de cobros configurada para este evento",
+  "card_unavailable": "Este evento no acepta pago con tarjeta. Elige transferencia bancaria.",
   "order_context_missing": "No se encontró la información de la orden",
   "invalid_phone": "El número de teléfono no tiene un formato válido",
   "phone_not_registered": "Este número no está registrado en Payphone",
