@@ -35,7 +35,7 @@ export class ConfirmOrderPaymentHandler implements ICommandHandler<ConfirmOrderP
     // 1. Scoped load — the tenant-boundary check. `assert` alone never
     // compares the order's event to the caller's scope, so it must be the
     // scoped load, not the assert, that turns an out-of-scope id into 404.
-    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const scope = await this.authz.resolveEventScope(command.audit.userId, 'order.confirm_payment')
     const order = await this.readRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
     await this.authz.assert(command.audit.userId, 'order.confirm_payment', order.eventId)

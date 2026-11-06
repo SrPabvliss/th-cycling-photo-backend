@@ -41,7 +41,7 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     if (!command.audit) {
       throw AppException.internal('confirm_photo_batch.missing_audit_context')
     }
-    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const scope = await this.authz.resolveEventScope(command.audit.userId, 'photo.upload')
     const event = await this.eventReadRepo.findById(command.eventId)
     if (!event || !scope.includesEvent(event)) {
       throw AppException.notFound('Event', command.eventId)

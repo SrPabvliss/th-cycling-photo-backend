@@ -22,6 +22,7 @@ import {
 
 import { PaginatedResult, type Pagination } from '@shared/application'
 import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import { eventScopeSql } from '@shared/authorization/infrastructure/event-scope.sql'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { PrismaService } from '@shared/infrastructure'
 import {
@@ -1034,11 +1035,8 @@ function reviewedAtFilter(status: ReviewQueueStatusFilter): Prisma.Sql {
   return Prisma.empty
 }
 
-/**
- * Raw-SQL equivalent of `EventScope.toPrisma()`, for queries that join `events` directly. `alias`
- * is interpolated unescaped via `Prisma.raw`, so it must never come from user input.
- */
+/** `AND`-prefixed `eventScopeSql`, for queries that join `events` directly. */
 function eventScopeFilter(scope: EventScope, alias: string): Prisma.Sql {
   if (scope.all) return Prisma.empty
-  return Prisma.sql`AND (${Prisma.raw(alias)}.tenant_id = ANY(${scope.tenantIds}::uuid[]) OR ${Prisma.raw(alias)}.id = ANY(${scope.eventIds}::uuid[]))`
+  return Prisma.sql`AND ${eventScopeSql(scope, alias)}`
 }

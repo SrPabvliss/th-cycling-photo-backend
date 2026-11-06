@@ -61,7 +61,7 @@ describe('GetOrdersStatsHandler', () => {
 
     await handler.execute(new GetOrdersStatsQuery('event-1', 'u1', 'andrea'))
 
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'order.stats.read')
     expect(readRepo.getStats).toHaveBeenCalledWith(
       { eventId: 'event-1', search: 'andrea' },
       tenantScope,

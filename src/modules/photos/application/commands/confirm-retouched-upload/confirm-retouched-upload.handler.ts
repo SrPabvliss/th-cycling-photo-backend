@@ -52,7 +52,7 @@ export class ConfirmRetouchedUploadHandler
   ) {}
 
   async execute(command: ConfirmRetouchedUploadCommand): Promise<{ confirmed: boolean }> {
-    const scope = await this.authz.resolveEventScope(command.retouchedById)
+    const scope = await this.authz.resolveEventScope(command.retouchedById, 'photo.retouch.upload')
     const photo = await this.photoReadRepo.findByIdInScope(command.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', command.photoId)
     await this.authz.assert(command.retouchedById, 'photo.retouch.upload', photo.eventId)

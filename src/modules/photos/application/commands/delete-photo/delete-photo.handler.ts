@@ -48,7 +48,7 @@ export class DeletePhotoHandler implements ICommandHandler<DeletePhotoCommand> {
   ) {}
 
   async execute(command: DeletePhotoCommand): Promise<void> {
-    const scope = await this.authz.resolveEventScope(command.userId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'photo.delete')
     const photo = await this.photoRead.findByIdInScope(command.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', command.photoId)
     await this.authz.assert(command.userId, 'photo.delete', photo.eventId)

@@ -19,7 +19,7 @@ export class GetEventsListHandler implements IQueryHandler<GetEventsListQuery> {
   ) {}
 
   async execute(query: GetEventsListQuery): Promise<PaginatedResult<EventListProjection>> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'event.read')
 
     const result = await this.readRepo.getEventsList(query.pagination, query.filters, scope)
     if (result.items.length === 0) return result

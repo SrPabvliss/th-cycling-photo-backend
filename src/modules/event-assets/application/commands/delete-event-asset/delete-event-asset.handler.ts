@@ -42,7 +42,7 @@ export class DeleteEventAssetHandler implements ICommandHandler<DeleteEventAsset
     // Scoped load, then assert — see Ruling 21. `EventAsset` itself
     // carries no tenant of its own; its parent Event does, so the
     // tenant-boundary check happens against the scoped Event load.
-    const scope = await this.authz.resolveEventScope(command.userId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'event_asset.delete')
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)
     await this.authz.assert(command.userId, 'event_asset.delete', event.id)

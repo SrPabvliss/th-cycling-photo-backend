@@ -170,86 +170,20 @@ describe('AuthorizationService.canAnywhere', () => {
   })
 })
 
-describe('AuthorizationService.resolveGrantedEventScope', () => {
-  it('narrows a retoucher holding the key only on events to exactly those events', async () => {
-    const p = EMPTY_PRINCIPAL_PERMISSIONS()
-    p.isPlatform = true
-    p.tenantId = 'platform'
-    p.eventGrants.set('e1', new Map([['photo.retouch.read', 'allow']]))
-    p.eventGrants.set('e2', new Map([['photo.retouch.read', 'deny']]))
-    p.eventGrants.set('e3', new Map([['photo.retouch.flag', 'allow']]))
-    const svc = new AuthorizationService(repoReturning(p), noCache())
-
-    const scope = await svc.resolveGrantedEventScope('u1', 'photo.retouch.read')
-
-    expect(scope.all).toBe(false)
-    expect(scope.tenantIds).toEqual([])
-    expect(scope.eventIds).toEqual(['e1'])
-  })
-
-  it('falls back to the regular scope when the key comes from the template', async () => {
-    const p = EMPTY_PRINCIPAL_PERMISSIONS()
-    p.isPlatform = true
-    p.templateKeys.add('photo.retouch.read')
-    p.templateKeys.add('event.read.all')
-    const svc = new AuthorizationService(repoReturning(p), noCache())
-
-    const scope = await svc.resolveGrantedEventScope('u1', 'photo.retouch.read')
-
-    expect(scope.all).toBe(true)
-  })
-})
+const tenantPrincipal = (keys: string[] = []): PrincipalPermissions => {
+  const p = EMPTY_PRINCIPAL_PERMISSIONS()
+  p.tenantId = 't1'
+  for (const key of keys) p.templateKeys.add(key as never)
+  return p
+}
 
 describe('AuthorizationService.resolveEventScope', () => {
-  it('returns all for a holder of event.read.all', async () => {
+  it('returns all for a holder of event.read.all, whatever the key', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.isPlatform = true
     p.templateKeys.add('event.read.all')
     const svc = new AuthorizationService(repoReturning(p), noCache())
-    expect((await svc.resolveEventScope('u1')).toPrisma()).toEqual({})
-  })
-
-  it('scopes a tenant user to their own tenant', async () => {
-    const p = EMPTY_PRINCIPAL_PERMISSIONS()
-    p.tenantId = 't1'
-    const svc = new AuthorizationService(repoReturning(p), noCache())
-    expect((await svc.resolveEventScope('u1')).toPrisma()).toEqual({
-      OR: [{ tenant_id: { in: ['t1'] } }, { id: { in: [] } }],
-    })
-  })
-
-  it('includes per-event grants', async () => {
-    const p = EMPTY_PRINCIPAL_PERMISSIONS()
-    p.eventGrants.set('e1', new Map([['event.read', 'allow']]))
-    p.eventGrants.set('e2', new Map([['photo.read', 'allow']]))
-    const svc = new AuthorizationService(repoReturning(p), noCache())
-    const w = (await svc.resolveEventScope('u1')).toPrisma() as {
-      OR: [unknown, { id: { in: string[] } }]
-    }
-    expect(w.OR[1].id.in.sort()).toEqual(['e1', 'e2'])
-  })
-
-  it('excludes an event whose grant is a deny', async () => {
-    const p = EMPTY_PRINCIPAL_PERMISSIONS()
-    p.eventGrants.set('e1', new Map([['event.read', 'deny']]))
-    const svc = new AuthorizationService(repoReturning(p), noCache())
-    const w = (await svc.resolveEventScope('u1')).toPrisma() as {
-      OR: [unknown, { id: { in: string[] } }]
-    }
-    expect(w.OR[1].id.in).toEqual([])
-  })
-
-  // Guards against a mutation that grants `all` from `isPlatform` alone. The four tests above
-  // can't catch it: their fixtures either hold `event.read.all` (so mutant and original agree) or
-  // leave `isPlatform` false (so the mutant never fires).
-  it('does not grant unrestricted scope to a platform_staff-shaped principal', async () => {
-    const p = EMPTY_PRINCIPAL_PERMISSIONS()
-    p.isPlatform = true
-    for (const key of TEMPLATE_PERMISSIONS.platform_staff) p.templateKeys.add(key)
-    const svc = new AuthorizationService(repoReturning(p), noCache())
-    const scope = await svc.resolveEventScope('u1')
-    expect(scope.all).toBe(false)
-    expect(scope.toPrisma()).toEqual({ OR: [{ tenant_id: { in: [] } }, { id: { in: [] } }] })
+    expect((await svc.resolveEventScope('u1', 'order.read')).toPrisma()).toEqual({})
   })
 
   it('returns all for a platform user holding event.read.all as a global grant', async () => {
@@ -257,32 +191,138 @@ describe('AuthorizationService.resolveEventScope', () => {
     p.isPlatform = true
     p.globalGrants.set('event.read.all', 'allow')
     const svc = new AuthorizationService(repoReturning(p), noCache())
-    expect((await svc.resolveEventScope('u1')).toPrisma()).toEqual({})
+    expect((await svc.resolveEventScope('u1', 'event.read')).toPrisma()).toEqual({})
+  })
+
+  it('scopes a tenant user holding the key in the template to their own tenant', async () => {
+    const svc = new AuthorizationService(repoReturning(tenantPrincipal(['event.read'])), noCache())
+    expect((await svc.resolveEventScope('u1', 'event.read')).toPrisma()).toEqual({
+      OR: [{ tenant_id: { in: ['t1'] } }, { id: { in: [] } }],
+    })
+  })
+
+  it('does not open the tenant to a user whose only reach is a grant on one event', async () => {
+    const p = tenantPrincipal()
+    p.eventGrants.set('e1', new Map([['event.read', 'allow']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    const scope = await svc.resolveEventScope('u1', 'event.read')
+    expect(scope.tenantIds).toEqual([])
+    expect(scope.eventIds).toEqual(['e1'])
+    expect(scope.includesEvent({ id: 'e2', tenantId: 't1' })).toBe(false)
+  })
+
+  it('opens the tenant through a global allow grant', async () => {
+    const p = tenantPrincipal()
+    p.globalGrants.set('order.read', 'allow')
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    expect((await svc.resolveEventScope('u1', 'order.read')).tenantIds).toEqual(['t1'])
+  })
+
+  it('closes the tenant when a global deny overrides the template', async () => {
+    const p = tenantPrincipal(['order.read'])
+    p.globalGrants.set('order.read', 'deny')
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    expect((await svc.resolveEventScope('u1', 'order.read')).isEmpty).toBe(true)
+  })
+
+  it('does not let a grant of one verb reach another verb', async () => {
+    const p = tenantPrincipal()
+    p.eventGrants.set('e1', new Map([['photo.read', 'allow']]))
+    p.eventGrants.set('e2', new Map([['order.read', 'allow']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    expect((await svc.resolveEventScope('u1', 'order.read')).eventIds).toEqual(['e2'])
+    expect((await svc.resolveEventScope('u1', 'photo.read')).eventIds).toEqual(['e1'])
+  })
+
+  it('carves an explicit per-event deny out of the tenant branch', async () => {
+    const p = tenantPrincipal(['photo.read'])
+    p.eventGrants.set('e1', new Map([['photo.read', 'deny']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    const scope = await svc.resolveEventScope('u1', 'photo.read')
+    expect(scope.deniedEventIds).toEqual(['e1'])
+    expect(scope.includesEvent({ id: 'e1', tenantId: 't1' })).toBe(false)
+    expect(scope.includesEvent({ id: 'e2', tenantId: 't1' })).toBe(true)
+  })
+
+  it('ignores a deny of a different verb', async () => {
+    const p = tenantPrincipal(['photo.read'])
+    p.eventGrants.set('e1', new Map([['order.read', 'deny']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    expect((await svc.resolveEventScope('u1', 'photo.read')).deniedEventIds).toEqual([])
+  })
+
+  it('narrows a retoucher holding the key only on events to exactly those events', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    p.tenantId = 'platform'
+    for (const key of TEMPLATE_PERMISSIONS.platform_staff) p.templateKeys.add(key)
+    p.eventGrants.set('e1', new Map([['photo.retouch.read', 'allow']]))
+    p.eventGrants.set('e2', new Map([['photo.retouch.read', 'deny']]))
+    p.eventGrants.set('e3', new Map([['photo.retouch.flag', 'allow']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+
+    const scope = await svc.resolveEventScope('u1', 'photo.retouch.read')
+
+    expect(scope.all).toBe(false)
+    expect(scope.tenantIds).toEqual([])
+    expect(scope.eventIds).toEqual(['e1'])
+  })
+
+  it('unions several keys so a retoucher reads the photos of the events they retouch', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    p.tenantId = 'platform'
+    for (const key of TEMPLATE_PERMISSIONS.platform_staff) p.templateKeys.add(key)
+    p.eventGrants.set('eB', new Map([['photo.retouch.read', 'allow']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+
+    const read = await svc.resolveEventScope('u1', 'photo.read')
+    const union = await svc.resolveEventScope('u1', ['photo.read', 'photo.retouch.read'])
+
+    expect(read.includesEvent({ id: 'eB', tenantId: 'tB' })).toBe(false)
+    expect(union.includesEvent({ id: 'eB', tenantId: 'tB' })).toBe(true)
+    expect(union.includesEvent({ id: 'eP', tenantId: 'platform' })).toBe(true)
+    expect(union.includesEvent({ id: 'eX', tenantId: 'tB' })).toBe(false)
+  })
+
+  it('returns an empty scope for a platform-only key held by a tenant user', async () => {
+    const p = tenantPrincipal(['buyer.read'])
+    p.eventGrants.set('e1', new Map([['buyer.read', 'allow']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    expect((await svc.resolveEventScope('u1', 'buyer.read')).isEmpty).toBe(true)
+  })
+
+  // Guards against a mutation that grants `all` from `isPlatform` alone.
+  it('does not grant unrestricted scope to a platform_staff-shaped principal', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    for (const key of TEMPLATE_PERMISSIONS.platform_staff) p.templateKeys.add(key)
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    const scope = await svc.resolveEventScope('u1', 'event.read')
+    expect(scope.all).toBe(false)
+    expect(scope.toPrisma()).toEqual({ OR: [{ tenant_id: { in: [] } }, { id: { in: [] } }] })
   })
 
   // A tenant user can never reach `unrestricted()` through a global `event.read.all` grant —
-  // `can()`'s platformOnly check denies it first. Re-deriving the flag by hand would leak here.
+  // `can()`'s platformOnly check denies it first.
   it('does not grant unrestricted scope to a tenant user holding event.read.all as a global grant', async () => {
-    const p = EMPTY_PRINCIPAL_PERMISSIONS()
-    p.isPlatform = false
-    p.tenantId = 't1'
+    const p = tenantPrincipal(['event.read'])
     p.globalGrants.set('event.read.all', 'allow')
     const svc = new AuthorizationService(repoReturning(p), noCache())
-    const scope = await svc.resolveEventScope('u1')
+    const scope = await svc.resolveEventScope('u1', 'event.read')
     expect(scope.all).toBe(false)
     expect(scope.toPrisma()).toEqual({
       OR: [{ tenant_id: { in: ['t1'] } }, { id: { in: [] } }],
     })
   })
 
-  // An explicit deny on event.read.all overrides the template, matching can()'s precedence.
   it('lets an explicit deny on event.read.all override the template', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()
     p.isPlatform = true
     p.templateKeys.add('event.read.all')
     p.globalGrants.set('event.read.all', 'deny')
     const svc = new AuthorizationService(repoReturning(p), noCache())
-    const scope = await svc.resolveEventScope('u1')
+    const scope = await svc.resolveEventScope('u1', 'event.read')
     expect(scope.all).toBe(false)
     expect(scope.toPrisma()).toEqual({ OR: [{ tenant_id: { in: [] } }, { id: { in: [] } }] })
   })

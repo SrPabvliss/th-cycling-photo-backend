@@ -28,7 +28,7 @@ export class ReclassifyPhotosHandler implements ICommandHandler<ReclassifyPhotos
   ) {}
 
   async execute(command: ReclassifyPhotosCommand): Promise<ReclassifyPhotosResultProjection> {
-    const scope = await this.authz.resolveEventScope(command.userId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'photo.classification.retry')
     const event = await this.eventReadRepo.findById(command.eventId)
     if (!event || !scope.includesEvent(event)) {
       throw AppException.notFound('Event', command.eventId)

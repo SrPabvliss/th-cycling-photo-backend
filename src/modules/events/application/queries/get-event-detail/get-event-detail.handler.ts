@@ -19,7 +19,7 @@ export class GetEventDetailHandler implements IQueryHandler<GetEventDetailQuery>
   ) {}
 
   async execute(query: GetEventDetailQuery): Promise<EventDetailProjection> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'event.read')
 
     // An out-of-scope slug resolves to no record here, so it 404s like any
     // other unknown slug — the caller must not be able to learn that an

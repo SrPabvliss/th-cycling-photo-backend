@@ -33,7 +33,7 @@ export class ConvertOrderToGiftHandler implements ICommandHandler<ConvertOrderTo
   ) {}
 
   async execute(command: ConvertOrderToGiftCommand): Promise<EntityIdProjection> {
-    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const scope = await this.authz.resolveEventScope(command.audit.userId, 'order.convert_to_gift')
     const order = await this.readRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
     await this.authz.assert(command.audit.userId, 'order.convert_to_gift', order.eventId)

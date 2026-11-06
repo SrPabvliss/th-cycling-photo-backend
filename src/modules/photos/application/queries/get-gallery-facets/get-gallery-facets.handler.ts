@@ -17,7 +17,7 @@ export class GetGalleryFacetsHandler implements IQueryHandler<GetGalleryFacetsQu
 
   /** Retrieves event-wide facet counts for the gallery filter panel, scoped to the caller. */
   async execute(query: GetGalleryFacetsQuery): Promise<GalleryFacetsProjection> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'photo.read')
     return this.readRepo.getGalleryFacets(query.eventId, scope)
   }
 }

@@ -31,7 +31,10 @@ export class UnassignCategoryFromEventHandler
     // .remove` is in the TENANT template, so a tenant holding it could strip
     // another tenant's event of its category assignments. The scoped load is
     // what denies that — 404, not 403, so nothing is disclosed.
-    const scope = await this.authz.resolveEventScope(command.unassignedById)
+    const scope = await this.authz.resolveEventScope(
+      command.unassignedById,
+      'photo_category.event.remove',
+    )
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)
 

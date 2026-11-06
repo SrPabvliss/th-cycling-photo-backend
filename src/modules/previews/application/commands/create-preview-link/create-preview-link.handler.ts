@@ -34,7 +34,7 @@ export class CreatePreviewLinkHandler implements ICommandHandler<CreatePreviewLi
     // Scoped load, then assert — see Ruling 21. The scoped load is what
     // enforces the tenant boundary; `assert` alone never compares the
     // event's tenant to the caller's.
-    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const scope = await this.authz.resolveEventScope(command.audit.userId, 'preview_link.create')
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('entities.event', command.eventId)
     await this.authz.assert(command.audit.userId, 'preview_link.create', event.id)

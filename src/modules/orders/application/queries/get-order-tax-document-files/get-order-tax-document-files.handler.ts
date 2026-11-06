@@ -57,7 +57,7 @@ export class GetOrderTaxDocumentFilesHandler
     if (query.actor === 'buyer') {
       return this.readRepo.existsOwnedBy(query.userId, query.orderId)
     }
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'order.read')
     const order = await this.readRepo.findByIdInScope(query.orderId, scope)
     return order !== null
   }

@@ -17,7 +17,10 @@ export class GetPhotoDetailBySlugHandler implements IQueryHandler<GetPhotoDetail
   ) {}
 
   async execute(query: GetPhotoDetailBySlugQuery): Promise<PhotoDetailProjection> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, [
+      'photo.read',
+      'photo.retouch.read',
+    ])
     const photo = await this.readRepo.getPhotoDetailBySlug(query.slug, scope)
     if (!photo) throw AppException.notFound('Photo', query.slug)
     return photo

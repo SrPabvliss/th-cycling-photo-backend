@@ -51,7 +51,6 @@ const authzReturning = (result: boolean): IAuthorizationService => ({
   canAnywhere: jest.fn().mockResolvedValue(result),
   assert: jest.fn(),
   resolveEventScope: jest.fn(),
-  resolveGrantedEventScope: jest.fn(),
 })
 
 describe('PermissionGuard', () => {

@@ -10,6 +10,7 @@ import {
   DashboardSummaryProjection,
   OperatorActiveEventProjection,
   OperatorCompletedEventProjection,
+  OperatorRetouchEventProjection,
   OperatorRetouchOrderDetailProjection,
   OperatorRetouchOrderProjection,
   OperatorReviewQueueItemProjection,
@@ -26,6 +27,7 @@ import { GetOperatorRetouchOrdersDto } from '../../application/queries/get-opera
 import { GetOperatorRetouchOrdersQuery } from '../../application/queries/get-operator-retouch-orders/get-operator-retouch-orders.query'
 import { GetRecentActivityDto } from '../../application/queries/get-recent-activity/get-recent-activity.dto'
 import { GetRecentActivityQuery } from '../../application/queries/get-recent-activity/get-recent-activity.query'
+import { GetRetouchEventsQuery } from '../../application/queries/get-retouch-events/get-retouch-events.query'
 import { GetRetouchQueueDto } from '../../application/queries/get-retouch-queue/get-retouch-queue.dto'
 import { GetRetouchQueueQuery } from '../../application/queries/get-retouch-queue/get-retouch-queue.query'
 import { GetOperatorReviewQueueDto } from '../../application/queries/get-review-queue/get-review-queue.dto'
@@ -145,6 +147,22 @@ export class OperatorController {
     return this.queryBus.execute(
       new GetOperatorRetouchOrderDetailQuery(orderId, user.userId, scope ?? 'pending'),
     )
+  }
+
+  @Get('retouch/events')
+  @RequirePermission('photo.retouch.read')
+  @SuccessMessage('success.LIST')
+  @ApiOperation({
+    summary: 'Active events the caller may retouch in, for the retouch event filter',
+  })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Events ordered by name',
+    type: OperatorRetouchEventProjection,
+    isArray: true,
+  })
+  async getRetouchEvents(@CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetRetouchEventsQuery(user.userId))
   }
 
   @Get('retouch/orders')

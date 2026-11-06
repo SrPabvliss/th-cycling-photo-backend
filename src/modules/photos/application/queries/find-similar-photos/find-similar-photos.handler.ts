@@ -21,7 +21,7 @@ export class FindSimilarPhotosHandler implements IQueryHandler<FindSimilarPhotos
    * in scope by definition, so `findSimilar` — a same-event query — needs no filter of its own.
    */
   async execute(query: FindSimilarPhotosQuery): Promise<SimilarPhotoProjection[]> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'photo.read')
     const photo = await this.photoReadRepo.findByIdInScope(query.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', query.photoId)
 

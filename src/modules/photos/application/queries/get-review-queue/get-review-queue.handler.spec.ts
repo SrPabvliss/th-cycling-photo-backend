@@ -37,7 +37,7 @@ describe('GetReviewQueueHandler', () => {
   it('resolves the caller scope and passes it plus pagination skip/take and status to repository', async () => {
     readRepo.getReviewQueue.mockResolvedValue({ items: [], total: 0 })
     await handler.execute(new GetReviewQueueQuery('e-1', new Pagination(1, 50), 'pending', 'u1'))
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'photo.review')
     expect(readRepo.getReviewQueue).toHaveBeenCalledWith({
       eventSlug: 'e-1',
       status: 'pending',

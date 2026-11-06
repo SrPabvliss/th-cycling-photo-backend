@@ -1,18 +1,23 @@
+import { randomUUID as uuid } from 'node:crypto'
 import { EventReadRepository } from '@events/infrastructure/repositories/event-read.repository'
+import { Prisma } from '@generated/prisma/client'
 import { ConfigModule } from '@nestjs/config'
 import { Test, type TestingModule } from '@nestjs/testing'
 import { OrderReadRepository } from '@orders/infrastructure/repositories/order-read.repository'
 import { CORRECTION_REPOSITORY } from '@photos/domain/ports/correction-repository.port'
 import { PhotoReadRepository } from '@photos/infrastructure/repositories/photo-read.repository'
+import { Pagination } from '@shared/application'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { PermissionKey } from '@shared/authorization/domain/permission-catalog'
 import { AUTHORIZATION_CACHE } from '@shared/authorization/domain/ports/authorization-cache.port'
 import { PERMISSION_REPOSITORY } from '@shared/authorization/domain/ports/permission-repository.port'
 import { AuthorizationService } from '@shared/authorization/infrastructure/authorization.service'
 import { RequestScopedAuthorizationCache } from '@shared/authorization/infrastructure/cache/request-scoped-authorization.cache'
+import { eventScopeSql } from '@shared/authorization/infrastructure/event-scope.sql'
 import { PermissionRepository } from '@shared/authorization/infrastructure/repositories/permission.repository'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import { STORAGE_ADAPTER } from '@shared/storage/domain/ports'
-import { v4 as uuid } from 'uuid'
 import configuration from '../../config/configuration'
 import { validate } from '../../config/env.validation'
 import { TenantPayoutMethod } from '../../modules/tenants/domain/entities/tenant-payout-method.entity'
@@ -20,6 +25,7 @@ import { TenantPayoutMethodRepository } from '../../modules/tenants/infrastructu
 import { TenantProfileRepository } from '../../modules/tenants/infrastructure/repositories/tenant-profile.repository'
 
 describe('cross-tenant isolation', () => {
+  const page = new Pagination(1, 10)
   let module: TestingModule
   let prisma: PrismaService
   let authz: AuthorizationService
@@ -40,6 +46,8 @@ describe('cross-tenant isolation', () => {
   let userA: any
   let userB: any
   let platformUser: any
+  let retoucher: any
+  let crossVerbUser: any
   let payoutMethodA: TenantPayoutMethod
   let payoutMethodB: TenantPayoutMethod
 
@@ -138,6 +146,29 @@ describe('cross-tenant isolation', () => {
       },
     })
 
+    const staffTpl = await prisma.permissionTemplate.findUniqueOrThrow({
+      where: { key: 'platform_staff' },
+    })
+    const customerTpl = await prisma.permissionTemplate.findUniqueOrThrow({
+      where: { key: 'customer' },
+    })
+    retoucher = await prisma.user.create({
+      data: {
+        email: `r-${uuid()}@t.com`,
+        password_hash: 'x',
+        permission_template_id: staffTpl.id,
+        tenant_id: platformTenant.id,
+      },
+    })
+    crossVerbUser = await prisma.user.create({
+      data: {
+        email: `c-${uuid()}@t.com`,
+        password_hash: 'x',
+        permission_template_id: customerTpl.id,
+        tenant_id: tenantA.id,
+      },
+    })
+
     const evtType = await prisma.eventType.findFirstOrThrow()
 
     eventA = await prisma.event.create({
@@ -191,6 +222,28 @@ describe('cross-tenant isolation', () => {
     orderA = { id: oAId }
     orderB = { id: oBId }
 
+    const grant = async (
+      userId: string,
+      key: PermissionKey,
+      eventId: string,
+      effect: 'allow' | 'deny',
+    ) => {
+      const permission = await prisma.permission.findUniqueOrThrow({ where: { key } })
+      await prisma.userPermissionGrant.create({
+        data: {
+          user_id: userId,
+          permission_id: permission.id,
+          scope_type: 'event',
+          event_id: eventId,
+          effect,
+          granted_by_id: platformUser.id,
+        },
+      })
+    }
+    await grant(retoucher.id, 'photo.retouch.read', eventB.id, 'allow')
+    await grant(crossVerbUser.id, 'photo.read', eventB.id, 'allow')
+    await grant(crossVerbUser.id, 'order.read', eventA.id, 'allow')
+
     payoutMethodA = TenantPayoutMethod.createBankTransfer(
       tenantA.id,
       {
@@ -220,6 +273,9 @@ describe('cross-tenant isolation', () => {
   afterAll(async () => {
     // Teardown
     if (prisma) {
+      await prisma.userPermissionGrant.deleteMany({
+        where: { granted_by_id: platformUser?.id },
+      })
       await prisma.$executeRawUnsafe(
         `DELETE FROM orders WHERE id IN ('${orderA?.id}', '${orderB?.id}')`,
       )
@@ -230,7 +286,14 @@ describe('cross-tenant isolation', () => {
         where: { id: { in: [eventA?.id, eventB?.id].filter(Boolean) } },
       })
       await prisma.user.deleteMany({
-        where: { id: { in: [userA?.id, userB?.id, platformUser?.id].filter(Boolean) } },
+        where: {
+          id: {
+            in: [userA?.id, userB?.id, retoucher?.id, crossVerbUser?.id].filter(Boolean),
+          },
+        },
+      })
+      await prisma.user.deleteMany({
+        where: { id: { in: [platformUser?.id].filter(Boolean) } },
       })
       await prisma.tenant.deleteMany({
         where: { id: { in: [tenantA?.id, tenantB?.id].filter(Boolean) } },
@@ -244,61 +307,164 @@ describe('cross-tenant isolation', () => {
   })
 
   it('isolates tenant A', async () => {
-    const scopeA = await authz.resolveEventScope(userA.id)
+    const scopeA = await authz.resolveEventScope(userA.id, 'event.read')
     expect(scopeA.all).toBe(false)
     expect(scopeA.tenantIds).toContain(tenantA.id)
     expect(scopeA.tenantIds).not.toContain(tenantB.id)
+    const photoScopeA = await authz.resolveEventScope(userA.id, 'photo.read')
+    const orderScopeA = await authz.resolveEventScope(userA.id, 'order.read')
 
     // Events
-    const events = await eventRepo.getEventsList({ skip: 0, take: 10 }, { tab: 'active' }, scopeA)
+    const events = await eventRepo.getEventsList(page, { tab: 'active' }, scopeA)
     expect(events.items.map((e) => e.id)).toContain(eventA.id)
     expect(events.items.map((e) => e.id)).not.toContain(eventB.id)
     expect(await eventRepo.getEventDetailBySlug(eventB.slug, scopeA)).toBeNull()
 
     // Photos
-    const photos = await photoRepo.getPhotosList(eventA.id, { skip: 0, take: 10 }, {}, scopeA)
+    const photos = await photoRepo.getPhotosList(eventA.id, page, {}, photoScopeA)
     expect(photos.items.map((p) => p.id)).toContain(photoA.id)
-    const photosB = await photoRepo.getPhotosList(eventB.id, { skip: 0, take: 10 }, {}, scopeA)
+    const photosB = await photoRepo.getPhotosList(eventB.id, page, {}, photoScopeA)
     expect(photosB.items).toHaveLength(0)
-    expect(await photoRepo.getPhotoDetail(photoB.id, scopeA)).toBeNull()
+    expect(await photoRepo.getPhotoDetail(photoB.id, photoScopeA)).toBeNull()
 
     // Orders
-    const ordersA = await orderRepo.getList({ skip: 0, take: 10 }, { eventId: eventA.id }, scopeA)
+    const ordersA = await orderRepo.getList(page, { eventId: eventA.id }, orderScopeA)
     expect(ordersA.items.map((o) => o.id)).toContain(orderA.id)
-    const ordersB = await orderRepo.getList({ skip: 0, take: 10 }, { eventId: eventB.id }, scopeA)
+    const ordersB = await orderRepo.getList(page, { eventId: eventB.id }, orderScopeA)
     expect(ordersB.items).toHaveLength(0)
-    expect(await orderRepo.getDetail(orderB.id, scopeA)).toBeNull()
+    expect(await orderRepo.getDetail(orderB.id, orderScopeA)).toBeNull()
   })
 
   it('isolates tenant B', async () => {
-    const scopeB = await authz.resolveEventScope(userB.id)
+    const scopeB = await authz.resolveEventScope(userB.id, 'event.read')
     expect(scopeB.all).toBe(false)
 
     // Events
-    const events = await eventRepo.getEventsList({ skip: 0, take: 10 }, { tab: 'active' }, scopeB)
+    const events = await eventRepo.getEventsList(page, { tab: 'active' }, scopeB)
     expect(events.items.map((e) => e.id)).toContain(eventB.id)
     expect(events.items.map((e) => e.id)).not.toContain(eventA.id)
     expect(await eventRepo.getEventDetailBySlug(eventA.slug, scopeB)).toBeNull()
 
     // Photos
-    expect(await photoRepo.getPhotoDetail(photoA.id, scopeB)).toBeNull()
+    expect(
+      await photoRepo.getPhotoDetail(
+        photoA.id,
+        await authz.resolveEventScope(userB.id, 'photo.read'),
+      ),
+    ).toBeNull()
 
     // Orders
-    expect(await orderRepo.getDetail(orderA.id, scopeB)).toBeNull()
+    expect(
+      await orderRepo.getDetail(orderA.id, await authz.resolveEventScope(userB.id, 'order.read')),
+    ).toBeNull()
   })
 
   it('allows platform access to both', async () => {
-    const scopeP = await authz.resolveEventScope(platformUser.id)
+    const scopeP = await authz.resolveEventScope(platformUser.id, 'event.read')
     expect(scopeP.all).toBe(true)
 
     // Events
-    const events = await eventRepo.getEventsList({ skip: 0, take: 10 }, { tab: 'active' }, scopeP)
+    const events = await eventRepo.getEventsList(page, { tab: 'active' }, scopeP)
     const ids = events.items.map((e) => e.id)
     expect(ids).toContain(eventA.id)
     expect(ids).toContain(eventB.id)
 
     expect(await eventRepo.getEventDetailBySlug(eventA.slug, scopeP)).not.toBeNull()
     expect(await eventRepo.getEventDetailBySlug(eventB.slug, scopeP)).not.toBeNull()
+  })
+
+  describe('per-event grants (TIT-89)', () => {
+    it('keeps a retoucher of another tenant event out of its events and orders', async () => {
+      const events = await eventRepo.getEventsList(
+        page,
+        { tab: 'active' },
+        await authz.resolveEventScope(retoucher.id, 'event.read'),
+      )
+      expect(events.items.map((e) => e.id)).not.toContain(eventB.id)
+      const orders = await orderRepo.getList(
+        page,
+        { eventId: eventB.id },
+        await authz.resolveEventScope(retoucher.id, 'order.read'),
+      )
+      expect(orders.items).toHaveLength(0)
+      expect(
+        await photoRepo.getPhotoDetail(
+          photoB.id,
+          await authz.resolveEventScope(retoucher.id, 'photo.read'),
+        ),
+      ).toBeNull()
+    })
+
+    it('lets a retoucher read the photos of the event they retouch through the union scope', async () => {
+      const scope = await authz.resolveEventScope(retoucher.id, [
+        'photo.read',
+        'photo.retouch.read',
+      ])
+      expect(await photoRepo.getPhotoDetail(photoB.id, scope)).not.toBeNull()
+      expect(await photoRepo.getPhotoDetail(photoA.id, scope)).toBeNull()
+    })
+
+    it('does not open the whole tenant to a user holding grants on single events', async () => {
+      const scope = await authz.resolveEventScope(crossVerbUser.id, 'order.read')
+      expect(scope.tenantIds).toEqual([])
+      expect(scope.eventIds).toEqual([eventA.id])
+    })
+
+    it('does not let a photo.read grant leak the event into the order list', async () => {
+      const orders = await orderRepo.getList(
+        page,
+        {},
+        await authz.resolveEventScope(crossVerbUser.id, 'order.read'),
+      )
+      const ids = orders.items.map((o) => o.id)
+      expect(ids).toContain(orderA.id)
+      expect(ids).not.toContain(orderB.id)
+      const photos = await authz.resolveEventScope(crossVerbUser.id, 'photo.read')
+      expect(await photoRepo.getPhotoDetail(photoB.id, photos)).not.toBeNull()
+      expect(await photoRepo.getPhotoDetail(photoA.id, photos)).toBeNull()
+    })
+
+    it('agrees between toPrisma, the raw SQL and includesEvent on the same data', async () => {
+      const events = [eventA, eventB].map((e) => ({
+        id: e.id as string,
+        tenantId: e.tenant_id as string,
+      }))
+      const ids = events.map((e) => e.id)
+      const scopes = [
+        EventScope.unrestricted(),
+        EventScope.empty(),
+        new EventScope(false, [tenantA.id], []),
+        new EventScope(false, [tenantA.id], [eventB.id]),
+        new EventScope(false, [tenantA.id], [], [eventA.id]),
+        new EventScope(false, [tenantA.id], [eventB.id], [eventA.id]),
+        new EventScope(false, [], [eventB.id]),
+        await authz.resolveEventScope(crossVerbUser.id, ['photo.read', 'order.read']),
+        await authz.resolveEventScope(retoucher.id, ['photo.read', 'photo.retouch.read']),
+      ]
+      for (const scope of scopes) {
+        const viaPrisma = (
+          await prisma.event.findMany({
+            where: { AND: [{ id: { in: ids } }, scope.toPrisma()] },
+            select: { id: true },
+          })
+        )
+          .map((e) => e.id)
+          .sort()
+        const viaSql = (
+          await prisma.$queryRaw<{ id: string }[]>(
+            Prisma.sql`SELECT e.id::text AS id FROM events e WHERE e.id = ANY(${ids}::uuid[]) AND ${eventScopeSql(scope, 'e')}`,
+          )
+        )
+          .map((e) => e.id)
+          .sort()
+        const inMemory = events
+          .filter((e) => scope.includesEvent(e))
+          .map((e) => e.id)
+          .sort()
+        expect(viaSql).toEqual(viaPrisma)
+        expect(inMemory).toEqual(viaPrisma)
+      }
+    })
   })
 
   describe('tenant profile isolation', () => {

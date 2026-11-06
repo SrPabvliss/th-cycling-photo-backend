@@ -56,7 +56,7 @@ describe('FindSimilarPhotosHandler', () => {
     const query = new FindSimilarPhotosQuery(photoId, 10, 'u1')
 
     await expect(handler.execute(query)).rejects.toThrow('errors.NOT_FOUND')
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'photo.read')
     expect(photoReadRepo.findByIdInScope).toHaveBeenCalledWith(photoId, scope)
   })
 

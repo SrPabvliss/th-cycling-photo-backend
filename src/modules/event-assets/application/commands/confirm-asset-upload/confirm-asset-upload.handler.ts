@@ -45,7 +45,7 @@ export class ConfirmAssetUploadHandler implements ICommandHandler<ConfirmAssetUp
       throw AppException.businessRule('event_asset.unsupported_type')
     }
 
-    const scope = await this.authz.resolveEventScope(command.userId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'event_asset.confirm')
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)
     await this.authz.assert(command.userId, 'event_asset.confirm', event.id)

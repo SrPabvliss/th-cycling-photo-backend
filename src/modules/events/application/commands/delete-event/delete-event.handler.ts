@@ -24,7 +24,7 @@ export class DeleteEventHandler implements ICommandHandler<DeleteEventCommand> {
 
   /** Verifies the event exists in the caller's scope and archives it (soft-delete). */
   async execute(command: DeleteEventCommand): Promise<EntityIdProjection> {
-    const scope = await this.authz.resolveEventScope(command.userId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'event.delete')
     const event = await this.readRepo.findByIdInScope(command.id, scope)
     if (!event) throw AppException.notFound('Event', command.id)
 

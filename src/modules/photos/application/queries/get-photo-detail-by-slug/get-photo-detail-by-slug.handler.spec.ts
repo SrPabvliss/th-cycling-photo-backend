@@ -31,7 +31,7 @@ describe('GetPhotoDetailBySlugHandler', () => {
 
     const result = await handler.execute(new GetPhotoDetailBySlugQuery('pub-slug', 'u1'))
 
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', ['photo.read', 'photo.retouch.read'])
     expect(repo.getPhotoDetailBySlug).toHaveBeenCalledWith('pub-slug', scope)
     expect(result).toBe(projection)
   })

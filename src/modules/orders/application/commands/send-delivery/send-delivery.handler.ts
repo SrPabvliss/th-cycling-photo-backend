@@ -59,7 +59,7 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
   async execute(command: SendDeliveryCommand): Promise<OrderPaymentConfirmedProjection> {
     // 1. Scoped load, then assert: the scoped load is what enforces the tenant boundary, since
     //    `assert` never compares the order's event to the caller's scope.
-    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const scope = await this.authz.resolveEventScope(command.audit.userId, 'order.deliver')
     const order = await this.readRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
     await this.authz.assert(command.audit.userId, 'order.deliver', order.eventId)

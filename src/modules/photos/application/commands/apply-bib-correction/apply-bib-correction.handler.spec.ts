@@ -56,7 +56,7 @@ describe('ApplyBibCorrectionHandler', () => {
     await expect(
       handler.execute(new ApplyBibCorrectionCommand('p-x', 'b-1', '42', 'r-1')),
     ).rejects.toBeInstanceOf(AppException)
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('r-1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('r-1', 'photo.bib.correct')
     expect(photoReadRepo.findByIdInScope).toHaveBeenCalledWith('p-x', scope)
     expect(authz.assert).not.toHaveBeenCalled()
   })

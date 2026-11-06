@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { PrismaService } from '@shared/infrastructure'
+import type { OperatorRetouchEventProjection } from '../../application/projections'
 import type {
   IOperatorRetouchReadRepository,
   OperatorRetouchOrderDetailRow,
@@ -33,6 +35,14 @@ function buildOrdersWhere(eventIds: string[] | null, scope: RetouchOrderScope) {
 @Injectable()
 export class OperatorRetouchReadRepository implements IOperatorRetouchReadRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  async findRetouchableEvents(scope: EventScope): Promise<OperatorRetouchEventProjection[]> {
+    return this.prisma.event.findMany({
+      where: { deleted_at: null, ...scope.toPrisma() },
+      select: { id: true, slug: true, name: true },
+      orderBy: { name: 'asc' },
+    })
+  }
 
   async getRetouchQueuePage(
     eventId: string,

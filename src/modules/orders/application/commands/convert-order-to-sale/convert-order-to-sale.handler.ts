@@ -33,7 +33,7 @@ export class ConvertOrderToSaleHandler implements ICommandHandler<ConvertOrderTo
   ) {}
 
   async execute(command: ConvertOrderToSaleCommand): Promise<EntityIdProjection> {
-    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const scope = await this.authz.resolveEventScope(command.audit.userId, 'order.convert_to_sale')
     const order = await this.readRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
     await this.authz.assert(command.audit.userId, 'order.convert_to_sale', order.eventId)

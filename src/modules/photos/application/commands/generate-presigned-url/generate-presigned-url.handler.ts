@@ -32,7 +32,7 @@ export class GeneratePresignedUrlHandler implements ICommandHandler<GeneratePres
    * 404s exactly like an unknown one.
    */
   async execute(command: GeneratePresignedUrlCommand): Promise<PresignedUrlProjection> {
-    const scope = await this.authz.resolveEventScope(command.userId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'photo.upload')
     const event = await this.eventReadRepo.findById(command.eventId)
     if (!event || !scope.includesEvent(event)) {
       throw AppException.notFound('Event', command.eventId)

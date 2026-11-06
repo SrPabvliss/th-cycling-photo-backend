@@ -72,39 +72,41 @@ export class AuthorizationService implements IAuthorizationService {
   }
 
   /**
-   * Which Event rows this user may see. `all` comes strictly from holding `event.read.all`, never
-   * from `isPlatform` alone — otherwise a narrowly-templated retoucher would see every event.
+   * Which Event rows this user may reach for `keys`. `all` comes strictly from holding
+   * `event.read.all`, never from `isPlatform` alone — otherwise a narrowly-templated retoucher
+   * would see every event.
    *
-   * Delegates the flag to `can()` instead of re-deriving it, so the usual precedence holds: a
-   * tenant can't reach `unrestricted()` through a grant, and an explicit deny beats the template.
+   * Per key, the tenant branch only opens when the key is held tenant-wide (template or global
+   * grant, through `can()` so a global deny wins), explicit per-event denies of that key carve it,
+   * and per-event allows of that key add single events. A grant on one event therefore never opens
+   * the tenant, nor reaches a different verb. Several keys union their scopes.
    */
-  async resolveEventScope(userId: string): Promise<EventScope> {
+  async resolveEventScope(
+    userId: string,
+    keys: PermissionKey | PermissionKey[],
+  ): Promise<EventScope> {
     if (await this.can(userId, 'event.read.all')) return EventScope.unrestricted()
 
-    const p = await this.principal(userId)
-
-    const tenantIds = p.tenantId ? [p.tenantId] : []
-
-    const granted = [...p.eventGrants.entries()]
-      .filter(([, keys]) => [...keys.values()].some((e) => e === 'allow'))
-      .map(([eventId]) => eventId)
-
-    const eventIds = [...new Set([...granted])]
-
-    return new EventScope(false, tenantIds, eventIds)
+    const list = Array.isArray(keys) ? keys : [keys]
+    const scopes = await Promise.all(list.map((key) => this.scopeForKey(userId, key)))
+    return scopes.length === 1 ? scopes[0] : EventScope.union(...scopes)
   }
 
-  async resolveGrantedEventScope(userId: string, key: PermissionKey): Promise<EventScope> {
-    if (await this.can(userId, key)) return this.resolveEventScope(userId)
-
+  private async scopeForKey(userId: string, key: PermissionKey): Promise<EventScope> {
+    const tenantWide = await this.can(userId, key)
     const p = await this.principal(userId)
     if (PERMISSIONS[key].platformOnly && !p.isPlatform) return EventScope.empty()
 
-    const eventIds = [...p.eventGrants.entries()]
-      .filter(([, grants]) => grants.get(key) === 'allow')
-      .map(([eventId]) => eventId)
+    const allowed: string[] = []
+    const denied: string[] = []
+    for (const [eventId, grants] of p.eventGrants) {
+      const effect = grants.get(key)
+      if (effect === 'allow') allowed.push(eventId)
+      if (effect === 'deny') denied.push(eventId)
+    }
 
-    return new EventScope(false, [], eventIds)
+    if (tenantWide && p.tenantId) return new EventScope(false, [p.tenantId], allowed, denied)
+    return new EventScope(false, [], allowed)
   }
 
   protected async principal(userId: string): Promise<PrincipalPermissions> {

@@ -25,7 +25,10 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
 
   async execute(command: RegenerateDeliveryCommand): Promise<OrderPaymentConfirmedProjection> {
     // 1. Scoped load, then assert — see Ruling 21.
-    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const scope = await this.authz.resolveEventScope(
+      command.audit.userId,
+      'order.delivery.regenerate',
+    )
     const order = await this.orderReadRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
     await this.authz.assert(command.audit.userId, 'order.delivery.regenerate', order.eventId)

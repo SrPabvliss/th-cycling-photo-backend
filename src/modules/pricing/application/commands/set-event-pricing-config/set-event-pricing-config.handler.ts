@@ -33,7 +33,7 @@ export class SetEventPricingConfigHandler implements ICommandHandler<SetEventPri
     // `pricing.config.set` is not platformOnly, so a tenant could be granted it even though no
     // template holds it today — the scoped load is what keeps such a holder inside its own tenant.
     // 404, not 403, so an out-of-scope event's existence isn't disclosed.
-    const scope = await this.authz.resolveEventScope(cmd.setById)
+    const scope = await this.authz.resolveEventScope(cmd.setById, 'pricing.config.set')
     const event = await this.eventReadRepo.findByIdInScope(cmd.eventId, scope)
     if (!event) throw AppException.notFound('Event', cmd.eventId)
 

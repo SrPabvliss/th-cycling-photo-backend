@@ -24,7 +24,7 @@ describe('GetEventsListHandler', () => {
     const filters = { tab: 'active' } as const
     await handler.execute(new GetEventsListQuery(new Pagination(1, 20), filters, 'u1'))
 
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'event.read')
     expect(readRepo.getEventsList).toHaveBeenCalledWith(expect.anything(), filters, scope)
   })
 })

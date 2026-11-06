@@ -24,7 +24,7 @@ export class DeletePhotoBibHandler implements ICommandHandler<DeletePhotoBibComm
   ) {}
 
   async execute(cmd: DeletePhotoBibCommand): Promise<{ bibId: string; photoId: string }> {
-    const scope = await this.authz.resolveEventScope(cmd.reviewerId)
+    const scope = await this.authz.resolveEventScope(cmd.reviewerId, 'photo.bib.delete')
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.bib.delete', photo.eventId)

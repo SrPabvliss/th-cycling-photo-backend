@@ -25,7 +25,7 @@ export class GetDownloadManifestHandler implements IQueryHandler<GetDownloadMani
   async execute(
     query: GetDownloadManifestQuery,
   ): Promise<{ items: DownloadManifestItem[]; totalSize: number }> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'photo.download')
     const photos = await this.photoReadRepo.getAllPhotoKeysForEvent(query.eventId, scope)
 
     const items = await Promise.all(

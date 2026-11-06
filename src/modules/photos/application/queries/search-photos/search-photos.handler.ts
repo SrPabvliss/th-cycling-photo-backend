@@ -18,7 +18,7 @@ export class SearchPhotosHandler implements IQueryHandler<SearchPhotosQuery> {
 
   /** Searches photos across events with multi-criteria filtering, scoped to the caller. */
   async execute(query: SearchPhotosQuery): Promise<PaginatedResult<PhotoListProjection>> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'photo.search')
     return this.readRepo.searchPhotos(query.filters, query.pagination, scope)
   }
 }

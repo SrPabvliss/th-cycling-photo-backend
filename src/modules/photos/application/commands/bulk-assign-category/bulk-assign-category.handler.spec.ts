@@ -35,7 +35,7 @@ describe('BulkAssignCategoryHandler', () => {
       new BulkAssignCategoryCommand(['p-1', 'p-2', 'p-3'], 7, 'u1'),
     )
 
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'photo.category.assign')
     expect(readRepo.getDistinctEventIdsForPhotoIds).toHaveBeenCalledWith(
       ['p-1', 'p-2', 'p-3'],
       scope,

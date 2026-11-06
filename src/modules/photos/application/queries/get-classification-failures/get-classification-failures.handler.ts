@@ -21,7 +21,7 @@ export class GetClassificationFailuresHandler
   ) {}
 
   async execute(query: GetClassificationFailuresQuery): Promise<ClassificationFailuresProjection> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'photo.classification.retry')
     const event = await this.eventReadRepo.findById(query.eventId)
     if (!event || !scope.includesEvent(event)) {
       throw AppException.notFound('Event', query.eventId)

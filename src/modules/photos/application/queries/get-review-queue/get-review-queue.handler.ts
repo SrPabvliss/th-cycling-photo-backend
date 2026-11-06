@@ -19,7 +19,7 @@ export class GetReviewQueueHandler implements IQueryHandler<GetReviewQueueQuery>
   ) {}
 
   async execute(query: GetReviewQueueQuery): Promise<PaginatedResult<ReviewQueueItemProjection>> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'photo.review')
     const { items, total } = await this.readRepo.getReviewQueue({
       eventSlug: query.eventSlug,
       status: query.status,

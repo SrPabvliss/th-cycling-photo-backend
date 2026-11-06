@@ -26,7 +26,10 @@ export class UnassignOperatorHandler implements ICommandHandler<UnassignOperator
     // would pass for any eventId as long as the caller's template grants
     // `event.collaborator.unassign` in general (it never checks tenant_id),
     // letting a tenant unassign an operator from another tenant's event.
-    const scope = await this.authz.resolveEventScope(command.unassignedById)
+    const scope = await this.authz.resolveEventScope(
+      command.unassignedById,
+      'event.collaborator.unassign',
+    )
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)
 
