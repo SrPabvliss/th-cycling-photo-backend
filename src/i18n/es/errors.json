@@ -7,5 +7,10 @@
   "EXTERNAL_SERVICE": "Error en servicio externo: {service}",
   "INTERNAL": "Ha ocurrido un error inesperado",
   "UNAUTHORIZED": "No autorizado",
-  "FORBIDDEN": "Acceso denegado"
+  "FORBIDDEN": "Acceso denegado",
+  "INVALID_ID": "El identificador no es válido",
+  "RESOURCE_NOT_FOUND": "Recurso no encontrado",
+  "REQUEST_CONFLICT": "La solicitud entra en conflicto con el estado actual",
+  "TOO_MANY_REQUESTS": "Demasiadas solicitudes, intenta de nuevo en un momento",
+  "BAD_REQUEST": "Solicitud inválida"
 }

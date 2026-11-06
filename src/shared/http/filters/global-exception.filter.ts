@@ -106,8 +106,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
       const fields = this.extractValidationFields(exceptionResponse)
 
-      const errorCode = fields ? 'VALIDATION_FAILED' : 'INTERNAL'
-      const messageKey = fields ? 'errors.VALIDATION_FAILED' : 'errors.INTERNAL'
+      const { code: errorCode, messageKey } = fields
+        ? { code: 'VALIDATION_FAILED', messageKey: 'errors.VALIDATION_FAILED' }
+        : this.describeHttpStatus(status)
       const translatedMessage = i18n ? String(i18n.t(messageKey)) : messageKey
 
       return {
@@ -116,6 +117,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           error: {
             code: errorCode,
             message: translatedMessage,
+            messageKey,
             shouldThrow: false,
             ...(fields && { fields }),
             ...(isDevelopment && {
@@ -178,9 +180,39 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           { field },
         )
       }
+      case 'P2007':
+      case 'P2023':
+        return new AppException(
+          'errors.INVALID_ID',
+          HttpStatus.BAD_REQUEST,
+          ErrorCode.VALIDATION_FAILED,
+          false,
+        )
       default:
         return AppException.internal('errors.INTERNAL', { prismaCode: error.code })
     }
+  }
+
+  private describeHttpStatus(status: number): { code: string; messageKey: string } {
+    if (status === HttpStatus.UNAUTHORIZED) {
+      return { code: 'UNAUTHORIZED', messageKey: 'errors.UNAUTHORIZED' }
+    }
+    if (status === HttpStatus.FORBIDDEN) {
+      return { code: ErrorCode.FORBIDDEN, messageKey: 'errors.FORBIDDEN' }
+    }
+    if (status === HttpStatus.NOT_FOUND) {
+      return { code: ErrorCode.NOT_FOUND, messageKey: 'errors.RESOURCE_NOT_FOUND' }
+    }
+    if (status === HttpStatus.CONFLICT) {
+      return { code: ErrorCode.CONFLICT, messageKey: 'errors.REQUEST_CONFLICT' }
+    }
+    if (status === HttpStatus.TOO_MANY_REQUESTS) {
+      return { code: 'TOO_MANY_REQUESTS', messageKey: 'errors.TOO_MANY_REQUESTS' }
+    }
+    if (status >= 400 && status < 500) {
+      return { code: 'BAD_REQUEST', messageKey: 'errors.BAD_REQUEST' }
+    }
+    return { code: ErrorCode.INTERNAL, messageKey: 'errors.INTERNAL' }
   }
 
   /**
@@ -205,7 +237,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     for (const msg of messages) {
       if (typeof msg !== 'string') continue
       const parts = msg.split(' ')
-      const fieldName = parts[0]
+      const fieldName = parts[0] === 'property' && parts[1] ? parts[1] : parts[0]
       if (fieldName) {
         if (!fields[fieldName]) {
           fields[fieldName] = []

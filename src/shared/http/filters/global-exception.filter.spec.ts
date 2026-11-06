@@ -141,15 +141,49 @@ describe('GlobalExceptionFilter', () => {
       })
     })
 
-    it('should handle HttpException without validation fields', () => {
-      const exception = new HttpException('Forbidden', HttpStatus.FORBIDDEN)
+    it.each([
+      [HttpStatus.UNAUTHORIZED, 'UNAUTHORIZED', 'errors.UNAUTHORIZED'],
+      [HttpStatus.FORBIDDEN, 'FORBIDDEN', 'errors.FORBIDDEN'],
+      [HttpStatus.NOT_FOUND, 'NOT_FOUND', 'errors.RESOURCE_NOT_FOUND'],
+      [HttpStatus.CONFLICT, 'CONFLICT', 'errors.REQUEST_CONFLICT'],
+      [HttpStatus.TOO_MANY_REQUESTS, 'TOO_MANY_REQUESTS', 'errors.TOO_MANY_REQUESTS'],
+      [HttpStatus.BAD_REQUEST, 'BAD_REQUEST', 'errors.BAD_REQUEST'],
+      [HttpStatus.PAYLOAD_TOO_LARGE, 'BAD_REQUEST', 'errors.BAD_REQUEST'],
+      [HttpStatus.SERVICE_UNAVAILABLE, 'INTERNAL', 'errors.INTERNAL'],
+    ])('should answer status %s with code %s instead of INTERNAL', (status, code, messageKey) => {
+      filter.catch(new HttpException('Nest message', status), mockHost)
+
+      expect(mockStatus).toHaveBeenCalledWith(status)
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.code).toBe(code)
+      expect(body.error.messageKey).toBe(messageKey)
+      expect(body.error.fields).toBeUndefined()
+    })
+
+    it('should key a whitelist rejection by the offending property', () => {
+      const exception = new BadRequestException({
+        message: ['property filename should not exist', 'fileName must be a string'],
+        error: 'Bad Request',
+        statusCode: 400,
+      })
 
       filter.catch(exception, mockHost)
 
-      expect(mockStatus).toHaveBeenCalledWith(HttpStatus.FORBIDDEN)
       const body = mockJson.mock.calls[0][0]
-      expect(body.error.code).toBe('INTERNAL')
-      expect(body.error.fields).toBeUndefined()
+      expect(body.error.fields).toEqual({
+        filename: ['property filename should not exist'],
+        fileName: ['fileName must be a string'],
+      })
+    })
+
+    it('should NOT include the stack for an HttpException in production mode', () => {
+      process.env.NODE_ENV = 'production'
+
+      filter.catch(new HttpException('Forbidden', HttpStatus.FORBIDDEN), mockHost)
+
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.stack).toBeUndefined()
+      expect(body.error.details).toBeUndefined()
     })
   })
 
@@ -196,6 +230,20 @@ describe('GlobalExceptionFilter', () => {
       expect(mockStatus).toHaveBeenCalledWith(HttpStatus.UNPROCESSABLE_ENTITY)
       const body = mockJson.mock.calls[0][0]
       expect(body.error.code).toBe(ErrorCode.BUSINESS_RULE)
+    })
+
+    it.each(['P2007', 'P2023'])('should return 400 for a malformed id (%s)', (code) => {
+      const exception = new PrismaClientKnownRequestError('Error creating UUID', {
+        code,
+        clientVersion: '7.0.0',
+      })
+
+      filter.catch(exception, mockHost)
+
+      expect(mockStatus).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST)
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.code).toBe(ErrorCode.VALIDATION_FAILED)
+      expect(body.error.messageKey).toBe('errors.INVALID_ID')
     })
 
     it('should return 500 for unhandled Prisma error codes', () => {
