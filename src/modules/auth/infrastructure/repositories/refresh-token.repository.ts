@@ -33,9 +33,22 @@ export class RefreshTokenRepository implements IRefreshTokenRepository {
       email: record.user.email,
       role: record.user.user_roles[0]?.role.name ?? 'operator',
       isActive: record.user.is_active,
+      permissionsVersion: record.user.permissions_version,
       revokedAt: record.revoked_at,
       expiresAt: record.expires_at,
     }
+  }
+
+  async revokeAllExcept(userId: string, keepTokenHash: string | null): Promise<number> {
+    const result = await this.prisma.refreshToken.updateMany({
+      where: {
+        user_id: userId,
+        revoked_at: null,
+        ...(keepTokenHash ? { token_hash: { not: keepTokenHash } } : {}),
+      },
+      data: { revoked_at: new Date() },
+    })
+    return result.count
   }
 
   async revokeByHash(tokenHash: string): Promise<void> {

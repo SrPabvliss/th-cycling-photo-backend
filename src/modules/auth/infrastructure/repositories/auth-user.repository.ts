@@ -35,7 +35,25 @@ export class AuthUserRepository implements IAuthUserRepository {
       passwordHash: record.password_hash,
       isActive: record.is_active,
       role: record.user_roles[0]?.role.name ?? 'operator',
+      permissionsVersion: record.permissions_version,
     }
+  }
+
+  async findSessionVersion(userId: string): Promise<{ isActive: boolean; version: number } | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { is_active: true, permissions_version: true },
+    })
+    return user ? { isActive: user.is_active, version: user.permissions_version } : null
+  }
+
+  async bumpSessionVersion(userId: string): Promise<number> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { permissions_version: { increment: 1 } },
+      select: { permissions_version: true },
+    })
+    return user.permissions_version
   }
 
   async updateLastLogin(userId: string): Promise<void> {

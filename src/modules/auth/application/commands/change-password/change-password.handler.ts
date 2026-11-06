@@ -2,10 +2,20 @@ import { MailService } from '@mail/application/services/mail.service'
 import { Inject, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import { JwtService } from '@nestjs/jwt'
 import { AppException } from '@shared/domain'
 import { compareSync, hashSync } from 'bcryptjs'
-import type { IAuthUserRepository } from '../../../domain/ports'
-import { AUTH_USER_REPOSITORY } from '../../../domain/ports'
+import type {
+  IAuthUserRepository,
+  IRefreshTokenRepository,
+  ITokenHashService,
+} from '../../../domain/ports'
+import {
+  AUTH_USER_REPOSITORY,
+  REFRESH_TOKEN_REPOSITORY,
+  TOKEN_HASH_SERVICE,
+} from '../../../domain/ports'
+import type { AuthTokensProjection } from '../../projections'
 import { ChangePasswordCommand } from './change-password.command'
 
 const BCRYPT_ROUNDS = 10
@@ -21,11 +31,14 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
     private readonly authUserRepo: IAuthUserRepository,
     private readonly mailService: MailService,
     private readonly config: ConfigService,
+    @Inject(REFRESH_TOKEN_REPOSITORY) private readonly refreshTokenRepo: IRefreshTokenRepository,
+    @Inject(TOKEN_HASH_SERVICE) private readonly tokenHashService: ITokenHashService,
+    private readonly jwtService: JwtService,
   ) {
     this.webBaseUrl = this.config.getOrThrow<string>('app.webBaseUrl')
   }
 
-  async execute(command: ChangePasswordCommand): Promise<void> {
+  async execute(command: ChangePasswordCommand): Promise<AuthTokensProjection> {
     const user = await this.authUserRepo.findCredentials(command.userId)
     if (!user) throw AppException.businessRule('auth.invalid_credentials')
 
@@ -40,6 +53,16 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
 
     const passwordHash = hashSync(command.newPassword, BCRYPT_ROUNDS)
     await this.authUserRepo.updatePassword(user.id, passwordHash)
+
+    const version = await this.authUserRepo.bumpSessionVersion(user.id)
+    const keep = command.refreshToken ? this.tokenHashService.hash(command.refreshToken) : null
+    await this.refreshTokenRepo.revokeAllExcept(user.id, keep)
+    const accessToken = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      role: command.role,
+      pv: version,
+    })
 
     const changedAt = new Date()
     const changedTime = new Intl.DateTimeFormat('es-EC', {
@@ -56,6 +79,8 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
     }).format(changedAt)
 
     await this.notifyPasswordChanged(user.email, user.firstName, changedDate, changedTime)
+
+    return { accessToken }
   }
 
   private async notifyPasswordChanged(
