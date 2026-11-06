@@ -43,6 +43,7 @@ describe('toDetailProjection — relational fields', () => {
       _count: { photos: 2428 },
       assets: [],
       tenant: { name: 'Andes Photo' },
+      event_type_id: 3,
       event_type: { name: 'Ruta' },
       contract: { commercial_name: 'Contrato 2026-A' },
       ...overrides,
@@ -53,6 +54,7 @@ describe('toDetailProjection — relational fields', () => {
     const result = toDetailProjection(makeDetailRecord() as never, cdn)
 
     expect(result.organizerName).toBe('Andes Photo')
+    expect(result.eventTypeId).toBe(3)
     expect(result.eventTypeName).toBe('Ruta')
     expect(result.contractName).toBe('Contrato 2026-A')
   })

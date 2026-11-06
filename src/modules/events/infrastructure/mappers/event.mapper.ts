@@ -64,6 +64,7 @@ export const eventDetailSelectConfig = {
   created_at: true,
   updated_at: true,
   tenant: { select: { name: true } },
+  event_type_id: true,
   event_type: { select: { name: true } },
   contract: { select: { commercial_name: true } },
 } satisfies Prisma.EventSelect
@@ -311,6 +312,7 @@ export function toDetailProjection(
     updatedAt: record.updated_at,
     frozenAt: record.frozen_at,
     organizerName: record.tenant.name,
+    eventTypeId: record.event_type_id,
     eventTypeName: record.event_type.name,
     contractName: record.contract?.commercial_name ?? null,
   }

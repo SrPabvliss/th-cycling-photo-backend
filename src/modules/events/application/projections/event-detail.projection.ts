@@ -43,6 +43,7 @@ export class EventDetailProjection {
   isFrozen: boolean
   frozenAt: Date | null
   organizerName: string
+  eventTypeId: number
   eventTypeName: string
   contractName: string | null
   /** When the event record was created */
