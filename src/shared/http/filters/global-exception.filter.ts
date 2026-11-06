@@ -11,6 +11,7 @@ import type { Request, Response } from 'express'
 import { I18nContext } from 'nestjs-i18n'
 import { AppException, ErrorCode } from '../../domain/exceptions/app.exception'
 import type { ApiErrorResponse } from '../dto/api-response.dto'
+import { agreeingMessageKey, translateEntity } from '../i18n/entity-agreement'
 
 /**
  * Global exception filter that catches all exceptions and formats
@@ -51,7 +52,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof AppException) {
       const translatedMessage = i18n
-        ? String(i18n.t(exception.messageKey, { args: exception.context }))
+        ? this.translateAppException(i18n, exception)
         : exception.messageKey
 
       return {
@@ -149,6 +150,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         meta,
       },
     }
+  }
+
+  private translateAppException(i18n: I18nContext, exception: AppException): string {
+    const entity = exception.context?.entity
+    if (typeof entity !== 'string') {
+      return String(i18n.t(exception.messageKey, { args: exception.context }))
+    }
+    const key = agreeingMessageKey(i18n, exception.messageKey, entity)
+    return String(
+      i18n.t(key, { args: { ...exception.context, entity: translateEntity(i18n, entity) } }),
+    )
   }
 
   /**

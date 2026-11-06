@@ -107,18 +107,42 @@ describe('GlobalExceptionFilter', () => {
       expect(body.error.shouldThrow).toBe(false)
     })
 
-    it('should translate messages when i18n is available', () => {
-      const mockI18n = { t: jest.fn().mockReturnValue('Evento no encontrado') }
+    const dictionaryI18n = (entries: Record<string, string>) => ({
+      t: jest.fn((key: string, options?: { args?: Record<string, unknown> }) => {
+        const template = entries[key]
+        if (!template) return key
+        return template.replace(/\{(\w+)\}/g, (_, name) => String(options?.args?.[name] ?? ''))
+      }),
+    })
+
+    it('should translate messages and the entity name when i18n is available', () => {
+      const mockI18n = dictionaryI18n({
+        'errors.NOT_FOUND': '{entity} no encontrado',
+        'entities.event': 'Evento',
+      })
       ;(I18nContext.current as jest.Mock).mockReturnValue(mockI18n)
 
-      const exception = AppException.notFound('event', '123')
-      filter.catch(exception, mockHost)
+      filter.catch(AppException.notFound('Event', '123'), mockHost)
 
-      expect(mockI18n.t).toHaveBeenCalledWith('errors.NOT_FOUND', {
-        args: { entity: 'event', id: '123' },
-      })
       const body = mockJson.mock.calls[0][0]
       expect(body.error.message).toBe('Evento no encontrado')
+    })
+
+    it('should agree in gender with a feminine entity', () => {
+      ;(I18nContext.current as jest.Mock).mockReturnValue(
+        dictionaryI18n({
+          'errors.NOT_FOUND': '{entity} no encontrado',
+          'errors.NOT_FOUND_F': '{entity} no encontrada',
+          'entities.order': 'Orden',
+          'entity_gender.order': 'f',
+        }),
+      )
+
+      filter.catch(AppException.notFound('entities.order', '123'), mockHost)
+
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.message).toBe('Orden no encontrada')
+      expect(body.error.messageKey).toBe('errors.NOT_FOUND')
     })
   })
 

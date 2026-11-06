@@ -15,6 +15,7 @@ import {
   type SuccessMessageMetadata,
 } from '../decorators/success-message.decorator'
 import type { ApiSuccessResponse } from '../dto/api-response.dto'
+import { agreeingMessageKey } from '../i18n/entity-agreement'
 
 /**
  * Global interceptor that wraps all successful responses
@@ -44,9 +45,10 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiSuccessResp
               Object.entries(messageMeta.args).map(([k, v]) => [k, String(i18n.t(v))]),
             )
           : messageMeta.args
-      translatedMessage = i18n
-        ? String(i18n.t(messageMeta.key, { args: resolvedArgs }))
-        : messageMeta.key
+      const entity = messageMeta.args?.entity
+      const key =
+        i18n && entity ? agreeingMessageKey(i18n, messageMeta.key, entity) : messageMeta.key
+      translatedMessage = i18n ? String(i18n.t(key, { args: resolvedArgs })) : messageMeta.key
     }
 
     return next.handle().pipe(
