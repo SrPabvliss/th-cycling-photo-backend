@@ -48,7 +48,13 @@ export class UpdateEventConfigurationHandler
     await this.configService.verifyNewPayphones(command.selection.payoutMethods)
 
     const existingMethods = await this.payoutRepo.findByEventId(event.id)
+    const before = {
+      publicName: event.snapPublicName,
+      watermarkStorageKey: event.snapWatermarkStorageKey,
+      whatsappNumber: event.snapWhatsappNumber,
+    }
     const config = await this.configService.rematerialise(event, command.selection, existingMethods)
+    this.configService.assertNoRegression(before, config)
     event.applyBrandSnapshot(config.brand)
     event.audit.setUpdatedBy(command.actorUserId)
 
@@ -64,6 +70,10 @@ export class UpdateEventConfigurationHandler
     } else if (watermarkKey) {
       await this.kv.write(`wm-${event.id}`, watermarkKey).catch((err) => {
         this.logger.error(`Failed to update watermark KV entry for event ${event.id}`, err)
+      })
+    } else if (before.watermarkStorageKey) {
+      await this.kv.delete(`wm-${event.id}`).catch((err) => {
+        this.logger.error(`Failed to remove watermark KV entry for event ${event.id}`, err)
       })
     }
 
