@@ -1,3 +1,5 @@
+import type { PaymentMethodType } from '@orders/domain/value-objects/payment-method.vo'
+
 export class CreateOrderFromPreviewCommand {
   constructor(
     public readonly token: string,
@@ -6,5 +8,7 @@ export class CreateOrderFromPreviewCommand {
     public readonly notes: string | null,
     public readonly bibNumber: string | null,
     public readonly snapCategoryName: string | null,
+    public readonly billingAccountId: string,
+    public readonly method: PaymentMethodType,
   ) {}
 }

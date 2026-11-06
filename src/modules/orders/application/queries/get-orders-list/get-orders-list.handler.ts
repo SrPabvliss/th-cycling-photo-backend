@@ -18,7 +18,7 @@ export class GetOrdersListHandler implements IQueryHandler<GetOrdersListQuery> {
 
   /** Retrieves a paginated list of orders, restricted to events within the caller's scope. */
   async execute(query: GetOrdersListQuery): Promise<PaginatedResult<OrderListProjection>> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'order.read')
     return this.readRepo.getList(query.pagination, query.filters, scope)
   }
 }

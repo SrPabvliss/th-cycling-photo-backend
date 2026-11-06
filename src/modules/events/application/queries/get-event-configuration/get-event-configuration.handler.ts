@@ -27,7 +27,7 @@ export class GetEventConfigurationHandler implements IQueryHandler<GetEventConfi
   ) {}
 
   async execute(query: GetEventConfigurationQuery): Promise<EventConfigurationProjection> {
-    const scope = await this.authz.resolveEventScope(query.actorUserId)
+    const scope = await this.authz.resolveEventScope(query.actorUserId, 'event.read')
     const event = await this.readRepo.findByIdInScope(query.id, scope, true)
     if (!event) throw AppException.notFound('Event', query.id)
 

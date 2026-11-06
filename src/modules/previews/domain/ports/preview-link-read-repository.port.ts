@@ -14,6 +14,8 @@ export interface IPreviewLinkReadRepository {
     scope: EventScope,
   ): Promise<PaginatedResult<PreviewLinkListProjection>>
   getPreviewData(token: string): Promise<PreviewDataProjection | null>
+  /** Public name of the event's organizer, falling back to its legal name. */
+  findOrganizerName(eventId: string): Promise<string | null>
   /** True if any preview link includes this photo (blocks hard-delete). */
   existsByPhotoId(photoId: string): Promise<boolean>
 }

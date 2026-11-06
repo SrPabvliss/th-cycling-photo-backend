@@ -9,6 +9,7 @@ import { GetDashboardSummaryHandler } from './application/queries/get-dashboard-
 import { GetOperatorRetouchOrderDetailHandler } from './application/queries/get-operator-retouch-order-detail/get-operator-retouch-order-detail.handler'
 import { GetOperatorRetouchOrdersHandler } from './application/queries/get-operator-retouch-orders/get-operator-retouch-orders.handler'
 import { GetRecentActivityHandler } from './application/queries/get-recent-activity/get-recent-activity.handler'
+import { GetRetouchEventsHandler } from './application/queries/get-retouch-events/get-retouch-events.handler'
 import { GetRetouchQueueHandler } from './application/queries/get-retouch-queue/get-retouch-queue.handler'
 import { GetOperatorReviewQueueHandler } from './application/queries/get-review-queue/get-review-queue.handler'
 import { OPERATOR_READ_REPOSITORY, OPERATOR_RETOUCH_READ_REPOSITORY } from './domain/ports'
@@ -27,6 +28,7 @@ import { OperatorController } from './presentation/controllers/operator.controll
     GetRecentActivityHandler,
     GetOperatorRetouchOrdersHandler,
     GetRetouchQueueHandler,
+    GetRetouchEventsHandler,
     GetOperatorReviewQueueHandler,
     { provide: OPERATOR_READ_REPOSITORY, useClass: OperatorReadRepository },
     { provide: OPERATOR_RETOUCH_READ_REPOSITORY, useClass: OperatorRetouchReadRepository },

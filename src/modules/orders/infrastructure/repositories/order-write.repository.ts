@@ -81,37 +81,67 @@ export class OrderWriteRepository implements IOrderWriteRepository {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`
 
       const existingRecord = await tx.order.findFirst({
-        where: { user_id: userId, event_id: eventId, status: OrderStatus.DRAFT },
+        where: {
+          user_id: userId,
+          event_id: eventId,
+          status: OrderStatus.DRAFT,
+          preview_link_id: null,
+        },
         orderBy: { created_at: 'desc' },
       })
       const existingDraft = existingRecord ? OrderMapper.toEntity(existingRecord) : null
 
-      const { order, items, snap } = await build(existingDraft, tx)
-      const data = OrderMapper.toPersistence(order)
-
-      const saved = await tx.order.upsert({
-        where: { id: order.id },
-        create: {
-          ...data,
-          ...OrderWriteRepository.snapColumns(snap),
-        },
-        update: {
-          ...data,
-          ...OrderWriteRepository.snapColumns(snap),
-        },
-      })
-
-      await tx.orderItem.deleteMany({ where: { order_id: order.id } })
-      await tx.orderItem.createMany({
-        data: items.map((i) => ({
-          order_id: order.id,
-          photo_id: i.photoId,
-          unit_price: i.unitPrice,
-        })),
-      })
-
-      return OrderMapper.toEntity(saved)
+      return OrderWriteRepository.persistBuilt(tx, await build(existingDraft, tx))
     })
+  }
+
+  /**
+   * Same as `lockAndUpsertDraft`, keyed by preview link: `build` receives the order already placed
+   * through this link, if any, and decides whether it may be rewritten.
+   */
+  async lockAndUpsertPreviewOrder(
+    previewLinkId: string,
+    build: (
+      existing: Order | null,
+      tx: Prisma.TransactionClient,
+    ) => Promise<{ order: Order; items: OrderItemInput[]; snap: OrderSnapData }>,
+  ): Promise<Order> {
+    return this.prisma.$transaction(async (tx) => {
+      const lockKey = `preview:${previewLinkId}`
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`
+
+      const existingRecord = await tx.order.findFirst({
+        where: { preview_link_id: previewLinkId },
+        orderBy: { created_at: 'desc' },
+      })
+      const existing = existingRecord ? OrderMapper.toEntity(existingRecord) : null
+
+      return OrderWriteRepository.persistBuilt(tx, await build(existing, tx))
+    })
+  }
+
+  private static async persistBuilt(
+    tx: Prisma.TransactionClient,
+    { order, items, snap }: { order: Order; items: OrderItemInput[]; snap: OrderSnapData },
+  ): Promise<Order> {
+    const data = OrderMapper.toPersistence(order)
+
+    const saved = await tx.order.upsert({
+      where: { id: order.id },
+      create: { ...data, ...OrderWriteRepository.snapColumns(snap) },
+      update: { ...data, ...OrderWriteRepository.snapColumns(snap) },
+    })
+
+    await tx.orderItem.deleteMany({ where: { order_id: order.id } })
+    await tx.orderItem.createMany({
+      data: items.map((i) => ({
+        order_id: order.id,
+        photo_id: i.photoId,
+        unit_price: i.unitPrice,
+      })),
+    })
+
+    return OrderMapper.toEntity(saved)
   }
 
   /** Sets delivered_as on each order item based on photo retouched status. */

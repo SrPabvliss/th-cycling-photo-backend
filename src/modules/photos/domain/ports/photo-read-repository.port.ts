@@ -85,6 +85,12 @@ export interface IPhotoReadRepository {
   countByIdsAndEvent(photoIds: string[], eventId: string): Promise<number>
   /** Distinct in-scope event ids among `photoIds`; out-of-scope photos are silently excluded. */
   getDistinctEventIdsForPhotoIds(photoIds: string[], scope: EventScope): Promise<string[]>
+  /** Photos in scope whose event does not have `photoCategoryId` assigned. */
+  countPhotosOutsideEventCategory(
+    photoIds: string[],
+    photoCategoryId: number,
+    scope: EventScope,
+  ): Promise<number>
   findSimilar(photoId: string, eventId: string, limit: number): Promise<SimilarPhotoProjection[]>
   getPhotoViewBySlug(slug: string, scope: EventScope): Promise<PhotoViewProjection | null>
   countAll(scope: EventScope): Promise<number>

@@ -26,7 +26,7 @@ export class GiftOrderHandler implements ICommandHandler<GiftOrderCommand> {
   ) {}
 
   async execute(command: GiftOrderCommand): Promise<EntityIdProjection> {
-    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const scope = await this.authz.resolveEventScope(command.audit.userId, 'order.gift')
     const order = await this.readRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
     await this.authz.assert(command.audit.userId, 'order.gift', order.eventId)

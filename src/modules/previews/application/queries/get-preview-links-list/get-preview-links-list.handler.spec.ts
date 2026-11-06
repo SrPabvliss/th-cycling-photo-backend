@@ -23,7 +23,7 @@ describe('GetPreviewLinksListHandler', () => {
 
     await handler.execute(new GetPreviewLinksListQuery('event-1', pagination, 'u1'))
 
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'preview_link.read')
     expect(readRepo.getListByEvent).toHaveBeenCalledWith('event-1', pagination, scope)
   })
 })

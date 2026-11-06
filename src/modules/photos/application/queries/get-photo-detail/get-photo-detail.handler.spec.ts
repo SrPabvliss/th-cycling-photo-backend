@@ -74,7 +74,6 @@ describe('GetPhotoDetailHandler', () => {
       can: jest.fn(),
       assert: jest.fn(),
       canAnywhere: jest.fn(),
-      resolveGrantedEventScope: jest.fn(),
       resolveEventScope: jest.fn().mockResolvedValue(scope),
     } as jest.Mocked<IAuthorizationService>
 
@@ -88,7 +87,7 @@ describe('GetPhotoDetailHandler', () => {
     const result = await handler.execute(query)
 
     expect(result).toEqual(photoDetail)
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'photo.read')
     expect(readRepo.getPhotoDetail).toHaveBeenCalledWith(photoDetail.id, scope)
   })
 

@@ -30,7 +30,7 @@ export class ApplyColorCorrectionHandler implements ICommandHandler<ApplyColorCo
   async execute(
     cmd: ApplyColorCorrectionCommand,
   ): Promise<{ changed: boolean; correctionId?: string }> {
-    const scope = await this.authz.resolveEventScope(cmd.reviewerId)
+    const scope = await this.authz.resolveEventScope(cmd.reviewerId, 'photo.color.correct')
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.color.correct', photo.eventId)

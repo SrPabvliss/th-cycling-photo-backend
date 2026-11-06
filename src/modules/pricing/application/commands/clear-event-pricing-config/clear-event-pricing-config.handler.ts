@@ -31,7 +31,7 @@ export class ClearEventPricingConfigHandler
 
   async execute(cmd: ClearEventPricingConfigCommand): Promise<void> {
     // Ruling 21 — see SetEventPricingConfigHandler for the reasoning.
-    const scope = await this.authz.resolveEventScope(cmd.clearedById)
+    const scope = await this.authz.resolveEventScope(cmd.clearedById, 'pricing.config.clear')
     const event = await this.eventReadRepo.findByIdInScope(cmd.eventId, scope)
     if (!event) throw AppException.notFound('Event', cmd.eventId)
 

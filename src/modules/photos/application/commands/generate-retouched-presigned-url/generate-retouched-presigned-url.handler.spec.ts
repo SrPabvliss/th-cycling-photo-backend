@@ -64,7 +64,6 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
       can: jest.fn(),
       assert: jest.fn().mockResolvedValue(undefined),
       canAnywhere: jest.fn(),
-      resolveGrantedEventScope: jest.fn(),
       resolveEventScope: jest.fn().mockResolvedValue(scope),
     } as jest.Mocked<IAuthorizationService>
 

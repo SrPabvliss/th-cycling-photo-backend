@@ -31,7 +31,10 @@ export class AssignCategoryToEventHandler implements ICommandHandler<AssignCateg
     // Scoped load first: `assert` only tests whether the caller holds the key, so with an unscoped
     // `findById` any tenant knowing another's event UUID could rewrite its category assignments.
     // Out-of-scope ids resolve to null (404, not 403) so the event's existence isn't disclosed.
-    const scope = await this.authz.resolveEventScope(command.assignedById)
+    const scope = await this.authz.resolveEventScope(
+      command.assignedById,
+      'photo_category.event.assign',
+    )
     const event = await this.eventReadRepo.findByIdInScope(command.eventId, scope)
     if (!event) throw AppException.notFound('Event', command.eventId)
 
@@ -40,6 +43,9 @@ export class AssignCategoryToEventHandler implements ICommandHandler<AssignCateg
 
     const category = await this.readRepo.findById(command.photoCategoryId)
     if (!category) throw AppException.notFound('PhotoCategory', String(command.photoCategoryId))
+    if (!category.isAvailableTo(event.tenantId)) {
+      throw AppException.businessRule('photo_category.not_available_for_event')
+    }
 
     const id = await this.writeRepo.assignToEvent(event.id, command.photoCategoryId)
     return { id }

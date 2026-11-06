@@ -5,6 +5,7 @@ import type {
 } from '@events/application/queries/get-events-list/get-events-list.dto'
 import { Prisma } from '@generated/prisma/client'
 import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import { eventScopeSql } from '@shared/authorization/infrastructure/event-scope.sql'
 
 export function escapeLikeTerm(value: string): string {
   return value.replace(/[\\%_]/g, (char) => `\\${char}`)
@@ -28,25 +29,6 @@ export function resolveEventSort(sort: EventSort | undefined): EventSort {
     sort === 'revenue'
     ? sort
     : 'event_date'
-}
-
-function uuidListSql(ids: string[]): Prisma.Sql {
-  return Prisma.join(ids.map((id) => Prisma.sql`${id}::uuid`))
-}
-
-function scopeSql(scope: EventScope): Prisma.Sql {
-  if (scope.all) return Prisma.sql`TRUE`
-
-  const reaches: Prisma.Sql[] = []
-  if (scope.tenantIds.length > 0) {
-    reaches.push(Prisma.sql`e.tenant_id IN (${uuidListSql(scope.tenantIds)})`)
-  }
-  if (scope.eventIds.length > 0) {
-    reaches.push(Prisma.sql`e.id IN (${uuidListSql(scope.eventIds)})`)
-  }
-  if (reaches.length === 0) return Prisma.sql`FALSE`
-
-  return Prisma.sql`(${Prisma.join(reaches, ' OR ')})`
 }
 
 export function eventTabConditionSql(tab: EventTab): Prisma.Sql {
@@ -84,7 +66,7 @@ export function eventListWhereSql(
   scope: EventScope,
   tab: EventTab,
 ): Prisma.Sql {
-  const conditions: Prisma.Sql[] = [scopeSql(scope), eventTabConditionSql(tab)]
+  const conditions: Prisma.Sql[] = [eventScopeSql(scope, 'e'), eventTabConditionSql(tab)]
 
   if (filters.organizerId) {
     conditions.push(Prisma.sql`e.tenant_id = ${filters.organizerId}::uuid`)

@@ -43,7 +43,6 @@ export const INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
  */
 export const ROLE_INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   'admin POST /cart/checkout',
-  'admin POST /public/events/:eventId/orders',
   'admin PATCH /orders/payment-method',
   'admin POST /payments/intent',
   'admin POST /payments/confirm',
@@ -52,6 +51,11 @@ export const ROLE_INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   // TIT-40: operator role loses global retouching capabilities in favor of per-event grants.
   'operator GET /operator/retouch/orders/:orderId',
   'operator GET /operator/retouch/orders',
+  'operator GET /operator/retouch/events',
+
+  // TIT-87: the category picker lists the caller's (or the event owner's) own categories, so it
+  // needs a principal; buyers and the public gallery only use GET /events/:eventId/photo-categories.
+  'anonymous GET /photo-categories',
   'operator GET /operator/events/:eventSlug/retouch-queue',
   'operator GET /photos/pending-retouch',
   'operator POST /photos/:id/retouched/presigned-url',

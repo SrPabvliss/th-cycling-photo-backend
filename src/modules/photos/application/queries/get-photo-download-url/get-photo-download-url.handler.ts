@@ -19,7 +19,10 @@ export class GetPhotoDownloadUrlHandler implements IQueryHandler<GetPhotoDownloa
   ) {}
 
   async execute(query: GetPhotoDownloadUrlQuery): Promise<DownloadUrlProjection> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, [
+      'photo.download',
+      'photo.retouch.read',
+    ])
     const photo = await this.photoReadRepo.findByIdInScope(query.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', query.photoId)
     await this.authz.assert(query.userId, 'photo.download', photo.eventId)

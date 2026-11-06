@@ -26,7 +26,7 @@ export class SetPhotoRetouchFlagHandler implements ICommandHandler<SetPhotoRetou
   ) {}
 
   async execute(command: SetPhotoRetouchFlagCommand): Promise<void> {
-    const scope = await this.authz.resolveEventScope(command.userId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'photo.retouch.flag')
     const photo = await this.photoRead.findByIdInScope(command.photoId, scope)
     if (!photo) {
       throw AppException.notFound('Photo', command.photoId)

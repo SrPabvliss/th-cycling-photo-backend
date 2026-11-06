@@ -8,8 +8,14 @@ export class PreviewPhotoProjection {
 export class PreviewDataProjection {
   /** Cryptographic token */
   token: string
+  /** Event UUID, for the buyer's payment options */
+  eventId: string
   /** Event name */
   eventName: string
+  /** Event type, to load its participant categories */
+  eventTypeId: number
+  /** Public name of the event's organizer */
+  organizerName: string
   /** Event start date */
   startDate: Date
   /** Event end date */

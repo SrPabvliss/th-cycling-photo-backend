@@ -19,6 +19,19 @@ describe('IssueContractDto', () => {
     expect(dto.validUntil.toISOString()).toBe('2027-01-01T04:59:59.999Z')
   })
 
+  it('keeps the Ecuador end of day under the global pipe implicit conversion', async () => {
+    const dto = plainToInstance(
+      IssueContractDto,
+      { ...BASE, validUntil: '2027-02-28' },
+      { enableImplicitConversion: true },
+    )
+
+    const errors = await validate(dto)
+
+    expect(errors).toHaveLength(0)
+    expect(dto.validUntil.toISOString()).toBe('2027-03-01T04:59:59.999Z')
+  })
+
   it('rejects a validUntil that is not a valid date-only string', async () => {
     const dto = plainToInstance(IssueContractDto, { ...BASE, validUntil: 'not-a-date' })
 

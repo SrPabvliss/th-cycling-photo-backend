@@ -45,4 +45,56 @@ describe('EventScope', () => {
       expect(scope.includesEvent({ id: 'e-other', tenantId: 't-other' })).toBe(false)
     })
   })
+
+  describe('deniedEventIds', () => {
+    const scope = new EventScope(false, ['t1'], ['e9'], ['e1'])
+
+    it('carves the denied events out of the tenant branch only', () => {
+      expect(scope.toPrisma()).toEqual({
+        OR: [{ tenant_id: { in: ['t1'] }, id: { notIn: ['e1'] } }, { id: { in: ['e9'] } }],
+      })
+    })
+
+    it('excludes a denied event of the tenant in memory', () => {
+      expect(scope.includesEvent({ id: 'e1', tenantId: 't1' })).toBe(false)
+      expect(scope.includesEvent({ id: 'e2', tenantId: 't1' })).toBe(true)
+    })
+  })
+
+  describe('union', () => {
+    it('is unrestricted when any part is', () => {
+      expect(EventScope.union(EventScope.empty(), EventScope.unrestricted()).all).toBe(true)
+    })
+
+    it('merges event grants and keeps the shared tenant', () => {
+      const u = EventScope.union(
+        new EventScope(false, ['t1'], ['e1']),
+        new EventScope(false, [], ['e2']),
+      )
+      expect(u.tenantIds).toEqual(['t1'])
+      expect(u.eventIds.sort()).toEqual(['e1', 'e2'])
+    })
+
+    it('keeps a deny only when every tenant branch denies the event', () => {
+      const u = EventScope.union(
+        new EventScope(false, ['t1'], [], ['e1', 'e2']),
+        new EventScope(false, ['t1'], [], ['e1']),
+      )
+      expect(u.deniedEventIds).toEqual(['e1'])
+    })
+
+    it('keeps the deny of the only tenant branch', () => {
+      const u = EventScope.union(
+        new EventScope(false, ['t1'], [], ['e1']),
+        new EventScope(false, [], ['e5']),
+      )
+      expect(u.deniedEventIds).toEqual(['e1'])
+    })
+
+    it('rejects tenant branches over different tenants', () => {
+      expect(() =>
+        EventScope.union(new EventScope(false, ['t1'], []), new EventScope(false, ['t2'], [])),
+      ).toThrow()
+    })
+  })
 })

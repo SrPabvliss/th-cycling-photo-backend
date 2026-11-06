@@ -69,7 +69,6 @@ describe('DeleteEventHandler', () => {
       can: jest.fn(),
       assert: jest.fn().mockResolvedValue(undefined),
       canAnywhere: jest.fn(),
-      resolveGrantedEventScope: jest.fn(),
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as jest.Mocked<IAuthorizationService>
 
@@ -87,7 +86,7 @@ describe('DeleteEventHandler', () => {
     const result = await handler.execute(command)
 
     expect(result).toEqual({ id: existingEvent.id })
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'event.delete')
     expect(readRepo.findByIdInScope).toHaveBeenCalledWith(existingEvent.id, unrestrictedScope)
     expect(authz.assert).toHaveBeenCalledWith('u1', 'event.delete', existingEvent.id)
     expect(writeRepo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'archived' }))

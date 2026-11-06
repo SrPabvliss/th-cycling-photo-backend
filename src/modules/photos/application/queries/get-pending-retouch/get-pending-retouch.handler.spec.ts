@@ -6,12 +6,12 @@ import { GetPendingRetouchQuery } from './get-pending-retouch.query'
 
 describe('GetPendingRetouchHandler', () => {
   let orderReadRepo: jest.Mocked<Pick<IOrderReadRepository, 'getPendingRetouch'>>
-  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveGrantedEventScope'>>
+  let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope'>>
   let handler: GetPendingRetouchHandler
 
   beforeEach(() => {
     orderReadRepo = { getPendingRetouch: jest.fn().mockResolvedValue([]) }
-    authz = { resolveGrantedEventScope: jest.fn() }
+    authz = { resolveEventScope: jest.fn() }
     handler = new GetPendingRetouchHandler(orderReadRepo as never, authz as never)
   })
 
@@ -21,17 +21,17 @@ describe('GetPendingRetouchHandler', () => {
   // would see every tenant's pending-retouch orders.
   it('restricts pending-retouch orders to events within the caller scope', async () => {
     const scope = new EventScope(false, ['tenant-a'], [])
-    authz.resolveGrantedEventScope.mockResolvedValue(scope)
+    authz.resolveEventScope.mockResolvedValue(scope)
 
     await handler.execute(new GetPendingRetouchQuery('u1'))
 
-    expect(authz.resolveGrantedEventScope).toHaveBeenCalledWith('u1', 'photo.retouch.read')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'photo.retouch.read')
     expect(orderReadRepo.getPendingRetouch).toHaveBeenCalledWith(scope)
   })
 
   it('an unrestricted (platform) caller still sees platform-wide pending-retouch orders', async () => {
     const unrestricted = EventScope.unrestricted()
-    authz.resolveGrantedEventScope.mockResolvedValue(unrestricted)
+    authz.resolveEventScope.mockResolvedValue(unrestricted)
 
     await handler.execute(new GetPendingRetouchQuery('platform-1'))
 

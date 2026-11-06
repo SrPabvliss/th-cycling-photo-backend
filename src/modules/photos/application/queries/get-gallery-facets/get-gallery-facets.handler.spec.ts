@@ -13,7 +13,7 @@ describe('GetGalleryFacetsHandler', () => {
 
     expect(
       (authz as never as { resolveEventScope: jest.Mock }).resolveEventScope,
-    ).toHaveBeenCalledWith('u1')
+    ).toHaveBeenCalledWith('u1', 'photo.read')
     expect(
       (readRepo as never as { getGalleryFacets: jest.Mock }).getGalleryFacets,
     ).toHaveBeenCalledWith('event-1', scope)

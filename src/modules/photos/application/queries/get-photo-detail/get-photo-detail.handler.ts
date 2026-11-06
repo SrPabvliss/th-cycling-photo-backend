@@ -21,7 +21,7 @@ export class GetPhotoDetailHandler implements IQueryHandler<GetPhotoDetailQuery>
    * event is out of scope, so an out-of-scope id is indistinguishable from an unknown one.
    */
   async execute(query: GetPhotoDetailQuery): Promise<PhotoDetailProjection> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'photo.read')
     const photo = await this.readRepo.getPhotoDetail(query.id, scope)
     if (!photo) throw AppException.notFound('Photo', query.id)
 

@@ -30,7 +30,7 @@ export class UpdateEventHandler implements ICommandHandler<UpdateEventCommand> {
       throw AppException.internal('UpdateEventCommand requires an audit context')
     }
 
-    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const scope = await this.authz.resolveEventScope(command.audit.userId, 'event.update')
     const event = await this.readRepo.findByIdInScope(command.id, scope)
     if (!event) throw AppException.notFound('Event', command.id)
     await this.authz.assert(command.audit.userId, 'event.update', event.id)

@@ -30,7 +30,7 @@ export class CancelOrderHandler implements ICommandHandler<CancelOrderCommand> {
   ) {}
 
   async execute(command: CancelOrderCommand): Promise<EntityIdProjection> {
-    const scope = await this.authz.resolveEventScope(command.userId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'order.cancel')
     const order = await this.readRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
     await this.authz.assert(command.userId, 'order.cancel', order.eventId)

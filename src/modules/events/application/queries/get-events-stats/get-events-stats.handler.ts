@@ -22,7 +22,7 @@ export class GetEventsStatsHandler implements IQueryHandler<GetEventsStatsQuery>
    * the tiles.
    */
   async execute(query: GetEventsStatsQuery): Promise<EventsStatsProjection> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'event.stats.read')
     return this.eventReadRepo.getEventsStats(query.filters, scope)
   }
 }

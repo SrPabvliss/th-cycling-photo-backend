@@ -1,11 +1,3 @@
-import { CONSENT_TYPE } from '@auth/domain/constants/consent.constants'
-import {
-  AUTH_USER_REPOSITORY,
-  CONSENT_REPOSITORY,
-  type IAuthUserRepository,
-  type IConsentRepository,
-} from '@auth/domain/ports'
-import { BILLING_ACCOUNT_REPOSITORY, type IBillingAccountRepository } from '@billing/domain/ports'
 import type { CheckoutResultProjection } from '@cart/application/projections'
 import {
   CART_READ_REPOSITORY,
@@ -16,6 +8,7 @@ import {
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { NotificationsService } from '@notifications/application/services/notifications.service'
+import { BuyerPurchaseSnapshotService } from '@orders/application/services/buyer-purchase-snapshot.service'
 import { Order } from '@orders/domain/entities'
 import {
   type IOrderWriteRepository,
@@ -42,13 +35,10 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
     @Inject(CART_READ_REPOSITORY) private readonly cartReadRepo: ICartReadRepository,
     @Inject(CART_WRITE_REPOSITORY) private readonly cartWriteRepo: ICartWriteRepository,
     @Inject(ORDER_WRITE_REPOSITORY) private readonly orderWriteRepo: IOrderWriteRepository,
-    @Inject(AUTH_USER_REPOSITORY) private readonly authUserRepo: IAuthUserRepository,
     @Inject(PAYMENT_TRANSACTION_WRITE_REPOSITORY)
     private readonly transactionWriteRepo: IPaymentTransactionWriteRepository,
     private readonly notifications: NotificationsService,
-    @Inject(BILLING_ACCOUNT_REPOSITORY)
-    private readonly billingAccountRepository: IBillingAccountRepository,
-    @Inject(CONSENT_REPOSITORY) private readonly consentRepository: IConsentRepository,
+    private readonly buyerSnapshot: BuyerPurchaseSnapshotService,
     private readonly receiverResolver: PaymentReceiverResolver,
   ) {}
 
@@ -83,24 +73,8 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
       }
     }
 
-    // 5. Get user snap data
-    const snapData = await this.authUserRepo.getUserSnapData(command.userId)
-    if (!snapData) throw AppException.businessRule('order.customer_profile_required')
-    if (snapData.countryId === null) {
-      throw AppException.businessRule('order.customer_profile_required')
-    }
-
-    const billingAccount = await this.billingAccountRepository.findActiveById(
-      command.billingAccountId,
-      command.userId,
-    )
-    if (!billingAccount) throw AppException.businessRule('billing.account_not_found')
-
-    const invoiceConsent = await this.consentRepository.findActive(
-      command.userId,
-      CONSENT_TYPE.ELECTRONIC_INVOICE,
-    )
-    if (!invoiceConsent) throw AppException.businessRule('billing.invoice_consent_required')
+    // 5. Buyer profile, billing account and invoice consent
+    const buyer = await this.buyerSnapshot.build(command.userId, command.billingAccountId, null)
 
     /**
      * Pricing is calculated at the CART level (across all events) using the default
@@ -142,22 +116,8 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
         unitPrice: calc.unitPrice,
       }))
       const snap: OrderSnapData = {
-        snapFirstName: snapData.firstName,
-        snapLastName: snapData.lastName,
-        snapEmail: snapData.email,
-        snapPhone: snapData.phone,
-        snapCountryId: snapData.countryId,
-        snapProvinceId: snapData.provinceId,
-        snapCantonId: snapData.cantonId,
+        ...buyer.snap,
         snapCategoryName: item.snapCategoryName ?? null,
-        snapBillingAccountId: billingAccount.id,
-        snapBillingIdType: billingAccount.idType,
-        snapBillingIdNumber: billingAccount.idNumber,
-        snapBillingLegalName: billingAccount.legalName,
-        snapBillingEmail: billingAccount.email,
-        snapBillingAddress: billingAccount.address,
-        snapInvoiceConsentAt: invoiceConsent.acceptedAt,
-        snapInvoiceConsentIp: invoiceConsent.ip,
       }
 
       let notify = false
@@ -227,7 +187,7 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
         this.notifications.emitOrderCreated({
           orderId: saved.id,
           eventName: cartEvent.eventName,
-          customerName: [snapData.firstName, snapData.lastName].filter(Boolean).join(' '),
+          customerName: buyer.customerName,
           photoCount: cartEvent.photoIds.length,
           subtotal: orderSubtotal,
           currency: DEFAULT_CURRENCY,

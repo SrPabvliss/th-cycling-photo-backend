@@ -15,7 +15,7 @@ export class GetResumePointHandler implements IQueryHandler<GetResumePointQuery>
   ) {}
 
   async execute(query: GetResumePointQuery): Promise<{ photoId: string | null; page: number }> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'photo.read')
     return this.readRepo.getResumePoint(query.eventId, query.limit, scope)
   }
 }

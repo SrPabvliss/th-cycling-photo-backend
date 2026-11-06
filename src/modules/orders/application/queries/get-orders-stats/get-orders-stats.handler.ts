@@ -19,7 +19,7 @@ export class GetOrdersStatsHandler implements IQueryHandler<GetOrdersStatsQuery>
 
   /** Returns order statistics, scoped to the caller so a tenant never sees another tenant's revenue. */
   async execute(query: GetOrdersStatsQuery): Promise<OrdersStatsProjection> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'order.stats.read')
     return this.readRepo.getStats({ eventId: query.eventId, search: query.search }, scope)
   }
 }

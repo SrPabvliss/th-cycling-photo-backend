@@ -123,7 +123,7 @@ describe('UpdateEventHandler', () => {
 
     const result = await handler.execute(command)
 
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'event.update')
     expect(authz.assert).toHaveBeenCalledWith(
       'u1',
       'event.update',

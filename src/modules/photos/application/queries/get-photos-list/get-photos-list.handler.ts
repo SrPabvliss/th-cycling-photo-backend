@@ -21,7 +21,7 @@ export class GetPhotosListHandler implements IQueryHandler<GetPhotosListQuery> {
 
   /** Retrieves a paginated list of photos for a given event, scoped to the caller. */
   async execute(query: GetPhotosListQuery): Promise<PaginatedResult<PhotoListProjection>> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'photo.read')
     const event = await this.eventReadRepo.findById(query.eventId)
     if (!event || !scope.includesEvent(event)) {
       throw AppException.notFound('Event', query.eventId)

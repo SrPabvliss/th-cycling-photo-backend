@@ -24,7 +24,7 @@ describe('GetOrdersListHandler', () => {
 
     await handler.execute(new GetOrdersListQuery(pagination, filters, 'u1'))
 
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'order.read')
     expect(readRepo.getList).toHaveBeenCalledWith(pagination, filters, scope)
   })
 

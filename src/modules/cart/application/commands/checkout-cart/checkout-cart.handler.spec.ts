@@ -1,3 +1,4 @@
+import { BuyerPurchaseSnapshotService } from '@orders/application/services/buyer-purchase-snapshot.service'
 import { Order } from '@orders/domain/entities'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import { PaymentMethod } from '@orders/domain/value-objects/payment-method.vo'
@@ -144,11 +145,13 @@ function buildHandler(
     cartReadRepo as never,
     cartWriteRepo as never,
     orderWriteRepo as never,
-    authUserRepo as never,
     transactionWriteRepo as never,
     notifications as never,
-    billingAccountRepository as never,
-    consentRepository as never,
+    new BuyerPurchaseSnapshotService(
+      authUserRepo as never,
+      billingAccountRepository as never,
+      consentRepository as never,
+    ),
     receiverResolver as never,
   )
 

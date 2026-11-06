@@ -76,7 +76,7 @@ describe('SetPhotoRetouchFlagHandler', () => {
 
     await handler.execute(new SetPhotoRetouchFlagCommand('p-1', false, 'u1'))
 
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'photo.retouch.flag')
     expect(photoRead.findByIdInScope).toHaveBeenCalledWith('p-1', scope)
     expect(authz.assert).toHaveBeenCalledWith('u1', 'photo.retouch.flag', 'e-1')
     expect(photoWrite.setRequiresRetouch).toHaveBeenCalledWith('p-1', false)

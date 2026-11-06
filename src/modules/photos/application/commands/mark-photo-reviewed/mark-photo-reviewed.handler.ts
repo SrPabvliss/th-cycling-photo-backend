@@ -24,7 +24,7 @@ export class MarkPhotoReviewedHandler implements ICommandHandler<MarkPhotoReview
   ) {}
 
   async execute(cmd: MarkPhotoReviewedCommand): Promise<{ photoId: string; reviewedAt: Date }> {
-    const scope = await this.authz.resolveEventScope(cmd.reviewerId)
+    const scope = await this.authz.resolveEventScope(cmd.reviewerId, 'photo.review')
     const photo = await this.photoReadRepo.findByIdInScope(cmd.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', cmd.photoId)
     await this.authz.assert(cmd.reviewerId, 'photo.review', photo.eventId)

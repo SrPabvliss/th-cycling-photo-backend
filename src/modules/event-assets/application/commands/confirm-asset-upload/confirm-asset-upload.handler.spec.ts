@@ -71,7 +71,6 @@ describe('ConfirmAssetUploadHandler', () => {
       can: jest.fn(),
       assert: jest.fn().mockResolvedValue(undefined),
       canAnywhere: jest.fn(),
-      resolveGrantedEventScope: jest.fn(),
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as jest.Mocked<IAuthorizationService>
 

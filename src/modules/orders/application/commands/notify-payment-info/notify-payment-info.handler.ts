@@ -27,7 +27,7 @@ export class NotifyPaymentInfoHandler implements ICommandHandler<NotifyPaymentIn
   ) {}
 
   async execute(command: NotifyPaymentInfoCommand): Promise<PaymentInfoNotifiedProjection> {
-    const scope = await this.authz.resolveEventScope(command.audit.userId)
+    const scope = await this.authz.resolveEventScope(command.audit.userId, 'order.notify_payment')
     const order = await this.readRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
     await this.authz.assert(command.audit.userId, 'order.notify_payment', order.eventId)

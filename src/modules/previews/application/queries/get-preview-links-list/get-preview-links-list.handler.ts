@@ -23,7 +23,7 @@ export class GetPreviewLinksListHandler implements IQueryHandler<GetPreviewLinks
   async execute(
     query: GetPreviewLinksListQuery,
   ): Promise<PaginatedResult<PreviewLinkListProjection>> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'preview_link.read')
     return this.readRepo.getListByEvent(query.eventId, query.pagination, scope)
   }
 }

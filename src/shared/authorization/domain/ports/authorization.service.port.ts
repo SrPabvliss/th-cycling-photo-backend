@@ -7,6 +7,5 @@ export interface IAuthorizationService {
   can(userId: string, key: PermissionKey, eventId?: string): Promise<boolean>
   canAnywhere(userId: string, key: PermissionKey): Promise<boolean>
   assert(userId: string, key: PermissionKey, eventId?: string): Promise<void>
-  resolveEventScope(userId: string): Promise<EventScope>
-  resolveGrantedEventScope(userId: string, key: PermissionKey): Promise<EventScope>
+  resolveEventScope(userId: string, keys: PermissionKey | PermissionKey[]): Promise<EventScope>
 }

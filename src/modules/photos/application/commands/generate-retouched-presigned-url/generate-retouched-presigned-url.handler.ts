@@ -25,7 +25,7 @@ export class GenerateRetouchedPresignedUrlHandler
   ) {}
 
   async execute(command: GenerateRetouchedPresignedUrlCommand): Promise<PresignedUrlProjection> {
-    const scope = await this.authz.resolveEventScope(command.userId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'photo.retouch.upload')
     const photo = await this.photoReadRepo.findByIdInScope(command.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', command.photoId)
     await this.authz.assert(command.userId, 'photo.retouch.upload', photo.eventId)

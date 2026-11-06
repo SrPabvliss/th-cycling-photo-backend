@@ -229,15 +229,15 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
   },
   {
     method: 'GET',
-    path: '/operator/events/:eventSlug/retouch-queue',
+    path: '/operator/retouch/events',
     legacyMarker: 'admin,operator',
     permission: 'photo.retouch.read',
   },
   {
-    method: 'POST',
-    path: '/public/events/:eventId/orders',
-    legacyMarker: 'customer',
-    permission: 'order.create',
+    method: 'GET',
+    path: '/operator/events/:eventSlug/retouch-queue',
+    legacyMarker: 'admin,operator',
+    permission: 'photo.retouch.read',
   },
   {
     method: 'POST',
@@ -316,7 +316,7 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
     permission: 'order.cancel',
   },
   { method: 'GET', path: '/participant-categories', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
-  { method: 'GET', path: '/photo-categories', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'GET', path: '/photo-categories', legacyMarker: 'PUBLIC', permission: 'AUTHENTICATED' },
   {
     method: 'POST',
     path: '/photo-categories',

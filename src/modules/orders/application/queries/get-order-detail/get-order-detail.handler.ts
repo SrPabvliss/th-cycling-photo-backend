@@ -71,7 +71,7 @@ export class GetOrderDetailHandler implements IQueryHandler<GetOrderDetailQuery>
    * out-of-scope id cannot be distinguished from an unknown one.
    */
   async execute(query: GetOrderDetailQuery): Promise<OrderDetailProjection> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveEventScope(query.userId, 'order.read')
     const inScope = await this.readRepo.findByIdInScope(query.orderId, scope)
     if (!inScope) throw AppException.notFound('entities.order', query.orderId)
 

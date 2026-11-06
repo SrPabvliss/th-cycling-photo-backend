@@ -38,7 +38,7 @@ describe('GetEventsStatsHandler', () => {
     const filters = { search: 'MTB', organizerId: 'tenant-a' }
     const result = await handler.execute(new GetEventsStatsQuery(filters, 'u1'))
 
-    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1')
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'event.stats.read')
     expect(eventReadRepo.getEventsStats).toHaveBeenCalledWith(filters, tenantScope)
     expect(result).toEqual(stats)
   })

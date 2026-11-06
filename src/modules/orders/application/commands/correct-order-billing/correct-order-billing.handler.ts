@@ -38,7 +38,7 @@ export class CorrectOrderBillingHandler implements ICommandHandler<CorrectOrderB
   ) {}
 
   async execute(command: CorrectOrderBillingCommand): Promise<EntityIdProjection> {
-    const scope = await this.authz.resolveEventScope(command.userId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'order.invoice.manage')
     const order = await this.readRepo.findByIdInScope(command.orderId, scope)
     if (!order) throw AppException.notFound('entities.order', command.orderId)
     await this.authz.assert(command.userId, 'order.invoice.manage', order.eventId)

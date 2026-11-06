@@ -21,14 +21,17 @@ export class PreviewLinkWriteRepository implements IPreviewLinkWriteRepository {
     return PreviewLinkMapper.toEntity(saved)
   }
 
-  /** Creates photo associations for a preview link. */
-  async savePhotos(previewLinkId: string, photoIds: string[]): Promise<void> {
-    await this.prisma.previewLinkPhoto.createMany({
-      data: photoIds.map((photoId) => ({
-        preview_link_id: previewLinkId,
-        photo_id: photoId,
-      })),
-      skipDuplicates: true,
+  /** Persists a new preview link and its photo associations atomically. */
+  async saveWithPhotos(previewLink: PreviewLink, photoIds: string[]): Promise<PreviewLink> {
+    const data = PreviewLinkMapper.toPersistence(previewLink)
+    const saved = await this.prisma.$transaction(async (tx) => {
+      const link = await tx.previewLink.create({ data })
+      await tx.previewLinkPhoto.createMany({
+        data: photoIds.map((photoId) => ({ preview_link_id: link.id, photo_id: photoId })),
+        skipDuplicates: true,
+      })
+      return link
     })
+    return PreviewLinkMapper.toEntity(saved)
   }
 }
