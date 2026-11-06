@@ -1,5 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { ArrayMinSize, IsArray, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator'
+import {
+  PaymentMethod,
+  type PaymentMethodType,
+} from '@orders/domain/value-objects/payment-method.vo'
+import {
+  ArrayMinSize,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator'
 
 export class CreateOrderFromPreviewDto {
   @ApiProperty({
@@ -37,4 +49,12 @@ export class CreateOrderFromPreviewDto {
   @IsOptional()
   @MaxLength(200)
   snapCategoryName?: string
+
+  @ApiProperty({ description: 'Billing account the invoice is issued to', format: 'uuid' })
+  @IsUUID('4')
+  billingAccountId: string
+
+  @ApiProperty({ enum: Object.values(PaymentMethod) })
+  @IsIn(Object.values(PaymentMethod))
+  method: PaymentMethodType
 }

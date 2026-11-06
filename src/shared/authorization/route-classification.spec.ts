@@ -112,7 +112,7 @@ describe('route classification', () => {
       }
     }
 
-    // Vacuous-pass floor (see docstring). 118 routes exist today; the floor sits well under that
+    // Vacuous-pass floor (see docstring). 117 routes exist today; the floor sits well under that
     // so ordinary route churn doesn't need a bump, but broken discovery still trips it.
     expect(totalRoutes).toBeGreaterThan(100)
 

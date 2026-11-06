@@ -24,7 +24,16 @@ export const previewDataSelectConfig = {
   token: true,
   status: true,
   expires_at: true,
-  event: { select: { name: true, start_date: true, end_date: true } },
+  event: {
+    select: {
+      id: true,
+      name: true,
+      start_date: true,
+      end_date: true,
+      event_type_id: true,
+      tenant: { select: { public_name: true, name: true } },
+    },
+  },
   photos: {
     select: {
       photo: { select: { id: true, public_slug: true } },
@@ -35,6 +44,11 @@ export const previewDataSelectConfig = {
 export type PreviewDataSelect = Prisma.PreviewLinkGetPayload<{
   select: typeof previewDataSelectConfig
 }>
+
+/** What a buyer sees as the organizer: its public name, falling back to its legal name. */
+export function organizerDisplayName(tenant: { public_name: string | null; name: string }): string {
+  return tenant.public_name?.trim() || tenant.name
+}
 
 /** Converts a domain entity to a Prisma create input. */
 export function toPersistence(entity: PreviewLink): Prisma.PreviewLinkUncheckedCreateInput {
@@ -82,7 +96,10 @@ export function toListProjection(record: PreviewLinkListSelect): PreviewLinkList
 export function toPreviewDataProjection(record: PreviewDataSelect): PreviewDataProjection {
   return {
     token: record.token,
+    eventId: record.event.id,
     eventName: record.event.name,
+    eventTypeId: record.event.event_type_id,
+    organizerName: organizerDisplayName(record.event.tenant),
     startDate: record.event.start_date,
     endDate: record.event.end_date,
     status: record.status,

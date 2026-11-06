@@ -8,8 +8,6 @@ export { ConvertOrderToSaleCommand } from './convert-order-to-sale/convert-order
 export { CorrectMyOrderBillingCommand } from './correct-my-order-billing/correct-my-order-billing.command'
 export { CorrectOrderBillingCommand } from './correct-order-billing/correct-order-billing.command'
 export { CorrectOrderBillingDto } from './correct-order-billing/correct-order-billing.dto'
-export { CreateOrderFromGalleryCommand } from './create-order-from-gallery/create-order-from-gallery.command'
-export { CreateOrderFromGalleryDto } from './create-order-from-gallery/create-order-from-gallery.dto'
 export { CreateOrderFromPreviewCommand } from './create-order-from-preview/create-order-from-preview.command'
 export { CreateOrderFromPreviewDto } from './create-order-from-preview/create-order-from-preview.dto'
 export { GiftOrderCommand } from './gift-order/gift-order.command'

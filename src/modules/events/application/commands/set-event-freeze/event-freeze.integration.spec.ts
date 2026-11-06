@@ -23,10 +23,9 @@ import { Test, type TestingModule } from '@nestjs/testing'
 import { NotificationsService } from '@notifications/application/services/notifications.service'
 import { ConfirmOrderPaymentCommand } from '@orders/application/commands/confirm-order-payment/confirm-order-payment.command'
 import { ConfirmOrderPaymentHandler } from '@orders/application/commands/confirm-order-payment/confirm-order-payment.handler'
-import { CreateOrderFromGalleryCommand } from '@orders/application/commands/create-order-from-gallery/create-order-from-gallery.command'
-import { CreateOrderFromGalleryHandler } from '@orders/application/commands/create-order-from-gallery/create-order-from-gallery.handler'
 import { SendDeliveryCommand } from '@orders/application/commands/send-delivery/send-delivery.command'
 import { SendDeliveryHandler } from '@orders/application/commands/send-delivery/send-delivery.handler'
+import { BuyerPurchaseSnapshotService } from '@orders/application/services/buyer-purchase-snapshot.service'
 import { ORDER_READ_REPOSITORY, ORDER_WRITE_REPOSITORY } from '@orders/domain/ports'
 import { PaymentMethod } from '@orders/domain/value-objects/payment-method.vo'
 import { OrderReadRepository } from '@orders/infrastructure/repositories/order-read.repository'
@@ -67,7 +66,6 @@ import { validate } from '../../../../../config/env.validation'
 describe('event freeze — the gallery/order boundary', () => {
   let module: TestingModule
   let prisma: PrismaService
-  let createFromGallery: CreateOrderFromGalleryHandler
   let checkoutCart: CheckoutCartHandler
   let confirmPayment: ConfirmOrderPaymentHandler
   let billingAccountId: string
@@ -169,7 +167,7 @@ describe('event freeze — the gallery/order boundary', () => {
           },
         },
         { provide: MailService, useValue: { enqueue: async () => undefined } },
-        CreateOrderFromGalleryHandler,
+        BuyerPurchaseSnapshotService,
         { provide: CDN_RETIRED_SLUG_REPOSITORY, useClass: CdnRetiredSlugRepository },
         { provide: BILLING_ACCOUNT_REPOSITORY, useClass: BillingAccountRepository },
         { provide: CONSENT_REPOSITORY, useClass: ConsentRepository },
@@ -195,7 +193,6 @@ describe('event freeze — the gallery/order boundary', () => {
     }).compile()
 
     prisma = module.get(PrismaService)
-    createFromGallery = module.get(CreateOrderFromGalleryHandler)
     checkoutCart = module.get(CheckoutCartHandler)
     confirmPayment = module.get(ConfirmOrderPaymentHandler)
     sendDelivery = module.get(SendDeliveryHandler)
@@ -377,17 +374,7 @@ describe('event freeze — the gallery/order boundary', () => {
     })
     expect(photos.items.length).toBeGreaterThan(0)
 
-    // Path 1: gallery order — inserts unitPrice: null and prices later.
-    const galleryOrder = await createFromGallery.execute(
-      // biome-ignore lint/style/noNonNullAssertion: seeded in beforeAll
-      new CreateOrderFromGalleryCommand(ev.id, buyer.id, [photoA!.id], '123', null),
-    )
-    createdOrderIds.push(galleryOrder.id)
-    const galleryItems = await prisma.orderItem.findMany({ where: { order_id: galleryOrder.id } })
-    expect(galleryItems).toHaveLength(1)
-    expect(galleryItems[0].unit_price).toBeNull()
-
-    // Path 2: cart checkout — snapshots unit_price at checkout.
+    // Cart checkout — snapshots unit_price at checkout.
     const checkout = await checkoutCart.execute(
       new CheckoutCartCommand(
         buyer.id,
@@ -405,16 +392,17 @@ describe('event freeze — the gallery/order boundary', () => {
     expect(cartItems[0].unit_price).not.toBeNull()
 
     // Fulfilment still runs end to end.
+    const fulfilled = { id: checkout.orders[0].orderId }
     const paid = await confirmPayment.execute(
-      new ConfirmOrderPaymentCommand(galleryOrder.id, new AuditContext(buyer.id)),
+      new ConfirmOrderPaymentCommand(fulfilled.id, new AuditContext(buyer.id)),
     )
-    expect(paid.id).toBe(galleryOrder.id)
+    expect(paid.id).toBe(fulfilled.id)
 
     const delivered = await sendDelivery.execute(
-      new SendDeliveryCommand(galleryOrder.id, new AuditContext(buyer.id)),
+      new SendDeliveryCommand(fulfilled.id, new AuditContext(buyer.id)),
     )
-    expect(delivered.orderId).toBe(galleryOrder.id)
-    const finalOrder = await prisma.order.findUniqueOrThrow({ where: { id: galleryOrder.id } })
+    expect(delivered.orderId).toBe(fulfilled.id)
+    const finalOrder = await prisma.order.findUniqueOrThrow({ where: { id: fulfilled.id } })
     expect(finalOrder.status).toBe('delivered')
   })
 

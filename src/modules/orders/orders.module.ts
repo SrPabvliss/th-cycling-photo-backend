@@ -1,4 +1,5 @@
 import { AuthModule } from '@auth/auth.module'
+import { BillingModule } from '@billing/billing.module'
 import { DeliveriesModule } from '@deliveries/deliveries.module'
 import { EventsModule } from '@events/events.module'
 import { MailModule } from '@mail/mail.module'
@@ -13,7 +14,6 @@ import { ConvertOrderToGiftHandler } from '@orders/application/commands/convert-
 import { ConvertOrderToSaleHandler } from '@orders/application/commands/convert-order-to-sale/convert-order-to-sale.handler'
 import { CorrectMyOrderBillingHandler } from '@orders/application/commands/correct-my-order-billing/correct-my-order-billing.handler'
 import { CorrectOrderBillingHandler } from '@orders/application/commands/correct-order-billing/correct-order-billing.handler'
-import { CreateOrderFromGalleryHandler } from '@orders/application/commands/create-order-from-gallery/create-order-from-gallery.handler'
 import { CreateOrderFromPreviewHandler } from '@orders/application/commands/create-order-from-preview/create-order-from-preview.handler'
 import { GiftOrderHandler } from '@orders/application/commands/gift-order/gift-order.handler'
 import { NotifyPaymentInfoHandler } from '@orders/application/commands/notify-payment-info/notify-payment-info.handler'
@@ -29,6 +29,7 @@ import { GetOrderDetailHandler } from '@orders/application/queries/get-order-det
 import { GetOrderTaxDocumentFilesHandler } from '@orders/application/queries/get-order-tax-document-files/get-order-tax-document-files.handler'
 import { GetOrdersListHandler } from '@orders/application/queries/get-orders-list/get-orders-list.handler'
 import { GetOrdersStatsHandler } from '@orders/application/queries/get-orders-stats/get-orders-stats.handler'
+import { BuyerPurchaseSnapshotService } from '@orders/application/services/buyer-purchase-snapshot.service'
 import { ORDER_READ_REPOSITORY, ORDER_WRITE_REPOSITORY } from '@orders/domain/ports'
 import {
   ORDER_INVOICE_SYNC_QUEUE,
@@ -40,7 +41,6 @@ import { OrderInvoiceSyncService } from '@orders/infrastructure/services/order-i
 import { OrderInvoiceSyncSchedulerService } from '@orders/infrastructure/services/order-invoice-sync-scheduler.service'
 import { OrderAccountController } from '@orders/presentation/controllers/order-account.controller'
 import { OrderCheckoutController } from '@orders/presentation/controllers/order-checkout.controller'
-import { OrderGalleryController } from '@orders/presentation/controllers/order-gallery.controller'
 import { OrderPublicController } from '@orders/presentation/controllers/order-public.controller'
 import { OrdersController } from '@orders/presentation/controllers/orders.controller'
 import { PaymentsModule } from '@payments/payments.module'
@@ -49,7 +49,6 @@ import { PreviewsModule } from '@previews/previews.module'
 
 const CommandHandlers = [
   CreateOrderFromPreviewHandler,
-  CreateOrderFromGalleryHandler,
   ConfirmOrderPaymentHandler,
   ConvertOrderToSaleHandler,
   ConvertOrderToGiftHandler,
@@ -87,15 +86,16 @@ const QueryHandlers = [
     forwardRef(() => PhotosModule),
     forwardRef(() => AuthModule),
     forwardRef(() => PaymentsModule),
+    BillingModule,
   ],
   controllers: [
     OrderAccountController,
     OrderCheckoutController,
     OrdersController,
     OrderPublicController,
-    OrderGalleryController,
   ],
   providers: [
+    BuyerPurchaseSnapshotService,
     ...CommandHandlers,
     ...QueryHandlers,
     { provide: ORDER_READ_REPOSITORY, useClass: OrderReadRepository },
@@ -104,6 +104,6 @@ const QueryHandlers = [
     OrderInvoiceSyncProcessor,
     OrderInvoiceSyncSchedulerService,
   ],
-  exports: [ORDER_READ_REPOSITORY, ORDER_WRITE_REPOSITORY],
+  exports: [ORDER_READ_REPOSITORY, ORDER_WRITE_REPOSITORY, BuyerPurchaseSnapshotService],
 })
 export class OrdersModule {}

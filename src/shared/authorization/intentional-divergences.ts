@@ -43,7 +43,6 @@ export const INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
  */
 export const ROLE_INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   'admin POST /cart/checkout',
-  'admin POST /public/events/:eventId/orders',
   'admin PATCH /orders/payment-method',
   'admin POST /payments/intent',
   'admin POST /payments/confirm',

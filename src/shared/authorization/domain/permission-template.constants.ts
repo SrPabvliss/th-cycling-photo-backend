@@ -89,6 +89,8 @@ const TENANT: PermissionKey[] = [
   'order.delivery.regenerate',
   'order.cancel',
   'order.invoice.manage',
+  'preview_link.read',
+  'preview_link.create',
   'notification.read',
   'notification.mark_read',
   'tenant.profile.read',

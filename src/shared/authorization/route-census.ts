@@ -10,9 +10,9 @@ export interface RouteCensusEntry {
 }
 
 /**
- * One entry per route: the 117 module routes under `src/modules/<module>/presentation/controllers`,
+ * One entry per route: the 116 module routes under `src/modules/<module>/presentation/controllers`,
  * plus `AppController`'s `GET /`. That last one is the bare health endpoint on the root module and
- * has always been `@Public()`, but including it keeps this census exactly as wide as the 118 routes
+ * has always been `@Public()`, but including it keeps this census exactly as wide as the 117 routes
  * `route-classification.spec.ts` counts.
  */
 export const ROUTE_CENSUS: RouteCensusEntry[] = [
@@ -238,12 +238,6 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
     path: '/operator/events/:eventSlug/retouch-queue',
     legacyMarker: 'admin,operator',
     permission: 'photo.retouch.read',
-  },
-  {
-    method: 'POST',
-    path: '/public/events/:eventId/orders',
-    legacyMarker: 'customer',
-    permission: 'order.create',
   },
   {
     method: 'POST',

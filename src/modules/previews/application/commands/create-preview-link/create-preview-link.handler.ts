@@ -6,7 +6,9 @@ import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain
 import type { PreviewLinkCreatedProjection } from '@previews/application/projections'
 import { PreviewLink } from '@previews/domain/entities'
 import {
+  type IPreviewLinkReadRepository,
   type IPreviewLinkWriteRepository,
+  PREVIEW_LINK_READ_REPOSITORY,
   PREVIEW_LINK_WRITE_REPOSITORY,
 } from '@previews/domain/ports'
 import {
@@ -22,6 +24,8 @@ export class CreatePreviewLinkHandler implements ICommandHandler<CreatePreviewLi
 
   constructor(
     @Inject(PREVIEW_LINK_WRITE_REPOSITORY) private readonly writeRepo: IPreviewLinkWriteRepository,
+    @Inject(PREVIEW_LINK_READ_REPOSITORY)
+    private readonly previewReadRepo: IPreviewLinkReadRepository,
     @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
@@ -39,32 +43,30 @@ export class CreatePreviewLinkHandler implements ICommandHandler<CreatePreviewLi
     if (!event) throw AppException.notFound('entities.event', command.eventId)
     await this.authz.assert(command.audit.userId, 'preview_link.create', event.id)
 
-    // Validate photos belong to this event
-    const photoCount = await this.photoReadRepo.countByIds(command.photoIds)
-    if (photoCount !== command.photoIds.length) {
+    const photoIds = [...new Set(command.photoIds)]
+    const photoCount = await this.photoReadRepo.countByIdsAndEvent(photoIds, event.id)
+    if (photoCount !== photoIds.length) {
       throw AppException.businessRule('preview.photos_not_in_event')
     }
 
-    // Create preview link entity
     const previewLink = PreviewLink.create({
       eventId: command.eventId,
       expiresInDays: command.expiresInDays,
       createdById: command.audit.userId,
     })
 
-    // Persist preview link + photo associations
-    const saved = await this.writeRepo.save(previewLink)
-    await this.writeRepo.savePhotos(saved.id, command.photoIds)
+    const saved = await this.writeRepo.saveWithPhotos(previewLink, photoIds)
 
-    // Build response
+    const organizer = (await this.previewReadRepo.findOrganizerName(event.id)) ?? 'Titan TV'
     const previewUrl = `${this.previewBaseUrl}/${saved.token}`
-    const shareTemplate = `¡Hola! \u{1F44B} Soy de Titan TV. Encontramos ${command.photoIds.length} fotos tuyas del evento "${event.name}". Revísalas aquí: ${previewUrl}. Selecciona las que quieras y completa el formulario. ¡Estaremos atentos! \u{1F4F8}`
+    const shareTemplate = `¡Hola! \u{1F44B} Soy de ${organizer}. Encontramos ${photoIds.length} fotos tuyas del evento "${event.name}". Revísalas aquí: ${previewUrl}. Selecciona las que quieras y completa el formulario. ¡Estaremos atentos! \u{1F4F8}`
 
     return {
       id: saved.id,
       token: saved.token,
       previewUrl,
       shareTemplate,
+      expiresAt: saved.expiresAt,
     }
   }
 }

@@ -35,6 +35,13 @@ export interface IOrderWriteRepository {
       tx: Prisma.TransactionClient,
     ) => Promise<{ order: Order; items: OrderItemInput[]; snap: OrderSnapData }>,
   ): Promise<Order>
+  lockAndUpsertPreviewOrder(
+    previewLinkId: string,
+    build: (
+      existing: Order | null,
+      tx: Prisma.TransactionClient,
+    ) => Promise<{ order: Order; items: OrderItemInput[]; snap: OrderSnapData }>,
+  ): Promise<Order>
   updateItemsDeliveredAs(orderId: string): Promise<void>
 }
 

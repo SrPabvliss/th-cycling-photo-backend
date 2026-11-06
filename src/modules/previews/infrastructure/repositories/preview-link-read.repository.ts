@@ -56,6 +56,14 @@ export class PreviewLinkReadRepository implements IPreviewLinkReadRepository {
     )
   }
 
+  async findOrganizerName(eventId: string): Promise<string | null> {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { tenant: { select: { public_name: true, name: true } } },
+    })
+    return event ? PreviewLinkMapper.organizerDisplayName(event.tenant) : null
+  }
+
   /** Retrieves preview data with photos for a public preview page. */
   async getPreviewData(token: string): Promise<PreviewDataProjection | null> {
     const record = await this.prisma.previewLink.findFirst({
