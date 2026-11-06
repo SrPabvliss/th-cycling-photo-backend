@@ -91,6 +91,7 @@ describe('cross-tenant isolation', () => {
           provide: CORRECTION_REPOSITORY,
           useValue: {
             findByPhotoId: async () => null,
+            findLatestByTargets: async () => new Map(),
           },
         },
       ],
