@@ -1,5 +1,6 @@
 import { Gender } from '@generated/prisma/client'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { NormalizeEmail } from '@shared/http/decorators/normalize-email.decorator'
 import {
   Equals,
   IsBoolean,
@@ -17,6 +18,7 @@ import {
 
 export class RegisterDto {
   @ApiProperty({ description: 'Email address', example: 'customer@example.com' })
+  @NormalizeEmail()
   @IsEmail()
   @MaxLength(255)
   email: string

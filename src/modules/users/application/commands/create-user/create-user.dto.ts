@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
+import { NormalizeEmail } from '@shared/http/decorators/normalize-email.decorator'
 import { IsEmail, IsIn, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator'
 
 const ALLOWED_ROLES = ['admin', 'operator'] as const
@@ -19,6 +20,7 @@ export class CreateUserDto {
   lastName: string
 
   @ApiProperty({ description: 'Email address', example: 'user@example.com' })
+  @NormalizeEmail()
   @IsEmail()
   @MaxLength(255)
   email: string

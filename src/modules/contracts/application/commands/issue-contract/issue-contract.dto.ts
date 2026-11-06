@@ -1,10 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { endOfDayInEcuador } from '@shared/domain'
+import { NormalizeEmail } from '@shared/http/decorators/normalize-email.decorator'
 import { Transform } from 'class-transformer'
 import { IsDate, IsEmail, IsInt, IsNotEmpty, IsString, MaxLength, Min } from 'class-validator'
 
 export class IssueContractDto {
   @ApiProperty({ description: "Owner's email address", example: 'organizador@example.com' })
+  @NormalizeEmail()
   @IsEmail()
   @MaxLength(255)
   ownerEmail: string

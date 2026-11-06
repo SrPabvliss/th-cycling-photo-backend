@@ -52,8 +52,8 @@ export class RequestEmailChangeHandler implements ICommandHandler<RequestEmailCh
 
     if (user.isProtected) throw AppException.businessRule('auth.email_change_protected_account')
 
-    const newEmail = command.newEmail.trim()
-    const currentEmail = user.email.trim()
+    const newEmail = command.newEmail.trim().toLowerCase()
+    const currentEmail = user.email.trim().toLowerCase()
     if (newEmail === currentEmail) {
       throw AppException.businessRule('auth.email_change_same_as_current')
     }

@@ -19,10 +19,13 @@ export class AuthUserRepository implements IAuthUserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findByEmail(email: string): Promise<AuthUserProjection | null> {
-    const record = await this.prisma.user.findFirst({
-      where: { email },
-      include: { user_roles: { include: { role: true } } },
-    })
+    const include = { user_roles: { include: { role: true } } } as const
+    const record =
+      (await this.prisma.user.findFirst({ where: { email }, include })) ??
+      (await this.prisma.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+        include,
+      }))
 
     if (!record) return null
 
@@ -136,7 +139,7 @@ export class AuthUserRepository implements IAuthUserRepository {
   /** Checks if a user with the given email already exists. */
   async findByEmailExists(email: string): Promise<boolean> {
     const user = await this.prisma.user.findFirst({
-      where: { email },
+      where: { email: { equals: email, mode: 'insensitive' } },
       select: { id: true },
     })
     return user !== null
@@ -175,10 +178,13 @@ export class AuthUserRepository implements IAuthUserRepository {
   }
 
   async findForPasswordReset(email: string): Promise<PasswordResetUserProjection | null> {
-    const user = await this.prisma.user.findFirst({
-      where: { email },
-      select: { id: true, first_name: true, is_active: true },
-    })
+    const select = { id: true, first_name: true, is_active: true } as const
+    const user =
+      (await this.prisma.user.findFirst({ where: { email }, select })) ??
+      (await this.prisma.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+        select,
+      }))
 
     if (!user) return null
 

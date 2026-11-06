@@ -61,19 +61,19 @@ describe('RequestEmailChangeHandler', () => {
       expect.objectContaining({
         userId: 'user-1',
         purpose: 'change_email',
-        targetEmail: 'New-Address@Example.com',
+        targetEmail: 'new-address@example.com',
         codeHash: 'hashed-code',
       }),
     )
 
     expect(mailService.enqueue).toHaveBeenCalledTimes(1)
     const job = mailService.enqueue.mock.calls[0][0]
-    expect(job.to).toBe('New-Address@Example.com')
+    expect(job.to).toBe('new-address@example.com')
     expect(job.template).toBe('email-verification-code')
     expect(job.vars.code).toBe('482913')
   })
 
-  it('should preserve the capitalization the person typed, without lowercasing it', async () => {
+  it('should store the new address in lowercase, since providers ignore case', async () => {
     const mixedCaseCommand = new RequestEmailChangeCommand(
       'user-1',
       '  Ana.Perez@Gmail.com  ',
@@ -83,9 +83,23 @@ describe('RequestEmailChangeHandler', () => {
     await handler.execute(mixedCaseCommand)
 
     expect(codeRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({ targetEmail: 'Ana.Perez@Gmail.com' }),
+      expect.objectContaining({ targetEmail: 'ana.perez@gmail.com' }),
     )
-    expect(mailService.enqueue.mock.calls[0][0].to).toBe('Ana.Perez@Gmail.com')
+    expect(mailService.enqueue.mock.calls[0][0].to).toBe('ana.perez@gmail.com')
+  })
+
+  it('should treat a change that only differs in case as the same address', async () => {
+    const sameAddress = new RequestEmailChangeCommand(
+      'user-1',
+      'ANA@EXAMPLE.COM',
+      'CurrentPass123!',
+    )
+    authUserRepo.findCredentials.mockResolvedValue({
+      ...(await authUserRepo.findCredentials('user-1')),
+      email: 'ana@example.com',
+    } as never)
+
+    await expect(handler.execute(sameAddress)).rejects.toThrow(/auth.email_change_same_as_current/)
   })
 
   it('should reject an incorrect current password without storing anything', async () => {
