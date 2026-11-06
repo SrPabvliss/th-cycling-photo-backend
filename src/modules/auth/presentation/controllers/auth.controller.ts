@@ -278,9 +278,19 @@ export class AuthController {
     description: 'Current password invalid, new password same as current, or account deactivated',
   })
   @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
-  async changePassword(@Body() dto: ChangePasswordDto, @CurrentUser() user: ICurrentUser) {
-    await this.commandBus.execute(
-      new ChangePasswordCommand(user.userId, dto.currentPassword, dto.newPassword),
+  async changePassword(
+    @Body() dto: ChangePasswordDto,
+    @CurrentUser() user: ICurrentUser,
+    @Req() req: Request,
+  ) {
+    return this.commandBus.execute(
+      new ChangePasswordCommand(
+        user.userId,
+        dto.currentPassword,
+        dto.newPassword,
+        user.role,
+        req.cookies?.[REFRESH_COOKIE_NAME] ?? null,
+      ),
     )
   }
 

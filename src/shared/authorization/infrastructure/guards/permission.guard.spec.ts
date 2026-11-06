@@ -47,9 +47,11 @@ const contextFor = (
   }) as unknown as ExecutionContext
 
 const authzReturning = (result: boolean): IAuthorizationService => ({
-  can: jest.fn().mockResolvedValue(result),
+  can: jest.fn(),
+  canAnywhere: jest.fn().mockResolvedValue(result),
   assert: jest.fn(),
   resolveEventScope: jest.fn(),
+  resolveGrantedEventScope: jest.fn(),
 })
 
 describe('PermissionGuard', () => {
@@ -61,7 +63,7 @@ describe('PermissionGuard', () => {
     const ctx = contextFor(PublicController.prototype.publicRoute, PublicController)
 
     await expect(guard.canActivate(ctx)).resolves.toBe(true)
-    expect(authz.can).not.toHaveBeenCalled()
+    expect(authz.canAnywhere).not.toHaveBeenCalled()
   })
 
   it('allows an @Authenticated() route without an authorization decision', async () => {
@@ -74,7 +76,7 @@ describe('PermissionGuard', () => {
     )
 
     await expect(guard.canActivate(ctx)).resolves.toBe(true)
-    expect(authz.can).not.toHaveBeenCalled()
+    expect(authz.canAnywhere).not.toHaveBeenCalled()
   })
 
   // The single behaviour the guard exists for: an unmarked route is never silently reachable.
@@ -86,7 +88,7 @@ describe('PermissionGuard', () => {
     })
 
     await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(ForbiddenException)
-    expect(authz.can).not.toHaveBeenCalled()
+    expect(authz.canAnywhere).not.toHaveBeenCalled()
   })
 
   it('allows a @RequirePermission(key) route when the authorization service grants it', async () => {
@@ -97,7 +99,7 @@ describe('PermissionGuard', () => {
     })
 
     await expect(guard.canActivate(ctx)).resolves.toBe(true)
-    expect(authz.can).toHaveBeenCalledWith('u1', 'event.read')
+    expect(authz.canAnywhere).toHaveBeenCalledWith('u1', 'event.read')
   })
 
   it('denies a @RequirePermission(key) route when the authorization service denies it', async () => {
@@ -116,7 +118,7 @@ describe('PermissionGuard', () => {
     const ctx = contextFor(PermissionController.prototype.permissionedRoute, PermissionController)
 
     await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(ForbiddenException)
-    expect(authz.can).not.toHaveBeenCalled()
+    expect(authz.canAnywhere).not.toHaveBeenCalled()
   })
 
   it('denies a @RequirePermission(key) route when request.user has no userId, without consulting the authorization service', async () => {
@@ -130,7 +132,7 @@ describe('PermissionGuard', () => {
     )
 
     await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(ForbiddenException)
-    expect(authz.can).not.toHaveBeenCalled()
+    expect(authz.canAnywhere).not.toHaveBeenCalled()
   })
 
   it('honours a class-level @Public() marker on a method that carries none of its own', async () => {
@@ -142,6 +144,6 @@ describe('PermissionGuard', () => {
     )
 
     await expect(guard.canActivate(ctx)).resolves.toBe(true)
-    expect(authz.can).not.toHaveBeenCalled()
+    expect(authz.canAnywhere).not.toHaveBeenCalled()
   })
 })

@@ -4,7 +4,13 @@ import { ChangePasswordHandler } from './change-password.handler'
 
 describe('ChangePasswordHandler', () => {
   let handler: ChangePasswordHandler
-  let authUserRepo: { findCredentials: jest.Mock; updatePassword: jest.Mock }
+  let authUserRepo: {
+    findCredentials: jest.Mock
+    updatePassword: jest.Mock
+    bumpSessionVersion: jest.Mock
+  }
+  let refreshTokenRepo: { revokeAllExcept: jest.Mock }
+  let jwtService: { sign: jest.Mock }
   let mailService: { enqueue: jest.Mock }
   let configService: { getOrThrow: jest.Mock }
 
@@ -20,7 +26,10 @@ describe('ChangePasswordHandler', () => {
     authUserRepo = {
       findCredentials: jest.fn().mockResolvedValue(validUser()),
       updatePassword: jest.fn().mockResolvedValue(undefined),
+      bumpSessionVersion: jest.fn().mockResolvedValue(4),
     }
+    refreshTokenRepo = { revokeAllExcept: jest.fn().mockResolvedValue(1) }
+    jwtService = { sign: jest.fn().mockReturnValue('new-access-token') }
     mailService = { enqueue: jest.fn().mockResolvedValue(undefined) }
     configService = { getOrThrow: jest.fn().mockReturnValue('https://titantv.com.ec') }
 
@@ -28,10 +37,38 @@ describe('ChangePasswordHandler', () => {
       authUserRepo as never,
       mailService as never,
       configService as never,
+      refreshTokenRepo as never,
+      { hash: (raw: string) => `hash:${raw}` } as never,
+      jwtService as never,
     )
   })
 
-  const command = new ChangePasswordCommand('user-1', 'CurrentPass123!', 'BrandNewPass1!')
+  const command = new ChangePasswordCommand(
+    'user-1',
+    'CurrentPass123!',
+    'BrandNewPass1!',
+    'customer',
+    'current-refresh',
+  )
+
+  it('closes every other session but keeps the current one', async () => {
+    const result = await handler.execute(command)
+
+    expect(authUserRepo.bumpSessionVersion).toHaveBeenCalledWith('user-1')
+    expect(refreshTokenRepo.revokeAllExcept).toHaveBeenCalledWith('user-1', 'hash:current-refresh')
+    expect(jwtService.sign).toHaveBeenCalledWith(
+      expect.objectContaining({ sub: 'user-1', role: 'customer', pv: 4 }),
+    )
+    expect(result).toEqual({ accessToken: 'new-access-token' })
+  })
+
+  it('revokes every refresh token when the request carries none', async () => {
+    await handler.execute(
+      new ChangePasswordCommand('user-1', 'CurrentPass123!', 'BrandNewPass1!', 'customer', null),
+    )
+
+    expect(refreshTokenRepo.revokeAllExcept).toHaveBeenCalledWith('user-1', null)
+  })
 
   it('should hash the new password and save it when the current password matches', async () => {
     await handler.execute(command)
@@ -61,7 +98,7 @@ describe('ChangePasswordHandler', () => {
   it('should keep the change when the notice cannot be queued', async () => {
     mailService.enqueue.mockRejectedValue(new Error('redis is down'))
 
-    await expect(handler.execute(command)).resolves.toBeUndefined()
+    await expect(handler.execute(command)).resolves.toEqual({ accessToken: 'new-access-token' })
     expect(authUserRepo.updatePassword).toHaveBeenCalledTimes(1)
   })
 
@@ -77,7 +114,13 @@ describe('ChangePasswordHandler', () => {
   })
 
   it('should reject a new password equal to the current one', async () => {
-    const sameCommand = new ChangePasswordCommand('user-1', 'CurrentPass123!', 'CurrentPass123!')
+    const sameCommand = new ChangePasswordCommand(
+      'user-1',
+      'CurrentPass123!',
+      'CurrentPass123!',
+      'customer',
+      null,
+    )
 
     await expect(handler.execute(sameCommand)).rejects.toThrow(/auth.password_same_as_current/)
     expect(authUserRepo.updatePassword).not.toHaveBeenCalled()

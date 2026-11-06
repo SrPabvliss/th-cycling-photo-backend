@@ -22,6 +22,7 @@ describe('UpdateEventConfigurationHandler', () => {
   let payoutRepo: jest.Mocked<IEventPayoutMethodRepository>
   let authz: jest.Mocked<IAuthorizationService>
   let configService: jest.Mocked<EventConfigurationService>
+  let kvStorage: { write: jest.Mock; writeBulk: jest.Mock; delete: jest.Mock }
   const unrestrictedScope = EventScope.unrestricted()
 
   const command = new UpdateEventConfigurationCommand(
@@ -32,7 +33,7 @@ describe('UpdateEventConfigurationHandler', () => {
     },
   )
 
-  const makeEvent = (isFrozen: boolean): Event =>
+  const makeEvent = (isFrozen: boolean, snapWatermarkStorageKey: string | null = null): Event =>
     Event.fromPersistence({
       slug: 'test-event',
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -45,7 +46,7 @@ describe('UpdateEventConfigurationHandler', () => {
       eventTypeId: 1,
       status: 'active',
       snapPublicName: null,
-      snapWatermarkStorageKey: null,
+      snapWatermarkStorageKey,
       snapWhatsappNumber: null,
       isFrozen,
       createdAt: new Date(),
@@ -77,6 +78,7 @@ describe('UpdateEventConfigurationHandler', () => {
 
     configService = {
       verifyNewPayphones: jest.fn().mockResolvedValue(undefined),
+      assertNoRegression: jest.fn(),
       rematerialise: jest.fn().mockResolvedValue({
         brand: { publicName: 'New Public Name', watermarkStorageKey: null, whatsappNumber: null },
         payoutMethods: [],
@@ -87,10 +89,10 @@ describe('UpdateEventConfigurationHandler', () => {
       $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb({})),
     } as unknown as PrismaService
 
-    const kvStorage = {
+    kvStorage = {
       write: jest.fn().mockResolvedValue(undefined),
       writeBulk: jest.fn(),
-      delete: jest.fn(),
+      delete: jest.fn().mockResolvedValue(undefined),
     }
 
     handler = new UpdateEventConfigurationHandler(
@@ -125,6 +127,44 @@ describe('UpdateEventConfigurationHandler', () => {
     )
   })
 
+  it('refuses an incomplete configuration without touching the event', async () => {
+    readRepo.findByIdInScope.mockResolvedValue(activeEvent)
+    configService.assertNoRegression.mockImplementation(() => {
+      throw AppException.businessRule('event.configuration_incomplete', false, {
+        missing: 'whatsapp',
+      })
+    })
+
+    await expect(handler.execute(command)).rejects.toMatchObject({
+      messageKey: 'event.configuration_incomplete',
+    })
+    expect(payoutRepo.replaceForEvent).not.toHaveBeenCalled()
+  })
+
+  it('removes the event watermark from KV when the update clears it', async () => {
+    const branded = makeEvent(false, 'tenants/t1/watermark/wm.png')
+    readRepo.findByIdInScope.mockResolvedValue(branded)
+    configService.rematerialise.mockResolvedValue({
+      brand: { publicName: 'Foto Andes', watermarkStorageKey: null, whatsappNumber: '0991234567' },
+      payoutMethods: null,
+    })
+
+    await handler.execute(
+      new UpdateEventConfigurationCommand(branded.id, 'u1', { watermarkStorageKey: null }),
+    )
+
+    expect(kvStorage.delete).toHaveBeenCalledWith(`wm-${branded.id}`)
+    expect(kvStorage.write).not.toHaveBeenCalled()
+  })
+
+  it('leaves KV alone when the event never had its own watermark', async () => {
+    readRepo.findByIdInScope.mockResolvedValue(activeEvent)
+
+    await handler.execute(command)
+
+    expect(kvStorage.delete).not.toHaveBeenCalled()
+  })
+
   it('verifies new payphone numbers before persisting the update', async () => {
     readRepo.findByIdInScope.mockResolvedValue(activeEvent)
     const selectionCommand = new UpdateEventConfigurationCommand(activeEvent.id, 'u1', {
@@ -156,9 +196,9 @@ describe('UpdateEventConfigurationHandler', () => {
     expect(payoutRepo.replaceForEvent).not.toHaveBeenCalled()
   })
 
-  it('rejects an explicit null watermark key', async () => {
+  it('accepts an explicit null watermark key, since the watermark is optional', async () => {
     const dto = plainToInstance(UpdateEventConfigurationDto, { watermarkStorageKey: null })
     const errors = await validate(dto)
-    expect(errors).toHaveLength(1)
+    expect(errors).toHaveLength(0)
   })
 })

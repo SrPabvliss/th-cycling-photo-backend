@@ -339,4 +339,34 @@ describe('GetMeHandler — permissions', () => {
     expect(result.permissions).toEqual(['event.read'])
     expect(result.permissions).not.toContain('photo.review')
   })
+
+  it('lists allowed event-scoped grants per event, without platform-only keys for a tenant', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    p.eventGrants.set(
+      'e1',
+      new Map([
+        ['photo.retouch.read', 'allow'],
+        ['photo.retouch.upload', 'allow'],
+      ]),
+    )
+    p.eventGrants.set('e2', new Map([['photo.retouch.flag', 'deny']]))
+
+    const handler = new GetMeHandler(
+      {
+        getMe: jest.fn().mockResolvedValue({ id: 'u1', email: 'a@b.c', role: 'operator' }),
+      } as never,
+      { findAcceptedTypes: jest.fn().mockResolvedValue([]) } as never,
+      { load: jest.fn().mockResolvedValue(p) } as never,
+      emptyPromptSnoozeRepo(),
+    )
+    const result = await handler.execute(new GetMeQuery('u1', 'a@b.c', 'operator'))
+
+    expect(result.eventPermissions).toEqual({ e1: ['photo.retouch.read', 'photo.retouch.upload'] })
+    expect(result.permissions).toEqual([])
+
+    p.isPlatform = false
+    const tenantResult = await handler.execute(new GetMeQuery('u1', 'a@b.c', 'operator'))
+    expect(tenantResult.eventPermissions).toEqual({ e1: ['photo.retouch.upload'] })
+  })
 })

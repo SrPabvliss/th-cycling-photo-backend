@@ -55,6 +55,7 @@ export default () => {
     MAIL_FROM_NAME,
     MAIL_REPLY_TO,
     MAIL_REDIRECT_TO,
+    CONTACT_INBOX_EMAIL,
     MAIL_TRANSPORT,
     PASSWORD_RESET_HMAC_SECRET,
     APP_WEB_BASE_URL,
@@ -129,6 +130,7 @@ export default () => {
       fromName: MAIL_FROM_NAME,
       replyTo: MAIL_REPLY_TO,
       redirectTo: MAIL_REDIRECT_TO || '',
+      contactInbox: CONTACT_INBOX_EMAIL || MAIL_REPLY_TO,
       transport: MAIL_TRANSPORT || 'api',
     },
     passwordReset: {

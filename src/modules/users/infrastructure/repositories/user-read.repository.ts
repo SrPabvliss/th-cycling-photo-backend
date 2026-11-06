@@ -234,7 +234,7 @@ export class UserReadRepository implements IUserReadRepository {
 
   async findByEmail(email: string): Promise<User | null> {
     const record = await this.prisma.user.findFirst({
-      where: { email },
+      where: { email: { equals: email, mode: 'insensitive' } },
       include: { user_roles: { include: { role: true } } },
     })
     return record ? UserMapper.toEntity(record) : null

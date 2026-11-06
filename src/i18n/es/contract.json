@@ -8,5 +8,6 @@
   "already_accepted": "Este contrato ya fue aceptado",
   "revoked": "Este contrato fue revocado",
   "not_pending": "Este contrato ya no está pendiente",
-  "resend_lapsed": "No se puede reenviar un contrato vencido"
+  "resend_lapsed": "No se puede reenviar un contrato vencido",
+  "contact_request_sent": "Mensaje enviado. Titan TV te responderá a tu correo"
 }

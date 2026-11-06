@@ -9,6 +9,7 @@ export interface EmailJobData {
   subject: string
   template: MailTemplate
   vars: Record<string, string>
+  replyTo?: string
 }
 
 const EMAIL_DELIVERY_CONCURRENCY = Number.parseInt(
@@ -28,11 +29,11 @@ export class EmailDeliveryProcessor extends WorkerHost {
   }
 
   async process(job: Job<EmailJobData>): Promise<void> {
-    const { to, subject, template, vars } = job.data
+    const { to, subject, template, vars, replyTo } = job.data
 
     try {
       const { html, text } = this.renderer.render(template, vars)
-      await this.mailer.send({ to, subject, html, text })
+      await this.mailer.send({ to, subject, html, text, replyTo })
       this.logger.log(`Sent ${template} to ${to}`)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)

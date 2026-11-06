@@ -131,6 +131,75 @@ describe('AuthorizationService', () => {
   })
 })
 
+describe('AuthorizationService.canAnywhere', () => {
+  it('allows a key held only on one event, for the coarse route check', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.eventGrants.set('e1', new Map([['photo.retouch.upload', 'allow']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    await expect(svc.canAnywhere('u1', 'photo.retouch.upload')).resolves.toBe(true)
+    await expect(svc.can('u1', 'photo.retouch.upload', 'e2')).resolves.toBe(false)
+  })
+
+  it('allows from the template without any event grant', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.templateKeys.add('event.read')
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    await expect(svc.canAnywhere('u1', 'event.read')).resolves.toBe(true)
+  })
+
+  it('ignores event deny grants', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.eventGrants.set('e1', new Map([['photo.retouch.upload', 'deny']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    await expect(svc.canAnywhere('u1', 'photo.retouch.upload')).resolves.toBe(false)
+  })
+
+  it('keeps platform-only keys out of reach for a non-platform user with an event grant', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.eventGrants.set('e1', new Map([['photo.retouch.read', 'allow']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    await expect(svc.canAnywhere('u1', 'photo.retouch.read')).resolves.toBe(false)
+  })
+
+  it('allows a platform-only key held on an event by a platform user', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    p.eventGrants.set('e1', new Map([['photo.retouch.read', 'allow']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+    await expect(svc.canAnywhere('u1', 'photo.retouch.read')).resolves.toBe(true)
+  })
+})
+
+describe('AuthorizationService.resolveGrantedEventScope', () => {
+  it('narrows a retoucher holding the key only on events to exactly those events', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    p.tenantId = 'platform'
+    p.eventGrants.set('e1', new Map([['photo.retouch.read', 'allow']]))
+    p.eventGrants.set('e2', new Map([['photo.retouch.read', 'deny']]))
+    p.eventGrants.set('e3', new Map([['photo.retouch.flag', 'allow']]))
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+
+    const scope = await svc.resolveGrantedEventScope('u1', 'photo.retouch.read')
+
+    expect(scope.all).toBe(false)
+    expect(scope.tenantIds).toEqual([])
+    expect(scope.eventIds).toEqual(['e1'])
+  })
+
+  it('falls back to the regular scope when the key comes from the template', async () => {
+    const p = EMPTY_PRINCIPAL_PERMISSIONS()
+    p.isPlatform = true
+    p.templateKeys.add('photo.retouch.read')
+    p.templateKeys.add('event.read.all')
+    const svc = new AuthorizationService(repoReturning(p), noCache())
+
+    const scope = await svc.resolveGrantedEventScope('u1', 'photo.retouch.read')
+
+    expect(scope.all).toBe(true)
+  })
+})
+
 describe('AuthorizationService.resolveEventScope', () => {
   it('returns all for a holder of event.read.all', async () => {
     const p = EMPTY_PRINCIPAL_PERMISSIONS()

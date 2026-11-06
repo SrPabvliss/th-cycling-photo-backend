@@ -8,5 +8,6 @@
   "already_accepted": "This contract has already been accepted",
   "revoked": "This contract was revoked",
   "not_pending": "This contract is no longer pending",
-  "resend_lapsed": "Cannot resend a lapsed contract"
+  "resend_lapsed": "Cannot resend a lapsed contract",
+  "contact_request_sent": "Message sent. Titan TV will reply to your email"
 }

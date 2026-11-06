@@ -22,8 +22,33 @@ describe('OrderInvoiceSyncProcessor', () => {
     return { processor, prisma, syncService }
   }
 
-  beforeEach(() => jest.spyOn(Logger.prototype, 'warn').mockImplementation())
+  beforeEach(() => {
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation()
+    jest.spyOn(Logger.prototype, 'log').mockImplementation()
+  })
   afterEach(() => jest.restoreAllMocks())
+
+  it('syncs only the order of a follow-up job, without scanning the batch', async () => {
+    const { processor, prisma, syncService } = setup({ orderIds: ['o-9'], views: [view] })
+
+    await processor.process({ name: 'sync-order', data: { orderId: 'o-1' } } as never)
+
+    expect(syncService.syncOrder).toHaveBeenCalledWith('o-1')
+    expect(prisma.order.findMany).not.toHaveBeenCalled()
+    expect(Logger.prototype.log).toHaveBeenCalledWith(
+      expect.stringContaining('orderId=o-1 state=authorized'),
+    )
+  })
+
+  it('logs every run with the orders taken and their resulting state', async () => {
+    const { processor } = setup({ orderIds: ['o-1', 'o-2'], views: [view, null] })
+
+    await processor.process()
+
+    expect(Logger.prototype.log).toHaveBeenCalledWith(
+      'invoice sync run: 2 orders (o-1=authorized, o-2=no answer)',
+    )
+  })
 
   it('does nothing while rikuchiy is not configured', async () => {
     const { processor, prisma } = setup({ configured: false, orderIds: ['o-1'], views: [] })

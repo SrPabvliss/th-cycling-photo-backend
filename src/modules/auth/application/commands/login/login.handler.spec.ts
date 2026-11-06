@@ -20,6 +20,8 @@ describe('LoginHandler', () => {
       findByEmail: jest.fn(),
       updateLastLogin: jest.fn().mockResolvedValue(undefined),
       getMe: jest.fn(),
+      findSessionVersion: jest.fn(),
+      bumpSessionVersion: jest.fn(),
       register: jest.fn(),
       findByEmailExists: jest.fn(),
       getUserSnapData: jest.fn(),
@@ -34,6 +36,7 @@ describe('LoginHandler', () => {
       create: jest.fn().mockResolvedValue(undefined),
       findByHash: jest.fn(),
       revokeByHash: jest.fn(),
+      revokeAllExcept: jest.fn(),
     } as jest.Mocked<IRefreshTokenRepository>
 
     tokenHashService = {
@@ -62,6 +65,7 @@ describe('LoginHandler', () => {
       passwordHash,
       isActive: true,
       role: 'admin',
+      permissionsVersion: 2,
     })
 
     const result = await handler.execute(new LoginCommand('user@test.com', 'CorrectPass123!'))
@@ -92,6 +96,7 @@ describe('LoginHandler', () => {
       passwordHash: hashSync('RealPassword', 10),
       isActive: true,
       role: 'admin',
+      permissionsVersion: 2,
     })
 
     await expect(
@@ -106,6 +111,7 @@ describe('LoginHandler', () => {
       passwordHash: 'hash',
       isActive: false,
       role: 'operator',
+      permissionsVersion: 2,
     })
 
     await expect(handler.execute(new LoginCommand('inactive@test.com', 'any'))).rejects.toThrow(

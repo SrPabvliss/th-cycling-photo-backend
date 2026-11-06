@@ -91,13 +91,7 @@ describe('GetEventConfigurationPresetHandler', () => {
 
     const result = await handler.execute(new GetEventConfigurationPresetQuery('user-1'))
 
-    expect(result.missing).toEqual([
-      'publicName',
-      'watermark',
-      'whatsapp',
-      'payphone',
-      'bankTransfer',
-    ])
+    expect(result.missing).toEqual(['publicName', 'whatsapp', 'payoutMethod'])
     expect(result.publicName).toBeNull()
   })
 

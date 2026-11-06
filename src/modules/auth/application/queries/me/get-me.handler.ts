@@ -5,6 +5,7 @@ import {
   type IPermissionRepository,
   PERMISSION_REPOSITORY,
 } from '@shared/authorization/domain/ports/permission-repository.port'
+import type { PrincipalPermissions } from '@shared/authorization/domain/principal'
 import { AppException } from '@shared/domain'
 import {
   CONSENT_TYPE,
@@ -65,12 +66,27 @@ export class GetMeHandler implements IQueryHandler<GetMeQuery> {
     }
 
     me.permissions = [...effective]
+    me.eventPermissions = this.eventPermissionsOf(p)
     me.tenantId = p.tenantId
     me.isPlatform = p.isPlatform
 
     me.pendingPrompts = await this.findPendingPrompts(query.userId, me)
 
     return me
+  }
+
+  private eventPermissionsOf(p: PrincipalPermissions): Record<string, string[]> {
+    const result: Record<string, string[]> = {}
+    for (const [eventId, grants] of p.eventGrants) {
+      const allowed = [...grants]
+        .filter(
+          ([key, effect]) =>
+            effect === 'allow' && (p.isPlatform || !PERMISSIONS[key]?.platformOnly),
+        )
+        .map(([key]) => key)
+      if (allowed.length > 0) result[eventId] = allowed
+    }
+    return result
   }
 
   private async findPendingConsents(userId: string): Promise<string[]> {

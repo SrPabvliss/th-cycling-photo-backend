@@ -11,6 +11,8 @@ import type { RegisterUserPayload } from '../payloads'
 export interface IAuthUserRepository {
   findByEmail(email: string): Promise<AuthUserProjection | null>
   updateLastLogin(userId: string): Promise<void>
+  findSessionVersion(userId: string): Promise<{ isActive: boolean; version: number } | null>
+  bumpSessionVersion(userId: string): Promise<number>
   getMe(userId: string): Promise<MeProjection | null>
   register(payload: RegisterUserPayload): Promise<RegisteredUserProjection>
   findByEmailExists(email: string): Promise<boolean>

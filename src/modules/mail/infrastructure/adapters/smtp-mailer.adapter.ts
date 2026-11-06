@@ -31,7 +31,7 @@ export class SmtpMailerAdapter implements IMailer {
   async send(message: MailMessage): Promise<void> {
     await this.sendMail({
       from: this.from,
-      replyTo: this.replyTo,
+      replyTo: message.replyTo ?? this.replyTo,
       to: message.to,
       subject: message.subject,
       html: message.html,

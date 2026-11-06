@@ -2,6 +2,7 @@ import type {
   ConfigurationSelection,
   EventPayoutSelection,
 } from '@events/application/services/event-configuration.service'
+import { EARLIEST_EVENT_DATE } from '@events/domain/event-dates'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import {
   ACCOUNT_NUMBER_PATTERN,
@@ -31,6 +32,7 @@ import {
   Matches,
   MaxLength,
   Min,
+  MinDate,
   MinLength,
   ValidateIf,
   ValidateNested,
@@ -115,11 +117,14 @@ export class EventConfigurationSelectionDto {
   @IsOptional()
   publicName?: string | null
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ nullable: true })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && value.trim() === '' ? null : value,
+  )
   @IsString()
   @MaxLength(500)
-  @ValidateIf((_, v) => v !== undefined)
-  watermarkStorageKey?: string
+  @IsOptional()
+  watermarkStorageKey?: string | null
 
   @ApiPropertyOptional({ nullable: true })
   @IsString()
@@ -148,6 +153,7 @@ export class CreateEventDto {
     example: '2026-06-15T00:00:00.000Z',
   })
   @IsDate()
+  @MinDate(EARLIEST_EVENT_DATE, { message: '$property must not be earlier than 2000-01-01' })
   @Type(() => Date)
   startDate: Date
 
@@ -156,6 +162,7 @@ export class CreateEventDto {
     example: '2026-06-17T00:00:00.000Z',
   })
   @IsDate()
+  @MinDate(EARLIEST_EVENT_DATE, { message: '$property must not be earlier than 2000-01-01' })
   @Type(() => Date)
   endDate: Date
 
@@ -191,7 +198,7 @@ export class CreateEventDto {
 
 export interface ConfigurationSelectionDtoLike {
   publicName?: string | null
-  watermarkStorageKey?: string
+  watermarkStorageKey?: string | null
   whatsappNumber?: string | null
   payoutMethods?: EventPayoutSelectionDto[]
 }

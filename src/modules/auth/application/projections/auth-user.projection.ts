@@ -9,4 +9,5 @@ export class AuthUserProjection {
   isActive: boolean
   /** Primary role name */
   role: string
+  permissionsVersion: number
 }

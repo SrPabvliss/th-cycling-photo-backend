@@ -72,7 +72,7 @@ describe('EventConfigurationService', () => {
 
     const missing = await service.findMissingRequirements(tenantId)
 
-    expect(missing).toEqual(['publicName', 'watermark', 'whatsapp', 'payphone', 'bankTransfer'])
+    expect(missing).toEqual(['publicName', 'whatsapp', 'payoutMethod'])
   })
 
   it('passes on a complete profile', async () => {
@@ -93,9 +93,110 @@ describe('EventConfigurationService', () => {
   it('ignores inactive methods', async () => {
     const inactive = bank()
     inactive.deactivate()
-    const service = buildService(completeProfile(), [payphone(), inactive])
+    const service = buildService(completeProfile(), [inactive])
 
-    await expect(service.findMissingRequirements(tenantId)).resolves.toEqual(['bankTransfer'])
+    await expect(service.findMissingRequirements(tenantId)).resolves.toEqual(['payoutMethod'])
+  })
+
+  it('accepts a single payout method of either provider', async () => {
+    await expect(
+      buildService(completeProfile(), [payphone()]).findMissingRequirements(tenantId),
+    ).resolves.toEqual([])
+    await expect(
+      buildService(completeProfile(), [bank()]).findMissingRequirements(tenantId),
+    ).resolves.toEqual([])
+  })
+
+  it('does not require a watermark', async () => {
+    const profile = TenantProfile.fromPersistence({
+      id: tenantId,
+      name: 'Foto Andes',
+      publicName: 'Foto Andes',
+      watermarkStorageKey: null,
+      whatsappNumber: '0991234567',
+      whatsappVerifiedAt: null,
+    })
+
+    await expect(
+      buildService(profile, [bank()]).findMissingRequirements(tenantId),
+    ).resolves.toEqual([])
+  })
+
+  describe('assertConfigurationComplete', () => {
+    const brand = {
+      publicName: 'Foto Andes',
+      watermarkStorageKey: null,
+      whatsappNumber: '0991234567',
+    }
+
+    it('passes with a public name, a whatsapp and one active method and no watermark', () => {
+      const service = buildService(completeProfile(), [])
+
+      expect(() =>
+        service.assertConfigurationComplete({
+          brand,
+          payoutMethods: [{ isActive: true }] as never,
+        }),
+      ).not.toThrow()
+    })
+
+    it('rejects a new event without whatsapp', () => {
+      const service = buildService(completeProfile(), [])
+
+      expect(() =>
+        service.assertConfigurationComplete({
+          brand: { ...brand, whatsappNumber: null },
+          payoutMethods: [{ isActive: true }] as never,
+        }),
+      ).toThrow(expect.objectContaining({ messageKey: 'event.configuration_incomplete' }))
+    })
+  })
+
+  describe('assertNoRegression', () => {
+    const complete = {
+      publicName: 'Foto Andes',
+      watermarkStorageKey: null,
+      whatsappNumber: '0991234567',
+    }
+    const legacy = { publicName: null, watermarkStorageKey: null, whatsappNumber: null }
+
+    it('lets an old event without whatsapp or public name keep being edited', () => {
+      const service = buildService(completeProfile(), [])
+
+      expect(() =>
+        service.assertNoRegression(legacy, { brand: legacy, payoutMethods: null }),
+      ).not.toThrow()
+    })
+
+    it('rejects clearing a whatsapp the event already had', () => {
+      const service = buildService(completeProfile(), [])
+
+      expect(() =>
+        service.assertNoRegression(complete, {
+          brand: { ...complete, whatsappNumber: null },
+          payoutMethods: null,
+        }),
+      ).toThrow(expect.objectContaining({ messageKey: 'event.configuration_incomplete' }))
+    })
+
+    it('rejects clearing a public name the event already had', () => {
+      const service = buildService(completeProfile(), [])
+
+      expect(() =>
+        service.assertNoRegression(complete, {
+          brand: { ...complete, publicName: null },
+          payoutMethods: null,
+        }),
+      ).toThrow(expect.objectContaining({ messageKey: 'event.configuration_incomplete' }))
+    })
+
+    it('rejects leaving the event without an active payout method', () => {
+      const service = buildService(completeProfile(), [])
+
+      expect(() =>
+        service.assertNoRegression(legacy, { brand: legacy, payoutMethods: [] }),
+      ).toThrow(expect.objectContaining({ messageKey: 'event.configuration_incomplete' }))
+    })
   })
 
   describe('materialise', () => {

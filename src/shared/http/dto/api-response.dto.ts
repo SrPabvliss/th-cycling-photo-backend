@@ -57,7 +57,18 @@ export class ApiErrorDetail {
   @ApiProperty({
     description: 'Error code',
     example: 'NOT_FOUND',
-    enum: ['VALIDATION_FAILED', 'NOT_FOUND', 'BUSINESS_RULE', 'EXTERNAL_SERVICE', 'INTERNAL'],
+    enum: [
+      'VALIDATION_FAILED',
+      'BAD_REQUEST',
+      'UNAUTHORIZED',
+      'FORBIDDEN',
+      'NOT_FOUND',
+      'CONFLICT',
+      'TOO_MANY_REQUESTS',
+      'BUSINESS_RULE',
+      'EXTERNAL_SERVICE',
+      'INTERNAL',
+    ],
   })
   code: ErrorCode | string
 

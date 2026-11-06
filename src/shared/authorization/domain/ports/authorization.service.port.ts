@@ -5,6 +5,8 @@ export const AUTHORIZATION_SERVICE = Symbol('AUTHORIZATION_SERVICE')
 
 export interface IAuthorizationService {
   can(userId: string, key: PermissionKey, eventId?: string): Promise<boolean>
+  canAnywhere(userId: string, key: PermissionKey): Promise<boolean>
   assert(userId: string, key: PermissionKey, eventId?: string): Promise<void>
   resolveEventScope(userId: string): Promise<EventScope>
+  resolveGrantedEventScope(userId: string, key: PermissionKey): Promise<EventScope>
 }

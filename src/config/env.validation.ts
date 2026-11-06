@@ -141,6 +141,10 @@ export class EnvironmentVariables {
   MAIL_REDIRECT_TO?: string
 
   @IsOptional()
+  @IsString()
+  CONTACT_INBOX_EMAIL?: string
+
+  @IsOptional()
   @IsEnum(['api', 'smtp'])
   MAIL_TRANSPORT?: string
 

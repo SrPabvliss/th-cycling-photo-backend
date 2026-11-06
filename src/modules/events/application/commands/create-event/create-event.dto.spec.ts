@@ -1,6 +1,9 @@
 import { plainToInstance } from 'class-transformer'
 import { validate } from 'class-validator'
+import { UpdateEventDto } from '../update-event/update-event.dto'
+import { UpdateEventConfigurationDto } from '../update-event-configuration/update-event-configuration.dto'
 import {
+  CreateEventDto,
   EventConfigurationSelectionDto,
   EventPayoutSelectionDto,
   toEventPayoutSelection,
@@ -166,5 +169,67 @@ describe('EventConfigurationSelectionDto', () => {
 
   it('leaves a null public name alone', async () => {
     expect(await checkConfiguration({ publicName: null })).toHaveLength(0)
+  })
+
+  it.each([
+    ['absent', {}],
+    ['null', { watermarkStorageKey: null }],
+    ['empty', { watermarkStorageKey: '' }],
+  ])('accepts a %s watermark on create and on the configuration patch', async (_, raw) => {
+    expect(await checkConfiguration(raw)).toHaveLength(0)
+    expect(
+      await validate(plainToInstance(UpdateEventConfigurationDto, raw), { whitelist: true }),
+    ).toHaveLength(0)
+  })
+
+  it('reads an empty watermark as no watermark', () => {
+    expect(
+      plainToInstance(EventConfigurationSelectionDto, { watermarkStorageKey: '' })
+        .watermarkStorageKey,
+    ).toBeNull()
+  })
+})
+
+describe('event dates', () => {
+  const dateErrors = async (cls: new () => object, raw: Record<string, unknown>) => {
+    const errors = await validate(plainToInstance(cls, raw), { whitelist: true })
+    return errors
+      .filter((e) => e.property === 'startDate' || e.property === 'endDate')
+      .map((e) => e.property)
+  }
+
+  const base = { name: 'Vuelta al Cotopaxi', eventTypeId: 1 }
+
+  it('requires both dates on create', async () => {
+    expect(await dateErrors(CreateEventDto, base)).toEqual(['startDate', 'endDate'])
+  })
+
+  it.each([null, '', 0, '1970-01-01'])('rejects %p as a create date', async (value) => {
+    expect(await dateErrors(CreateEventDto, { ...base, startDate: value, endDate: value })).toEqual(
+      ['startDate', 'endDate'],
+    )
+  })
+
+  it('accepts real dates on create', async () => {
+    expect(
+      await dateErrors(CreateEventDto, {
+        ...base,
+        startDate: '2026-06-15T00:00:00.000Z',
+        endDate: '2026-06-16T00:00:00.000Z',
+      }),
+    ).toEqual([])
+  })
+
+  it('keys the floor message by the field so the error lands on it', async () => {
+    const errors = await validate(
+      plainToInstance(CreateEventDto, { ...base, startDate: 0, endDate: '2026-06-16' }),
+    )
+    const message = Object.values(errors.find((e) => e.property === 'startDate')?.constraints ?? {})
+    expect(message[0]?.split(' ')[0]).toBe('startDate')
+  })
+
+  it('leaves dates optional on update but still refuses the epoch', async () => {
+    expect(await dateErrors(UpdateEventDto, {})).toEqual([])
+    expect(await dateErrors(UpdateEventDto, { startDate: '1970-01-01' })).toEqual(['startDate'])
   })
 })

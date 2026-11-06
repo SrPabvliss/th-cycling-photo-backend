@@ -1,10 +1,16 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq'
 import { Inject, Logger } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
+import {
+  ORDER_INVOICE_SYNC_QUEUE,
+  SYNC_ORDER_JOB,
+  type SyncOrderJobData,
+} from '@shared/rikuchiy/domain/order-invoice-sync'
 import { type IRikuchiyClient, RIKUCHIY_CLIENT } from '@shared/rikuchiy/domain/ports'
+import type { Job } from 'bullmq'
 import { OrderInvoiceSyncService } from '../services/order-invoice-sync.service'
 
-export const ORDER_INVOICE_SYNC_QUEUE = 'order-invoice-sync'
+export { ORDER_INVOICE_SYNC_QUEUE }
 
 @Processor(ORDER_INVOICE_SYNC_QUEUE, { concurrency: 1 })
 export class OrderInvoiceSyncProcessor extends WorkerHost {
@@ -21,8 +27,16 @@ export class OrderInvoiceSyncProcessor extends WorkerHost {
     super()
   }
 
-  async process(): Promise<void> {
+  async process(job?: Job<SyncOrderJobData>): Promise<void> {
     if (!this.rikuchiyClient.isConfigured()) return
+
+    if (job?.name === SYNC_ORDER_JOB) {
+      const view = await this.orderInvoiceSyncService.syncOrder(job.data.orderId)
+      this.logger.log(
+        `invoice follow-up sync: orderId=${job.data.orderId} state=${view?.state ?? 'no answer'}`,
+      )
+      return
+    }
 
     const orders = await this.prisma.order.findMany({
       where: {
@@ -36,9 +50,11 @@ export class OrderInvoiceSyncProcessor extends WorkerHost {
       take: OrderInvoiceSyncProcessor.BATCH_SIZE,
     })
 
+    const outcomes: string[] = []
     let consecutiveFailures = 0
     for (const order of orders) {
       const view = await this.orderInvoiceSyncService.syncOrder(order.id)
+      outcomes.push(`${order.id}=${view?.state ?? 'no answer'}`)
       if (view !== null) {
         consecutiveFailures = 0
         continue
@@ -54,8 +70,12 @@ export class OrderInvoiceSyncProcessor extends WorkerHost {
         this.logger.warn(
           `rikuchiy failed ${consecutiveFailures} invoice syncs in a row; the rest of the batch waits for the next run`,
         )
-        return
+        break
       }
     }
+
+    this.logger.log(
+      `invoice sync run: ${orders.length} orders${outcomes.length ? ` (${outcomes.join(', ')})` : ''}`,
+    )
   }
 }

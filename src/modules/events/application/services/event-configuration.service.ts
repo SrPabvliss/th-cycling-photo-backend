@@ -21,12 +21,7 @@ import {
 } from '@tenants/domain/ports/tenant-profile-repository.port'
 import { PayoutProvider } from '@tenants/domain/value-objects/payout-provider.vo'
 
-export type ConfigurationRequirement =
-  | 'publicName'
-  | 'watermark'
-  | 'whatsapp'
-  | 'payphone'
-  | 'bankTransfer'
+export type ConfigurationRequirement = 'publicName' | 'whatsapp' | 'payoutMethod'
 
 export type EventPayoutSelection =
   | { source: 'profile'; id: string }
@@ -116,18 +111,10 @@ export class EventConfigurationService {
       this.payoutRepo.findByTenantId(tenantId),
     ])
 
-    const active = methods.filter((method) => method.isActive)
-    const missing: ConfigurationRequirement[] = []
-
-    if (!profile?.publicName) missing.push('publicName')
-    if (!profile?.watermarkStorageKey) missing.push('watermark')
-    if (!profile?.whatsappNumber) missing.push('whatsapp')
-    if (!active.some((m) => m.provider === PayoutProvider.PAYPHONE)) missing.push('payphone')
-    if (!active.some((m) => m.provider === PayoutProvider.BANK_TRANSFER)) {
-      missing.push('bankTransfer')
-    }
-
-    return missing
+    return this.missingFrom(
+      { publicName: profile?.publicName ?? null, whatsappNumber: profile?.whatsappNumber ?? null },
+      methods,
+    )
   }
 
   async assertProfileComplete(tenantId: string): Promise<void> {
@@ -140,22 +127,36 @@ export class EventConfigurationService {
   }
 
   assertConfigurationComplete(config: MaterialisedConfiguration): void {
-    const active = config.payoutMethods.filter((method) => method.isActive)
-    const missing: ConfigurationRequirement[] = []
+    this.throwIfMissing(this.missingFrom(config.brand, config.payoutMethods))
+  }
 
-    if (!config.brand.publicName) missing.push('publicName')
-    if (!config.brand.watermarkStorageKey) missing.push('watermark')
-    if (!config.brand.whatsappNumber) missing.push('whatsapp')
-    if (!active.some((m) => m.provider === PayoutProvider.PAYPHONE)) missing.push('payphone')
-    if (!active.some((m) => m.provider === PayoutProvider.BANK_TRANSFER)) {
-      missing.push('bankTransfer')
-    }
+  assertNoRegression(before: EventBrandSnapshot, after: RematerialisedConfiguration): void {
+    const missing = this.missingFrom(after.brand, after.payoutMethods).filter(
+      (requirement) =>
+        (requirement === 'publicName' && before.publicName) ||
+        (requirement === 'whatsapp' && before.whatsappNumber) ||
+        requirement === 'payoutMethod',
+    )
+    this.throwIfMissing(missing)
+  }
 
+  private throwIfMissing(missing: ConfigurationRequirement[]): void {
     if (missing.length > 0) {
       throw AppException.businessRule('event.configuration_incomplete', false, {
         missing: missing.join(', '),
       })
     }
+  }
+
+  private missingFrom(
+    brand: Pick<EventBrandSnapshot, 'publicName' | 'whatsappNumber'>,
+    methods: { isActive: boolean }[] | null,
+  ): ConfigurationRequirement[] {
+    const missing: ConfigurationRequirement[] = []
+    if (!brand.publicName) missing.push('publicName')
+    if (!brand.whatsappNumber) missing.push('whatsapp')
+    if (methods && !methods.some((method) => method.isActive)) missing.push('payoutMethod')
+    return missing
   }
 
   async materialise(

@@ -68,7 +68,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
     })
 
     const role = 'customer'
-    const payload = { sub: user.id, email: user.email, role }
+    const payload = { sub: user.id, email: user.email, role, pv: 0 }
     const accessToken = this.jwtService.sign(payload)
 
     const rawToken = this.tokenHashService.generateToken()

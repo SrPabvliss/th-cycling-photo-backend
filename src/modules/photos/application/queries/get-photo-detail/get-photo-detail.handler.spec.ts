@@ -73,6 +73,8 @@ describe('GetPhotoDetailHandler', () => {
     authz = {
       can: jest.fn(),
       assert: jest.fn(),
+      canAnywhere: jest.fn(),
+      resolveGrantedEventScope: jest.fn(),
       resolveEventScope: jest.fn().mockResolvedValue(scope),
     } as jest.Mocked<IAuthorizationService>
 

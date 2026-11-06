@@ -25,7 +25,12 @@ export class RefreshHandler implements ICommandHandler<RefreshCommand> {
     if (storedToken.expiresAt < new Date()) throw AppException.businessRule('auth.token_expired')
     if (!storedToken.isActive) throw AppException.businessRule('auth.account_deactivated')
 
-    const payload = { sub: storedToken.userId, email: storedToken.email, role: storedToken.role }
+    const payload = {
+      sub: storedToken.userId,
+      email: storedToken.email,
+      role: storedToken.role,
+      pv: storedToken.permissionsVersion,
+    }
     const accessToken = this.jwtService.sign(payload)
 
     return { accessToken }
