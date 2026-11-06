@@ -44,7 +44,7 @@ export class PermissionGuard implements CanActivate {
     const { user } = context.switchToHttp().getRequest()
     if (!user?.userId) throw new ForbiddenException('Insufficient permissions')
 
-    if (!(await this.authz.can(user.userId, key))) {
+    if (!(await this.authz.canAnywhere(user.userId, key))) {
       throw new ForbiddenException('Insufficient permissions')
     }
     return true

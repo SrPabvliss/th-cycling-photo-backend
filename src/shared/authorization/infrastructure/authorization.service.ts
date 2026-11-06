@@ -58,6 +58,13 @@ export class AuthorizationService implements IAuthorizationService {
     return false
   }
 
+  async canAnywhere(userId: string, key: PermissionKey): Promise<boolean> {
+    if (await this.can(userId, key)) return true
+    const p = await this.principal(userId)
+    if (PERMISSIONS[key].platformOnly && !p.isPlatform) return false
+    return [...p.eventGrants.values()].some((grants) => grants.get(key) === 'allow')
+  }
+
   async assert(userId: string, key: PermissionKey, eventId?: string): Promise<void> {
     if (!(await this.can(userId, key, eventId))) {
       throw new ForbiddenException('Insufficient permissions')
@@ -85,6 +92,19 @@ export class AuthorizationService implements IAuthorizationService {
     const eventIds = [...new Set([...granted])]
 
     return new EventScope(false, tenantIds, eventIds)
+  }
+
+  async resolveGrantedEventScope(userId: string, key: PermissionKey): Promise<EventScope> {
+    if (await this.can(userId, key)) return this.resolveEventScope(userId)
+
+    const p = await this.principal(userId)
+    if (PERMISSIONS[key].platformOnly && !p.isPlatform) return EventScope.empty()
+
+    const eventIds = [...p.eventGrants.entries()]
+      .filter(([, grants]) => grants.get(key) === 'allow')
+      .map(([eventId]) => eventId)
+
+    return new EventScope(false, [], eventIds)
   }
 
   protected async principal(userId: string): Promise<PrincipalPermissions> {

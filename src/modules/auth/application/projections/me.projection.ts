@@ -21,6 +21,7 @@ export class MeProjection {
   pendingPrompts?: string[]
   /** Effective global permission keys (event-scoped grants are not included) */
   permissions?: string[]
+  eventPermissions?: Record<string, string[]>
   /** Tenant the principal's permissions are scoped to, if any */
   tenantId?: string | null
   /** Whether the principal operates in the platform tenant */

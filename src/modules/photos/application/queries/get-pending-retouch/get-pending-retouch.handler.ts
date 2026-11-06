@@ -20,7 +20,7 @@ export class GetPendingRetouchHandler implements IQueryHandler<GetPendingRetouch
    * the orders module, which is why it was the last listing left unscoped.
    */
   async execute(query: GetPendingRetouchQuery): Promise<PendingRetouchOrderProjection[]> {
-    const scope = await this.authz.resolveEventScope(query.userId)
+    const scope = await this.authz.resolveGrantedEventScope(query.userId, 'photo.retouch.read')
     return this.orderReadRepo.getPendingRetouch(scope)
   }
 }
