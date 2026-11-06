@@ -705,6 +705,23 @@ export class PhotoReadRepository implements IPhotoReadRepository {
   }
 
   /** Distinct in-scope event ids among `photoIds`, so bulk mutations needn't trust the id list. */
+  async countPhotosOutsideEventCategory(
+    photoIds: string[],
+    photoCategoryId: number,
+    scope: EventScope,
+  ): Promise<number> {
+    if (photoIds.length === 0) return 0
+    return this.prisma.photo.count({
+      where: {
+        id: { in: photoIds },
+        event: {
+          ...scope.toPrisma(),
+          photo_categories: { none: { photo_category_id: photoCategoryId } },
+        },
+      },
+    })
+  }
+
   async getDistinctEventIdsForPhotoIds(photoIds: string[], scope: EventScope): Promise<string[]> {
     if (photoIds.length === 0) return []
 

@@ -817,12 +817,19 @@ model EventAsset {
 
 model PhotoCategory {
   id         Int      @id @default(autoincrement())
-  name       String   @unique @db.VarChar(100)
+  name       String   @db.VarChar(100)
+  // NULL = base category, global and read-only for tenants; set = that tenant's own category.
+  tenant_id  String?  @db.Uuid
   created_at DateTime @default(now()) @db.Timestamptz
 
+  tenant                 Tenant?              @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
   event_photo_categories EventPhotoCategory[]
   photos                 Photo[]
 
+  // Uniqueness is the expression index `photo_categories_owner_name_key`
+  // (tenant_id, lower(name)) NULLS NOT DISTINCT, built by the TIT-87 migration's raw SQL; Prisma
+  // cannot declare it, so only the plain tenant index is mirrored here.
+  @@index([tenant_id])
   @@map("photo_categories")
 }
 
@@ -1005,10 +1012,11 @@ model Tenant {
   whatsapp_number       String?   @db.VarChar(20)
   whatsapp_verified_at  DateTime? @db.Timestamptz
 
-  users          User[]
-  events         Event[]
-  payout_methods TenantPayoutMethod[]
-  contracts      TenantContract[]
+  users            User[]
+  events           Event[]
+  payout_methods   TenantPayoutMethod[]
+  contracts        TenantContract[]
+  photo_categories PhotoCategory[]
 
   @@map("tenants")
 }

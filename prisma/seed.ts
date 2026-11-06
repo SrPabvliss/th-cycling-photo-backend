@@ -193,14 +193,11 @@ async function seedPhotoCategories() {
   ]
 
   for (const name of categories) {
-    await prisma.photoCategory.upsert({
-      where: { name },
-      update: {},
-      create: { name },
-    })
+    const existing = await prisma.photoCategory.findFirst({ where: { name, tenant_id: null } })
+    if (!existing) await prisma.photoCategory.create({ data: { name, tenant_id: null } })
   }
 
-  console.log(`Seeded ${categories.length} photo categories`)
+  console.log(`Seeded ${categories.length} base photo categories`)
 }
 
 async function seedRoles() {

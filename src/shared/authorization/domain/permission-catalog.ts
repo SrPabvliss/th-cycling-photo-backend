@@ -51,6 +51,7 @@ export const PERMISSIONS = {
   'photo.classification.retry': E(false, true, 'photos'),
   // photo categories
   'photo_category.create': E(false, false, 'catalogs'),
+  'photo_category.base.manage': E(true, false, 'catalogs'),
   'photo_category.event.assign': E(false, true, 'catalogs'),
   'photo_category.event.remove': E(false, true, 'catalogs'),
   // orders

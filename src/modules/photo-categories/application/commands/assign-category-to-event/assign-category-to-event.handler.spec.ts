@@ -4,6 +4,7 @@ import type { IEventReadRepository } from '@events/domain/ports'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
+import { PhotoCategory } from '../../../domain/entities'
 import type {
   IPhotoCategoryReadRepository,
   IPhotoCategoryWriteRepository,
@@ -23,6 +24,10 @@ describe('AssignCategoryToEventHandler', () => {
 
   const futureDate = new Date()
   futureDate.setFullYear(futureDate.getFullYear() + 1)
+
+  const TENANT_ID = '11111111-1111-4111-8111-111111111111'
+  const category = (tenantId: string | null) =>
+    PhotoCategory.fromPersistence({ id: 7, name: 'Competencia', tenantId, createdAt: new Date() })
 
   const makeEvent = (): Event =>
     Event.fromPersistence({
@@ -51,7 +56,7 @@ describe('AssignCategoryToEventHandler', () => {
     } as unknown as jest.Mocked<IEventReadRepository>
 
     readRepo = {
-      findById: jest.fn().mockResolvedValue({ id: 7, name: 'Competencia' }),
+      findById: jest.fn().mockResolvedValue(category(null)),
     } as unknown as jest.Mocked<IPhotoCategoryReadRepository>
 
     writeRepo = {
@@ -125,5 +130,21 @@ describe('AssignCategoryToEventHandler', () => {
     expect(authz.assert).toHaveBeenCalledWith('caller-1', 'photo_category.event.assign', EVENT_ID)
     expect(writeRepo.assignToEvent).toHaveBeenCalledWith(EVENT_ID, 7)
     expect(result).toEqual({ id: 'assignment-1' })
+  })
+
+  it('assigns a category owned by the event organizer', async () => {
+    readRepo.findById.mockResolvedValueOnce(category(TENANT_ID))
+
+    await expect(handler.execute(command)).resolves.toEqual({ id: 'assignment-1' })
+  })
+
+  it('refuses a category owned by another organizer', async () => {
+    readRepo.findById.mockResolvedValueOnce(category('22222222-2222-4222-8222-222222222222'))
+
+    const error = await handler.execute(command).catch((e) => e)
+
+    expect(error).toBeInstanceOf(AppException)
+    expect(error.messageKey).toBe('photo_category.not_available_for_event')
+    expect(writeRepo.assignToEvent).not.toHaveBeenCalled()
   })
 })

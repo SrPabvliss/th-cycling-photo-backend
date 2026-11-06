@@ -6,13 +6,18 @@ import { BulkAssignCategoryHandler } from './bulk-assign-category.handler'
 
 describe('BulkAssignCategoryHandler', () => {
   let handler: BulkAssignCategoryHandler
-  let readRepo: jest.Mocked<Pick<IPhotoReadRepository, 'getDistinctEventIdsForPhotoIds'>>
+  let readRepo: jest.Mocked<
+    Pick<IPhotoReadRepository, 'getDistinctEventIdsForPhotoIds' | 'countPhotosOutsideEventCategory'>
+  >
   let writeRepo: jest.Mocked<Pick<IPhotoWriteRepository, 'bulkUpdateCategory'>>
   let authz: jest.Mocked<Pick<IAuthorizationService, 'resolveEventScope' | 'assert'>>
   const scope = EventScope.unrestricted()
 
   beforeEach(() => {
-    readRepo = { getDistinctEventIdsForPhotoIds: jest.fn().mockResolvedValue([]) }
+    readRepo = {
+      getDistinctEventIdsForPhotoIds: jest.fn().mockResolvedValue([]),
+      countPhotosOutsideEventCategory: jest.fn().mockResolvedValue(0),
+    }
     writeRepo = { bulkUpdateCategory: jest.fn().mockResolvedValue(0) }
     authz = {
       resolveEventScope: jest.fn().mockResolvedValue(scope),
@@ -84,5 +89,27 @@ describe('BulkAssignCategoryHandler', () => {
 
     expect(authz.assert).not.toHaveBeenCalled()
     expect(result).toEqual({ updated: 0 })
+  })
+
+  it('refuses a category not assigned to every affected event, before writing', async () => {
+    readRepo.getDistinctEventIdsForPhotoIds.mockResolvedValue(['e-1'])
+    readRepo.countPhotosOutsideEventCategory.mockResolvedValue(2)
+
+    const error = await handler
+      .execute(new BulkAssignCategoryCommand(['p-1', 'p-2'], 9, 'u1'))
+      .catch((e) => e)
+
+    expect(error.messageKey).toBe('photo_category.not_assigned_to_event')
+    expect(readRepo.countPhotosOutsideEventCategory).toHaveBeenCalledWith(['p-1', 'p-2'], 9, scope)
+    expect(writeRepo.bulkUpdateCategory).not.toHaveBeenCalled()
+  })
+
+  it('clears the category without checking assignments', async () => {
+    readRepo.getDistinctEventIdsForPhotoIds.mockResolvedValue(['e-1'])
+
+    await handler.execute(new BulkAssignCategoryCommand(['p-1'], null, 'u1'))
+
+    expect(readRepo.countPhotosOutsideEventCategory).not.toHaveBeenCalled()
+    expect(writeRepo.bulkUpdateCategory).toHaveBeenCalled()
   })
 })

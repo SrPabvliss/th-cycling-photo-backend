@@ -11,6 +11,7 @@ import {
   AUTHORIZATION_SERVICE,
   type IAuthorizationService,
 } from '@shared/authorization/domain/ports/authorization.service.port'
+import { AppException } from '@shared/domain'
 import { BulkAssignCategoryCommand } from './bulk-assign-category.command'
 
 @CommandHandler(BulkAssignCategoryCommand)
@@ -36,6 +37,15 @@ export class BulkAssignCategoryHandler implements ICommandHandler<BulkAssignCate
         await this.freeze.assertNotFrozen(eventId)
       }),
     )
+
+    if (command.photoCategoryId !== null && command.photoCategoryId !== undefined) {
+      const outside = await this.readRepo.countPhotosOutsideEventCategory(
+        command.photoIds,
+        command.photoCategoryId,
+        scope,
+      )
+      if (outside > 0) throw AppException.businessRule('photo_category.not_assigned_to_event')
+    }
 
     const updated = await this.writeRepo.bulkUpdateCategory(
       command.photoIds,

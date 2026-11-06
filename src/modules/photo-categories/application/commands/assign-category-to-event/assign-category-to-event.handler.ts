@@ -43,6 +43,9 @@ export class AssignCategoryToEventHandler implements ICommandHandler<AssignCateg
 
     const category = await this.readRepo.findById(command.photoCategoryId)
     if (!category) throw AppException.notFound('PhotoCategory', String(command.photoCategoryId))
+    if (!category.isAvailableTo(event.tenantId)) {
+      throw AppException.businessRule('photo_category.not_available_for_event')
+    }
 
     const id = await this.writeRepo.assignToEvent(event.id, command.photoCategoryId)
     return { id }

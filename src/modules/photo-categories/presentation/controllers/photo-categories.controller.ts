@@ -7,13 +7,16 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  ParseUUIDPipe,
   Post,
+  Query,
 } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
 import { EntityIdProjection } from '@shared/application'
 import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
+import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
 import {
   AllowedWhenFrozen,
   BlocksWhenFrozen,
@@ -41,8 +44,7 @@ export class PhotoCategoriesController {
 
   // ─── Global category endpoints ────────────────────────────────────────────
 
-  @SkipThrottle()
-  @Public()
+  @Authenticated()
   @Get('photo-categories')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List all global photo categories' })
@@ -52,8 +54,16 @@ export class PhotoCategoriesController {
     type: PhotoCategoryProjection,
     isArray: true,
   })
-  async getAll() {
-    return this.queryBus.execute(new GetAllCategoriesQuery())
+  @ApiQuery({
+    name: 'eventId',
+    required: false,
+    description: 'Event UUID whose organizer to list for',
+  })
+  async getAll(
+    @CurrentUser() user: ICurrentUser,
+    @Query('eventId', new ParseUUIDPipe({ optional: true })) eventId?: string,
+  ) {
+    return this.queryBus.execute(new GetAllCategoriesQuery(user.userId, eventId ?? null))
   }
 
   @RequirePermission('photo_category.create')
@@ -63,8 +73,10 @@ export class PhotoCategoriesController {
   @ApiOperation({ summary: 'Create a global photo category' })
   @ApiEnvelopeResponse({ status: 201, description: 'Category created', type: EntityIdProjection })
   @ApiEnvelopeErrorResponse({ status: 409, description: 'Category name already exists' })
-  async create(@Body() dto: CreatePhotoCategoryDto) {
-    return this.commandBus.execute(new CreatePhotoCategoryCommand(dto.name))
+  async create(@Body() dto: CreatePhotoCategoryDto, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(
+      new CreatePhotoCategoryCommand(dto.name, user.userId, dto.base ?? false),
+    )
   }
 
   // ─── Event-scoped category endpoints ──────────────────────────────────────
