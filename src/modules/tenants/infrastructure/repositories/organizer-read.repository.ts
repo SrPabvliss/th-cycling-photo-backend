@@ -2,7 +2,7 @@ import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { PaginatedResult, type Pagination } from '@shared/application'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
-import { EVENT_SLOT_CONSUMED_FILTER, toEcuadorDateOnly } from '@shared/domain'
+import { EVENT_SLOT_CONSUMED_FILTER, toCalendarDateOnly, toEcuadorDateOnly } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
 import type {
   OrganizerContractProjection,
@@ -651,8 +651,8 @@ export class OrganizerReadRepository implements IOrganizerReadRepository {
       (row): OrganizerEventProjection => ({
         id: row.id,
         name: row.name,
-        startDate: toEcuadorDateOnly(row.start_date),
-        endDate: toEcuadorDateOnly(row.end_date),
+        startDate: toCalendarDateOnly(row.start_date),
+        endDate: toCalendarDateOnly(row.end_date),
         photosUploaded: row.photos_uploaded,
         photoQuota: row.photo_quota,
       }),

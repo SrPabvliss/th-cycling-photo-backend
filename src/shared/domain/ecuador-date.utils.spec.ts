@@ -1,4 +1,9 @@
-import { endOfDayInEcuador, startOfDayInEcuador, toEcuadorDateOnly } from './ecuador-date.utils'
+import {
+  endOfDayInEcuador,
+  startOfDayInEcuador,
+  toCalendarDateOnly,
+  toEcuadorDateOnly,
+} from './ecuador-date.utils'
 
 describe('endOfDayInEcuador', () => {
   it('resolves the chosen calendar day last instant in UTC-5, not UTC midnight', () => {
@@ -32,5 +37,14 @@ describe('toEcuadorDateOnly', () => {
 
   it('reads a raw UTC instant as its Ecuador calendar day', () => {
     expect(toEcuadorDateOnly(new Date('2026-01-01T02:00:00.000Z'))).toBe('2025-12-31')
+  })
+})
+
+describe('toCalendarDateOnly', () => {
+  it('keeps the day of a @db.Date column, which Prisma returns as UTC midnight', () => {
+    const storedDay = new Date('2026-11-30T00:00:00.000Z')
+
+    expect(toCalendarDateOnly(storedDay)).toBe('2026-11-30')
+    expect(toEcuadorDateOnly(storedDay)).toBe('2026-11-29')
   })
 })

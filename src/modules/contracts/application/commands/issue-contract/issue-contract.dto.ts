@@ -31,7 +31,11 @@ export class IssueContractDto {
     description: 'Last day (Ecuador time) the contract stays usable, as yyyy-MM-dd',
     example: '2026-12-31',
   })
-  @Transform(({ value }) => (typeof value === 'string' ? endOfDayInEcuador(value) : value))
+  // Reads the raw `obj[key]`: the global pipe's implicit conversion has already turned `value` into
+  // UTC midnight by the time a custom transform runs, which lands on the previous day in Ecuador.
+  @Transform(({ obj, key }) =>
+    typeof obj[key] === 'string' ? endOfDayInEcuador(obj[key]) : obj[key],
+  )
   @IsDate()
   validUntil: Date
 }

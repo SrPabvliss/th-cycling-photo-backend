@@ -17,6 +17,15 @@ const ecuadorDateOnlyFormatter = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
 })
 
+/** For instants (`timestamptz`): the calendar day the instant falls on in Ecuador. */
 export function toEcuadorDateOnly(date: Date): string {
   return ecuadorDateOnlyFormatter.format(date)
+}
+
+/**
+ * For calendar days (`@db.Date`): Prisma hands them back as UTC midnight, so the day is the UTC
+ * one — reading it in Ecuador would land on the previous day.
+ */
+export function toCalendarDateOnly(date: Date): string {
+  return date.toISOString().slice(0, 10)
 }

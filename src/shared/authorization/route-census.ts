@@ -316,7 +316,7 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
     permission: 'order.cancel',
   },
   { method: 'GET', path: '/participant-categories', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
-  { method: 'GET', path: '/photo-categories', legacyMarker: 'PUBLIC', permission: 'PUBLIC' },
+  { method: 'GET', path: '/photo-categories', legacyMarker: 'PUBLIC', permission: 'AUTHENTICATED' },
   {
     method: 'POST',
     path: '/photo-categories',

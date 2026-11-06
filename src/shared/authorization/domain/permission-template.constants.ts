@@ -79,6 +79,7 @@ const TENANT: PermissionKey[] = [
   'photo.color.delete',
   'photo.color.correct',
   'photo.category.assign',
+  'photo_category.create',
   'photo_category.event.assign',
   'photo_category.event.remove',
   'order.read',
