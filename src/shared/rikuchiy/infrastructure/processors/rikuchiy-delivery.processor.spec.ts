@@ -57,13 +57,15 @@ describe('RikuchiyDeliveryProcessor', () => {
       refresh: jest.fn().mockResolvedValue(undefined),
       settle: jest.fn().mockResolvedValue(undefined),
     }
+    const syncQueue = { add: jest.fn().mockResolvedValue(undefined) }
     const processor = new RikuchiyDeliveryProcessor(
       outbox as never,
       client as never,
       prisma as never,
       refresher as never,
+      syncQueue as never,
     )
-    return { processor, outbox, client, sent, prisma, tx, refresher }
+    return { processor, outbox, client, sent, prisma, tx, refresher, syncQueue }
   }
 
   afterEach(() => jest.restoreAllMocks())
@@ -80,7 +82,7 @@ describe('RikuchiyDeliveryProcessor', () => {
   it('settles each emission by what rikuchiy answered, one at a time and in order', async () => {
     const error = jest.spyOn(Logger.prototype, 'error').mockImplementation()
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation()
-    const { processor, outbox, sent, refresher } = setup({
+    const { processor, outbox, sent, refresher, syncQueue } = setup({
       configured: true,
       outcomes: [
         { kind: 'accepted', taxDocumentId: 'td-1' },
@@ -110,6 +112,25 @@ describe('RikuchiyDeliveryProcessor', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('order-3'))
     expect(refresher.settle.mock.calls).toEqual([['order-1'], ['order-2']])
     expect(refresher.refresh).not.toHaveBeenCalled()
+    expect(syncQueue.add.mock.calls).toEqual([
+      ['sync-order', { orderId: 'order-1' }, expect.objectContaining({ delay: 15_000 })],
+      ['sync-order', { orderId: 'order-1' }, expect.objectContaining({ delay: 60_000 })],
+    ])
+  })
+
+  it('keeps the emission settled when the follow-up sync cannot be scheduled', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation()
+    const { processor, outbox, syncQueue } = setup({
+      configured: true,
+      items: [item('1', 'order-1')],
+      outcomes: [{ kind: 'accepted', taxDocumentId: 'td-1' }],
+    })
+    syncQueue.add.mockRejectedValue(new Error('redis down'))
+
+    await processor.process()
+
+    expect(outbox.markSent).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('order-1'))
   })
 
   it('records the acceptance and enqueues an annulment when a withdrawn emission turns out sent', async () => {

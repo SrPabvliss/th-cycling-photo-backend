@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto'
-import { Processor, WorkerHost } from '@nestjs/bullmq'
+import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq'
 import { Inject, Logger } from '@nestjs/common'
 import { PrismaService } from '@shared/infrastructure'
+import type { Queue } from 'bullmq'
+import {
+  ORDER_INVOICE_SYNC_QUEUE,
+  SYNC_FOLLOW_UP_DELAYS_MS,
+  SYNC_ORDER_JOB,
+  type SyncOrderJobData,
+} from '../../domain/order-invoice-sync'
 import {
   type IRikuchiyClient,
   type IRikuchiyOutboxRepository,
@@ -28,6 +35,7 @@ export class RikuchiyDeliveryProcessor extends WorkerHost {
     @Inject(RIKUCHIY_CLIENT) private readonly rikuchiyClient: IRikuchiyClient,
     private readonly prisma: PrismaService,
     private readonly orderInvoiceStateRefresher: OrderInvoiceStateRefresher,
+    @InjectQueue(ORDER_INVOICE_SYNC_QUEUE) private readonly syncQueue: Queue<SyncOrderJobData>,
   ) {
     super()
   }
@@ -52,7 +60,10 @@ export class RikuchiyDeliveryProcessor extends WorkerHost {
       const settlement = { taxDocumentId: outcome.taxDocumentId, outcome: null }
       const marked = await this.rikuchiyOutboxRepository.markSent(item.id, settlement)
       if (!marked) await this.annulWithdrawnEmission(item, settlement)
-      else await this.orderInvoiceStateRefresher.settle(item.orderId)
+      else {
+        await this.orderInvoiceStateRefresher.settle(item.orderId)
+        await this.scheduleFollowUpSyncs(item)
+      }
     } else if (outcome.kind === 'rejected') {
       this.logger.error(
         `rikuchiy rejected the invoice request: ${outcome.reason}. orderId=${item.orderId}`,
@@ -64,6 +75,30 @@ export class RikuchiyDeliveryProcessor extends WorkerHost {
         `invoice request not delivered, will retry: ${outcome.reason}. orderId=${item.orderId}`,
       )
       await this.rikuchiyOutboxRepository.markAttemptFailed(item.id, outcome.reason)
+    }
+  }
+
+  private async scheduleFollowUpSyncs(item: PendingRikuchiyItem): Promise<void> {
+    try {
+      await Promise.all(
+        SYNC_FOLLOW_UP_DELAYS_MS.map((delay) =>
+          this.syncQueue.add(
+            SYNC_ORDER_JOB,
+            { orderId: item.orderId },
+            {
+              delay,
+              jobId: `${SYNC_ORDER_JOB}:${item.id}:${delay}`,
+              removeOnComplete: true,
+              removeOnFail: { age: 86400 },
+            },
+          ),
+        ),
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.warn(
+        `could not schedule the invoice follow-up sync: ${message}. orderId=${item.orderId}`,
+      )
     }
   }
 

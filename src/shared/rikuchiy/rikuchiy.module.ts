@@ -1,5 +1,6 @@
 import { BullModule } from '@nestjs/bullmq'
 import { Global, Module } from '@nestjs/common'
+import { ORDER_INVOICE_SYNC_QUEUE } from './domain/order-invoice-sync'
 import {
   INVOICE_SOURCE_READER,
   ORDER_TAX_DOCUMENT_REPOSITORY,
@@ -21,7 +22,10 @@ import { RikuchiyInvoiceRequesterService } from './infrastructure/services/rikuc
 
 @Global()
 @Module({
-  imports: [BullModule.registerQueue({ name: RIKUCHIY_DELIVERY_QUEUE })],
+  imports: [
+    BullModule.registerQueue({ name: RIKUCHIY_DELIVERY_QUEUE }),
+    BullModule.registerQueue({ name: ORDER_INVOICE_SYNC_QUEUE }),
+  ],
   providers: [
     { provide: RIKUCHIY_CLIENT, useClass: RikuchiyHttpClient },
     { provide: RIKUCHIY_OUTBOX_REPOSITORY, useClass: RikuchiyOutboxRepository },
