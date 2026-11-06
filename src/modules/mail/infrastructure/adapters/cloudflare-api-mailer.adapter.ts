@@ -56,7 +56,7 @@ export class CloudflareApiMailerAdapter implements IMailer {
           subject: message.subject,
           html: message.html,
           text: message.text,
-          reply_to: this.replyTo,
+          reply_to: message.replyTo ?? this.replyTo,
         }),
       })
     } catch (error) {

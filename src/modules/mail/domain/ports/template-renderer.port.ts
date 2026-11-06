@@ -6,6 +6,8 @@ export type MailTemplate =
   | 'email-verification-code'
   | 'email-changed-notice'
   | 'tenant-contract-invitation'
+  | 'tenant-contact-request'
+  | 'tenant-contact-confirmation'
 
 export interface RenderedTemplate {
   html: string
