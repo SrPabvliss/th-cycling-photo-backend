@@ -24,6 +24,8 @@ export class MeProjection {
   eventPermissions?: Record<string, string[]>
   /** Tenant the principal's permissions are scoped to, if any */
   tenantId?: string | null
+  tenantName?: string | null
+  permissionTemplate?: string | null
   /** Whether the principal operates in the platform tenant */
   isPlatform?: boolean
 }
