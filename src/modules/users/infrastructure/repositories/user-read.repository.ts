@@ -77,6 +77,26 @@ function escapeLikeTerm(value: string): string {
   return value.replace(/[\\%_]/g, (c) => `\\${c}`)
 }
 
+/**
+ * Splits a free-text search into words. Each word must match some field on its own, so
+ * "nombre apellido" finds the user whose first and last name hold one word each.
+ */
+function splitSearchTerms(search: string | undefined): string[] {
+  return search?.trim().split(/\s+/).filter(Boolean) ?? []
+}
+
+const EC_LOCAL_PHONE_TERM = /^0\d+$/
+
+/**
+ * Phones are stored in E.164 (`+593984…`) but people in Ecuador type them in local format
+ * (`0984…`). A digits-only word with the trunk 0 also matches as `+593` + the rest, so both
+ * forms find the same buyer. Returns the LIKE patterns to try against `phone_number`.
+ */
+function phoneSearchPatterns(term: string): string[] {
+  const local = `%${escapeLikeTerm(term)}%`
+  return EC_LOCAL_PHONE_TERM.test(term) ? [local, `%+593${term.slice(1)}%`] : [local]
+}
+
 type BuyerSort = 'recent' | 'orders' | 'spent' | 'last_purchase'
 
 function resolveBuyerSort(sort: string | undefined): BuyerSort {
@@ -100,13 +120,17 @@ function buildCandidatesWhereSql(filters: BuyerListFilters): Prisma.Sql {
     )`,
   ]
 
-  if (filters.search) {
-    const pattern = `%${escapeLikeTerm(filters.search)}%`
+  for (const term of splitSearchTerms(filters.search)) {
+    const pattern = `%${escapeLikeTerm(term)}%`
+    const phoneMatch = Prisma.join(
+      phoneSearchPatterns(term).map((p) => Prisma.sql`p.phone_number LIKE ${p} ESCAPE '\\'`),
+      ' OR ',
+    )
     conditions.push(Prisma.sql`(
       u.first_name ILIKE ${pattern} ESCAPE '\\' OR
       u.last_name ILIKE ${pattern} ESCAPE '\\' OR
       u.email ILIKE ${pattern} ESCAPE '\\' OR
-      EXISTS (SELECT 1 FROM user_phones p WHERE p.user_id = u.id AND p.phone_number LIKE ${pattern} ESCAPE '\\')
+      EXISTS (SELECT 1 FROM user_phones p WHERE p.user_id = u.id AND (${phoneMatch}))
     )`)
   }
 
@@ -262,12 +286,15 @@ export class UserReadRepository implements IUserReadRepository {
       where.user_roles = { some: { role: { name: role as RoleType } } }
     }
 
-    if (search) {
-      where.OR = [
-        { first_name: { contains: search, mode: 'insensitive' } },
-        { last_name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ]
+    const terms = splitSearchTerms(search)
+    if (terms.length > 0) {
+      where.AND = terms.map((term) => ({
+        OR: [
+          { first_name: { contains: term, mode: 'insensitive' } },
+          { last_name: { contains: term, mode: 'insensitive' } },
+          { email: { contains: term, mode: 'insensitive' } },
+        ],
+      }))
     }
 
     const [users, total] = await Promise.all([

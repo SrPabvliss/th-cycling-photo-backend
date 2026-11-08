@@ -3,6 +3,7 @@ import { HttpStatus } from '@nestjs/common'
 export enum ErrorCode {
   VALIDATION_FAILED = 'VALIDATION_FAILED',
   NOT_FOUND = 'NOT_FOUND',
+  UNAUTHORIZED = 'UNAUTHORIZED',
   FORBIDDEN = 'FORBIDDEN',
   CONFLICT = 'CONFLICT',
   BUSINESS_RULE = 'BUSINESS_RULE',

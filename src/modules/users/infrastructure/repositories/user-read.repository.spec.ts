@@ -70,6 +70,29 @@ describe('UserReadRepository getUsersList', () => {
     expect(result.items[0].emailVerified).toBe(false)
   })
 
+  it('requires every word of a multi-word search to match some name or email field', async () => {
+    const { repository, findMany } = buildRepository()
+
+    await repository.getUsersList(new Pagination(1, 20), false, undefined, '  andres   boxes ')
+
+    const where = findMany.mock.calls[0][0].where as {
+      OR?: unknown
+      AND: { OR: { first_name?: { contains: string } }[] }[]
+    }
+    expect(where.OR).toBeUndefined()
+    expect(where.AND).toHaveLength(2)
+    expect(where.AND[0].OR[0].first_name?.contains).toBe('andres')
+    expect(where.AND[1].OR[0].first_name?.contains).toBe('boxes')
+  })
+
+  it('ignores a user search made only of blanks', async () => {
+    const { repository, findMany } = buildRepository()
+
+    await repository.getUsersList(new Pagination(1, 20), false, undefined, '   ')
+
+    expect(findMany.mock.calls[0][0].where.AND).toBeUndefined()
+  })
+
   it('leaves the organizer pair null for a platform-tenant staff account, even with a verified email', async () => {
     const { repository, findMany, count } = buildRepository()
     findMany.mockResolvedValueOnce([
@@ -264,6 +287,51 @@ describe('UserReadRepository getBuyersList filters', () => {
 
     const { values } = pageQuery(queryRaw)
     expect(values).toContain('%50\\%\\_off%')
+  })
+
+  it('adds one name/email/phone predicate per word of a multi-word buyer search', async () => {
+    const { repository, queryRaw } = buildRepository()
+    queryRaw.mockResolvedValueOnce([])
+
+    await repository.getBuyersList(new Pagination(1, 20), { search: ' ana   ruiz ' })
+
+    const { sql, values } = pageQuery(queryRaw)
+    expect(values).toContain('%ana%')
+    expect(values).toContain('%ruiz%')
+    expect(values).not.toContain('%ana   ruiz%')
+    expect(sql.match(/u\.first_name ILIKE/g)).toHaveLength(2)
+  })
+
+  it('matches a local-format phone word (leading 0) against the E.164 +593 form too', async () => {
+    const { repository, queryRaw } = buildRepository()
+    queryRaw.mockResolvedValueOnce([])
+
+    await repository.getBuyersList(new Pagination(1, 20), { search: 'elena 0984' })
+
+    const { values } = pageQuery(queryRaw)
+    expect(values).toContain('%0984%')
+    expect(values).toContain('%+593984%')
+    expect(values).not.toContain('%+593lena%')
+  })
+
+  it('keeps a phone word that is already international or has no trunk 0 as a single pattern', async () => {
+    const { repository, queryRaw } = buildRepository()
+    queryRaw.mockResolvedValueOnce([])
+
+    await repository.getBuyersList(new Pagination(1, 20), { search: '98419' })
+
+    const { values } = pageQuery(queryRaw)
+    expect(values).toContain('%98419%')
+    expect(values.some((v) => typeof v === 'string' && v.includes('+593'))).toBe(false)
+  })
+
+  it('adds no search predicate for a buyer search made only of blanks', async () => {
+    const { repository, queryRaw } = buildRepository()
+    queryRaw.mockResolvedValueOnce([])
+
+    await repository.getBuyersList(new Pagination(1, 20), { search: '   ' })
+
+    expect(pageQuery(queryRaw).sql).not.toContain('ILIKE')
   })
 
   it('falls back to a second, still-bounded count query when the requested page is past the last row', async () => {

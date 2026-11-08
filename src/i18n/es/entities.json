@@ -33,5 +33,10 @@
   "tenant_contract": "Contrato de organizador",
   "payout_method": "Método de cobro",
   "billing_account": "Cuenta de facturación",
-  "tax_document": "Documento tributario"
+  "tax_document": "Documento tributario",
+  "photo_bib": "Dorsal de la foto",
+  "photo_color": "Color de la foto",
+  "province": "Provincia",
+  "retouched_photo": "Foto retocada",
+  "cost": "Costo"
 }
