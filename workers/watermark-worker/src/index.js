@@ -246,7 +246,7 @@ const ROUTE_REGEX =
 /**
  * Validates the Referer header to prevent hotlinking from unauthorized domains.
  * Allows: direct browser access (no referer), same-domain, and allowed origins.
- * ALLOWED_ORIGINS env var: comma-separated list (e.g., "http://localhost:5173,https://app.titantv.com.ec")
+ * ALLOWED_ORIGINS env var: comma-separated list (e.g., "http://localhost:5173,https://titantv.com.ec")
  */
 function isAllowedReferer(request, env) {
   const referer = request.headers.get('referer')
