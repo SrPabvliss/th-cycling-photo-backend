@@ -31,7 +31,7 @@ export class GetPhotoDownloadUrlHandler implements IQueryHandler<GetPhotoDownloa
 
     if (query.type === 'retouched') {
       if (!photo.retouchedStorageKey) {
-        throw AppException.notFound('Retouched photo', query.photoId)
+        throw AppException.notFound('entities.retouched_photo', query.photoId)
       }
       storageKey = photo.retouchedStorageKey
     } else {

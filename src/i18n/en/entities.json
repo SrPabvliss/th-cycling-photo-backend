@@ -33,5 +33,10 @@
   "tenant_contract": "Organizer contract",
   "payout_method": "Payout method",
   "billing_account": "Billing account",
-  "tax_document": "Tax document"
+  "tax_document": "Tax document",
+  "photo_bib": "Photo bib",
+  "photo_color": "Photo color",
+  "province": "Province",
+  "retouched_photo": "Retouched photo",
+  "cost": "Cost"
 }

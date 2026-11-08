@@ -10,5 +10,7 @@
   "password": "n",
   "email_verification": "n",
   "cover": "n",
-  "payphone_account": "n"
+  "payphone_account": "n",
+  "province": "n",
+  "retouched_photo": "n"
 }

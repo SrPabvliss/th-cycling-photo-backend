@@ -207,7 +207,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   private describeHttpStatus(status: number): { code: string; messageKey: string } {
     if (status === HttpStatus.UNAUTHORIZED) {
-      return { code: 'UNAUTHORIZED', messageKey: 'errors.UNAUTHORIZED' }
+      return { code: ErrorCode.UNAUTHORIZED, messageKey: 'errors.UNAUTHORIZED' }
     }
     if (status === HttpStatus.FORBIDDEN) {
       return { code: ErrorCode.FORBIDDEN, messageKey: 'errors.FORBIDDEN' }
