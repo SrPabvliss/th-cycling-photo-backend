@@ -1,4 +1,5 @@
 import { EventConfigurationService } from '@events/application/services/event-configuration.service'
+import { assertMayChoosePayouts } from '@events/application/services/payout-selection-guard'
 import {
   EVENT_PAYOUT_METHOD_REPOSITORY,
   EVENT_READ_REPOSITORY,
@@ -45,6 +46,7 @@ export class UpdateEventConfigurationHandler
 
     event.assertNotFrozen()
 
+    await assertMayChoosePayouts(this.authz, command.actorUserId, command.selection.payoutMethods)
     await this.configService.verifyNewPayphones(command.selection.payoutMethods)
 
     const existingMethods = await this.payoutRepo.findByEventId(event.id)

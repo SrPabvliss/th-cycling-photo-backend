@@ -9,7 +9,12 @@ export const TEMPLATE_KEYS = {
 
 export type TemplateKey = (typeof TEMPLATE_KEYS)[keyof typeof TEMPLATE_KEYS]
 
-/** Reproduces every route today's `@Roles('admin','operator')` allows. */
+/**
+ * Reproduces every route today's `@Roles('admin','operator')` allows.
+ *
+ * Staff reads TitanTV's payout methods but never changes them (TIT-95): where the platform's money
+ * lands is the owner's call, so `tenant.payout_method.manage` stays with `platform_admin`.
+ */
 const STAFF: PermissionKey[] = [
   'event.read',
   'event.stats.read',
@@ -43,7 +48,6 @@ const STAFF: PermissionKey[] = [
   'order.stats.read',
   'tenant.profile.read',
   'tenant.payout_method.read',
-  'tenant.payout_method.manage',
   'notification.read',
   'notification.mark_read',
 ]
