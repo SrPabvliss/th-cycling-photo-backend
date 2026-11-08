@@ -12,6 +12,7 @@
   "frozen_not_editable": "A frozen event cannot be modified",
   "configuration_incomplete": "Complete the profile before creating an event. Missing: {missing}",
   "payout_method_required": "The event must have at least one active payout method",
+  "payout_method_manage_required": "You cannot add new payout methods to an event; you can only choose the ones in the organizer's profile or keep the ones the event already has",
   "photo_quota_exceeded": "This event allows {quota} photos and {used} are already used. You can upload {remaining} more.",
   "tenant_quota_exceeded": "Your plan allows {quota} events and all of them are in use. Contact TitanTV to increase the quota.",
   "watermark_not_owned": "The selected watermark does not belong to your organisation",

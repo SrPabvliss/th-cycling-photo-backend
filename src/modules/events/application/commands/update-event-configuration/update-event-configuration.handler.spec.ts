@@ -73,6 +73,7 @@ describe('UpdateEventConfigurationHandler', () => {
 
     authz = {
       assert: jest.fn().mockResolvedValue(undefined),
+      canAnywhere: jest.fn().mockResolvedValue(true),
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as unknown as jest.Mocked<IAuthorizationService>
 
@@ -194,6 +195,86 @@ describe('UpdateEventConfigurationHandler', () => {
     })
     expect(writeRepo.save).not.toHaveBeenCalled()
     expect(payoutRepo.replaceForEvent).not.toHaveBeenCalled()
+  })
+
+  describe('who may choose where the event money lands (TIT-95)', () => {
+    const newBank = {
+      source: 'new' as const,
+      provider: 'bank_transfer' as const,
+      bankName: 'Banco Pichincha',
+      accountNumber: '2200000000',
+      accountType: 'ahorros',
+      accountHolder: 'Someone Else',
+      holderIdentification: '1700000000',
+    }
+
+    beforeEach(() => readRepo.findByIdInScope.mockResolvedValue(activeEvent))
+
+    it.each([
+      ['a profile method', { source: 'profile' as const, id: 'profile-bank-id' }],
+      [
+        'a method the event already has, kept or re-sent untouched',
+        { source: 'event' as const, id: 'event-only-id' },
+      ],
+    ])('lets staff without payout management send %s', async (_label, entry) => {
+      authz.canAnywhere.mockResolvedValue(false)
+
+      await handler.execute(
+        new UpdateEventConfigurationCommand(activeEvent.id, 'staff-1', { payoutMethods: [entry] }),
+      )
+
+      expect(authz.canAnywhere).not.toHaveBeenCalled()
+      expect(payoutRepo.replaceForEvent).toHaveBeenCalled()
+    })
+
+    it.each([
+      ['a new bank account', newBank],
+      [
+        'a new payphone number',
+        { source: 'new' as const, provider: 'payphone' as const, phone: '0991234567' },
+      ],
+    ])('refuses %s from staff without payout management, before calling Payphone or writing', async (_label, entry) => {
+      authz.canAnywhere.mockResolvedValue(false)
+
+      await expect(
+        handler.execute(
+          new UpdateEventConfigurationCommand(activeEvent.id, 'staff-1', {
+            payoutMethods: [{ source: 'event', id: 'event-only-id' }, entry],
+          }),
+        ),
+      ).rejects.toMatchObject({
+        messageKey: 'event.payout_method_manage_required',
+        httpStatus: 403,
+      })
+
+      expect(authz.canAnywhere).toHaveBeenCalledWith('staff-1', 'tenant.payout_method.manage')
+      expect(configService.verifyNewPayphones).not.toHaveBeenCalled()
+      expect(payoutRepo.replaceForEvent).not.toHaveBeenCalled()
+    })
+
+    it('lets a tenant or admin with payout management add a new account', async () => {
+      authz.canAnywhere.mockResolvedValue(true)
+
+      await handler.execute(
+        new UpdateEventConfigurationCommand(activeEvent.id, 'owner-1', {
+          payoutMethods: [newBank],
+        }),
+      )
+
+      expect(payoutRepo.replaceForEvent).toHaveBeenCalled()
+    })
+
+    it('leaves staff free to edit the rest of the configuration when payoutMethods is omitted', async () => {
+      authz.canAnywhere.mockResolvedValue(false)
+
+      await handler.execute(
+        new UpdateEventConfigurationCommand(activeEvent.id, 'staff-1', {
+          publicName: 'Otro nombre',
+        }),
+      )
+
+      expect(authz.canAnywhere).not.toHaveBeenCalled()
+    })
   })
 
   it('accepts an explicit null watermark key, since the watermark is optional', async () => {

@@ -45,6 +45,15 @@ describe('permission templates', () => {
     expect(TEMPLATE_PERMISSIONS[TEMPLATE_KEYS.PLATFORM_STAFF]).not.toContain('event.read.all')
   })
 
+  it('lets platform_staff read the payout methods but never change them (TIT-95)', () => {
+    const staff = TEMPLATE_PERMISSIONS[TEMPLATE_KEYS.PLATFORM_STAFF]
+    expect(staff).toContain('tenant.payout_method.read')
+    expect(staff).not.toContain('tenant.payout_method.manage')
+    expect(TEMPLATE_PERMISSIONS[TEMPLATE_KEYS.PLATFORM_ADMIN]).toContain(
+      'tenant.payout_method.manage',
+    )
+  })
+
   it('withholds buyer.read and order.gift from platform_staff', () => {
     const staff = TEMPLATE_PERMISSIONS[TEMPLATE_KEYS.PLATFORM_STAFF]
     expect(staff).not.toContain('buyer.read')

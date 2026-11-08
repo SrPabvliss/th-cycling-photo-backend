@@ -4,6 +4,7 @@ import { IEventPayoutMethodRepository, IEventWriteRepository } from '@events/dom
 import type { IEventOperatorRepository } from '@events/domain/ports/event-operator-repository.port'
 import { LocationValidator } from '@locations/application/services'
 import { AuditContext } from '@shared/application'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import type { PrismaService } from '@shared/infrastructure'
 import type { IUserReadRepository } from '@users/domain/ports'
@@ -24,6 +25,7 @@ describe('CreateEventHandler', () => {
   let locationValidator: jest.Mocked<LocationValidator>
   let configService: jest.Mocked<EventConfigurationService>
   let kvStorage: { write: jest.Mock; writeBulk: jest.Mock; delete: jest.Mock }
+  let authz: jest.Mocked<IAuthorizationService>
 
   const activeContract = TenantContract.rehydrate({
     id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -137,6 +139,10 @@ describe('CreateEventHandler', () => {
       delete: jest.fn(),
     }
 
+    authz = {
+      canAnywhere: jest.fn().mockResolvedValue(true),
+    } as unknown as jest.Mocked<IAuthorizationService>
+
     handler = new CreateEventHandler(
       writeRepo,
       operatorRepo,
@@ -145,6 +151,7 @@ describe('CreateEventHandler', () => {
       contractRepo,
       payoutRepo,
       kvStorage,
+      authz,
       locationValidator,
       configService,
       prisma,
@@ -440,6 +447,59 @@ describe('CreateEventHandler', () => {
     expect(configService.verifyNewPayphones).toHaveBeenCalledWith(
       command.configuration?.payoutMethods,
     )
+  })
+
+  describe('who may choose where the event money lands (TIT-95)', () => {
+    const withPayouts = (
+      payoutMethods: NonNullable<CreateEventCommand['configuration']>['payoutMethods'],
+    ) =>
+      new CreateEventCommand('Test Event', futureStart, futureEnd, null, null, 1, audit, {
+        publicName: 'Foto Andes',
+        whatsappNumber: '+593987654321',
+        payoutMethods,
+      })
+
+    beforeEach(() => writeRepo.save.mockImplementation(async (event: Event) => event))
+
+    it.each([
+      ['profile', { source: 'profile' as const, id: 'profile-bank-id' }],
+      ['event', { source: 'event' as const, id: 'event-method-id' }],
+    ])('lets staff without payout management create an event with a %s method', async (_source, entry) => {
+      authz.canAnywhere.mockResolvedValue(false)
+
+      await handler.execute(withPayouts([entry]))
+
+      expect(authz.canAnywhere).not.toHaveBeenCalled()
+      expect(writeRepo.save).toHaveBeenCalled()
+    })
+
+    it('refuses a new payout method from staff without payout management, before anything else', async () => {
+      authz.canAnywhere.mockResolvedValue(false)
+
+      await expect(
+        handler.execute(
+          withPayouts([{ source: 'new', provider: 'payphone', phone: '0991234567' }]),
+        ),
+      ).rejects.toMatchObject({
+        messageKey: 'event.payout_method_manage_required',
+        httpStatus: 403,
+      })
+
+      expect(authz.canAnywhere).toHaveBeenCalledWith(creatorId, 'tenant.payout_method.manage')
+      expect(configService.materialise).not.toHaveBeenCalled()
+      expect(configService.verifyNewPayphones).not.toHaveBeenCalled()
+      expect(writeRepo.save).not.toHaveBeenCalled()
+    })
+
+    it('lets a tenant or admin with payout management create an event with a new method', async () => {
+      authz.canAnywhere.mockResolvedValue(true)
+
+      await handler.execute(
+        withPayouts([{ source: 'new', provider: 'payphone', phone: '0991234567' }]),
+      )
+
+      expect(writeRepo.save).toHaveBeenCalled()
+    })
   })
 
   it('propagates an unverified payphone number and never saves the event', async () => {

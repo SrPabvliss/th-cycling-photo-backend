@@ -1,5 +1,6 @@
 import type { EventCreatedProjection } from '@events/application/projections'
 import { EventConfigurationService } from '@events/application/services/event-configuration.service'
+import { assertMayChoosePayouts } from '@events/application/services/payout-selection-guard'
 import { Event } from '@events/domain/entities'
 import {
   EVENT_PAYOUT_METHOD_REPOSITORY,
@@ -14,6 +15,10 @@ import {
 import { LocationValidator } from '@locations/application/services'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
@@ -42,6 +47,7 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     @Inject(EVENT_PAYOUT_METHOD_REPOSITORY)
     private readonly payoutRepo: IEventPayoutMethodRepository,
     @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly locationValidator: LocationValidator,
     private readonly configService: EventConfigurationService,
     private readonly prisma: PrismaService,
@@ -57,6 +63,12 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
     if (!tenantId) {
       throw AppException.businessRule('event.creator_tenant_required')
     }
+
+    await assertMayChoosePayouts(
+      this.authz,
+      command.audit.userId,
+      command.configuration?.payoutMethods,
+    )
 
     const { isPlatform, defaultEventPhotoQuota } = await this.tenantRepo.checkQuota(tenantId)
 

@@ -12,6 +12,7 @@
   "frozen_not_editable": "No se puede modificar un evento congelado",
   "configuration_incomplete": "Complete el perfil antes de crear un evento. Falta: {missing}",
   "payout_method_required": "El evento debe tener al menos un método de cobro activo",
+  "payout_method_manage_required": "No puedes registrar métodos de cobro nuevos en un evento; solo puedes elegir los del perfil del organizador o conservar los que el evento ya tiene",
   "photo_quota_exceeded": "Este evento permite {quota} fotos y ya se usaron {used}. Puedes subir {remaining} más.",
   "tenant_quota_exceeded": "Tu plan permite {quota} eventos y ya los estás usando todos. Contacta a TitanTV para ampliar el cupo.",
   "watermark_not_owned": "La marca de agua seleccionada no pertenece a tu organización",
