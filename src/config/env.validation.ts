@@ -1,10 +1,13 @@
+import { assertEnvironmentMatchesDeployment } from '@shared/payment-gateways'
 import { plainToInstance } from 'class-transformer'
 import {
+  IsEmail,
   IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Min,
   validateSync,
 } from 'class-validator'
@@ -83,6 +86,15 @@ export class EnvironmentVariables {
   @IsString()
   CLOUDFLARE_HMAC_SECRET?: string
 
+  // Cloudflare Analytics Engine (CDN transformations reported to yupana)
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_ANALYTICS_TOKEN?: string
+
+  @IsOptional()
+  @Matches(/^[a-z][a-z0-9_]{0,62}$/)
+  CDN_TRANSFORMATIONS_DATASET?: string
+
   // Voyage AI
   @IsOptional()
   @IsString()
@@ -129,6 +141,10 @@ export class EnvironmentVariables {
   MAIL_REDIRECT_TO?: string
 
   @IsOptional()
+  @IsString()
+  CONTACT_INBOX_EMAIL?: string
+
+  @IsOptional()
   @IsEnum(['api', 'smtp'])
   MAIL_TRANSPORT?: string
 
@@ -170,6 +186,72 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsNumber()
   AI_PIPELINE_TIMEOUT_MS?: number
+
+  // Yupana
+  @IsOptional()
+  @IsString()
+  YUPANA_BASE_URL?: string
+
+  @IsOptional()
+  @IsString()
+  YUPANA_PRODUCER_KEY?: string
+
+  @IsOptional()
+  @IsString()
+  YUPANA_SERVICE_KEY?: string
+
+  @IsOptional()
+  @IsNumber()
+  YUPANA_TIMEOUT_MS?: number
+
+  // Rikuchiy
+  @IsOptional()
+  @IsString()
+  RIKUCHIY_BASE_URL?: string
+
+  @IsOptional()
+  @IsString()
+  RIKUCHIY_SERVICE_KEY?: string
+
+  @IsOptional()
+  @IsNumber()
+  RIKUCHIY_TIMEOUT_MS?: number
+
+  // Payphone
+  @IsEnum(['test', 'production'])
+  PAYPHONE_ENVIRONMENT: string
+
+  @IsString()
+  @IsNotEmpty()
+  PAYPHONE_TOKEN: string
+
+  @IsString()
+  @IsNotEmpty()
+  PAYPHONE_STORE_ID: string
+
+  @IsString()
+  @IsNotEmpty()
+  CREDENTIAL_ENCRYPTION_KEY: string
+
+  @IsOptional()
+  @IsString()
+  PAYPHONE_SPLIT_ENCRYPTION_PASSWORD?: string
+
+  @IsOptional()
+  @IsString()
+  PAYPHONE_API_TOKEN?: string
+
+  @IsOptional()
+  @IsString()
+  PAYPHONE_API_STORE_ID?: string
+
+  @IsOptional()
+  @IsNumber()
+  PAYMENT_EXPIRY_SWEEP_DELAY_MS?: number
+
+  /** Resolved to a user row at boot: an id would drift between environments, an email will not. */
+  @IsEmail()
+  PAYMENT_SYSTEM_USER_EMAIL: string
 }
 
 export function validate(config: Record<string, unknown>) {
@@ -187,5 +269,6 @@ export function validate(config: Record<string, unknown>) {
       'Environment validation failed:\nMAIL_REDIRECT_TO must be empty when NODE_ENV=production',
     )
   }
+  assertEnvironmentMatchesDeployment(validatedConfig.NODE_ENV, validatedConfig.PAYPHONE_ENVIRONMENT)
   return validatedConfig
 }

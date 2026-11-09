@@ -4,5 +4,6 @@ export class GetPreviewLinksListQuery {
   constructor(
     public readonly eventId: string,
     public readonly pagination: Pagination,
+    public readonly userId: string,
   ) {}
 }

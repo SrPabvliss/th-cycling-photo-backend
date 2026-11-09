@@ -6,5 +6,6 @@ export class GenerateAssetPresignedUrlCommand {
     public readonly assetType: EventAssetType,
     public readonly fileName: string,
     public readonly contentType: string,
+    public readonly userId: string,
   ) {}
 }

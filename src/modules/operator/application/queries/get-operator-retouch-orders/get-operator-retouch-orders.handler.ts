@@ -1,8 +1,13 @@
 import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
-import { ForbiddenException, Inject } from '@nestjs/common'
+import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import { PaginatedResult } from '@shared/application'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import { AppException } from '@shared/domain/exceptions/app.exception'
 import {
   type IOperatorRetouchReadRepository,
   OPERATOR_RETOUCH_READ_REPOSITORY,
@@ -21,18 +26,19 @@ export class GetOperatorRetouchOrdersHandler
     @Inject(OPERATOR_RETOUCH_READ_REPOSITORY)
     private readonly retouchRead: IOperatorRetouchReadRepository,
     private readonly cdn: CdnUrlBuilder,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(
     query: GetOperatorRetouchOrdersQuery,
   ): Promise<PaginatedResult<OperatorRetouchOrderProjection>> {
-    const isAdmin = query.userRole === 'admin'
+    const isAdmin = await this.authz.can(query.operatorId, 'event.read.all')
 
     let eventIdsForQuery: string[] | null = null
     if (isAdmin) {
       if (query.eventSlug) {
         const event = await this.eventRead.existsActiveEventBySlug(query.eventSlug)
-        if (!event) throw new ForbiddenException('event.not_found')
+        if (!event) throw AppException.notFound('Event', query.eventSlug)
         eventIdsForQuery = [event.id]
       }
     } else {
@@ -44,7 +50,7 @@ export class GetOperatorRetouchOrdersHandler
       if (query.eventSlug) {
         const event = await this.eventRead.existsActiveEventBySlug(query.eventSlug)
         if (!event || !assignedIds.includes(event.id)) {
-          throw new ForbiddenException('operator.not_assigned_to_event')
+          throw AppException.forbidden('operator.not_assigned_to_event')
         }
         eventIdsForQuery = [event.id]
       }

@@ -15,6 +15,9 @@ export class CartViewEventGroupProjection {
   @ApiProperty({ description: 'Event name' })
   eventName: string
 
+  @ApiProperty({ description: 'URL-friendly event slug for public navigation' })
+  eventSlug: string
+
   @ApiProperty({ description: 'Event start date' })
   startDate: Date
 

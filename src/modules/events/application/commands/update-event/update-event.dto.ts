@@ -1,6 +1,16 @@
+import { EARLIEST_EVENT_DATE } from '@events/domain/event-dates'
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
-import { IsDate, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator'
+import {
+  IsDate,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  MinDate,
+  MinLength,
+} from 'class-validator'
 
 export class UpdateEventDto {
   @ApiPropertyOptional({
@@ -18,6 +28,7 @@ export class UpdateEventDto {
     example: '2026-06-15T00:00:00.000Z',
   })
   @IsDate()
+  @MinDate(EARLIEST_EVENT_DATE, { message: '$property must not be earlier than 2000-01-01' })
   @Type(() => Date)
   @IsOptional()
   startDate?: Date
@@ -27,6 +38,7 @@ export class UpdateEventDto {
     example: '2026-06-17T00:00:00.000Z',
   })
   @IsDate()
+  @MinDate(EARLIEST_EVENT_DATE, { message: '$property must not be earlier than 2000-01-01' })
   @Type(() => Date)
   @IsOptional()
   endDate?: Date

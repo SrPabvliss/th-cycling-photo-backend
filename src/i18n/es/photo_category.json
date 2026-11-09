@@ -1,0 +1,6 @@
+{
+  "not_available_for_event": "Esta categoría no está disponible para el organizador del evento",
+  "not_assigned_to_event": "La categoría no está asignada a uno de los eventos de estas fotos",
+  "tenant_required": "Solo un organizador puede crear sus propias categorías",
+  "name_taken": "Ya existe una categoría con ese nombre"
+}

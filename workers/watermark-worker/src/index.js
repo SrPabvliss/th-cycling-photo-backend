@@ -1,11 +1,24 @@
 import { AwsClient } from 'aws4fetch'
+import { combinationKey, recordTransformation } from './transformation-record.js'
+import { eventIdFromObjectPath, gravityFromQuery, resolveWatermarkUrl } from './watermark-url.js'
 
 // ─── Preset maps ───────────────────────────────────────────────────────────
 
+// `fit: cover` only crops when both sides are given: with a width alone Cloudflare just scales the
+// image and keeps its original ratio, which left the 16:9 framing to the browser's object-fit and
+// made the organiser's focal point pointless. These heights are the 16:9 counterpart of each width.
 const ASSET_PRESETS = {
-  'cover-sm': { width: 400, quality: 80, fit: 'cover', format: 'auto' },
-  'cover-lg': { width: 1200, quality: 85, fit: 'cover', format: 'auto' },
+  'cover-sm': { width: 400, height: 225, quality: 80, fit: 'cover', format: 'auto' },
+  'cover-lg': { width: 1200, height: 675, quality: 85, fit: 'cover', format: 'auto' },
 }
+
+// Every gallery render is 800px wide, so a fixed tile width is what keeps the mosaic identical
+// across tenants: without it Cloudflare draws the PNG at its native pixel size, and a 2000px logo
+// covers the whole photo while a 100px one tiles into noise.
+//
+// 380 is the platform's own watermark asset, whose density is the one already validated in
+// production. Anything smaller crowds the photo: 200 tiled it five across and buried the rider.
+const DEFAULT_WATERMARK_TILE_WIDTH = 380
 
 const INTERNAL_PRESETS = {
   thumb: { width: 400, quality: 80, fit: 'scale-down', format: 'auto' },
@@ -127,20 +140,28 @@ async function fetchOriginal(slug, env) {
 }
 
 /** Resolves slug → B2 path, signs request, applies cf.image preset transform. */
-async function fetchWithPreset(slug, presetOptions, env) {
+async function fetchWithPreset(slug, presetOptions, env, gravity, { kind, preset }) {
   const objectPath = await env.IMAGE_MAP.get(slug)
   if (!objectPath) return new Response('Not Found', { status: 404 })
+
+  // Gravity only means anything to a cropping fit; on the others it would be silently dropped.
+  const options =
+    gravity && presetOptions.fit === 'cover' ? { ...presetOptions, gravity } : presetOptions
 
   const b2 = getB2Client(env)
   const originUrl = getB2Url(env, objectPath)
   const signedReq = await b2.sign(originUrl)
 
+  const image = { ...options, 'origin-auth': 'share-publicly' }
   const response = await fetch(originUrl, {
     headers: signedReq.headers,
     cf: {
-      image: { ...presetOptions, 'origin-auth': 'share-publicly' },
+      image,
       cacheEverything: true,
       cacheTtl: 604800,
+      // The subrequest URL is the same B2 object whatever the crop, so the origin has to carry the
+      // framing too. Without it the edge would answer every re-frame with the first crop it cached.
+      cacheKey: `${originUrl}#${slug}-${gravity ? `${gravity.x}x${gravity.y}` : 'centre'}`,
     },
   })
 
@@ -150,6 +171,7 @@ async function fetchWithPreset(slug, presetOptions, env) {
       : new Response('Bad Gateway', { status: 502 })
   }
 
+  recordTransformation(env, { key: await combinationKey(originUrl, image), kind, slug, preset })
   return sanitizeResponse(response)
 }
 
@@ -162,37 +184,39 @@ async function fetchWatermarked(slug, env) {
   const originUrl = getB2Url(env, objectPath)
   const signedReq = await b2.sign(originUrl)
 
-  // Bumped suffix busts the long-lived (immutable, 1y) cache on the
-  // watermark asset whenever the underlying PNG changes in KV.
-  const watermarkUrl = `https://${env.PUBLIC_DOMAIN}/gallery/_assets/watermark.png?v=3`
+  const eventId = eventIdFromObjectPath(objectPath)
+  const wmPath = eventId ? await env.IMAGE_MAP.get(`wm-${eventId}`) : null
+  const watermarkUrl = resolveWatermarkUrl(eventId, wmPath, env.PUBLIC_DOMAIN)
   const publicUrl = `https://${env.PUBLIC_DOMAIN}/gallery/${slug}.jpg`
   const qrUrl = `https://${env.QR_WORKER_HOST}/?url=${encodeURIComponent(publicUrl)}&v=2`
 
+  const image = {
+    width: 800,
+    quality: parseInt(env.DEFAULT_QUALITY, 10) || 40,
+    format: 'jpeg',
+    draw: [
+      {
+        url: watermarkUrl,
+        repeat: true,
+        opacity: parseFloat(env.WATERMARK_OPACITY) || 0.3,
+        width: parseInt(env.WATERMARK_TILE_WIDTH, 10) || DEFAULT_WATERMARK_TILE_WIDTH,
+      },
+      {
+        url: qrUrl,
+        bottom: 15,
+        left: 15,
+        width: 130,
+        height: 130,
+        opacity: 1.0,
+        background: '#ffffff',
+      },
+    ],
+    'origin-auth': 'share-publicly',
+  }
   const response = await fetch(originUrl, {
     headers: signedReq.headers,
     cf: {
-      image: {
-        width: 800,
-        quality: parseInt(env.DEFAULT_QUALITY, 10) || 40,
-        format: 'jpeg',
-        draw: [
-          {
-            url: watermarkUrl,
-            repeat: true,
-            opacity: parseFloat(env.WATERMARK_OPACITY) || 0.3,
-          },
-          {
-            url: qrUrl,
-            bottom: 15,
-            left: 15,
-            width: 130,
-            height: 130,
-            opacity: 1.0,
-            background: '#ffffff',
-          },
-        ],
-        'origin-auth': 'share-publicly',
-      },
+      image,
       cacheEverything: true,
       cacheTtl: 604800,
     },
@@ -205,17 +229,24 @@ async function fetchWatermarked(slug, env) {
       : new Response('Bad Gateway', { status: 502 })
   }
 
+  recordTransformation(env, {
+    key: await combinationKey(originUrl, image),
+    kind: 'gallery',
+    slug,
+    preset: 'gallery',
+  })
   return sanitizeResponse(response)
 }
 
 // ─── Main router ───────────────────────────────────────────────────────────
 
-const ROUTE_REGEX = /^\/(gallery|internal|assets)\/(?:([a-z0-9-]+)\/)?([a-zA-Z0-9_-]+)\.jpg$/
+const ROUTE_REGEX =
+  /^\/(gallery|internal|assets)\/(?:([a-z0-9-]+)\/)?([a-zA-Z0-9_-]+)\.(?:jpg|png)$/
 
 /**
  * Validates the Referer header to prevent hotlinking from unauthorized domains.
  * Allows: direct browser access (no referer), same-domain, and allowed origins.
- * ALLOWED_ORIGINS env var: comma-separated list (e.g., "http://localhost:5173,https://app.titantv.com.ec")
+ * ALLOWED_ORIGINS env var: comma-separated list (e.g., "http://localhost:5173,https://titantv.com.ec")
  */
 function isAllowedReferer(request, env) {
   const referer = request.headers.get('referer')
@@ -267,7 +298,7 @@ export default {
       if (preset) {
         const presetOptions = INTERNAL_PRESETS[preset]
         if (!presetOptions) return new Response('Not Found', { status: 404 })
-        return fetchWithPreset(slug, presetOptions, env)
+        return fetchWithPreset(slug, presetOptions, env, null, { kind: 'internal', preset })
       }
       return fetchOriginal(slug, env)
     }
@@ -277,7 +308,10 @@ export default {
       if (preset) {
         const presetOptions = ASSET_PRESETS[preset]
         if (!presetOptions) return new Response('Not Found', { status: 404 })
-        return fetchWithPreset(slug, presetOptions, env)
+        return fetchWithPreset(slug, presetOptions, env, gravityFromQuery(url.searchParams), {
+          kind: 'asset',
+          preset,
+        })
       }
       return fetchOriginal(slug, env)
     }

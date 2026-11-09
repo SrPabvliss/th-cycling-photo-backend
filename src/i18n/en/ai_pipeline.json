@@ -1,0 +1,7 @@
+{
+  "service_unavailable": "The classification service is unavailable right now",
+  "invalid_request": "The classification service rejected the request",
+  "invalid_response_shape": "The classification service returned an unexpected response",
+  "unsupported_schema_version": "The classification service replied with a version we do not handle",
+  "image_id_mismatch": "The classification service replied about a different image than the one sent"
+}

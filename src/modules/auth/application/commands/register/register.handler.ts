@@ -8,7 +8,7 @@ import { hashSync } from 'bcryptjs'
 import {
   CONSENT_TYPE,
   type ConsentType,
-  POLICY_VERSION,
+  POLICY_VERSIONS,
 } from '../../../domain/constants/consent.constants'
 import {
   AUTH_USER_REPOSITORY,
@@ -68,7 +68,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
     })
 
     const role = 'customer'
-    const payload = { sub: user.id, email: user.email, role }
+    const payload = { sub: user.id, email: user.email, role, pv: 0 }
     const accessToken = this.jwtService.sign(payload)
 
     const rawToken = this.tokenHashService.generateToken()
@@ -106,7 +106,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
           this.consentRepo.record({
             userId,
             type,
-            policyVersion: POLICY_VERSION,
+            policyVersion: POLICY_VERSIONS[type],
             ipAddress: command.ipAddress,
             userAgent: command.userAgent,
           }),

@@ -1,0 +1,23 @@
+{
+  "negative_amount": "El monto no puede ser negativo",
+  "account_not_verified": "El fotógrafo aún no configuró sus cobros",
+  "account_not_found": "No hay una cuenta de cobros configurada para este evento",
+  "card_unavailable": "Este evento no acepta pago con tarjeta. Elige transferencia bancaria.",
+  "order_context_missing": "No se encontró la información de la orden",
+  "invalid_phone": "El número de teléfono no tiene un formato válido",
+  "phone_not_registered": "Este número no está registrado en Payphone",
+  "invalid_credentials": "Las credenciales de Payphone no son válidas",
+  "order_not_payable": "Esta orden no admite pagos",
+  "transaction_not_found": "No se encontró la transacción",
+  "duplicate_transaction": "Esta transacción ya fue registrada",
+  "amount_mismatch": "El desglose de montos no suma el total",
+  "gateway_unavailable": "No se pudo contactar a Payphone",
+  "card_daily_limit": "Ya realizaste una compra hoy con esta tarjeta. Intenta con otra tarjeta o vuelve mañana.",
+  "split_not_enabled": "El reparto de pagos no está habilitado",
+  "order_not_yours": "Esta orden no te pertenece",
+  "receiver_verification_unavailable": "No se puede verificar el número en Payphone: faltan credenciales de la aplicación API",
+  "mixed_sellers": "No se pueden cobrar juntas órdenes de fotógrafos distintos",
+  "mixed_receivers": "Estos eventos no reciben el pago en la misma cuenta. Paga cada evento por separado",
+  "invalid_bank_details": "Los datos bancarios están incompletos",
+  "payout_method_already_exists": "Ya tienes una cuenta activa de este tipo. Edita la existente o elimínala antes de crear otra"
+}

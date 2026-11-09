@@ -12,8 +12,11 @@ import configuration from './config/configuration'
 import { validate } from './config/env.validation'
 import { AuthModule } from './modules/auth/auth.module'
 import { JwtAuthGuard } from './modules/auth/infrastructure/guards/jwt-auth.guard'
+import { BillingModule } from './modules/billing/billing.module'
 import { CartModule } from './modules/cart/cart.module'
 import { ClassificationsModule } from './modules/classifications/classifications.module'
+import { ContractsModule } from './modules/contracts/contracts.module'
+import { CostsModule } from './modules/costs/costs.module'
 import { DeliveriesModule } from './modules/deliveries/deliveries.module'
 import { EventAssetsModule } from './modules/event-assets/event-assets.module'
 import { EventTypesModule } from './modules/event-types/event-types.module'
@@ -24,18 +27,25 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { OperatorModule } from './modules/operator/operator.module'
 import { OrdersModule } from './modules/orders/orders.module'
 import { ParticipantCategoriesModule } from './modules/participant-categories/participant-categories.module'
+import { PaymentsModule } from './modules/payments/payments.module'
 import { PhotoCategoriesModule } from './modules/photo-categories/photo-categories.module'
 import { PhotosModule } from './modules/photos/photos.module'
 import { PreviewsModule } from './modules/previews/previews.module'
 import { PricingModule } from './modules/pricing/pricing.module'
+import { TenantsModule } from './modules/tenants/tenants.module'
 import { UsersModule } from './modules/users/users.module'
 import { AiPipelineModule } from './shared/ai-pipeline/ai-pipeline.module'
-import { RolesGuard } from './shared/auth'
+import { AuthorizationModule } from './shared/authorization/authorization.module'
+import { PermissionGuard } from './shared/authorization/infrastructure/guards/permission.guard'
 import { CloudflareModule } from './shared/cloudflare/cloudflare.module'
+import { CryptoModule } from './shared/crypto'
 import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
+import { PaymentGatewaysModule } from './shared/payment-gateways'
+import { RikuchiyModule } from './shared/rikuchiy/rikuchiy.module'
 import { StorageModule } from './shared/storage/storage.module'
+import { YupanaModule } from './shared/yupana/yupana.module'
 
 @Module({
   imports: [
@@ -79,13 +89,20 @@ import { StorageModule } from './shared/storage/storage.module'
     ]),
     EventEmitterModule.forRoot(),
     PrismaModule,
+    AuthorizationModule,
     StorageModule,
     CloudflareModule,
+    CryptoModule,
+    PaymentGatewaysModule,
     NotificationsModule,
     EmbeddingsModule,
     AiPipelineModule,
+    YupanaModule,
+    RikuchiyModule,
     CartModule,
     ClassificationsModule,
+    ContractsModule,
+    CostsModule,
     DeliveriesModule,
     EventAssetsModule,
     EventTypesModule,
@@ -94,19 +111,22 @@ import { StorageModule } from './shared/storage/storage.module'
     MailModule,
     OperatorModule,
     OrdersModule,
+    PaymentsModule,
     PricingModule,
     ParticipantCategoriesModule,
     PhotoCategoriesModule,
     PhotosModule,
     PreviewsModule,
+    TenantsModule,
     UsersModule,
+    BillingModule,
     AuthModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PermissionGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })

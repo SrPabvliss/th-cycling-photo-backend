@@ -14,15 +14,23 @@ export class PhotoCategoryReadRepository implements IPhotoCategoryReadRepository
     return record ? PhotoCategoryMapper.toEntity(record) : null
   }
 
-  async findByName(name: string): Promise<PhotoCategory | null> {
-    const record = await this.prisma.photoCategory.findFirst({ where: { name } })
+  async findClashing(name: string, tenantId: string | null): Promise<PhotoCategory | null> {
+    const record = await this.prisma.photoCategory.findFirst({
+      where: {
+        name: { equals: name.trim(), mode: 'insensitive' },
+        OR: [{ tenant_id: null }, ...(tenantId ? [{ tenant_id: tenantId }] : [])],
+      },
+    })
     return record ? PhotoCategoryMapper.toEntity(record) : null
   }
 
-  async getAll(): Promise<PhotoCategoryProjection[]> {
+  async getAvailable(tenantId: string | null): Promise<PhotoCategoryProjection[]> {
     const records = await this.prisma.photoCategory.findMany({
-      select: PhotoCategoryMapper.photoCategorySelectConfig,
-      orderBy: { name: 'asc' },
+      where: { OR: [{ tenant_id: null }, ...(tenantId ? [{ tenant_id: tenantId }] : [])] },
+      select: PhotoCategoryMapper.photoCategorySelect(
+        tenantId ? { event: { tenant_id: tenantId } } : { id: { in: [] } },
+      ),
+      orderBy: [{ tenant_id: { sort: 'asc', nulls: 'first' } }, { name: 'asc' }],
     })
     return records.map(PhotoCategoryMapper.toProjection)
   }
@@ -31,17 +39,7 @@ export class PhotoCategoryReadRepository implements IPhotoCategoryReadRepository
     const records = await this.prisma.eventPhotoCategory.findMany({
       where: { event_id: eventId },
       select: {
-        photo_category: {
-          select: {
-            id: true,
-            name: true,
-            _count: {
-              select: {
-                photos: { where: { event_id: eventId } },
-              },
-            },
-          },
-        },
+        photo_category: { select: PhotoCategoryMapper.photoCategorySelect({ event_id: eventId }) },
       },
       orderBy: { photo_category: { name: 'asc' } },
     })

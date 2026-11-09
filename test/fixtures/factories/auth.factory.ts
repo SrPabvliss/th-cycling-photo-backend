@@ -38,7 +38,7 @@ export async function createAuthenticatedUser(
     await prisma.userRole.create({ data: { user_id: user.id, role_id: dbRole.id } })
   }
 
-  const token = jwt.sign({ sub: user.id, email: user.email, role })
+  const token = jwt.sign({ sub: user.id, email: user.email, role, pv: 0 })
 
   return { userId: user.id, email: user.email, role, token }
 }

@@ -2,6 +2,10 @@ import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain
 import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import { PaginatedResult } from '@shared/application'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { AppException } from '@shared/domain'
 import {
@@ -20,6 +24,7 @@ export class GetRetouchQueueHandler implements IQueryHandler<GetRetouchQueueQuer
     @Inject(OPERATOR_RETOUCH_READ_REPOSITORY)
     private readonly retouchRead: IOperatorRetouchReadRepository,
     private readonly cdn: CdnUrlBuilder,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
   ) {}
 
   async execute(
@@ -30,7 +35,8 @@ export class GetRetouchQueueHandler implements IQueryHandler<GetRetouchQueueQuer
       throw AppException.notFound('Event', query.eventSlug)
     }
 
-    if (query.userRole !== 'admin') {
+    const seesAllEvents = await this.authz.can(query.operatorId, 'event.read.all')
+    if (!seesAllEvents) {
       const isAssigned = await this.retouchRead.isOperatorAssigned(event.id, query.operatorId)
       if (!isAssigned) {
         throw AppException.forbidden('operator.not_assigned_to_event')

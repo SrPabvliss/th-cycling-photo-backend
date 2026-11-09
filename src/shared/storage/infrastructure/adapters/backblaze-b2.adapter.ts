@@ -46,6 +46,19 @@ export class BackblazeB2Adapter implements IStorageAdapter {
   }
 
   /** Uploads a file to Backblaze B2 and returns the storage key and public URL. */
+  async download(key: string): Promise<Buffer> {
+    try {
+      const response = await this.client.send(
+        new GetObjectCommand({ Bucket: this.bucketName, Key: key }),
+      )
+      if (!response.Body) throw new Error(`Empty body for ${key}`)
+      return Buffer.from(await response.Body.transformToByteArray())
+    } catch (error) {
+      this.logger.error(`Failed to download file: ${key}`, error)
+      throw AppException.externalService('BackblazeB2', error as Error)
+    }
+  }
+
   async upload(params: UploadParams): Promise<UploadResult> {
     try {
       await this.client.send(

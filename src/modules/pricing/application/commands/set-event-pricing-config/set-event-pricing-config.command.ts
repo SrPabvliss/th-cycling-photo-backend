@@ -4,5 +4,6 @@ export class SetEventPricingConfigCommand {
   constructor(
     public readonly eventId: string,
     public readonly config: RawPricingConfig,
+    public readonly setById: string,
   ) {}
 }

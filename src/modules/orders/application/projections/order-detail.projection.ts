@@ -1,3 +1,19 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { OrderBillingProjection } from './order-billing.projection'
+import { OrderInvoiceProjection } from './order-invoice.projection'
+
+export class OrderPayoutMethodProjection {
+  @ApiProperty() provider: string
+  @ApiProperty() isActive: boolean
+  @ApiProperty() sortOrder: number
+  @ApiPropertyOptional({ nullable: true }) receiverIdentifier: string | null
+  @ApiPropertyOptional({ nullable: true }) bankName: string | null
+  @ApiPropertyOptional({ nullable: true }) accountNumber: string | null
+  @ApiPropertyOptional({ nullable: true }) accountType: string | null
+  @ApiPropertyOptional({ nullable: true }) accountHolder: string | null
+  @ApiPropertyOptional({ nullable: true }) holderIdentification: string | null
+}
+
 export class OrderPhotoProjection {
   id: string
   filename: string
@@ -11,6 +27,16 @@ export class OrderDeliveryLinkProjection {
   status: string
   expiresAt: Date
   downloadCount: number
+  /** Ready-to-send message for this link. Built here so every send point says the same thing. */
+  whatsappTemplate: string
+}
+
+/**
+ * What the repository can read. The message needs the public delivery base URL, which is
+ * configuration, so only the query handler can finish the projection.
+ */
+export type RawOrderDetailProjection = Omit<OrderDetailProjection, 'deliveryLink' | 'invoice'> & {
+  deliveryLink: Omit<OrderDeliveryLinkProjection, 'whatsappTemplate'> | null
 }
 
 export class OrderDetailProjection {
@@ -38,14 +64,21 @@ export class OrderDetailProjection {
   snapLastName: string | null
   /** Snap WhatsApp at time of order */
   snapWhatsapp: string | null
+  customerPrimaryPhone: string | null
   /** Snap email at time of order */
   snapEmail: string | null
+  eventId: string
   /** Event name */
   eventName: string
+  /** Tenant that owns the order's event. Shown to TitanTV only. */
+  organizerName: string
   /** Order subtotal (Decimal serialized as string to preserve precision) */
   subtotal: string | null
   /** Currency code snapshot at time of order (e.g. USD) */
   snapCurrency: string | null
+  paymentMethod: string | null
+  @ApiPropertyOptional({ type: [OrderPayoutMethodProjection] })
+  payoutMethods?: OrderPayoutMethodProjection[]
   /** Preview link token that originated this order (nullable) */
   previewLinkToken: string | null
   /** Retouch progress for the order */
@@ -54,4 +87,8 @@ export class OrderDetailProjection {
   photos: OrderPhotoProjection[]
   /** Delivery link (null if not yet generated) */
   deliveryLink: OrderDeliveryLinkProjection | null
+  /** Billing snapshot taken when the order was placed (null when the buyer asked for no invoice) */
+  billing: OrderBillingProjection | null
+  /** Electronic invoice follow-up (null when no invoice was ever requested) */
+  invoice: OrderInvoiceProjection | null
 }

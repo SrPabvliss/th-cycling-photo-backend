@@ -42,7 +42,12 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
     const passwordValid = compareSync(command.password, user.passwordHash)
     if (!passwordValid) throw AppException.businessRule('auth.invalid_credentials')
 
-    const payload = { sub: user.id, email: user.email, role: user.role }
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      pv: user.permissionsVersion,
+    }
     const accessToken = this.jwtService.sign(payload)
 
     const rawToken = this.tokenHashService.generateToken()

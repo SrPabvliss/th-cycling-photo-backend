@@ -1,4 +1,5 @@
 import { AppException } from '@shared/domain'
+import { EventStatus } from '../value-objects/event-status.vo'
 import { Event } from './event.entity'
 
 describe('Event Entity', () => {
@@ -7,6 +8,8 @@ describe('Event Entity', () => {
   const futureEnd = new Date(futureStart)
   futureEnd.setDate(futureEnd.getDate() + 2)
 
+  const testTenantId = '11111111-1111-4111-8111-111111111111'
+
   const validData = {
     name: 'Vuelta Ciclística de Ambato',
     startDate: futureStart,
@@ -14,6 +17,7 @@ describe('Event Entity', () => {
     provinceId: 18 as number | null,
     cantonId: 1 as number | null,
     eventTypeId: 1,
+    tenantId: testTenantId,
   }
 
   describe('create', () => {
@@ -22,6 +26,7 @@ describe('Event Entity', () => {
 
       expect(event).toBeInstanceOf(Event)
       expect(event.id).toBeDefined()
+      expect(event.tenantId).toBe(testTenantId)
       expect(event.name).toBe(validData.name)
       expect(event.slug).toBe('vuelta-ciclistica-de-ambato')
       expect(event.startDate).toBe(futureStart)
@@ -172,6 +177,7 @@ describe('Event Entity', () => {
       const pastEnd = new Date('2020-01-02')
       const event = Event.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
+        tenantId: testTenantId,
         name: 'Past Event',
         slug: 'past-event',
         startDate: pastStart,
@@ -180,6 +186,9 @@ describe('Event Entity', () => {
         cantonId: null,
         eventTypeId: 1,
         status: 'active',
+        snapPublicName: null,
+        snapWatermarkStorageKey: null,
+        snapWhatsappNumber: null,
         createdAt: new Date('2020-01-01'),
         updatedAt: new Date('2020-06-01'),
         deletedAt: null,
@@ -198,6 +207,7 @@ describe('Event Entity', () => {
       const deletedDate = new Date('2024-06-15')
       const event = Event.fromPersistence({
         id: '550e8400-e29b-41d4-a716-446655440000',
+        tenantId: testTenantId,
         name: 'Archived Event',
         slug: 'archived-event',
         startDate: new Date('2024-01-01'),
@@ -206,6 +216,9 @@ describe('Event Entity', () => {
         cantonId: 1,
         eventTypeId: 1,
         status: 'archived',
+        snapPublicName: null,
+        snapWatermarkStorageKey: null,
+        snapWhatsappNumber: null,
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date('2024-06-15'),
         deletedAt: deletedDate,
@@ -225,6 +238,7 @@ describe('Event Entity', () => {
       provinceId: 18,
       cantonId: null,
       eventTypeId: 1,
+      tenantId: testTenantId,
     }
 
     it('accepts past start dates', () => {
@@ -259,6 +273,49 @@ describe('Event Entity', () => {
       const event = Event.create(baseInput)
       expect((event as unknown as Record<string, unknown>).description).toBeUndefined()
       expect((event as unknown as Record<string, unknown>).isFeatured).toBeUndefined()
+    })
+  })
+
+  describe('assertNotFrozen', () => {
+    const buildEvent = (isFrozen: boolean) =>
+      Event.fromPersistence({
+        id: crypto.randomUUID(),
+        tenantId: crypto.randomUUID(),
+        name: 'Vuelta al Cotopaxi',
+        slug: 'vuelta-al-cotopaxi',
+        startDate: new Date('2026-06-15'),
+        endDate: new Date('2026-06-17'),
+        provinceId: null,
+        cantonId: null,
+        eventTypeId: 1,
+        status: EventStatus.ACTIVE,
+        snapPublicName: null,
+        snapWatermarkStorageKey: null,
+        snapWhatsappNumber: null,
+        isFrozen,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      })
+
+    it('throws when the event is frozen', () => {
+      expect(() => buildEvent(true).assertNotFrozen()).toThrow(AppException)
+    })
+
+    it('passes when the event is not frozen', () => {
+      expect(() => buildEvent(false).assertNotFrozen()).not.toThrow()
+    })
+
+    it('setFrozen toggles the flag and timestamp', () => {
+      const event = buildEvent(false)
+
+      event.setFrozen(true)
+      expect(event.isFrozen).toBe(true)
+      expect(event.frozenAt).toBeInstanceOf(Date)
+
+      event.setFrozen(false)
+      expect(event.isFrozen).toBe(false)
+      expect(event.frozenAt).toBeNull()
     })
   })
 })

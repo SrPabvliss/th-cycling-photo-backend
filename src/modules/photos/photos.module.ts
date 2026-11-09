@@ -15,9 +15,13 @@ import { DeletePhotoColorHandler } from '@photos/application/commands/delete-pho
 import { GeneratePresignedUrlHandler } from '@photos/application/commands/generate-presigned-url/generate-presigned-url.handler'
 import { GenerateRetouchedPresignedUrlHandler } from '@photos/application/commands/generate-retouched-presigned-url/generate-retouched-presigned-url.handler'
 import { MarkPhotoReviewedHandler } from '@photos/application/commands/mark-photo-reviewed/mark-photo-reviewed.handler'
+import { ReapStalledPhotosHandler } from '@photos/application/commands/reap-stalled-photos/reap-stalled-photos.handler'
+import { ReclassifyPhotosHandler } from '@photos/application/commands/reclassify-photos/reclassify-photos.handler'
 import { SetPhotoRetouchFlagHandler } from '@photos/application/commands/set-photo-retouch-flag/set-photo-retouch-flag.handler'
 import { FindSimilarPhotosHandler } from '@photos/application/queries/find-similar-photos/find-similar-photos.handler'
+import { GetClassificationFailuresHandler } from '@photos/application/queries/get-classification-failures/get-classification-failures.handler'
 import { GetDownloadManifestHandler } from '@photos/application/queries/get-download-manifest/get-download-manifest.handler'
+import { GetGalleryFacetsHandler } from '@photos/application/queries/get-gallery-facets/get-gallery-facets.handler'
 import { GetPendingRetouchHandler } from '@photos/application/queries/get-pending-retouch/get-pending-retouch.handler'
 import { GetPhotoDetailHandler } from '@photos/application/queries/get-photo-detail/get-photo-detail.handler'
 import { GetPhotoDetailBySlugHandler } from '@photos/application/queries/get-photo-detail-by-slug/get-photo-detail-by-slug.handler'
@@ -30,17 +34,24 @@ import { SearchPhotosHandler } from '@photos/application/queries/search-photos/s
 import {
   CORRECTION_REPOSITORY,
   PHOTO_BIB_WRITE_REPOSITORY,
+  PHOTO_CLASSIFICATION_QUEUE,
   PHOTO_COLOR_WRITE_REPOSITORY,
   PHOTO_READ_REPOSITORY,
   PHOTO_WRITE_REPOSITORY,
 } from '@photos/domain/ports'
+import { BullPhotoClassificationQueue } from '@photos/infrastructure/adapters/bull-photo-classification-queue.adapter'
 import { EmbeddingGenerationProcessor } from '@photos/infrastructure/processors/embedding-generation.processor'
 import { PhotoClassificationProcessor } from '@photos/infrastructure/processors/photo-classification.processor'
+import {
+  PHOTO_PROCESSING_REAPER_QUEUE,
+  PhotoProcessingReaperProcessor,
+} from '@photos/infrastructure/processors/photo-processing-reaper.processor'
 import { CorrectionRepository } from '@photos/infrastructure/repositories/correction.repository'
 import { PhotoBibWriteRepository } from '@photos/infrastructure/repositories/photo-bib-write.repository'
 import { PhotoColorWriteRepository } from '@photos/infrastructure/repositories/photo-color-write.repository'
 import { PhotoReadRepository } from '@photos/infrastructure/repositories/photo-read.repository'
 import { PhotoWriteRepository } from '@photos/infrastructure/repositories/photo-write.repository'
+import { PhotoProcessingReaperSchedulerService } from '@photos/infrastructure/services/photo-processing-reaper-scheduler.service'
 import { PhotosController } from '@photos/presentation/controllers/photos.controller'
 import { PreviewsModule } from '@previews/previews.module'
 import { ClassificationsModule } from '../classifications/classifications.module'
@@ -60,10 +71,14 @@ const CommandHandlers = [
   GeneratePresignedUrlHandler,
   GenerateRetouchedPresignedUrlHandler,
   MarkPhotoReviewedHandler,
+  ReapStalledPhotosHandler,
+  ReclassifyPhotosHandler,
   SetPhotoRetouchFlagHandler,
 ]
 const QueryHandlers = [
   FindSimilarPhotosHandler,
+  GetClassificationFailuresHandler,
+  GetGalleryFacetsHandler,
   GetPhotosListHandler,
   GetPhotoDetailHandler,
   GetPhotoDetailBySlugHandler,
@@ -79,7 +94,11 @@ const QueryHandlers = [
 @Module({
   imports: [
     CqrsModule,
-    BullModule.registerQueue({ name: 'embedding-generation' }, { name: 'photo-classification' }),
+    BullModule.registerQueue(
+      { name: 'embedding-generation' },
+      { name: 'photo-classification' },
+      { name: PHOTO_PROCESSING_REAPER_QUEUE },
+    ),
     forwardRef(() => EventsModule),
     forwardRef(() => OrdersModule),
     forwardRef(() => ClassificationsModule),
@@ -91,6 +110,9 @@ const QueryHandlers = [
     ...QueryHandlers,
     EmbeddingGenerationProcessor,
     PhotoClassificationProcessor,
+    PhotoProcessingReaperProcessor,
+    PhotoProcessingReaperSchedulerService,
+    { provide: PHOTO_CLASSIFICATION_QUEUE, useClass: BullPhotoClassificationQueue },
     { provide: PHOTO_READ_REPOSITORY, useClass: PhotoReadRepository },
     { provide: PHOTO_WRITE_REPOSITORY, useClass: PhotoWriteRepository },
     { provide: CORRECTION_REPOSITORY, useClass: CorrectionRepository },

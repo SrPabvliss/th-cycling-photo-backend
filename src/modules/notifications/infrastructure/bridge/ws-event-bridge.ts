@@ -12,6 +12,7 @@ import {
   type OrderPaidPayload,
   type OrderRetouchCompletedPayload,
   type PreviewViewedPayload,
+  type TenantContractAcceptedPayload,
 } from '@notifications/application/services/notification-events'
 import {
   type INotificationWriteRepository,
@@ -140,6 +141,18 @@ export class WsEventBridge {
       NotificationEvent.ORDER_RETOUCH_COMPLETED,
       'order:retouch_completed',
       payload as unknown as Record<string, unknown>,
+    )
+  }
+
+  @OnEvent(NotificationEvent.TENANT_CONTRACT_ACCEPTED, { async: true })
+  async handleTenantContractAccepted(payload: TenantContractAcceptedPayload): Promise<void> {
+    this.logger.debug(`Processing tenant_contract:accepted for ${payload.contractId}`)
+    await this.persistAndBroadcast(
+      NotificationEvent.TENANT_CONTRACT_ACCEPTED,
+      'tenant_contract:accepted',
+      payload as unknown as Record<string, unknown>,
+      [],
+      payload.acceptedBy,
     )
   }
 }

@@ -19,7 +19,10 @@ import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { JwtService } from '@nestjs/jwt'
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
-import { CurrentUser, type ICurrentUser, Public, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
+import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
+import { AllowedWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import type { Request } from 'express'
 
@@ -103,6 +106,7 @@ export class CartController {
     return this.commandBus.execute(command)
   }
 
+  @Authenticated()
   @Post('merge')
   @SuccessMessage('success.UPDATED', { entity: 'entities.cart' })
   @ApiOperation({ summary: 'Merge anonymous cart into authenticated user cart' })
@@ -115,7 +119,8 @@ export class CartController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('customer')
+  @RequirePermission('cart.checkout')
+  @AllowedWhenFrozen()
   @Post('checkout')
   @SuccessMessage('success.CREATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Checkout the cart — creates orders per event' })
@@ -136,6 +141,8 @@ export class CartController {
         bibNumber: i.bibNumber ?? null,
         snapCategoryName: i.snapCategoryName ?? null,
       })),
+      dto.method,
+      dto.billingAccountId,
     )
     return this.commandBus.execute(command)
   }

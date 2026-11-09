@@ -1,52 +1,57 @@
 import { Reflector } from '@nestjs/core'
-import { ROLES_KEY } from '@shared/auth'
+import { PERMISSION_KEY } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { OperatorController } from './operator.controller'
 
-describe('OperatorController (roles metadata)', () => {
+describe('OperatorController (permission metadata)', () => {
   const reflector = new Reflector()
 
-  const getRoles = (methodName: keyof OperatorController): string[] | undefined => {
+  const getPermission = (methodName: keyof OperatorController): string | undefined => {
     const handler = OperatorController.prototype[methodName] as unknown as (
       ...args: unknown[]
     ) => unknown
-    return reflector.get<string[]>(ROLES_KEY, handler)
+    return reflector.get<string>(PERMISSION_KEY, handler)
   }
 
-  describe('admin + operator endpoints', () => {
-    it('getReviewQueue accepts admin and operator', () => {
-      expect(getRoles('getReviewQueue')).toEqual(expect.arrayContaining(['admin', 'operator']))
+  // Task 12 replaced `@Roles` with `@RequirePermission` on this controller
+  // per Appendix A of the TIT-38 plan. `@Roles` is removed from these
+  // routes (RolesGuard passes through when no metadata is present), so
+  // this spec now asserts the new permission key instead of the legacy role
+  // list it used to check.
+  describe('operator dashboard endpoints (dashboard.operator.read)', () => {
+    it('getSummary requires dashboard.operator.read', () => {
+      expect(getPermission('getSummary')).toBe('dashboard.operator.read')
     })
 
-    it('getRetouchQueue accepts admin and operator', () => {
-      expect(getRoles('getRetouchQueue')).toEqual(expect.arrayContaining(['admin', 'operator']))
+    it('getActiveEvents requires dashboard.operator.read', () => {
+      expect(getPermission('getActiveEvents')).toBe('dashboard.operator.read')
     })
 
-    it('getRetouchOrders accepts admin and operator', () => {
-      expect(getRoles('getRetouchOrders')).toEqual(expect.arrayContaining(['admin', 'operator']))
+    it('getCompletedEvents requires dashboard.operator.read', () => {
+      expect(getPermission('getCompletedEvents')).toBe('dashboard.operator.read')
     })
 
-    it('getRetouchOrderDetail accepts admin and operator', () => {
-      expect(getRoles('getRetouchOrderDetail')).toEqual(
-        expect.arrayContaining(['admin', 'operator']),
-      )
+    it('getRecentActivity requires dashboard.operator.read', () => {
+      expect(getPermission('getRecentActivity')).toBe('dashboard.operator.read')
     })
   })
 
-  describe('operator-only endpoints', () => {
-    it('getSummary remains operator-only', () => {
-      expect(getRoles('getSummary')).toEqual(['operator'])
+  describe('review queue endpoint (dashboard.review_queue.read)', () => {
+    it('getReviewQueue requires dashboard.review_queue.read', () => {
+      expect(getPermission('getReviewQueue')).toBe('dashboard.review_queue.read')
+    })
+  })
+
+  describe('retouch endpoints (photo.retouch.read)', () => {
+    it('getRetouchOrderDetail requires photo.retouch.read', () => {
+      expect(getPermission('getRetouchOrderDetail')).toBe('photo.retouch.read')
     })
 
-    it('getActiveEvents remains operator-only', () => {
-      expect(getRoles('getActiveEvents')).toEqual(['operator'])
+    it('getRetouchOrders requires photo.retouch.read', () => {
+      expect(getPermission('getRetouchOrders')).toBe('photo.retouch.read')
     })
 
-    it('getCompletedEvents remains operator-only', () => {
-      expect(getRoles('getCompletedEvents')).toEqual(['operator'])
-    })
-
-    it('getRecentActivity remains operator-only', () => {
-      expect(getRoles('getRecentActivity')).toEqual(['operator'])
+    it('getRetouchQueue requires photo.retouch.read', () => {
+      expect(getPermission('getRetouchQueue')).toBe('photo.retouch.read')
     })
   })
 })

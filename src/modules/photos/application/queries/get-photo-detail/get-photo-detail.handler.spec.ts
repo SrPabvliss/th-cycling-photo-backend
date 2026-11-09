@@ -1,4 +1,6 @@
 import type { IPhotoReadRepository } from '@photos/domain/ports'
+import { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
 import { AppException } from '@shared/domain'
 import { GetPhotoDetailHandler } from './get-photo-detail.handler'
 import { GetPhotoDetailQuery } from './get-photo-detail.query'
@@ -6,6 +8,8 @@ import { GetPhotoDetailQuery } from './get-photo-detail.query'
 describe('GetPhotoDetailHandler', () => {
   let handler: GetPhotoDetailHandler
   let readRepo: jest.Mocked<IPhotoReadRepository>
+  let authz: jest.Mocked<IAuthorizationService>
+  const scope = EventScope.unrestricted()
 
   const photoDetail = {
     id: '550e8400-e29b-41d4-a716-446655440000',
@@ -27,6 +31,13 @@ describe('GetPhotoDetailHandler', () => {
     retouchedImageUrl: null,
     retouchedFileSize: null,
     retouchedAt: null,
+    photoCategoryId: null,
+    photoCategoryName: null,
+    orders: [],
+    position: 1,
+    eventPhotoCount: 1,
+    previousSlug: null,
+    nextSlug: null,
     bibs: [],
     colors: [],
   }
@@ -34,8 +45,10 @@ describe('GetPhotoDetailHandler', () => {
   beforeEach(() => {
     readRepo = {
       findById: jest.fn(),
+      findByIdInScope: jest.fn(),
       existsByEventAndFilename: jest.fn(),
       getPhotosList: jest.fn(),
+      getGalleryFacets: jest.fn(),
       getPhotoDetail: jest.fn(),
       getPhotoDetailBySlug: jest.fn(),
       getPhotoViewBySlug: jest.fn(),
@@ -46,7 +59,9 @@ describe('GetPhotoDetailHandler', () => {
       getClassifiedCountsByEventIds: jest.fn(),
       getAllPhotoKeysForEvent: jest.fn(),
       getResumePoint: jest.fn(),
+      getDistinctEventIdsForPhotoIds: jest.fn(),
       countAll: jest.fn(),
+      countPendingReview: jest.fn(),
       sumAllFileSize: jest.fn(),
       countByIds: jest.fn(),
       findSimilar: jest.fn(),
@@ -55,25 +70,48 @@ describe('GetPhotoDetailHandler', () => {
       getReviewQueueByEventIds: jest.fn(),
     } as jest.Mocked<IPhotoReadRepository>
 
-    handler = new GetPhotoDetailHandler(readRepo)
+    authz = {
+      can: jest.fn(),
+      assert: jest.fn(),
+      canAnywhere: jest.fn(),
+      resolveEventScope: jest.fn().mockResolvedValue(scope),
+    } as jest.Mocked<IAuthorizationService>
+
+    handler = new GetPhotoDetailHandler(readRepo, authz)
   })
 
   it('should return photo detail when photo exists', async () => {
     readRepo.getPhotoDetail.mockResolvedValue(photoDetail)
 
-    const query = new GetPhotoDetailQuery(photoDetail.id)
+    const query = new GetPhotoDetailQuery(photoDetail.id, 'u1')
     const result = await handler.execute(query)
 
     expect(result).toEqual(photoDetail)
-    expect(readRepo.getPhotoDetail).toHaveBeenCalledWith(photoDetail.id)
+    expect(authz.resolveEventScope).toHaveBeenCalledWith('u1', 'photo.read')
+    expect(readRepo.getPhotoDetail).toHaveBeenCalledWith(photoDetail.id, scope)
   })
 
   it('should throw 404 when photo does not exist', async () => {
     readRepo.getPhotoDetail.mockResolvedValue(null)
 
-    const query = new GetPhotoDetailQuery('non-existent-id')
+    const query = new GetPhotoDetailQuery('non-existent-id', 'u1')
 
     await expect(handler.execute(query)).rejects.toThrow(AppException)
-    expect(readRepo.getPhotoDetail).toHaveBeenCalledWith('non-existent-id')
+    expect(readRepo.getPhotoDetail).toHaveBeenCalledWith('non-existent-id', scope)
+  })
+
+  it('should throw 404 (not 403) when the photo exists but its event is outside the caller scope', async () => {
+    // The repository is the one enforcing this — an out-of-scope id simply
+    // does not match the query's nested `event: scope.toPrisma()` filter,
+    // so it returns null exactly like an unknown id. This test proves the
+    // handler propagates that as a 404 rather than special-casing it.
+    readRepo.getPhotoDetail.mockResolvedValue(null)
+    const restrictedScope = new EventScope(false, ['t1'], [])
+    authz.resolveEventScope.mockResolvedValue(restrictedScope)
+
+    const query = new GetPhotoDetailQuery('out-of-scope-id', 'u2')
+
+    await expect(handler.execute(query)).rejects.toThrow(AppException)
+    expect(readRepo.getPhotoDetail).toHaveBeenCalledWith('out-of-scope-id', restrictedScope)
   })
 })

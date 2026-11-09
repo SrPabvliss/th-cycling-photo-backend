@@ -1,6 +1,7 @@
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
+import { AppException } from '@shared/domain'
 import { UserPhone } from '@users/domain/entities'
 import type { IUserPhoneReadRepository, IUserPhoneWriteRepository } from '@users/domain/ports'
 import { USER_PHONE_READ_REPOSITORY, USER_PHONE_WRITE_REPOSITORY } from '@users/domain/ports'
@@ -14,6 +15,9 @@ export class AddUserPhoneHandler implements ICommandHandler<AddUserPhoneCommand>
   ) {}
 
   async execute(command: AddUserPhoneCommand): Promise<EntityIdProjection> {
+    const duplicate = await this.readRepo.findByUserIdAndNumber(command.userId, command.phoneNumber)
+    if (duplicate) throw AppException.businessRule('user_phone.duplicate_number')
+
     const phone = UserPhone.create({
       userId: command.userId,
       phoneNumber: command.phoneNumber,

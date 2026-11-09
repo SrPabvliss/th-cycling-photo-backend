@@ -1,4 +1,5 @@
 {
   "unsupported_type": "Only cover_image uploads are accepted.",
-  "invalid_storage_key": "The storage key does not match the expected asset path for this event."
+  "invalid_storage_key": "The storage key does not match the expected asset path for this event.",
+  "invalid_focal_point": "The focal point must sit between 0 and 1 on both axes"
 }

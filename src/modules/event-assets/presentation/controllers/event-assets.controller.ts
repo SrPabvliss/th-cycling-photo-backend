@@ -1,8 +1,20 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { EntityIdProjection } from '@shared/application'
-import { Public, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
+import { BlocksWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import {
   ConfirmAssetUploadCommand,
@@ -10,6 +22,8 @@ import {
   DeleteEventAssetCommand,
   GenerateAssetPresignedUrlCommand,
   GenerateAssetPresignedUrlDto,
+  SetAssetFocalPointCommand,
+  SetAssetFocalPointDto,
 } from '../../application/commands'
 import { AssetPresignedUrlProjection, EventAssetProjection } from '../../application/projections'
 import { GetEventAssetsQuery } from '../../application/queries'
@@ -39,7 +53,8 @@ export class EventAssetsController {
     return this.queryBus.execute(new GetEventAssetsQuery(eventId))
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('event_asset.presign')
+  @BlocksWhenFrozen()
   @Post(':assetType/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate presigned URL for asset upload' })
@@ -59,17 +74,20 @@ export class EventAssetsController {
     @Param('eventId') eventId: string,
     @Param('assetType') assetType: EventAssetType,
     @Body() dto: GenerateAssetPresignedUrlDto,
+    @CurrentUser() user: ICurrentUser,
   ) {
     const command = new GenerateAssetPresignedUrlCommand(
       eventId,
       assetType,
       dto.fileName,
       dto.contentType,
+      user.userId,
     )
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('event_asset.confirm')
+  @BlocksWhenFrozen()
   @Post(':assetType/confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.event_asset' })
   @ApiOperation({ summary: 'Confirm asset upload after presigned URL flow' })
@@ -90,6 +108,7 @@ export class EventAssetsController {
     @Param('eventId') eventId: string,
     @Param('assetType') assetType: EventAssetType,
     @Body() dto: ConfirmAssetUploadDto,
+    @CurrentUser() user: ICurrentUser,
   ) {
     const command = new ConfirmAssetUploadCommand(
       eventId,
@@ -97,11 +116,39 @@ export class EventAssetsController {
       dto.storageKey,
       dto.fileSize ? BigInt(dto.fileSize) : null,
       dto.mimeType ?? null,
+      user.userId,
+      dto.focalX,
+      dto.focalY,
     )
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('event_asset.confirm')
+  @BlocksWhenFrozen()
+  @Patch(':assetType/focal-point')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.event_asset' })
+  @ApiOperation({ summary: 'Move the crop origin of an asset without re-uploading it' })
+  @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
+  @ApiParam({ name: 'assetType', description: 'Asset type', enum: ['cover_image'] })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Focal point updated',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Event or asset not found' })
+  async setFocalPoint(
+    @Param('eventId') eventId: string,
+    @Param('assetType') assetType: EventAssetType,
+    @Body() dto: SetAssetFocalPointDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new SetAssetFocalPointCommand(eventId, assetType, dto.focalX, dto.focalY, user.userId),
+    )
+  }
+
+  @RequirePermission('event_asset.delete')
+  @BlocksWhenFrozen()
   @Delete(':assetType')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an event asset' })
@@ -115,7 +162,8 @@ export class EventAssetsController {
   async deleteAsset(
     @Param('eventId') eventId: string,
     @Param('assetType') assetType: EventAssetType,
+    @CurrentUser() user: ICurrentUser,
   ) {
-    await this.commandBus.execute(new DeleteEventAssetCommand(eventId, assetType))
+    await this.commandBus.execute(new DeleteEventAssetCommand(eventId, assetType, user.userId))
   }
 }

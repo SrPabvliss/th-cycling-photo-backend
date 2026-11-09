@@ -1,11 +1,18 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { Photo } from '@photos/domain/entities'
 import { type IPhotoWriteRepository, PHOTO_WRITE_REPOSITORY } from '@photos/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
+import { type IYupanaPhotoDeclarer, YUPANA_PHOTO_DECLARER } from '@shared/yupana/domain/ports'
 import type { Queue } from 'bullmq'
 import type { ConfirmBatchProjection } from '../../projections'
 import { ConfirmPhotoBatchCommand } from './confirm-photo-batch.command'
@@ -20,12 +27,27 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     @Inject(KV_STORAGE_ADAPTER) private readonly kvStorage: IKvStorageAdapter,
     @InjectQueue('embedding-generation') private readonly embeddingQueue: Queue,
     @InjectQueue('photo-classification') private readonly classificationQueue: Queue,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly prisma: PrismaService,
+    private readonly freeze: FreezeStateService,
+    @Inject(YUPANA_PHOTO_DECLARER) private readonly yupanaDeclarer: IYupanaPhotoDeclarer,
   ) {}
 
-  /** Validates event, checks objectKey prefixes, and batch-inserts photo metadata. */
+  /**
+   * Validates event, checks objectKey prefixes, and batch-inserts photo metadata. See
+   * `GeneratePresignedUrlHandler` for why the boundary check uses `scope.includesEvent()`.
+   */
   async execute(command: ConfirmPhotoBatchCommand): Promise<ConfirmBatchProjection> {
+    if (!command.audit) {
+      throw AppException.internal('confirm_photo_batch.missing_audit_context')
+    }
+    const scope = await this.authz.resolveEventScope(command.audit.userId, 'photo.upload')
     const event = await this.eventReadRepo.findById(command.eventId)
-    if (!event) throw AppException.notFound('Event', command.eventId)
+    if (!event || !scope.includesEvent(event)) {
+      throw AppException.notFound('Event', command.eventId)
+    }
+    await this.authz.assert(command.audit.userId, 'photo.upload', event.id)
+    await this.freeze.assertNotFrozen(command.eventId)
 
     const expectedPrefix = `events/${command.eventId}/`
     for (const item of command.photos) {
@@ -47,7 +69,33 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
       return photo
     })
 
-    const confirmed = await this.photoWriteRepo.saveMany(photos)
+    const confirmed = await this.prisma.$transaction(async (tx) => {
+      // Insert first, then charge the rows actually written — skipDuplicates
+      // means a retried batch must not burn quota it never used.
+      const insertedIds = new Set(await this.photoWriteRepo.saveMany(photos, tx))
+      const inserted = insertedIds.size
+      if (inserted === 0) return 0
+
+      const claimed = await this.photoWriteRepo.claimPhotoQuota(command.eventId, inserted, tx)
+      if (!claimed) {
+        const { photo_quota: quota, photos_uploaded: used } = await tx.event.findUniqueOrThrow({
+          where: { id: command.eventId },
+          select: { photo_quota: true, photos_uploaded: true },
+        })
+        throw AppException.businessRule('event.photo_quota_exceeded', false, {
+          quota,
+          used,
+          remaining: Math.max(0, (quota ?? 0) - used),
+        })
+      }
+
+      await this.yupanaDeclarer.declareStored(
+        photos.filter((photo) => insertedIds.has(photo.id)),
+        tx,
+      )
+
+      return inserted
+    })
 
     // Register slug→path mappings in Workers KV for CDN resolution
     const kvEntries = photos.map((photo) => ({

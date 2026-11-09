@@ -1,4 +1,13 @@
-export type MailTemplate = 'password-reset' | 'password-changed'
+export type MailTemplate =
+  | 'password-reset'
+  | 'password-changed'
+  | 'order-delivered'
+  | 'invoice-rejected'
+  | 'email-verification-code'
+  | 'email-changed-notice'
+  | 'tenant-contract-invitation'
+  | 'tenant-contact-request'
+  | 'tenant-contact-confirmation'
 
 export interface RenderedTemplate {
   html: string

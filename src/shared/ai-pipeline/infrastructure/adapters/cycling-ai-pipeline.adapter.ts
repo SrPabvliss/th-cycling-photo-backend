@@ -15,6 +15,7 @@ import type {
 import { HealthResponseV1Schema, PipelineResponseV1Schema } from './schemas-runtime'
 
 const SUPPORTED_SCHEMA_VERSIONS = new Set(['1.0', '1.1', '1.2'])
+const MODAL_CALL_ID_HEADER = 'modal-function-call-id'
 
 @Injectable()
 export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter {
@@ -24,7 +25,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
 
   constructor(config: ConfigService) {
     this.baseUrl = config.getOrThrow<string>('aiPipeline.baseUrl')
-    this.timeoutMs = config.get<number>('aiPipeline.timeoutMs', 15_000)
+    this.timeoutMs = config.get<number>('aiPipeline.timeoutMs', 120_000)
   }
 
   async classify(request: ClassificationPipelineRequest): Promise<ClassificationPipelineResponse> {
@@ -56,27 +57,20 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         signal: AbortSignal.timeout(this.timeoutMs),
       })
     } catch (error) {
-      this.logger.error(
-        `AI pipeline network failure: ${error instanceof Error ? error.message : String(error)}`,
-      )
-      throw new AppException(
-        'ai_pipeline.service_unavailable',
-        HttpStatus.BAD_GATEWAY,
-        ErrorCode.EXTERNAL_SERVICE,
-        false,
-        { cause: error instanceof Error ? error.message : String(error) },
-      )
+      throw this.unavailable(error, null)
     }
+
+    const modalCallId = response.headers.get(MODAL_CALL_ID_HEADER)
 
     if (response.status >= 500) {
       const body = await response.text().catch(() => 'no body')
-      this.logger.error(`AI pipeline 5xx ${response.status}: ${body}`)
+      this.logger.error(`AI pipeline answered ${response.status}: ${body}`)
       throw new AppException(
         'ai_pipeline.service_unavailable',
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { httpStatus: response.status, body },
+        { reason: 'http_5xx', httpStatus: response.status, body, modalCallId },
       )
     }
 
@@ -88,11 +82,16 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         HttpStatus.UNPROCESSABLE_ENTITY,
         ErrorCode.BUSINESS_RULE,
         false,
-        { httpStatus: response.status, body },
+        { httpStatus: response.status, body, modalCallId },
       )
     }
 
-    const json = await response.json().catch(() => null)
+    let json: unknown = null
+    try {
+      json = await response.json()
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw this.unavailable(error, modalCallId)
+    }
 
     const parsed = PipelineResponseV1Schema.safeParse(json)
     if (!parsed.success) {
@@ -105,7 +104,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { issue: firstIssue },
+        { issue: firstIssue, modalCallId },
       )
     }
     const raw = parsed.data
@@ -116,7 +115,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { received: raw.schema_version, expected: '1.0 | 1.1 | 1.2' },
+        { received: raw.schema_version, expected: '1.0 | 1.1 | 1.2', modalCallId },
       )
     }
 
@@ -126,7 +125,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
         HttpStatus.BAD_GATEWAY,
         ErrorCode.EXTERNAL_SERVICE,
         false,
-        { sent: request.imageId, received: raw.image_id },
+        { sent: request.imageId, received: raw.image_id, modalCallId },
       )
     }
 
@@ -144,6 +143,7 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
     return {
       schemaVersion: raw.schema_version,
       imageId: raw.image_id,
+      modalCallId,
       detections: raw.detections.map(
         (d): DetectionDto => ({
           className: d.class_name,
@@ -199,6 +199,21 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
       ),
       modelVersions: raw.model_versions,
     }
+  }
+
+  private unavailable(error: unknown, modalCallId: string | null): AppException {
+    const cause = error instanceof Error ? error.message : String(error)
+    const timedOut =
+      error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
+    if (timedOut) this.logger.error(`AI pipeline timed out after ${this.timeoutMs}ms`)
+    else this.logger.error(`AI pipeline network failure: ${cause}`)
+    return new AppException(
+      'ai_pipeline.service_unavailable',
+      HttpStatus.BAD_GATEWAY,
+      ErrorCode.EXTERNAL_SERVICE,
+      false,
+      { reason: timedOut ? 'timeout' : 'network', cause, modalCallId },
+    )
   }
 
   async healthCheck(): Promise<HealthCheckResponse> {

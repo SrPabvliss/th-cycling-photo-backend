@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@generated/prisma/client'
+import { getPlatformTenantId } from './tenant.factory'
 
 /**
  * Creates a minimal User fixture. Adjusts to actual schema:
@@ -29,6 +30,7 @@ export async function createEventFixture(prisma: PrismaClient): Promise<string> 
     create: { name: 'road_race' },
     select: { id: true },
   })
+  const tenantId = await getPlatformTenantId(prisma)
 
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const event = await prisma.event.create({
@@ -38,6 +40,7 @@ export async function createEventFixture(prisma: PrismaClient): Promise<string> 
       start_date: new Date(),
       end_date: new Date(),
       event_type_id: eventType.id,
+      tenant_id: tenantId,
     },
     select: { id: true },
   })

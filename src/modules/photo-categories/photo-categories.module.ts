@@ -1,6 +1,7 @@
 import { EventsModule } from '@events/events.module'
 import { Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
+import { UsersModule } from '@users/users.module'
 import { AssignCategoryToEventHandler } from './application/commands/assign-category-to-event/assign-category-to-event.handler'
 import { CreatePhotoCategoryHandler } from './application/commands/create-photo-category/create-photo-category.handler'
 import { UnassignCategoryFromEventHandler } from './application/commands/unassign-category-from-event/unassign-category-from-event.handler'
@@ -19,7 +20,7 @@ const CommandHandlers = [
 const QueryHandlers = [GetAllCategoriesHandler, GetPhotoCategoriesHandler]
 
 @Module({
-  imports: [CqrsModule, EventsModule],
+  imports: [CqrsModule, EventsModule, UsersModule],
   controllers: [PhotoCategoriesController],
   providers: [
     ...CommandHandlers,

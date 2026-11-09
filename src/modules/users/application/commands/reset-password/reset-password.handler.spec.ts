@@ -26,14 +26,19 @@ describe('ResetPasswordHandler', () => {
     readRepo = {
       findById: jest.fn(),
       findByEmail: jest.fn(),
+      findTenantId: jest.fn(),
       getUsersList: jest.fn(),
       getUserDetail: jest.fn(),
       findActiveAdminIds: jest.fn(),
       getBuyersList: jest.fn(),
+      getBuyersStats: jest.fn(),
+      getBuyerDetail: jest.fn(),
+      getMyProfile: jest.fn(),
     } as jest.Mocked<IUserReadRepository>
 
     writeRepo = {
       save: jest.fn(),
+      updateProfile: jest.fn(),
     } as jest.Mocked<IUserWriteRepository>
 
     handler = new ResetPasswordHandler(readRepo, writeRepo)

@@ -1,7 +1,10 @@
+import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
+import { TEMPLATE_KEYS } from '@shared/authorization/domain/permission-template.constants'
 import { AppException } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
 import type {
+  AuthCredentialsProjection,
   AuthUserProjection,
   MeProjection,
   PasswordResetUserProjection,
@@ -16,10 +19,13 @@ export class AuthUserRepository implements IAuthUserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findByEmail(email: string): Promise<AuthUserProjection | null> {
-    const record = await this.prisma.user.findFirst({
-      where: { email },
-      include: { user_roles: { include: { role: true } } },
-    })
+    const include = { user_roles: { include: { role: true } } } as const
+    const record =
+      (await this.prisma.user.findFirst({ where: { email }, include })) ??
+      (await this.prisma.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+        include,
+      }))
 
     if (!record) return null
 
@@ -29,7 +35,25 @@ export class AuthUserRepository implements IAuthUserRepository {
       passwordHash: record.password_hash,
       isActive: record.is_active,
       role: record.user_roles[0]?.role.name ?? 'operator',
+      permissionsVersion: record.permissions_version,
     }
+  }
+
+  async findSessionVersion(userId: string): Promise<{ isActive: boolean; version: number } | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { is_active: true, permissions_version: true },
+    })
+    return user ? { isActive: user.is_active, version: user.permissions_version } : null
+  }
+
+  async bumpSessionVersion(userId: string): Promise<number> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { permissions_version: { increment: 1 } },
+      select: { permissions_version: true },
+    })
+    return user.permissions_version
   }
 
   async updateLastLogin(userId: string): Promise<void> {
@@ -48,7 +72,12 @@ export class AuthUserRepository implements IAuthUserRepository {
         email: true,
         first_name: true,
         last_name: true,
+        email_verified_at: true,
+        is_protected: true,
         user_roles: { select: { role: { select: { name: true } } } },
+        customer_profile: { select: { id: true } },
+        tenant: { select: { name: true, public_name: true } },
+        permission_template: { select: { key: true } },
       },
     })
 
@@ -60,12 +89,31 @@ export class AuthUserRepository implements IAuthUserRepository {
       firstName: user.first_name,
       lastName: user.last_name,
       role: user.user_roles[0]?.role.name ?? 'customer',
+      emailVerified: user.email_verified_at !== null,
+      isProtected: user.is_protected,
+      hasPersonalProfile: user.customer_profile !== null,
+      tenantName: user.tenant ? (user.tenant.public_name ?? user.tenant.name) : null,
+      permissionTemplate: user.permission_template?.key ?? null,
     }
   }
 
   /** Registers a new user with role, profile, and phone in a single transaction. */
   async register(payload: RegisterUserPayload): Promise<RegisteredUserProjection> {
     return this.prisma.$transaction(async (tx) => {
+      // A user with no template resolves to zero permissions and fails closed everywhere — a
+      // buyer registered without one cannot check out. The migration backfilled existing users;
+      // this covers every user created from here on. Buyers stay `tenant_id = NULL` on purpose.
+      const customerTemplate = await tx.permissionTemplate.findUnique({
+        where: { key: TEMPLATE_KEYS.CUSTOMER },
+        select: { id: true },
+      })
+      if (!customerTemplate) {
+        // Never write a NULL template: that account is unusable and only raw SQL can repair it.
+        throw AppException.internal('authz.template_missing', {
+          template: TEMPLATE_KEYS.CUSTOMER,
+        })
+      }
+
       const createdUser = await tx.user.create({
         data: {
           email: payload.email,
@@ -73,6 +121,7 @@ export class AuthUserRepository implements IAuthUserRepository {
           first_name: payload.firstName,
           last_name: payload.lastName,
           is_active: true,
+          permission_template_id: customerTemplate.id,
         },
       })
 
@@ -112,7 +161,7 @@ export class AuthUserRepository implements IAuthUserRepository {
   /** Checks if a user with the given email already exists. */
   async findByEmailExists(email: string): Promise<boolean> {
     const user = await this.prisma.user.findFirst({
-      where: { email },
+      where: { email: { equals: email, mode: 'insensitive' } },
       select: { id: true },
     })
     return user !== null
@@ -151,13 +200,69 @@ export class AuthUserRepository implements IAuthUserRepository {
   }
 
   async findForPasswordReset(email: string): Promise<PasswordResetUserProjection | null> {
-    const user = await this.prisma.user.findFirst({
-      where: { email },
-      select: { id: true, first_name: true, is_active: true },
-    })
+    const select = { id: true, first_name: true, is_active: true } as const
+    const user =
+      (await this.prisma.user.findFirst({ where: { email }, select })) ??
+      (await this.prisma.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+        select,
+      }))
 
     if (!user) return null
 
     return { id: user.id, firstName: user.first_name, isActive: user.is_active }
+  }
+
+  async findCredentials(userId: string): Promise<AuthCredentialsProjection | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        first_name: true,
+        password_hash: true,
+        is_active: true,
+        is_protected: true,
+      },
+    })
+
+    if (!user) return null
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      passwordHash: user.password_hash,
+      isActive: user.is_active,
+      isProtected: user.is_protected,
+    }
+  }
+
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password_hash: passwordHash },
+    })
+  }
+
+  async markEmailVerified(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { email_verified_at: new Date() },
+    })
+  }
+
+  async applyEmailChange(userId: string, newEmail: string): Promise<void> {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { email: newEmail, email_verified_at: new Date() },
+      })
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw AppException.businessRule('auth.email_change_target_taken')
+      }
+      throw error
+    }
   }
 }

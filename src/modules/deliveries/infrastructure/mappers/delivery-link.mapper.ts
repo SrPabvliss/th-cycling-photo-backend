@@ -16,6 +16,22 @@ export function toPersistence(entity: DeliveryLink): Prisma.DeliveryLinkUnchecke
   }
 }
 
+/**
+ * The columns a regenerated link overwrites on the order's existing row. `id` and `order_id` stay
+ * as they are: the row is replaced in place, not inserted again.
+ */
+export function toReplacement(entity: DeliveryLink): Prisma.DeliveryLinkUncheckedUpdateInput {
+  return {
+    token: entity.token,
+    status: entity.status,
+    expires_at: entity.expiresAt,
+    first_downloaded_at: null,
+    last_downloaded_at: null,
+    download_count: 0,
+    created_at: entity.createdAt,
+  }
+}
+
 /** Converts a Prisma record to a domain entity. */
 export function toEntity(record: PrismaDeliveryLink): DeliveryLink {
   return DeliveryLink.fromPersistence({

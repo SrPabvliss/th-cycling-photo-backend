@@ -7,6 +7,7 @@ export class StoredRefreshTokenProjection {
   role: string
   /** Whether the user account is active */
   isActive: boolean
+  permissionsVersion: number
   /** When the token was revoked (null if still valid) */
   revokedAt: Date | null
   /** When the token expires */

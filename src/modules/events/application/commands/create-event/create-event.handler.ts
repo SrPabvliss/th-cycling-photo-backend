@@ -1,5 +1,13 @@
+import type { EventCreatedProjection } from '@events/application/projections'
+import { EventConfigurationService } from '@events/application/services/event-configuration.service'
+import { assertMayChoosePayouts } from '@events/application/services/payout-selection-guard'
 import { Event } from '@events/domain/entities'
-import { EVENT_WRITE_REPOSITORY, type IEventWriteRepository } from '@events/domain/ports'
+import {
+  EVENT_PAYOUT_METHOD_REPOSITORY,
+  EVENT_WRITE_REPOSITORY,
+  type IEventPayoutMethodRepository,
+  type IEventWriteRepository,
+} from '@events/domain/ports'
 import {
   EVENT_OPERATOR_REPOSITORY,
   type IEventOperatorRepository,
@@ -7,7 +15,23 @@ import {
 import { LocationValidator } from '@locations/application/services'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import type { EntityIdProjection } from '@shared/application'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
+import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
+import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
+import { isSafeStorageKey } from '@shared/storage/domain/storage-key'
+import { type IUserReadRepository, USER_READ_REPOSITORY } from '@users/domain/ports'
+import {
+  CONTRACT_REPOSITORY,
+  type IContractRepository,
+} from '../../../../contracts/domain/ports/contract-repository.port'
+import {
+  type ITenantRepository,
+  TENANT_REPOSITORY,
+} from '../../../../tenants/domain/ports/tenant-repository.port'
 import { CreateEventCommand } from './create-event.command'
 
 @CommandHandler(CreateEventCommand)
@@ -17,34 +41,94 @@ export class CreateEventHandler implements ICommandHandler<CreateEventCommand> {
   constructor(
     @Inject(EVENT_WRITE_REPOSITORY) private readonly writeRepo: IEventWriteRepository,
     @Inject(EVENT_OPERATOR_REPOSITORY) private readonly operatorRepo: IEventOperatorRepository,
+    @Inject(USER_READ_REPOSITORY) private readonly userRepo: IUserReadRepository,
+    @Inject(TENANT_REPOSITORY) private readonly tenantRepo: ITenantRepository,
+    @Inject(CONTRACT_REPOSITORY) private readonly contractRepo: IContractRepository,
+    @Inject(EVENT_PAYOUT_METHOD_REPOSITORY)
+    private readonly payoutRepo: IEventPayoutMethodRepository,
+    @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly locationValidator: LocationValidator,
+    private readonly configService: EventConfigurationService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /** Creates a new event entity and persists it. */
-  async execute(command: CreateEventCommand): Promise<EntityIdProjection> {
+  async execute(command: CreateEventCommand): Promise<EventCreatedProjection> {
     await this.locationValidator.validate(command.provinceId, command.cantonId)
 
-    const event = Event.create({
-      name: command.name,
-      startDate: command.startDate,
-      endDate: command.endDate,
-      provinceId: command.provinceId,
-      cantonId: command.cantonId,
-      eventTypeId: command.eventTypeId,
+    // An event always belongs to its creator's tenant. Buyers and other
+    // tenant-less users cannot create events.
+    const tenantId = await this.userRepo.findTenantId(command.audit.userId)
+    if (!tenantId) {
+      throw AppException.businessRule('event.creator_tenant_required')
+    }
+
+    await assertMayChoosePayouts(
+      this.authz,
+      command.audit.userId,
+      command.configuration?.payoutMethods,
+    )
+
+    const { isPlatform, defaultEventPhotoQuota } = await this.tenantRepo.checkQuota(tenantId)
+
+    const eventId = crypto.randomUUID()
+    const config = await this.configService.materialise(tenantId, eventId, command.configuration)
+    this.configService.assertConfigurationComplete(config)
+
+    await this.configService.verifyNewPayphones(command.configuration?.payoutMethods)
+
+    const saved = await this.prisma.$transaction(async (tx) => {
+      let contractId: string | null = null
+      let photoQuota = defaultEventPhotoQuota
+
+      if (!isPlatform) {
+        const contract = await this.contractRepo.consumeSlot(tenantId, tx)
+        if (!contract) {
+          throw AppException.businessRule('event.no_contract_available')
+        }
+        contractId = contract.id
+        photoQuota = contract.photosPerEvent
+      }
+
+      const event = Event.create({
+        id: eventId,
+        name: command.name,
+        startDate: command.startDate,
+        endDate: command.endDate,
+        provinceId: command.provinceId,
+        cantonId: command.cantonId,
+        eventTypeId: command.eventTypeId,
+        tenantId,
+        photoQuota,
+        contractId,
+      })
+
+      event.audit.setCreatedBy(command.audit.userId)
+      event.applyBrandSnapshot(config.brand)
+
+      const persisted = await this.writeRepo.save(event, tx)
+      await this.payoutRepo.replaceForEvent(persisted.id, config.payoutMethods, tx)
+      return persisted
     })
 
-    if (command.audit) event.audit.setCreatedBy(command.audit.userId)
-
-    const saved = await this.writeRepo.save(event)
+    const watermarkKey = config.brand.watermarkStorageKey
+    if (watermarkKey && !isSafeStorageKey(watermarkKey)) {
+      this.logger.error(`Refusing to publish unsafe watermark key for event ${saved.id}`)
+    } else if (watermarkKey) {
+      await this.kv.write(`wm-${saved.id}`, watermarkKey).catch((err) => {
+        this.logger.error(`Failed to register watermark KV entry for event ${saved.id}`, err)
+      })
+    }
 
     // Auto-assign first available operator
     const operatorId = await this.operatorRepo.findFirstOperatorId()
     if (operatorId) {
-      const assignedById = command.audit?.userId ?? operatorId
+      const assignedById = command.audit.userId
       await this.operatorRepo.assign(saved.id, operatorId, assignedById)
       this.logger.log(`Auto-assigned operator ${operatorId} to event ${saved.id}`)
     }
 
-    return { id: saved.id }
+    return { id: saved.id, slug: saved.slug }
   }
 }

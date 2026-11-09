@@ -1,7 +1,7 @@
 import type { IEventReadRepository } from '@events/domain/ports'
-import { ForbiddenException } from '@nestjs/common'
 import { PaginatedResult, Pagination } from '@shared/application'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import { AppException } from '@shared/domain/exceptions/app.exception'
 import type { IOperatorRetouchReadRepository, OperatorRetouchOrderRow } from '../../../domain/ports'
 import { GetOperatorRetouchOrdersHandler } from './get-operator-retouch-orders.handler'
 import { GetOperatorRetouchOrdersQuery } from './get-operator-retouch-orders.query'
@@ -15,6 +15,7 @@ describe('GetOperatorRetouchOrdersHandler', () => {
     Pick<IOperatorRetouchReadRepository, 'findOperatorRetouchOrdersPage'>
   >
   let cdn: jest.Mocked<Pick<CdnUrlBuilder, 'internalUrl'>>
+  let authz: { can: jest.Mock }
 
   beforeEach(() => {
     eventRead = {
@@ -25,10 +26,12 @@ describe('GetOperatorRetouchOrdersHandler', () => {
       findOperatorRetouchOrdersPage: jest.fn(),
     }
     cdn = { internalUrl: jest.fn().mockReturnValue('https://cdn.test/thumb.jpg') }
+    authz = { can: jest.fn().mockResolvedValue(false) }
     handler = new GetOperatorRetouchOrdersHandler(
       eventRead as never,
       retouchRead as never,
       cdn as never,
+      authz as never,
     )
   })
 
@@ -88,9 +91,7 @@ describe('GetOperatorRetouchOrdersHandler', () => {
     eventRead.getAllAssignedEventIds.mockResolvedValue(['e-1'])
     eventRead.existsActiveEventBySlug.mockResolvedValue({ id: 'e-9', name: 'Other' })
 
-    await expect(handler.execute(baseQuery({ eventSlug: 'other' }))).rejects.toThrow(
-      ForbiddenException,
-    )
+    await expect(handler.execute(baseQuery({ eventSlug: 'other' }))).rejects.toThrow(AppException)
   })
 
   it('passes scope=completed to the repository', async () => {

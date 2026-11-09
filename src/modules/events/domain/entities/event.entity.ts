@@ -1,10 +1,12 @@
 import { AppException, AuditFields } from '@shared/domain'
 import slugify from 'slugify'
+import type { EventBrandSnapshot } from '../value-objects/event-brand-snapshot.vo'
 import { EventStatus, type EventStatusType } from '../value-objects/event-status.vo'
 
 export class Event {
   constructor(
     public readonly id: string,
+    public readonly tenantId: string,
     public name: string,
     public slug: string,
     public startDate: Date,
@@ -13,22 +15,36 @@ export class Event {
     public cantonId: number | null,
     public eventTypeId: number,
     public status: EventStatusType,
+    public snapPublicName: string | null,
+    public snapWatermarkStorageKey: string | null,
+    public snapWhatsappNumber: string | null,
+    public readonly photoQuota: number | null,
+    public readonly photosUploaded: number,
+    public isFrozen: boolean,
+    public frozenAt: Date | null,
     public readonly audit: AuditFields,
+    public readonly contractId: string | null = null,
   ) {}
 
   static create(data: {
+    id?: string
     name: string
     startDate: Date
     endDate: Date
     provinceId: number | null
     cantonId: number | null
     eventTypeId: number
+    tenantId: string
+    photoQuota?: number | null
+    photosUploaded?: number
+    contractId?: string | null
   }): Event {
     Event.validateName(data.name)
     Event.validateDateRange(data.startDate, data.endDate)
 
     return new Event(
-      crypto.randomUUID(),
+      data.id ?? crypto.randomUUID(),
+      data.tenantId,
       data.name,
       Event.generateSlug(data.name),
       data.startDate,
@@ -37,7 +53,16 @@ export class Event {
       data.cantonId,
       data.eventTypeId,
       EventStatus.ACTIVE,
+      null,
+      null,
+      null,
+      // copied at creation, not referenced, so raising the tenant default never re-caps existing events
+      data.photoQuota ?? null,
+      data.photosUploaded ?? 0,
+      false,
+      null,
       AuditFields.initialize(),
+      data.contractId ?? null,
     )
   }
 
@@ -86,6 +111,25 @@ export class Event {
     this.audit.markUpdated()
   }
 
+  setFrozen(frozen: boolean): void {
+    this.isFrozen = frozen
+    this.frozenAt = frozen ? new Date() : null
+    this.audit.markUpdated()
+  }
+
+  assertNotFrozen(): void {
+    if (this.isFrozen) {
+      throw AppException.businessRule('event.frozen_not_editable')
+    }
+  }
+
+  applyBrandSnapshot(brand: EventBrandSnapshot): void {
+    this.snapPublicName = brand.publicName
+    this.snapWatermarkStorageKey = brand.watermarkStorageKey
+    this.snapWhatsappNumber = brand.whatsappNumber
+    this.audit.markUpdated()
+  }
+
   static generateSlug(name: string): string {
     return slugify(name, { lower: true, strict: true, locale: 'es' })
   }
@@ -104,6 +148,7 @@ export class Event {
 
   static fromPersistence(data: {
     id: string
+    tenantId: string
     name: string
     slug: string
     startDate: Date
@@ -112,14 +157,23 @@ export class Event {
     cantonId: number | null
     eventTypeId: number
     status: EventStatusType
+    snapPublicName: string | null
+    snapWatermarkStorageKey: string | null
+    snapWhatsappNumber: string | null
+    photoQuota?: number | null
+    photosUploaded?: number
+    isFrozen?: boolean
+    frozenAt?: Date | null
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
     createdById?: string | null
     updatedById?: string | null
+    contractId?: string | null
   }): Event {
     return new Event(
       data.id,
+      data.tenantId,
       data.name,
       data.slug,
       data.startDate,
@@ -128,6 +182,13 @@ export class Event {
       data.cantonId,
       data.eventTypeId,
       data.status,
+      data.snapPublicName,
+      data.snapWatermarkStorageKey,
+      data.snapWhatsappNumber,
+      data.photoQuota ?? null,
+      data.photosUploaded ?? 0,
+      data.isFrozen ?? false,
+      data.frozenAt ?? null,
       AuditFields.fromPersistence({
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
@@ -135,6 +196,7 @@ export class Event {
         createdById: data.createdById,
         updatedById: data.updatedById,
       }),
+      data.contractId ?? null,
     )
   }
 }

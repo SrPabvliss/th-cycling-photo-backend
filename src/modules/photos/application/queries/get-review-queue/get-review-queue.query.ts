@@ -6,5 +6,6 @@ export class GetReviewQueueQuery {
     public readonly eventSlug: string,
     public readonly pagination: Pagination,
     public readonly status: ReviewQueueStatusFilter,
+    public readonly userId: string,
   ) {}
 }

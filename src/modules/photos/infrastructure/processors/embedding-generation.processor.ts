@@ -4,6 +4,8 @@ import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { EMBEDDING_ADAPTER, type IEmbeddingAdapter } from '@shared/embeddings'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
+import { type IYupanaOutboxRepository, YUPANA_OUTBOX_REPOSITORY } from '@shared/yupana/domain/ports'
+import { YupanaUsageReport } from '@shared/yupana/domain/yupana-usage-report'
 import type { Job } from 'bullmq'
 
 export interface EmbeddingGenerationJobData {
@@ -24,6 +26,7 @@ export class EmbeddingGenerationProcessor extends WorkerHost {
     @Inject(EMBEDDING_ADAPTER) private readonly embeddingAdapter: IEmbeddingAdapter,
     private readonly prisma: PrismaService,
     private readonly cdn: CdnUrlBuilder,
+    @Inject(YUPANA_OUTBOX_REPOSITORY) private readonly yupanaOutbox: IYupanaOutboxRepository,
   ) {
     super()
   }
@@ -52,6 +55,15 @@ export class EmbeddingGenerationProcessor extends WorkerHost {
       const base64 = `data:image/jpeg;base64,${buffer.toString('base64')}`
 
       const result = await this.embeddingAdapter.generateImageEmbedding(base64)
+
+      await this.yupanaOutbox.enqueue([
+        YupanaUsageReport.voyagePixels({
+          photoId,
+          eventId: photo.eventId,
+          imagePixels: result.imagePixels,
+          occurredAt: new Date(),
+        }),
+      ])
 
       const vectorSql = `[${result.embedding.join(',')}]`
       await this.prisma.$executeRawUnsafe(

@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { EventEmitter2 } from '@nestjs/event-emitter'
@@ -12,9 +13,20 @@ import {
   PHOTO_READ_REPOSITORY,
   PHOTO_WRITE_REPOSITORY,
 } from '@photos/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
+import {
+  CDN_RETIRED_SLUG_REPOSITORY,
+  type ICdnRetiredSlugRepository,
+  type IYupanaPhotoDeclarer,
+  YUPANA_PHOTO_DECLARER,
+} from '@shared/yupana/domain/ports'
 import { nanoid } from 'nanoid'
 import { ConfirmRetouchedUploadCommand } from './confirm-retouched-upload.command'
 
@@ -31,11 +43,20 @@ export class ConfirmRetouchedUploadHandler
     @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
     @Inject(ORDER_READ_REPOSITORY) private readonly orderReadRepo: IOrderReadRepository,
     private readonly eventEmitter: EventEmitter2,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
+    private readonly prisma: PrismaService,
+    @Inject(YUPANA_PHOTO_DECLARER) private readonly yupanaDeclarer: IYupanaPhotoDeclarer,
+    @Inject(CDN_RETIRED_SLUG_REPOSITORY)
+    private readonly cdnRetiredSlugs: ICdnRetiredSlugRepository,
   ) {}
 
   async execute(command: ConfirmRetouchedUploadCommand): Promise<{ confirmed: boolean }> {
-    const photo = await this.photoReadRepo.findById(command.photoId)
+    const scope = await this.authz.resolveEventScope(command.retouchedById, 'photo.retouch.upload')
+    const photo = await this.photoReadRepo.findByIdInScope(command.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', command.photoId)
+    await this.authz.assert(command.retouchedById, 'photo.retouch.upload', photo.eventId)
+    await this.freeze.assertNotFrozen(photo.eventId)
 
     const expectedPrefix = `events/${photo.eventId}/retouched/`
     if (!command.objectKey.startsWith(expectedPrefix)) {
@@ -59,6 +80,8 @@ export class ConfirmRetouchedUploadHandler
       })
     }
 
+    const replacedSlug = photo.retouchedPublicSlug
+
     // Generate slug and register in KV
     const retouchedSlug = nanoid()
     photo.setRetouched(
@@ -67,7 +90,16 @@ export class ConfirmRetouchedUploadHandler
       BigInt(command.fileSize),
       command.retouchedById,
     )
-    await this.photoWriteRepo.save(photo)
+    await this.prisma.$transaction(async (tx) => {
+      await this.photoWriteRepo.save(photo, tx)
+      await this.yupanaDeclarer.declareResized(photo, tx)
+      if (replacedSlug) {
+        await this.cdnRetiredSlugs.retire(
+          [{ slug: replacedSlug, photoId: photo.id, eventId: photo.eventId }],
+          tx,
+        )
+      }
+    })
 
     // Register slug → storage key in KV (fire-and-forget)
     this.kv.write(retouchedSlug, command.objectKey).catch((err: unknown) => {

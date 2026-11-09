@@ -7,6 +7,7 @@ import { PHOTO_READ_REPOSITORY, PHOTO_WRITE_REPOSITORY } from '@photos/domain/po
 import { CLASSIFICATION_PIPELINE_ADAPTER } from '@shared/ai-pipeline'
 import { AppException } from '@shared/domain'
 import { STORAGE_ADAPTER } from '@shared/storage/domain/ports/storage-adapter.port'
+import { YUPANA_OUTBOX_REPOSITORY } from '@shared/yupana/domain/ports'
 import { ProcessPhotoClassificationCommand } from './process-photo-classification.command'
 import { ProcessPhotoClassificationHandler } from './process-photo-classification.handler'
 
@@ -70,6 +71,7 @@ describe('ProcessPhotoClassificationHandler', () => {
     persistResult: jest.fn().mockResolvedValue({ processingId: 'p-1' }),
     persistFailure: jest.fn().mockResolvedValue({ processingId: 'p-fail' }),
   }
+  const yupanaOutbox = { enqueue: jest.fn().mockResolvedValue(undefined) }
   const cropUrlsService = {
     generate: jest.fn().mockResolvedValue({
       bibs: [],
@@ -100,6 +102,7 @@ describe('ProcessPhotoClassificationHandler', () => {
         { provide: CLASSIFICATION_PIPELINE_ADAPTER, useValue: adapter },
         { provide: PHOTO_CLASSIFICATION_WRITE_REPOSITORY, useValue: writeRepo },
         { provide: CROP_UPLOAD_URLS_SERVICE, useValue: cropUrlsService },
+        { provide: YUPANA_OUTBOX_REPOSITORY, useValue: yupanaOutbox },
       ],
     }).compile()
     handler = moduleRef.get(ProcessPhotoClassificationHandler)
@@ -179,7 +182,7 @@ describe('ProcessPhotoClassificationHandler', () => {
     )
   })
 
-  it('on service_unavailable: rethrows without persistFailure', async () => {
+  it('retryable error before the final attempt only rethrows', async () => {
     const photo = okPhoto()
     photoReadRepo.findById.mockResolvedValue(photo)
     adapter.classify.mockRejectedValue(
@@ -190,9 +193,95 @@ describe('ProcessPhotoClassificationHandler', () => {
       ),
     )
     await expect(
-      handler.execute(new ProcessPhotoClassificationCommand('photo-1')),
+      handler.execute(new ProcessPhotoClassificationCommand('photo-1', false)),
     ).rejects.toMatchObject({ messageKey: 'ai_pipeline.service_unavailable' })
     expect(writeRepo.persistFailure).not.toHaveBeenCalled()
     expect(photo.markFailed).not.toHaveBeenCalled()
+  })
+
+  it('retryable error on the final attempt persists failure and marks failed', async () => {
+    const photo = okPhoto()
+    photoReadRepo.findById.mockResolvedValue(photo)
+    adapter.classify.mockRejectedValue(
+      new AppException(
+        'ai_pipeline.service_unavailable' as any,
+        502 as any,
+        'EXTERNAL_SERVICE' as any,
+        false,
+        { reason: 'timeout' },
+      ),
+    )
+    await expect(
+      handler.execute(new ProcessPhotoClassificationCommand('photo-1', true)),
+    ).rejects.toMatchObject({ messageKey: 'ai_pipeline.service_unavailable' })
+    expect(writeRepo.persistFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        photoId: photo.id,
+        errorMessage: expect.stringContaining('ai_pipeline.service_unavailable (timeout)'),
+      }),
+    )
+    expect(photo.markFailed).toHaveBeenCalled()
+  })
+
+  it('reports the Modal call to yupana when the pipeline answered with a call id', async () => {
+    photoReadRepo.findById.mockResolvedValue(okPhoto())
+    adapter.classify.mockResolvedValue({
+      ...baseResponse,
+      modalCallId: 'fc-01JABCDEFGHJKMNPQRSTVWXYZ0',
+    })
+
+    await handler.execute(new ProcessPhotoClassificationCommand('photo-1'))
+
+    expect(yupanaOutbox.enqueue).toHaveBeenCalledTimes(1)
+    const [[entries]] = yupanaOutbox.enqueue.mock.calls
+    expect(entries[0].payload).toMatchObject({
+      provider: 'modal',
+      payload: {
+        meter: 'gpu.function_call',
+        subject: {
+          photo_id: 'photo-1',
+          domain_event_id: 'evt-1',
+          call_id: 'fc-01JABCDEFGHJKMNPQRSTVWXYZ0',
+        },
+      },
+    })
+  })
+
+  it('reports the Modal call of a failed call that still carried a call id', async () => {
+    photoReadRepo.findById.mockResolvedValue(okPhoto())
+    adapter.classify.mockRejectedValue(
+      new AppException(
+        'ai_pipeline.invalid_request' as any,
+        422 as any,
+        'BUSINESS_RULE' as any,
+        false,
+        {
+          modalCallId: 'fc-01JABCDEFGHJKMNPQRSTVWXYZ0',
+        },
+      ),
+    )
+
+    await expect(
+      handler.execute(new ProcessPhotoClassificationCommand('photo-1')),
+    ).rejects.toThrow()
+
+    expect(yupanaOutbox.enqueue).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports nothing when the pipeline gave no call id', async () => {
+    photoReadRepo.findById.mockResolvedValue(okPhoto())
+    adapter.classify.mockRejectedValue(
+      new AppException(
+        'ai_pipeline.service_unavailable' as any,
+        502 as any,
+        'EXTERNAL_SERVICE' as any,
+      ),
+    )
+
+    await expect(
+      handler.execute(new ProcessPhotoClassificationCommand('photo-1')),
+    ).rejects.toThrow()
+
+    expect(yupanaOutbox.enqueue).not.toHaveBeenCalled()
   })
 })

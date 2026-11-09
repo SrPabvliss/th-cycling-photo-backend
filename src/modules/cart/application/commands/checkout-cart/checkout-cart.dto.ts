@@ -1,8 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import {
+  PaymentMethod,
+  type PaymentMethodType,
+} from '@orders/domain/value-objects/payment-method.vo'
 import { Type } from 'class-transformer'
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -29,10 +35,19 @@ export class CheckoutCartItemDto {
 }
 
 export class CheckoutCartDto {
-  @ApiProperty({ description: 'Checkout items per event', type: [CheckoutCartItemDto] })
+  @ApiProperty({ description: 'Checkout items for a single event', type: [CheckoutCartItemDto] })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(1)
   @ValidateNested({ each: true })
   @Type(() => CheckoutCartItemDto)
   items: CheckoutCartItemDto[]
+
+  @ApiProperty({ enum: Object.values(PaymentMethod) })
+  @IsIn(Object.values(PaymentMethod))
+  method: PaymentMethodType
+
+  @ApiProperty({ description: 'Billing account the invoice is issued to', format: 'uuid' })
+  @IsUUID('4')
+  billingAccountId: string
 }

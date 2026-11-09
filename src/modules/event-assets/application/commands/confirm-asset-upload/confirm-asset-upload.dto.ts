@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsNumber, IsOptional, IsString, MaxLength } from 'class-validator'
+import { IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator'
 
 export class ConfirmAssetUploadDto {
   @ApiProperty({
@@ -21,4 +21,18 @@ export class ConfirmAssetUploadDto {
   @IsString()
   @MaxLength(50)
   mimeType?: string
+
+  @ApiPropertyOptional({ description: 'Horizontal focal point, 0 = left, 1 = right', example: 0.5 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  focalX?: number
+
+  @ApiPropertyOptional({ description: 'Vertical focal point, 0 = top, 1 = bottom', example: 0.35 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  focalY?: number
 }

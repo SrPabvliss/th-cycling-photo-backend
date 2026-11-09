@@ -1,3 +1,6 @@
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
+import type { OperatorRetouchEventProjection } from '../../application/projections'
+
 export type RetouchOrderScope = 'pending' | 'completed'
 
 export type OperatorRetouchPhotoRow = {
@@ -38,6 +41,7 @@ export type OperatorRetouchQueueOrderRow = {
 }
 
 export interface IOperatorRetouchReadRepository {
+  findRetouchableEvents(scope: EventScope): Promise<OperatorRetouchEventProjection[]>
   getRetouchQueuePage(
     eventId: string,
     scope: RetouchOrderScope,

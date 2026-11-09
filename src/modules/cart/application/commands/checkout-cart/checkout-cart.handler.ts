@@ -1,4 +1,3 @@
-import { AUTH_USER_REPOSITORY, type IAuthUserRepository } from '@auth/domain/ports'
 import type { CheckoutResultProjection } from '@cart/application/projections'
 import {
   CART_READ_REPOSITORY,
@@ -9,8 +8,19 @@ import {
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { NotificationsService } from '@notifications/application/services/notifications.service'
+import { BuyerPurchaseSnapshotService } from '@orders/application/services/buyer-purchase-snapshot.service'
 import { Order } from '@orders/domain/entities'
-import { type IOrderWriteRepository, ORDER_WRITE_REPOSITORY } from '@orders/domain/ports'
+import {
+  type IOrderWriteRepository,
+  ORDER_WRITE_REPOSITORY,
+  type OrderSnapData,
+} from '@orders/domain/ports'
+import { PaymentMethod } from '@orders/domain/value-objects/payment-method.vo'
+import { PaymentReceiverResolver } from '@payments/application/services/payment-receiver-resolver.service'
+import {
+  type IPaymentTransactionWriteRepository,
+  PAYMENT_TRANSACTION_WRITE_REPOSITORY,
+} from '@payments/domain/ports'
 import { PricingCalculator } from '@pricing/domain/services/pricing-calculator.service'
 import {
   DEFAULT_CURRENCY,
@@ -25,11 +35,18 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
     @Inject(CART_READ_REPOSITORY) private readonly cartReadRepo: ICartReadRepository,
     @Inject(CART_WRITE_REPOSITORY) private readonly cartWriteRepo: ICartWriteRepository,
     @Inject(ORDER_WRITE_REPOSITORY) private readonly orderWriteRepo: IOrderWriteRepository,
-    @Inject(AUTH_USER_REPOSITORY) private readonly authUserRepo: IAuthUserRepository,
+    @Inject(PAYMENT_TRANSACTION_WRITE_REPOSITORY)
+    private readonly transactionWriteRepo: IPaymentTransactionWriteRepository,
     private readonly notifications: NotificationsService,
+    private readonly buyerSnapshot: BuyerPurchaseSnapshotService,
+    private readonly receiverResolver: PaymentReceiverResolver,
   ) {}
 
   async execute(command: CheckoutCartCommand): Promise<CheckoutResultProjection> {
+    if (command.items.length > 1) {
+      throw AppException.businessRule('cart.single_event_only')
+    }
+
     // 1. Find active user cart
     const cart = await this.cartReadRepo.findActiveByUserId(command.userId)
     if (!cart) throw AppException.businessRule('cart.no_active_cart')
@@ -48,12 +65,16 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
       }
     }
 
-    // 5. Get user snap data
-    const snapData = await this.authUserRepo.getUserSnapData(command.userId)
-    if (!snapData) throw AppException.businessRule('order.customer_profile_required')
-    if (snapData.countryId === null) {
-      throw AppException.businessRule('order.customer_profile_required')
+    if (command.method === PaymentMethod.CARD) {
+      for (const item of command.items) {
+        if (!(await this.receiverResolver.acceptsCard(item.eventId))) {
+          throw AppException.businessRule('payment.card_unavailable')
+        }
+      }
     }
+
+    // 5. Buyer profile, billing account and invoice consent
+    const buyer = await this.buyerSnapshot.build(command.userId, command.billingAccountId, null)
 
     /**
      * Pricing is calculated at the CART level (across all events) using the default
@@ -77,62 +98,124 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
     const snapPricingConfig = DEFAULT_PRICING_TIERS.map((t) => t.toJSON())
 
     // 6. Create one order per event
-    const orderResults: { orderId: string; eventName: string; photoCount: number }[] = []
+    const orderResults: {
+      orderId: string
+      eventName: string
+      photoCount: number
+      subtotal: number
+      currency: string
+    }[] = []
 
     for (const item of command.items) {
       const cartEvent = cartEventMap.get(item.eventId)
       if (!cartEvent) continue
 
       const orderSubtotal = Math.round(calc.unitPrice * cartEvent.photoIds.length * 100) / 100
-
-      const order = Order.create({
-        previewLinkId: null,
-        eventId: item.eventId,
-        userId: command.userId,
-        notes: null,
-        bibNumber: item.bibNumber ?? null,
-        subtotal: orderSubtotal,
-        snapCurrency: DEFAULT_CURRENCY,
-        snapPricingConfig,
-      })
-
-      const saved = await this.orderWriteRepo.saveWithSnap(order, {
-        snapFirstName: snapData.firstName,
-        snapLastName: snapData.lastName,
-        snapEmail: snapData.email,
-        snapPhone: snapData.phone,
-        snapCountryId: snapData.countryId,
-        snapProvinceId: snapData.provinceId,
-        snapCantonId: snapData.cantonId,
+      const photoItems = cartEvent.photoIds.map((id) => ({
+        photoId: id,
+        unitPrice: calc.unitPrice,
+      }))
+      const snap: OrderSnapData = {
+        ...buyer.snap,
         snapCategoryName: item.snapCategoryName ?? null,
-      })
+      }
 
-      await this.orderWriteRepo.savePhotos(
-        saved.id,
-        cartEvent.photoIds.map((id) => ({ photoId: id, unitPrice: calc.unitPrice })),
+      let notify = false
+
+      const saved = await this.orderWriteRepo.lockAndUpsertDraft(
+        command.userId,
+        item.eventId,
+        async (existingDraft, tx) => {
+          if (existingDraft) {
+            await this.transactionWriteRepo.expireOpenByOrderId(existingDraft.id, tx)
+
+            const rewritten = Order.fromPersistence({
+              ...existingDraft,
+              bibNumber: item.bibNumber ?? null,
+              subtotal: orderSubtotal,
+              snapPricingConfig,
+              paymentMethod: command.method,
+            })
+
+            if (command.method === PaymentMethod.TRANSFER) {
+              rewritten.confirmDraftAsPending()
+              notify = true
+            }
+
+            return { order: rewritten, items: photoItems, snap }
+          }
+
+          if (command.method === PaymentMethod.TRANSFER) {
+            notify = true
+
+            return {
+              order: Order.create({
+                previewLinkId: null,
+                eventId: item.eventId,
+                userId: command.userId,
+                notes: null,
+                bibNumber: item.bibNumber ?? null,
+                subtotal: orderSubtotal,
+                snapCurrency: DEFAULT_CURRENCY,
+                snapPricingConfig,
+                paymentMethod: PaymentMethod.TRANSFER,
+              }),
+              items: photoItems,
+              snap,
+            }
+          }
+
+          return {
+            order: Order.createDraft({
+              previewLinkId: null,
+              eventId: item.eventId,
+              userId: command.userId,
+              notes: null,
+              bibNumber: item.bibNumber ?? null,
+              subtotal: orderSubtotal,
+              snapCurrency: DEFAULT_CURRENCY,
+              snapPricingConfig,
+              paymentMethod: PaymentMethod.CARD,
+            }),
+            items: photoItems,
+            snap,
+          }
+        },
       )
+
+      if (notify) {
+        this.notifications.emitOrderCreated({
+          orderId: saved.id,
+          eventName: cartEvent.eventName,
+          customerName: buyer.customerName,
+          photoCount: cartEvent.photoIds.length,
+          subtotal: orderSubtotal,
+          currency: DEFAULT_CURRENCY,
+          createdAt: saved.createdAt,
+          actorUserId: command.userId,
+        })
+      }
 
       orderResults.push({
         orderId: saved.id,
         eventName: cartEvent.eventName,
         photoCount: cartEvent.photoIds.length,
-      })
-
-      // Emit notification for each order
-      this.notifications.emitOrderCreated({
-        orderId: saved.id,
-        eventName: cartEvent.eventName,
-        customerName: [snapData.firstName, snapData.lastName].filter(Boolean).join(' '),
-        photoCount: cartEvent.photoIds.length,
         subtotal: orderSubtotal,
         currency: DEFAULT_CURRENCY,
-        createdAt: saved.createdAt,
-        actorUserId: command.userId,
       })
     }
 
-    // 7. Mark cart as converted
-    await this.cartWriteRepo.markConverted(cart.id)
+    if (command.method === PaymentMethod.TRANSFER) {
+      const checkedOutPhotoIds = command.items.flatMap(
+        (item) => cartEventMap.get(item.eventId)?.photoIds ?? [],
+      )
+      await this.cartWriteRepo.removeItems(cart.id, checkedOutPhotoIds)
+
+      const summary = await this.cartReadRepo.getCartSummary(cart.id)
+      if (summary.itemCount === 0) {
+        await this.cartWriteRepo.markConverted(cart.id)
+      }
+    }
 
     return { orders: orderResults }
   }

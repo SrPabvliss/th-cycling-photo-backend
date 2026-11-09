@@ -18,6 +18,7 @@ describe('RefreshHandler', () => {
     email: 'user@test.com',
     role: 'admin',
     isActive: true,
+    permissionsVersion: 3,
     revokedAt: null,
     expiresAt: futureDate,
   }
@@ -27,6 +28,7 @@ describe('RefreshHandler', () => {
       create: jest.fn(),
       findByHash: jest.fn(),
       revokeByHash: jest.fn(),
+      revokeAllExcept: jest.fn(),
     } as jest.Mocked<IRefreshTokenRepository>
 
     tokenHashService = {

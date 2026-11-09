@@ -2,6 +2,7 @@ import { Prisma, type Order as PrismaOrder } from '@generated/prisma/client'
 import type { RetouchCompletedOrderProjection } from '@orders/application/projections'
 import { Order } from '@orders/domain/entities'
 import type { OrderStatusType } from '@orders/domain/value-objects/order-status.vo'
+import type { PaymentMethodType } from '@orders/domain/value-objects/payment-method.vo'
 import type { PricingTierSnapshot } from '@pricing/domain/value-objects'
 
 /** Converts a domain entity to a Prisma create input. */
@@ -27,6 +28,7 @@ export function toPersistence(entity: Order): Prisma.OrderUncheckedCreateInput {
     cancelled_at: entity.cancelledAt,
     notified_by_id: entity.notifiedById,
     confirmed_by_id: entity.confirmedById,
+    payment_method: entity.paymentMethod,
   }
 }
 
@@ -50,6 +52,7 @@ export function toEntity(record: PrismaOrder): Order {
     cancelledAt: record.cancelled_at,
     notifiedById: record.notified_by_id,
     confirmedById: record.confirmed_by_id,
+    paymentMethod: record.payment_method as PaymentMethodType | null,
   })
 }
 

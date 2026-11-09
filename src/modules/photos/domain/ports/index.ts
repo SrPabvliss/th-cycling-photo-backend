@@ -4,10 +4,18 @@ export {
   PHOTO_BIB_WRITE_REPOSITORY,
 } from './photo-bib-write-repository.port'
 export {
+  type IPhotoClassificationQueue,
+  PHOTO_CLASSIFICATION_QUEUE,
+} from './photo-classification-queue.port'
+export {
   type IPhotoColorWriteRepository,
   PHOTO_COLOR_WRITE_REPOSITORY,
 } from './photo-color-write-repository.port'
 export {
+  type GalleryBibFilter,
+  type GallerySaleFilter,
+  type GallerySort,
+  type IGalleryFilters,
   type IPhotoReadRepository,
   PHOTO_READ_REPOSITORY,
   REVIEW_QUEUE_STATUS_FILTERS,

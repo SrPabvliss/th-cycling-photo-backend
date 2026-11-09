@@ -1,3 +1,4 @@
+import { FreezeStateService } from '@events/application/services/freeze-state.service'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { type IOrderReadRepository, ORDER_READ_REPOSITORY } from '@orders/domain/ports'
@@ -11,9 +12,20 @@ import {
   type IPreviewLinkReadRepository,
   PREVIEW_LINK_READ_REPOSITORY,
 } from '@previews/domain/ports'
+import {
+  AUTHORIZATION_SERVICE,
+  type IAuthorizationService,
+} from '@shared/authorization/domain/ports/authorization.service.port'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { AppException } from '@shared/domain'
+import { PrismaService } from '@shared/infrastructure'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
+import {
+  CDN_RETIRED_SLUG_REPOSITORY,
+  type ICdnRetiredSlugRepository,
+  type IYupanaPhotoDeclarer,
+  YUPANA_PHOTO_DECLARER,
+} from '@shared/yupana/domain/ports'
 import { DeletePhotoCommand } from './delete-photo.command'
 
 @CommandHandler(DeletePhotoCommand)
@@ -27,11 +39,20 @@ export class DeletePhotoHandler implements ICommandHandler<DeletePhotoCommand> {
     @Inject(KV_STORAGE_ADAPTER) private readonly kv: IKvStorageAdapter,
     @Inject(ORDER_READ_REPOSITORY) private readonly orderRead: IOrderReadRepository,
     @Inject(PREVIEW_LINK_READ_REPOSITORY) private readonly previewRead: IPreviewLinkReadRepository,
+    @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
+    private readonly freeze: FreezeStateService,
+    private readonly prisma: PrismaService,
+    @Inject(YUPANA_PHOTO_DECLARER) private readonly yupanaDeclarer: IYupanaPhotoDeclarer,
+    @Inject(CDN_RETIRED_SLUG_REPOSITORY)
+    private readonly cdnRetiredSlugs: ICdnRetiredSlugRepository,
   ) {}
 
   async execute(command: DeletePhotoCommand): Promise<void> {
-    const photo = await this.photoRead.findById(command.photoId)
+    const scope = await this.authz.resolveEventScope(command.userId, 'photo.delete')
+    const photo = await this.photoRead.findByIdInScope(command.photoId, scope)
     if (!photo) throw AppException.notFound('Photo', command.photoId)
+    await this.authz.assert(command.userId, 'photo.delete', photo.eventId)
+    await this.freeze.assertNotFrozen(photo.eventId)
 
     const [inOrder, inPreview] = await Promise.all([
       this.orderRead.existsByPhotoId(command.photoId),
@@ -42,7 +63,16 @@ export class DeletePhotoHandler implements ICommandHandler<DeletePhotoCommand> {
     }
 
     // DB first: cascade removes processings, detections, bibs, colors, corrections, cart items, embedding.
-    await this.photoWrite.delete(photo.id)
+    await this.prisma.$transaction(async (tx) => {
+      await this.photoWrite.delete(photo.id, tx)
+      await this.yupanaDeclarer.declareRemoved(photo, tx)
+      await this.cdnRetiredSlugs.retire(
+        [photo.publicSlug, photo.retouchedPublicSlug]
+          .filter((slug): slug is string => slug !== null)
+          .map((slug) => ({ slug, photoId: photo.id, eventId: photo.eventId })),
+        tx,
+      )
+    })
 
     // Best-effort object cleanup (the row is already gone; log and continue on failure).
     await this.deleteObject(photo.storageKey)

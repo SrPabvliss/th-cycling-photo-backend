@@ -20,6 +20,28 @@ describe('PhotoClassificationProcessor', () => {
     expect(commandBus.execute).toHaveBeenCalledTimes(1)
   })
 
+  it('passes isFinalAttempt true on the last attempt and false before', async () => {
+    commandBus.execute.mockResolvedValue(undefined)
+    await processor.process({
+      data: { photoId: 'p-1' },
+      attemptsMade: 1,
+      opts: { attempts: 3 },
+    } as any)
+    await processor.process({
+      data: { photoId: 'p-1' },
+      attemptsMade: 2,
+      opts: { attempts: 3 },
+    } as any)
+    expect(commandBus.execute.mock.calls[0][0]).toMatchObject({
+      photoId: 'p-1',
+      isFinalAttempt: false,
+    })
+    expect(commandBus.execute.mock.calls[1][0]).toMatchObject({
+      photoId: 'p-1',
+      isFinalAttempt: true,
+    })
+  })
+
   it('rethrows when command fails (BullMQ retry)', async () => {
     commandBus.execute.mockRejectedValue(new Error('network'))
     await expect(

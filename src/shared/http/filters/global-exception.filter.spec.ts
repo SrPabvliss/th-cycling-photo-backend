@@ -48,6 +48,7 @@ describe('GlobalExceptionFilter', () => {
         error: {
           code: ErrorCode.NOT_FOUND,
           message: 'errors.NOT_FOUND',
+          messageKey: 'errors.NOT_FOUND',
           shouldThrow: false,
         },
         meta: {
@@ -92,18 +93,56 @@ describe('GlobalExceptionFilter', () => {
       expect(body.error.stack).toBeUndefined()
     })
 
-    it('should translate messages when i18n is available', () => {
+    it('should carry the untranslated messageKey alongside the translated message', () => {
       const mockI18n = { t: jest.fn().mockReturnValue('Evento no encontrado') }
       ;(I18nContext.current as jest.Mock).mockReturnValue(mockI18n)
 
       const exception = AppException.notFound('event', '123')
       filter.catch(exception, mockHost)
 
-      expect(mockI18n.t).toHaveBeenCalledWith('errors.NOT_FOUND', {
-        args: { entity: 'event', id: '123' },
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.messageKey).toBe('errors.NOT_FOUND')
+      expect(body.error.message).toBe('Evento no encontrado')
+      expect(body.error.code).toBe(ErrorCode.NOT_FOUND)
+      expect(body.error.shouldThrow).toBe(false)
+    })
+
+    const dictionaryI18n = (entries: Record<string, string>) => ({
+      t: jest.fn((key: string, options?: { args?: Record<string, unknown> }) => {
+        const template = entries[key]
+        if (!template) return key
+        return template.replace(/\{(\w+)\}/g, (_, name) => String(options?.args?.[name] ?? ''))
+      }),
+    })
+
+    it('should translate messages and the entity name when i18n is available', () => {
+      const mockI18n = dictionaryI18n({
+        'errors.NOT_FOUND': '{entity} no encontrado',
+        'entities.event': 'Evento',
       })
+      ;(I18nContext.current as jest.Mock).mockReturnValue(mockI18n)
+
+      filter.catch(AppException.notFound('Event', '123'), mockHost)
+
       const body = mockJson.mock.calls[0][0]
       expect(body.error.message).toBe('Evento no encontrado')
+    })
+
+    it('should agree in gender with a feminine entity', () => {
+      ;(I18nContext.current as jest.Mock).mockReturnValue(
+        dictionaryI18n({
+          'errors.NOT_FOUND': '{entity} no encontrado',
+          'errors.NOT_FOUND_F': '{entity} no encontrada',
+          'entities.order': 'Orden',
+          'entity_gender.order': 'f',
+        }),
+      )
+
+      filter.catch(AppException.notFound('entities.order', '123'), mockHost)
+
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.message).toBe('Orden no encontrada')
+      expect(body.error.messageKey).toBe('errors.NOT_FOUND')
     })
   })
 
@@ -126,15 +165,49 @@ describe('GlobalExceptionFilter', () => {
       })
     })
 
-    it('should handle HttpException without validation fields', () => {
-      const exception = new HttpException('Forbidden', HttpStatus.FORBIDDEN)
+    it.each([
+      [HttpStatus.UNAUTHORIZED, 'UNAUTHORIZED', 'errors.UNAUTHORIZED'],
+      [HttpStatus.FORBIDDEN, 'FORBIDDEN', 'errors.FORBIDDEN'],
+      [HttpStatus.NOT_FOUND, 'NOT_FOUND', 'errors.RESOURCE_NOT_FOUND'],
+      [HttpStatus.CONFLICT, 'CONFLICT', 'errors.REQUEST_CONFLICT'],
+      [HttpStatus.TOO_MANY_REQUESTS, 'TOO_MANY_REQUESTS', 'errors.TOO_MANY_REQUESTS'],
+      [HttpStatus.BAD_REQUEST, 'BAD_REQUEST', 'errors.BAD_REQUEST'],
+      [HttpStatus.PAYLOAD_TOO_LARGE, 'BAD_REQUEST', 'errors.BAD_REQUEST'],
+      [HttpStatus.SERVICE_UNAVAILABLE, 'INTERNAL', 'errors.INTERNAL'],
+    ])('should answer status %s with code %s instead of INTERNAL', (status, code, messageKey) => {
+      filter.catch(new HttpException('Nest message', status), mockHost)
+
+      expect(mockStatus).toHaveBeenCalledWith(status)
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.code).toBe(code)
+      expect(body.error.messageKey).toBe(messageKey)
+      expect(body.error.fields).toBeUndefined()
+    })
+
+    it('should key a whitelist rejection by the offending property', () => {
+      const exception = new BadRequestException({
+        message: ['property filename should not exist', 'fileName must be a string'],
+        error: 'Bad Request',
+        statusCode: 400,
+      })
 
       filter.catch(exception, mockHost)
 
-      expect(mockStatus).toHaveBeenCalledWith(HttpStatus.FORBIDDEN)
       const body = mockJson.mock.calls[0][0]
-      expect(body.error.code).toBe('INTERNAL')
-      expect(body.error.fields).toBeUndefined()
+      expect(body.error.fields).toEqual({
+        filename: ['property filename should not exist'],
+        fileName: ['fileName must be a string'],
+      })
+    })
+
+    it('should NOT include the stack for an HttpException in production mode', () => {
+      process.env.NODE_ENV = 'production'
+
+      filter.catch(new HttpException('Forbidden', HttpStatus.FORBIDDEN), mockHost)
+
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.stack).toBeUndefined()
+      expect(body.error.details).toBeUndefined()
     })
   })
 
@@ -181,6 +254,20 @@ describe('GlobalExceptionFilter', () => {
       expect(mockStatus).toHaveBeenCalledWith(HttpStatus.UNPROCESSABLE_ENTITY)
       const body = mockJson.mock.calls[0][0]
       expect(body.error.code).toBe(ErrorCode.BUSINESS_RULE)
+    })
+
+    it.each(['P2007', 'P2023'])('should return 400 for a malformed id (%s)', (code) => {
+      const exception = new PrismaClientKnownRequestError('Error creating UUID', {
+        code,
+        clientVersion: '7.0.0',
+      })
+
+      filter.catch(exception, mockHost)
+
+      expect(mockStatus).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST)
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.code).toBe(ErrorCode.VALIDATION_FAILED)
+      expect(body.error.messageKey).toBe('errors.INVALID_ID')
     })
 
     it('should return 500 for unhandled Prisma error codes', () => {
@@ -274,6 +361,15 @@ describe('GlobalExceptionFilter', () => {
       expect(body.error.code).toBe('INTERNAL')
       expect(body.error.message).toBe('An unexpected error occurred')
       expect(body.error.shouldThrow).toBe(false)
+    })
+
+    it('should NOT include a messageKey for a generic non-AppException error', () => {
+      const exception = new Error('Something went wrong')
+
+      filter.catch(exception, mockHost)
+
+      const body = mockJson.mock.calls[0][0]
+      expect(body.error.messageKey).toBeUndefined()
     })
 
     it('should handle non-Error exceptions', () => {

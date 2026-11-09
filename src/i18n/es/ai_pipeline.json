@@ -1,0 +1,7 @@
+{
+  "service_unavailable": "El servicio de clasificación no está disponible en este momento",
+  "invalid_request": "El servicio de clasificación rechazó la solicitud",
+  "invalid_response_shape": "El servicio de clasificación devolvió una respuesta inesperada",
+  "unsupported_schema_version": "El servicio de clasificación respondió con una versión que no manejamos",
+  "image_id_mismatch": "El servicio de clasificación respondió sobre una imagen distinta a la enviada"
+}

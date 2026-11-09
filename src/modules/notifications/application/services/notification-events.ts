@@ -4,6 +4,7 @@ export const NotificationEvent = {
   ORDER_PAID: 'order.paid',
   ORDER_DELIVERED: 'order.delivered',
   ORDER_RETOUCH_COMPLETED: 'order.retouch_completed',
+  TENANT_CONTRACT_ACCEPTED: 'tenant_contract.accepted',
 } as const
 
 export interface PreviewViewedPayload {
@@ -49,4 +50,11 @@ export interface OrderRetouchCompletedPayload {
   customerName: string
   photoCount: number
   completedAt: Date
+}
+
+export interface TenantContractAcceptedPayload {
+  contractId: string
+  commercialName: string
+  tenantCreated: boolean
+  acceptedBy: string
 }

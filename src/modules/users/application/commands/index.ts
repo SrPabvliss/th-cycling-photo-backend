@@ -12,6 +12,8 @@ export { ReactivateUserCommand } from './reactivate-user/reactivate-user.command
 export { ResetPasswordCommand } from './reset-password/reset-password.command'
 export { ResetPasswordDto } from './reset-password/reset-password.dto'
 export { SetPrimaryPhoneCommand } from './set-primary-phone/set-primary-phone.command'
+export { UpdateMyProfileCommand } from './update-my-profile/update-my-profile.command'
+export { UpdateMyProfileDto } from './update-my-profile/update-my-profile.dto'
 export { UpdateUserCommand } from './update-user/update-user.command'
 export { UpdateUserDto } from './update-user/update-user.dto'
 export { UpdateUserPhoneCommand } from './update-user-phone/update-user-phone.command'

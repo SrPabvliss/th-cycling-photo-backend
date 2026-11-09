@@ -14,6 +14,7 @@ enum EventStatus {
   active
   completed
   archived
+  frozen
 
   @@map("event_status")
 }
@@ -85,6 +86,7 @@ enum PreviewLinkStatus {
 }
 
 enum OrderStatus {
+  draft
   pending
   payment_info_sent
   paid
@@ -135,6 +137,52 @@ enum Gender {
   prefer_not_to_say
 
   @@map("gender")
+}
+
+enum PaymentMode {
+  own_merchant
+  split_receiver
+
+  @@map("payment_mode")
+}
+
+enum PaymentProvider {
+  payphone
+
+  @@map("payment_provider")
+}
+
+enum PayoutProvider {
+  payphone
+  bank_transfer
+
+  @@map("payout_provider")
+}
+
+enum PaymentMethod {
+  card
+  transfer
+
+  @@map("payment_method")
+}
+
+enum PaymentAccountStatus {
+  pending
+  verified
+  disabled
+
+  @@map("payment_account_status")
+}
+
+enum PaymentTransactionStatus {
+  initiated
+  confirming
+  approved
+  declined
+  expired
+  reversed
+
+  @@map("payment_transaction_status")
 }
 
 // ─── Reference Tables ───────────────────────────────────────────────────────
@@ -218,33 +266,49 @@ model User {
   is_active          Boolean   @default(true)
   created_at         DateTime  @default(now()) @db.Timestamptz
   last_login_at      DateTime? @db.Timestamptz
+  email_verified_at  DateTime? @db.Timestamptz
 
-  user_roles            UserRole[]
-  refresh_tokens        RefreshToken[]
-  password_reset_tokens PasswordResetToken[]
-  phones                UserPhone[]
-  customer_profile      CustomerProfile?
-  consents              UserConsent[]
+  tenant_id           String? @db.Uuid
+  is_protected        Boolean @default(false)
+  permissions_version Int     @default(0)
+  tenant              Tenant? @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
 
-  events_created         Event[]         @relation("EventCreatedBy")
-  events_updated         Event[]         @relation("EventUpdatedBy")
-  photos_created         Photo[]         @relation("PhotoCreatedBy")
-  photos_updated         Photo[]         @relation("PhotoUpdatedBy")
-  photos_retouched       Photo[]         @relation("PhotoRetouchedBy")
-  created_bibs           PhotoBib[]      @relation("UserCreatedBibs")
-  created_colors         PhotoColor[]    @relation("UserCreatedColors")
-  deleted_bibs           PhotoBib[]      @relation("UserDeletedBibs")
-  deleted_colors         PhotoColor[]    @relation("UserDeletedColors")
-  corrections            Correction[]    @relation("UserCorrections")
-  preview_links_created  PreviewLink[]   @relation("PreviewLinkCreatedBy")
-  orders_confirmed       Order[]         @relation("OrderConfirmedBy")
-  orders_notified        Order[]         @relation("OrderNotifiedBy")
-  orders_placed          Order[]         @relation("OrderUser")
-  carts                  Cart[]
-  notifications          Notification[]
-  assigned_events        EventOperator[] @relation("EventOperatorUser")
-  event_assignments_made EventOperator[] @relation("EventOperatorAssignedBy")
+  permission_template_id String?             @db.Uuid
+  permission_template    PermissionTemplate? @relation(fields: [permission_template_id], references: [id], onDelete: Restrict)
 
+  user_roles               UserRole[]
+  refresh_tokens           RefreshToken[]
+  password_reset_tokens    PasswordResetToken[]
+  email_verification_codes EmailVerificationCode[]
+  phones                   UserPhone[]
+  customer_profile         CustomerProfile?
+  consents                 UserConsent[]
+  billing_accounts         BillingAccount[]
+  prompt_snoozes           UserPromptSnooze[]
+
+  events_created            Event[]               @relation("EventCreatedBy")
+  events_updated            Event[]               @relation("EventUpdatedBy")
+  photos_created            Photo[]               @relation("PhotoCreatedBy")
+  photos_updated            Photo[]               @relation("PhotoUpdatedBy")
+  photos_retouched          Photo[]               @relation("PhotoRetouchedBy")
+  created_bibs              PhotoBib[]            @relation("UserCreatedBibs")
+  created_colors            PhotoColor[]          @relation("UserCreatedColors")
+  deleted_bibs              PhotoBib[]            @relation("UserDeletedBibs")
+  deleted_colors            PhotoColor[]          @relation("UserDeletedColors")
+  corrections               Correction[]          @relation("UserCorrections")
+  preview_links_created     PreviewLink[]         @relation("PreviewLinkCreatedBy")
+  orders_confirmed          Order[]               @relation("OrderConfirmedBy")
+  orders_notified           Order[]               @relation("OrderNotifiedBy")
+  orders_placed             Order[]               @relation("OrderUser")
+  carts                     Cart[]
+  notifications             Notification[]
+  permission_grants         UserPermissionGrant[] @relation("GrantHolder")
+  permissions_issued        UserPermissionGrant[] @relation("GrantIssuer")
+  payout_methods_configured TenantPayoutMethod[]  @relation("PayoutMethodConfiguredBy")
+  contracts                 TenantContract[]      @relation("ContractHolder")
+  contracts_issued          TenantContract[]      @relation("ContractIssuer")
+
+  @@index([tenant_id])
   @@map("users")
 }
 
@@ -306,36 +370,82 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+model EmailVerificationCode {
+  id           String    @id @default(uuid()) @db.Uuid
+  user_id      String    @db.Uuid
+  purpose      String    @db.VarChar(20)
+  target_email String    @db.VarChar(255)
+  code_hash    String    @db.VarChar(64)
+  expires_at   DateTime  @db.Timestamptz
+  consumed_at  DateTime? @db.Timestamptz
+  attempts     Int       @default(0)
+  created_at   DateTime  @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("email_verification_codes")
+}
+
+model UserPromptSnooze {
+  id            String   @id @default(uuid()) @db.Uuid
+  user_id       String   @db.Uuid
+  prompt_key    String   @db.VarChar(40)
+  snoozed_until DateTime @db.Timestamptz
+  created_at    DateTime @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, prompt_key])
+  @@index([user_id])
+  @@map("user_prompt_snoozes")
+}
+
 model Event {
-  id             String      @id @default(uuid()) @db.Uuid
-  name           String      @db.VarChar(200)
-  slug           String      @unique @db.VarChar(250)
-  start_date     DateTime    @db.Date
-  end_date       DateTime    @db.Date
-  event_type_id  Int
-  province_id    Int?
-  canton_id      Int?
-  status         EventStatus @default(active)
-  pricing_config Json?
-  created_at     DateTime    @default(now()) @db.Timestamptz
-  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz
-  deleted_at     DateTime?   @db.Timestamptz
+  id              String      @id @default(uuid()) @db.Uuid
+  name            String      @db.VarChar(200)
+  slug            String      @unique @db.VarChar(250)
+  start_date      DateTime    @db.Date
+  end_date        DateTime    @db.Date
+  event_type_id   Int
+  province_id     Int?
+  canton_id       Int?
+  status          EventStatus @default(active)
+  photo_quota     Int?
+  photos_uploaded Int         @default(0)
+  is_frozen       Boolean     @default(false)
+  frozen_at       DateTime?   @db.Timestamptz
+  pricing_config  Json?
+  created_at      DateTime    @default(now()) @db.Timestamptz
+  updated_at      DateTime    @default(now()) @updatedAt @db.Timestamptz
+  deleted_at      DateTime?   @db.Timestamptz
 
   created_by_id String? @db.Uuid
   updated_by_id String? @db.Uuid
 
-  event_type       EventType            @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
-  province         Province?            @relation(fields: [province_id], references: [id])
-  canton           Canton?              @relation(fields: [canton_id], references: [id])
-  created_by       User?                @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
-  updated_by       User?                @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
-  photos           Photo[]
-  preview_links    PreviewLink[]
-  orders           Order[]
-  assets           EventAsset[]
-  photo_categories EventPhotoCategory[]
-  cart_items       CartItem[]
-  operators        EventOperator[]
+  tenant_id String @db.Uuid
+
+  snap_public_name           String? @db.VarChar(200)
+  snap_watermark_storage_key String? @db.VarChar(500)
+  snap_whatsapp_number       String? @db.VarChar(20)
+
+  event_type        EventType             @relation(fields: [event_type_id], references: [id], onDelete: Restrict)
+  province          Province?             @relation(fields: [province_id], references: [id])
+  canton            Canton?               @relation(fields: [canton_id], references: [id])
+  created_by        User?                 @relation("EventCreatedBy", fields: [created_by_id], references: [id], onDelete: SetNull)
+  updated_by        User?                 @relation("EventUpdatedBy", fields: [updated_by_id], references: [id], onDelete: SetNull)
+  tenant            Tenant                @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  photos            Photo[]
+  preview_links     PreviewLink[]
+  orders            Order[]
+  assets            EventAsset[]
+  photo_categories  EventPhotoCategory[]
+  cart_items        CartItem[]
+  permission_grants UserPermissionGrant[]
+  payout_methods    EventPayoutMethod[]
+
+  contract_id String?         @db.Uuid
+  contract    TenantContract? @relation(fields: [contract_id], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([event_type_id])
@@ -346,25 +456,9 @@ model Event {
   @@index([canton_id])
   @@index([created_by_id])
   @@index([updated_by_id])
+  @@index([tenant_id])
+  @@index([contract_id])
   @@map("events")
-}
-
-model EventOperator {
-  id             String   @id @default(uuid()) @db.Uuid
-  event_id       String   @db.Uuid
-  user_id        String   @db.Uuid
-  assigned_at    DateTime @default(now()) @db.Timestamptz
-  assigned_by_id String   @db.Uuid
-
-  event       Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  user        User  @relation("EventOperatorUser", fields: [user_id], references: [id], onDelete: Cascade)
-  assigned_by User  @relation("EventOperatorAssignedBy", fields: [assigned_by_id], references: [id], onDelete: Restrict)
-
-  @@unique([event_id, user_id])
-  @@index([event_id])
-  @@index([user_id])
-  @@index([assigned_by_id])
-  @@map("event_operators")
 }
 
 model Photo {
@@ -388,10 +482,11 @@ model Photo {
   retouched_file_size   BigInt?
   retouched_at          DateTime? @db.Timestamptz
 
-  captured_at  DateTime? @db.Timestamptz
-  uploaded_at  DateTime  @default(now()) @db.Timestamptz
-  processed_at DateTime? @db.Timestamptz
-  reviewed_at  DateTime? @db.Timestamptz
+  captured_at           DateTime? @db.Timestamptz
+  uploaded_at           DateTime  @default(now()) @db.Timestamptz
+  processed_at          DateTime? @db.Timestamptz
+  processing_started_at DateTime? @db.Timestamptz
+  reviewed_at           DateTime? @db.Timestamptz
 
   embedding Unsupported("vector(1024)")?
 
@@ -602,40 +697,57 @@ model PreviewLinkPhoto {
 }
 
 model Order {
-  id                  String      @id @default(uuid()) @db.Uuid
-  preview_link_id     String?     @db.Uuid
-  event_id            String      @db.Uuid
-  user_id             String      @db.Uuid
-  status              OrderStatus @default(pending)
-  bib_number          String?     @db.VarChar(20)
-  subtotal            Decimal?    @db.Decimal(10, 2)
-  snap_currency       String?     @db.VarChar(3)
-  snap_pricing_config Json?
-  notes               String?     @db.Text
-  snap_first_name     String?     @db.VarChar(100)
-  snap_last_name      String?     @db.VarChar(100)
-  snap_email          String?     @db.VarChar(255)
-  snap_phone          String?     @db.VarChar(20)
-  snap_country_id     Int?
-  snap_province_id    Int?
-  snap_canton_id      Int?
-  snap_category_name  String?     @db.VarChar(100)
-  created_at          DateTime    @default(now()) @db.Timestamptz
-  notified_at         DateTime?   @db.Timestamptz
-  paid_at             DateTime?   @db.Timestamptz
-  delivered_at        DateTime?   @db.Timestamptz
-  cancelled_at        DateTime?   @db.Timestamptz
-  notified_by_id      String?     @db.Uuid
-  confirmed_by_id     String?     @db.Uuid
+  id                      String         @id @default(uuid()) @db.Uuid
+  preview_link_id         String?        @db.Uuid
+  event_id                String         @db.Uuid
+  user_id                 String         @db.Uuid
+  status                  OrderStatus    @default(pending)
+  payment_method          PaymentMethod? @map("payment_method")
+  bib_number              String?        @db.VarChar(20)
+  subtotal                Decimal?       @db.Decimal(10, 2)
+  snap_currency           String?        @db.VarChar(3)
+  snap_pricing_config     Json?
+  notes                   String?        @db.Text
+  snap_first_name         String?        @db.VarChar(100)
+  snap_last_name          String?        @db.VarChar(100)
+  snap_email              String?        @db.VarChar(255)
+  snap_phone              String?        @db.VarChar(20)
+  snap_country_id         Int?
+  snap_province_id        Int?
+  snap_canton_id          Int?
+  snap_category_name      String?        @db.VarChar(100)
+  snap_billing_account_id String?        @db.Uuid
+  snap_billing_id_type    BillingIdType?
+  snap_billing_id_number  String?        @db.VarChar(20)
+  snap_billing_legal_name String?        @db.VarChar(300)
+  snap_billing_email      String?        @db.VarChar(255)
+  snap_billing_address    String?        @db.VarChar(300)
+  snap_invoice_consent_at DateTime?      @db.Timestamptz
+  snap_invoice_consent_ip String?        @db.VarChar(45)
+  created_at              DateTime       @default(now()) @db.Timestamptz
+  notified_at             DateTime?      @db.Timestamptz
+  paid_at                 DateTime?      @db.Timestamptz
+  delivered_at            DateTime?      @db.Timestamptz
+  cancelled_at            DateTime?      @db.Timestamptz
+  notified_by_id          String?        @db.Uuid
+  confirmed_by_id         String?        @db.Uuid
 
-  preview_link  PreviewLink?  @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
-  event         Event         @relation(fields: [event_id], references: [id], onDelete: Restrict)
-  user          User          @relation("OrderUser", fields: [user_id], references: [id], onDelete: Restrict)
-  notified_by   User?         @relation("OrderNotifiedBy", fields: [notified_by_id], references: [id], onDelete: Restrict)
-  confirmed_by  User?         @relation("OrderConfirmedBy", fields: [confirmed_by_id], references: [id], onDelete: Restrict)
-  items         OrderItem[]
-  delivery_link DeliveryLink?
+  preview_link                  PreviewLink?              @relation(fields: [preview_link_id], references: [id], onDelete: Restrict)
+  event                         Event                     @relation(fields: [event_id], references: [id], onDelete: Restrict)
+  user                          User                      @relation("OrderUser", fields: [user_id], references: [id], onDelete: Restrict)
+  notified_by                   User?                     @relation("OrderNotifiedBy", fields: [notified_by_id], references: [id], onDelete: Restrict)
+  confirmed_by                  User?                     @relation("OrderConfirmedBy", fields: [confirmed_by_id], references: [id], onDelete: Restrict)
+  billing_account               BillingAccount?           @relation(fields: [snap_billing_account_id], references: [id], onDelete: Restrict)
+  items                         OrderItem[]
+  delivery_link                 DeliveryLink?
+  payment_transaction_orders    PaymentTransactionOrder[]
+  rikuchiy_outbox_items         RikuchiyOutboxItem[]
+  order_tax_documents           OrderTaxDocument[]
+  invoice_state                 OrderInvoiceState         @default(none)
+  invoice_synced_at             DateTime?                 @db.Timestamptz
+  invoice_rejection_notified_at DateTime?                 @db.Timestamptz
 
+  @@index([invoice_state], map: "idx_orders_invoice_state")
   @@index([preview_link_id])
   @@index([event_id])
   @@index([user_id])
@@ -692,6 +804,8 @@ model EventAsset {
   public_slug String         @unique @db.VarChar(30)
   file_size   BigInt?
   mime_type   String?        @db.VarChar(50)
+  focal_x     Float          @default(0.5)
+  focal_y     Float          @default(0.5)
   uploaded_at DateTime       @default(now()) @db.Timestamptz
 
   event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
@@ -703,12 +817,19 @@ model EventAsset {
 
 model PhotoCategory {
   id         Int      @id @default(autoincrement())
-  name       String   @unique @db.VarChar(100)
+  name       String   @db.VarChar(100)
+  // NULL = base category, global and read-only for tenants; set = that tenant's own category.
+  tenant_id  String?  @db.Uuid
   created_at DateTime @default(now()) @db.Timestamptz
 
+  tenant                 Tenant?              @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
   event_photo_categories EventPhotoCategory[]
   photos                 Photo[]
 
+  // Uniqueness is the expression index `photo_categories_owner_name_key`
+  // (tenant_id, lower(name)) NULLS NOT DISTINCT, built by the TIT-87 migration's raw SQL; Prisma
+  // cannot declare it, so only the plain tenant index is mirrored here.
+  @@index([tenant_id])
   @@map("photo_categories")
 }
 
@@ -739,26 +860,56 @@ model UserPhone {
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
+  @@unique([user_id, phone_number])
   @@index([user_id])
   // Unique partial index (user_id) WHERE is_primary = true created via raw SQL
   @@map("user_phones")
 }
 
 model UserConsent {
-  id             String   @id @default(uuid()) @db.Uuid
-  user_id        String   @db.Uuid
-  type           String   @db.VarChar(40)
-  policy_version String   @db.VarChar(20)
-  accepted_at    DateTime @default(now()) @db.Timestamptz
-  ip             String?  @db.VarChar(45)
-  user_agent     String?  @db.VarChar(500)
-  created_at     DateTime @default(now()) @db.Timestamptz
+  id             String    @id @default(uuid()) @db.Uuid
+  user_id        String    @db.Uuid
+  type           String    @db.VarChar(40)
+  policy_version String    @db.VarChar(20)
+  accepted_at    DateTime  @default(now()) @db.Timestamptz
+  ip             String?   @db.VarChar(45)
+  user_agent     String?   @db.VarChar(500)
+  created_at     DateTime  @default(now()) @db.Timestamptz
+  revoked_at     DateTime? @db.Timestamptz
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, type, policy_version])
   @@index([user_id])
   @@map("user_consents")
+}
+
+enum BillingIdType {
+  ruc
+  national_id
+  passport
+
+  @@map("billing_id_type")
+}
+
+model BillingAccount {
+  id         String        @id @default(uuid()) @db.Uuid
+  user_id    String        @db.Uuid
+  id_type    BillingIdType
+  id_number  String        @db.VarChar(20)
+  legal_name String        @db.VarChar(300)
+  email      String        @db.VarChar(255)
+  address    String?       @db.VarChar(300)
+  is_default Boolean       @default(false)
+  created_at DateTime      @default(now()) @db.Timestamptz
+  deleted_at DateTime?     @db.Timestamptz
+
+  user   User    @relation(fields: [user_id], references: [id], onDelete: Restrict)
+  orders Order[]
+
+  @@index([user_id])
+  // Unique partial index (user_id) WHERE is_default AND deleted_at IS NULL created via raw SQL
+  @@map("billing_accounts")
 }
 
 model CustomerProfile {
@@ -844,4 +995,400 @@ model Notification {
 
   @@index([user_id, is_read, created_at(sort: Desc)])
   @@map("notifications")
+}
+
+// ─── Authorization ──────────────────────────────────────────────────────────
+
+model Tenant {
+  id                        String   @id @default(uuid()) @db.Uuid
+  name                      String   @db.VarChar(200)
+  is_platform               Boolean  @default(false)
+  event_quota               Int      @default(0)
+  default_event_photo_quota Int?
+  created_at                DateTime @default(now()) @db.Timestamptz
+
+  public_name           String?   @db.VarChar(200)
+  watermark_storage_key String?   @db.VarChar(500)
+  whatsapp_number       String?   @db.VarChar(20)
+  whatsapp_verified_at  DateTime? @db.Timestamptz
+
+  users            User[]
+  events           Event[]
+  payout_methods   TenantPayoutMethod[]
+  contracts        TenantContract[]
+  photo_categories PhotoCategory[]
+
+  @@map("tenants")
+}
+
+model Permission {
+  id                 String  @id @default(uuid()) @db.Uuid
+  key                String  @unique @db.VarChar(100)
+  category           String  @db.VarChar(50)
+  is_platform_only   Boolean @default(false)
+  allows_event_scope Boolean @default(false)
+
+  template_memberships PermissionTemplatePermission[]
+  grants               UserPermissionGrant[]
+
+  @@map("permissions")
+}
+
+model PermissionTemplate {
+  id               String  @id @default(uuid()) @db.Uuid
+  key              String  @unique @db.VarChar(50)
+  name             String  @db.VarChar(100)
+  is_platform_only Boolean @default(false)
+
+  permissions PermissionTemplatePermission[]
+  users       User[]
+
+  @@map("permission_templates")
+}
+
+model PermissionTemplatePermission {
+  template_id   String @db.Uuid
+  permission_id String @db.Uuid
+
+  template   PermissionTemplate @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  permission Permission         @relation(fields: [permission_id], references: [id], onDelete: Restrict)
+
+  @@id([template_id, permission_id])
+  @@map("permission_template_permissions")
+}
+
+enum GrantScopeType {
+  global
+  event
+
+  @@map("grant_scope_type")
+}
+
+enum GrantEffect {
+  allow
+  deny
+
+  @@map("grant_effect")
+}
+
+model UserPermissionGrant {
+  id            String         @id @default(uuid()) @db.Uuid
+  user_id       String         @db.Uuid
+  permission_id String         @db.Uuid
+  scope_type    GrantScopeType
+  event_id      String?        @db.Uuid
+  effect        GrantEffect
+  granted_by_id String         @db.Uuid
+  granted_at    DateTime       @default(now()) @db.Timestamptz
+
+  user       User       @relation("GrantHolder", fields: [user_id], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permission_id], references: [id], onDelete: Restrict)
+  event      Event?     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  granted_by User       @relation("GrantIssuer", fields: [granted_by_id], references: [id], onDelete: Restrict)
+
+  // Declared for Prisma Client's compound `WhereUniqueInput` only, so
+  // GrantPermissionHandler can `upsert` idempotently. THE PHYSICAL INDEX
+  // IS NOT WHAT THIS LINE WOULD CREATE: it already exists, built by the
+  // 20260818143434_tit38_grants migration's raw SQL, WITH `NULLS NOT
+  // DISTINCT` — the clause that makes two global grants (event_id IS
+  // NULL) collide as duplicates instead of Postgres's default of treating
+  // every NULL as distinct. Prisma's schema DSL cannot express `NULLS NOT
+  // DISTINCT` in an `@@unique`, so this declaration is deliberately
+  // incomplete: it exists for the generated TypeScript types only.
+  //
+  // THE MIGRATION FILE IS THE SOURCE OF TRUTH for what's actually on the
+  // database — this line is not. Never run `prisma migrate dev` or
+  // `prisma db push` from this schema: Prisma will see this `@@unique` as
+  // plain (NULLS-DISTINCT) drift from the real index and offer to "fix"
+  // it by recreating `user_permission_grants_unique` WITHOUT `NULLS NOT
+  // DISTINCT` — which reopens the duplicate-global-grant hole Task 4
+  // closed and proved shut against a live database (see
+  // count-active-permission-grant-holders.integration.spec.ts and
+  // grant-uniqueness.integration.spec.ts, which fail immediately if that
+  // ever happens). `prisma generate` only reads this file and never
+  // touches the database, so it remains safe.
+  @@unique([user_id, permission_id, scope_type, event_id], map: "user_permission_grants_unique")
+  @@index([user_id])
+  @@index([event_id])
+  @@map("user_permission_grants")
+}
+
+enum ContractStatus {
+  pending
+  accepted
+  revoked
+  expired
+
+  @@map("contract_status")
+}
+
+model TenantContract {
+  id                  String         @id @default(uuid()) @db.Uuid
+  user_id             String         @db.Uuid
+  tenant_id           String?        @db.Uuid
+  commercial_name     String         @db.VarChar(200)
+  events_total        Int
+  photos_per_event    Int?
+  status              ContractStatus @default(pending)
+  token_hash          String         @unique @db.VarChar(64)
+  valid_until         DateTime       @db.Timestamptz
+  terms_version       String         @db.VarChar(20)
+  issued_by_id        String?        @db.Uuid
+  is_backfill         Boolean        @default(false)
+  accepted_at         DateTime?      @db.Timestamptz
+  accepted_ip         String?        @db.VarChar(45)
+  accepted_user_agent String?        @db.VarChar(500)
+  revoked_at          DateTime?      @db.Timestamptz
+  created_at          DateTime       @default(now()) @db.Timestamptz
+
+  user      User    @relation("ContractHolder", fields: [user_id], references: [id], onDelete: Restrict)
+  issued_by User?   @relation("ContractIssuer", fields: [issued_by_id], references: [id], onDelete: SetNull)
+  tenant    Tenant? @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  events    Event[]
+
+  @@index([user_id])
+  @@index([tenant_id])
+  @@index([status])
+  @@map("tenant_contracts")
+}
+
+// ─── Payments ───────────────────────────────────────────────────────────────
+
+model TenantPayoutMethod {
+  id         String         @id @default(uuid()) @db.Uuid
+  tenant_id  String         @db.Uuid
+  provider   PayoutProvider
+  is_active  Boolean        @default(true)
+  sort_order Int            @default(0)
+
+  mode                  PaymentMode?
+  status                PaymentAccountStatus @default(pending)
+  receiver_identifier   String?              @db.VarChar(100)
+  credentials_encrypted String?              @db.Text
+  verified_at           DateTime?            @db.Timestamptz
+
+  bank_name             String? @db.VarChar(100)
+  account_number        String? @db.VarChar(50)
+  account_type          String? @db.VarChar(20)
+  account_holder        String? @db.VarChar(200)
+  holder_identification String? @db.VarChar(20)
+
+  configured_by_id String?  @db.Uuid
+  created_at       DateTime @default(now()) @db.Timestamptz
+  updated_at       DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  tenant        Tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  configured_by User?               @relation("PayoutMethodConfiguredBy", fields: [configured_by_id], references: [id], onDelete: SetNull)
+  event_copies  EventPayoutMethod[]
+
+  @@index([tenant_id, is_active])
+  @@map("tenant_payout_methods")
+}
+
+model PaymentTransaction {
+  id                     String          @id @default(uuid()) @db.Uuid
+  client_transaction_id  String          @unique @db.VarChar(50)
+  provider               PaymentProvider
+  gateway_transaction_id String?         @db.VarChar(100)
+
+  status PaymentTransactionStatus @default(initiated)
+
+  amount_cents             Int
+  amount_without_tax_cents Int
+  amount_with_tax_cents    Int
+  tax_cents                Int
+  commission_cents         Int
+  transfer_to_cents        Int?
+
+  mode_snapshot     PaymentMode
+  receiver_snapshot String      @db.VarChar(100)
+  store_id_snapshot String?     @db.VarChar(100)
+
+  authorization_code String? @db.VarChar(50)
+  card_brand         String? @db.VarChar(80)
+  last_digits        String? @db.VarChar(8)
+  confirm_payload    Json?
+  failure_message    String? @db.Text
+
+  confirmed_at DateTime? @db.Timestamptz
+  created_at   DateTime  @default(now()) @db.Timestamptz
+  updated_at   DateTime  @default(now()) @updatedAt @db.Timestamptz
+
+  orders PaymentTransactionOrder[]
+
+  @@index([status])
+  @@map("payment_transactions")
+}
+
+model PaymentTransactionOrder {
+  payment_transaction_id String @db.Uuid
+  order_id               String @db.Uuid
+
+  payment_transaction PaymentTransaction @relation(fields: [payment_transaction_id], references: [id], onDelete: Restrict)
+  order               Order              @relation(fields: [order_id], references: [id], onDelete: Restrict)
+
+  @@id([payment_transaction_id, order_id])
+  @@index([order_id])
+  @@map("payment_transaction_orders")
+}
+
+model EventPayoutMethod {
+  id         String         @id @default(uuid()) @db.Uuid
+  event_id   String         @db.Uuid
+  provider   PayoutProvider
+  is_active  Boolean        @default(true)
+  sort_order Int            @default(0)
+
+  mode                PaymentMode?
+  receiver_identifier String?      @db.VarChar(100)
+
+  bank_name             String? @db.VarChar(100)
+  account_number        String? @db.VarChar(50)
+  account_type          String? @db.VarChar(20)
+  account_holder        String? @db.VarChar(200)
+  holder_identification String? @db.VarChar(20)
+
+  source_payout_method_id String?  @db.Uuid
+  created_at              DateTime @default(now()) @db.Timestamptz
+  updated_at              DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  event  Event               @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  source TenantPayoutMethod? @relation(fields: [source_payout_method_id], references: [id], onDelete: SetNull)
+
+  @@index([event_id, is_active])
+  @@map("event_payout_methods")
+}
+
+enum YupanaOutboxKind {
+  usage_report
+  photo_declaration
+
+  @@map("yupana_outbox_kind")
+}
+
+enum YupanaOutboxStatus {
+  pending
+  sent
+  rejected
+
+  @@map("yupana_outbox_status")
+}
+
+model YupanaOutboxItem {
+  id               String             @id @default(uuid()) @db.Uuid
+  kind             YupanaOutboxKind
+  item_key         String             @unique @db.VarChar(120)
+  photo_id         String?            @db.Uuid
+  payload          Json
+  status           YupanaOutboxStatus @default(pending)
+  attempts         Int                @default(0)
+  last_error       String?            @db.Text
+  rejection_reason String?            @db.VarChar(80)
+  created_at       DateTime           @default(now()) @db.Timestamptz
+  sent_at          DateTime?          @db.Timestamptz
+
+  @@index([status, kind, created_at], map: "idx_yupana_outbox_items_pending")
+  @@index([photo_id, kind], map: "idx_yupana_outbox_items_photo")
+  @@map("yupana_outbox_items")
+}
+
+model CdnTransformationSighting {
+  id              String   @id @default(uuid()) @db.Uuid
+  month           String   @db.Char(7)
+  combination_key String   @db.Char(64)
+  kind            String   @db.VarChar(10)
+  slug            String   @db.VarChar(30)
+  first_seen_on   DateTime @db.Date
+  created_at      DateTime @default(now()) @db.Timestamptz
+
+  @@unique([month, combination_key], map: "uq_cdn_transformation_sightings_month_key")
+  @@index([first_seen_on], map: "idx_cdn_transformation_sightings_day")
+  @@map("cdn_transformation_sightings")
+}
+
+model CdnRetiredSlug {
+  slug       String   @id @db.VarChar(30)
+  photo_id   String   @db.VarChar(80)
+  event_id   String   @db.Uuid
+  retired_at DateTime @default(now()) @db.Timestamptz
+
+  @@map("cdn_retired_slugs")
+}
+
+model CdnTransformationReportDay {
+  day              DateTime @id @db.Date
+  new_combinations Int
+  processed_at     DateTime @default(now()) @db.Timestamptz
+
+  @@map("cdn_transformation_report_days")
+}
+
+enum RikuchiyOutboxKind {
+  emit
+  annul
+
+  @@map("rikuchiy_outbox_kind")
+}
+
+enum RikuchiyOutboxStatus {
+  pending
+  sent
+  rejected
+  suppressed
+
+  @@map("rikuchiy_outbox_status")
+}
+
+model RikuchiyOutboxItem {
+  id               String               @id @default(uuid()) @db.Uuid
+  order_id         String               @db.Uuid
+  kind             RikuchiyOutboxKind
+  emission_id      String               @unique @db.Uuid
+  payload          Json
+  status           RikuchiyOutboxStatus @default(pending)
+  attempts         Int                  @default(0)
+  last_error       String?              @db.Text
+  rejection_reason String?              @db.VarChar(300)
+  tax_document_id  String?              @db.Uuid
+  external_ref     String               @db.VarChar(100)
+  outcome          String?              @db.VarChar(20)
+  created_at       DateTime             @default(now()) @db.Timestamptz
+  sent_at          DateTime?            @db.Timestamptz
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Restrict)
+
+  @@index([status, created_at], map: "idx_rikuchiy_outbox_items_pending")
+  // Unique partial index rikuchiy_outbox_items_one_pending_per_kind (order_id, kind) WHERE status = 'pending' created via raw SQL
+  @@map("rikuchiy_outbox_items")
+}
+
+enum OrderInvoiceState {
+  none
+  requested
+  in_process
+  authorized
+  rejected
+  annulled
+
+  @@map("order_invoice_state")
+}
+
+model OrderTaxDocument {
+  id            String    @id @db.Uuid
+  order_id      String    @db.Uuid
+  external_ref  String    @db.VarChar(100)
+  type          String    @db.VarChar(20)
+  state         String    @db.VarChar(20)
+  number        String    @db.VarChar(17)
+  access_key    String    @db.VarChar(49)
+  issue_date    DateTime  @db.Date
+  authorized_at DateTime? @db.Timestamptz
+  sri_messages  Json
+  deliveries    Json
+  synced_at     DateTime  @db.Timestamptz
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Restrict)
+
+  @@index([order_id])
+  @@map("order_tax_documents")
 }

@@ -1,3 +1,4 @@
+export { ActiveDeliveryProjection, type ActiveDeliveryRaw } from './active-delivery.projection'
 export {
   DeliveryDataProjection,
   type DeliveryDataRaw,

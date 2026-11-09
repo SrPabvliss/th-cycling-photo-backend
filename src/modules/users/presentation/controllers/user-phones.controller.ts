@@ -3,6 +3,7 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { EntityIdProjection } from '@shared/application'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import {
   AddUserPhoneCommand,
@@ -24,6 +25,7 @@ export class UserPhonesController {
     private readonly queryBus: QueryBus,
   ) {}
 
+  @Authenticated()
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List my phones' })
@@ -37,6 +39,7 @@ export class UserPhonesController {
     return this.queryBus.execute(new GetUserPhonesQuery(user.userId))
   }
 
+  @Authenticated()
   @Post()
   @SuccessMessage('success.CREATED', { entity: 'entities.user_phone' })
   @ApiOperation({ summary: 'Add a phone number' })
@@ -51,6 +54,7 @@ export class UserPhonesController {
     return this.commandBus.execute(command)
   }
 
+  @Authenticated()
   @Patch(':phoneId')
   @SuccessMessage('success.UPDATED', { entity: 'entities.user_phone' })
   @ApiOperation({ summary: 'Update a phone number' })
@@ -76,6 +80,7 @@ export class UserPhonesController {
     return this.commandBus.execute(command)
   }
 
+  @Authenticated()
   @Delete(':phoneId')
   @SuccessMessage('success.DELETED', { entity: 'entities.user_phone' })
   @ApiOperation({ summary: 'Delete a phone number' })
@@ -91,6 +96,7 @@ export class UserPhonesController {
     return this.commandBus.execute(new DeleteUserPhoneCommand(user.userId, phoneId))
   }
 
+  @Authenticated()
   @Patch(':phoneId/primary')
   @SuccessMessage('success.UPDATED', { entity: 'entities.user_phone' })
   @ApiOperation({ summary: 'Set a phone as primary' })

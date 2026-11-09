@@ -7,13 +7,21 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  ParseUUIDPipe,
   Post,
+  Query,
 } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
 import { EntityIdProjection } from '@shared/application'
-import { Public, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
+import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
+import {
+  AllowedWhenFrozen,
+  BlocksWhenFrozen,
+} from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import {
   AssignCategoryToEventCommand,
@@ -36,8 +44,7 @@ export class PhotoCategoriesController {
 
   // ─── Global category endpoints ────────────────────────────────────────────
 
-  @SkipThrottle()
-  @Public()
+  @Authenticated()
   @Get('photo-categories')
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List all global photo categories' })
@@ -47,18 +54,29 @@ export class PhotoCategoriesController {
     type: PhotoCategoryProjection,
     isArray: true,
   })
-  async getAll() {
-    return this.queryBus.execute(new GetAllCategoriesQuery())
+  @ApiQuery({
+    name: 'eventId',
+    required: false,
+    description: 'Event UUID whose organizer to list for',
+  })
+  async getAll(
+    @CurrentUser() user: ICurrentUser,
+    @Query('eventId', new ParseUUIDPipe({ optional: true })) eventId?: string,
+  ) {
+    return this.queryBus.execute(new GetAllCategoriesQuery(user.userId, eventId ?? null))
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('photo_category.create')
+  @AllowedWhenFrozen()
   @Post('photo-categories')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo_category' })
   @ApiOperation({ summary: 'Create a global photo category' })
   @ApiEnvelopeResponse({ status: 201, description: 'Category created', type: EntityIdProjection })
   @ApiEnvelopeErrorResponse({ status: 409, description: 'Category name already exists' })
-  async create(@Body() dto: CreatePhotoCategoryDto) {
-    return this.commandBus.execute(new CreatePhotoCategoryCommand(dto.name))
+  async create(@Body() dto: CreatePhotoCategoryDto, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(
+      new CreatePhotoCategoryCommand(dto.name, user.userId, dto.base ?? false),
+    )
   }
 
   // ─── Event-scoped category endpoints ──────────────────────────────────────
@@ -79,18 +97,26 @@ export class PhotoCategoriesController {
     return this.queryBus.execute(new GetPhotoCategoriesQuery(eventId))
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('photo_category.event.assign')
+  @BlocksWhenFrozen()
   @Post('events/:eventId/photo-categories')
   @SuccessMessage('success.CREATED', { entity: 'entities.photo_category' })
   @ApiOperation({ summary: 'Assign a global category to an event' })
   @ApiParam({ name: 'eventId', description: 'Event UUID', format: 'uuid' })
   @ApiEnvelopeResponse({ status: 201, description: 'Category assigned', type: EntityIdProjection })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event or category not found' })
-  async assignToEvent(@Param('eventId') eventId: string, @Body() dto: AssignCategoryToEventDto) {
-    return this.commandBus.execute(new AssignCategoryToEventCommand(eventId, dto.photoCategoryId))
+  async assignToEvent(
+    @Param('eventId') eventId: string,
+    @Body() dto: AssignCategoryToEventDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new AssignCategoryToEventCommand(eventId, dto.photoCategoryId, user.userId),
+    )
   }
 
-  @Roles('admin', 'operator')
+  @RequirePermission('photo_category.event.remove')
+  @BlocksWhenFrozen()
   @Delete('events/:eventId/photo-categories/:photoCategoryId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Unassign a category from an event' })
@@ -99,7 +125,10 @@ export class PhotoCategoriesController {
   async unassignFromEvent(
     @Param('eventId') eventId: string,
     @Param('photoCategoryId', ParseIntPipe) photoCategoryId: number,
+    @CurrentUser() user: ICurrentUser,
   ) {
-    await this.commandBus.execute(new UnassignCategoryFromEventCommand(eventId, photoCategoryId))
+    await this.commandBus.execute(
+      new UnassignCategoryFromEventCommand(eventId, photoCategoryId, user.userId),
+    )
   }
 }

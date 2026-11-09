@@ -57,12 +57,29 @@ export class ApiErrorDetail {
   @ApiProperty({
     description: 'Error code',
     example: 'NOT_FOUND',
-    enum: ['VALIDATION_FAILED', 'NOT_FOUND', 'BUSINESS_RULE', 'EXTERNAL_SERVICE', 'INTERNAL'],
+    enum: [
+      'VALIDATION_FAILED',
+      'BAD_REQUEST',
+      'UNAUTHORIZED',
+      'FORBIDDEN',
+      'NOT_FOUND',
+      'CONFLICT',
+      'TOO_MANY_REQUESTS',
+      'BUSINESS_RULE',
+      'EXTERNAL_SERVICE',
+      'INTERNAL',
+    ],
   })
   code: ErrorCode | string
 
   @ApiProperty({ description: 'Human-readable error message', example: 'Event not found' })
   message: string
+
+  @ApiPropertyOptional({
+    description: 'Untranslated i18n key identifying the specific rule that failed',
+    example: 'event.no_contract_available',
+  })
+  messageKey?: string
 
   @ApiProperty({
     description: 'Whether the frontend should propagate the error prominently',

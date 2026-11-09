@@ -4,7 +4,9 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { ClearEventPricingConfigCommand } from '@pricing/application/commands/clear-event-pricing-config/clear-event-pricing-config.command'
 import { SetEventPricingConfigCommand } from '@pricing/application/commands/set-event-pricing-config/set-event-pricing-config.command'
 import { SetEventPricingConfigDto } from '@pricing/application/commands/set-event-pricing-config/set-event-pricing-config.dto'
-import { Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { BlocksWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 
 /**
  * Admin endpoints for managing per-event pricing config (`Event.pricing_config`).
@@ -22,17 +24,27 @@ import { Roles } from '@shared/auth'
 export class PricingAdminController {
   constructor(private readonly commandBus: CommandBus) {}
 
-  @Roles('admin')
+  @RequirePermission('pricing.config.set')
+  @BlocksWhenFrozen()
   @Put(':eventId/pricing-config')
-  set(@Param('eventId', ParseUUIDPipe) eventId: string, @Body() dto: SetEventPricingConfigDto) {
+  set(
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+    @Body() dto: SetEventPricingConfigDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
     return this.commandBus.execute(
-      new SetEventPricingConfigCommand(eventId, { currency: dto.currency, tiers: dto.tiers }),
+      new SetEventPricingConfigCommand(
+        eventId,
+        { currency: dto.currency, tiers: dto.tiers },
+        user.userId,
+      ),
     )
   }
 
-  @Roles('admin')
+  @RequirePermission('pricing.config.clear')
+  @BlocksWhenFrozen()
   @Delete(':eventId/pricing-config')
-  clear(@Param('eventId', ParseUUIDPipe) eventId: string) {
-    return this.commandBus.execute(new ClearEventPricingConfigCommand(eventId))
+  clear(@Param('eventId', ParseUUIDPipe) eventId: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new ClearEventPricingConfigCommand(eventId, user.userId))
   }
 }

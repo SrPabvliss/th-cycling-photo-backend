@@ -6,6 +6,7 @@ import {
   type OrderDeliveredPayload,
   type OrderPaidPayload,
   type PreviewViewedPayload,
+  type TenantContractAcceptedPayload,
 } from './notification-events'
 
 @Injectable()
@@ -26,5 +27,9 @@ export class NotificationsService {
 
   emitOrderDelivered(payload: OrderDeliveredPayload): void {
     this.eventEmitter.emit(NotificationEvent.ORDER_DELIVERED, payload)
+  }
+
+  emitTenantContractAccepted(payload: TenantContractAcceptedPayload): void {
+    this.eventEmitter.emit(NotificationEvent.TENANT_CONTRACT_ACCEPTED, payload)
   }
 }

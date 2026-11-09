@@ -24,6 +24,8 @@ export class EventAssetWriteRepository implements IEventAssetWriteRepository {
         public_slug: data.public_slug,
         file_size: data.file_size,
         mime_type: data.mime_type,
+        focal_x: data.focal_x,
+        focal_y: data.focal_y,
         uploaded_at: data.uploaded_at,
       },
     })

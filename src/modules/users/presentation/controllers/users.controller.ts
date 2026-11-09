@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { EntityIdProjection, Pagination } from '@shared/application'
-import { Roles } from '@shared/auth'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 import {
   ConfirmAvatarUploadCommand,
@@ -27,7 +27,6 @@ import { GetUserDetailQuery, GetUsersListDto, GetUsersListQuery } from '@users/a
 
 @ApiTags('Users')
 @ApiBearerAuth()
-@Roles('admin')
 @Controller('users')
 export class UsersController {
   constructor(
@@ -35,6 +34,7 @@ export class UsersController {
     private readonly queryBus: QueryBus,
   ) {}
 
+  @RequirePermission('user.read')
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List users with pagination' })
@@ -55,6 +55,7 @@ export class UsersController {
     return this.queryBus.execute(query)
   }
 
+  @RequirePermission('user.read')
   @Get(':id')
   @SuccessMessage('success.FETCHED', { entity: 'entities.user' })
   @ApiOperation({ summary: 'Get user details by ID' })
@@ -69,6 +70,7 @@ export class UsersController {
     return this.queryBus.execute(new GetUserDetailQuery(id))
   }
 
+  @RequirePermission('user.create')
   @Post()
   @SuccessMessage('success.CREATED', { entity: 'entities.user' })
   @ApiOperation({ summary: 'Create a new user (admin only)' })
@@ -90,6 +92,7 @@ export class UsersController {
     return this.commandBus.execute(command)
   }
 
+  @RequirePermission('user.update')
   @Patch(':id')
   @SuccessMessage('success.UPDATED', { entity: 'entities.user' })
   @ApiOperation({ summary: 'Update user profile' })
@@ -105,6 +108,7 @@ export class UsersController {
     return this.commandBus.execute(command)
   }
 
+  @RequirePermission('user.deactivate')
   @Patch(':id/deactivate')
   @SuccessMessage('success.UPDATED', { entity: 'entities.user' })
   @ApiOperation({ summary: 'Deactivate a user account' })
@@ -120,6 +124,7 @@ export class UsersController {
     return this.commandBus.execute(new DeactivateUserCommand(id))
   }
 
+  @RequirePermission('user.reactivate')
   @Patch(':id/reactivate')
   @SuccessMessage('success.UPDATED', { entity: 'entities.user' })
   @ApiOperation({ summary: 'Reactivate a user account' })
@@ -135,6 +140,7 @@ export class UsersController {
     return this.commandBus.execute(new ReactivateUserCommand(id))
   }
 
+  @RequirePermission('user.reset_password')
   @Post(':id/reset-password')
   @SuccessMessage('success.UPDATED', { entity: 'entities.password' })
   @ApiOperation({ summary: 'Reset user password (admin only)' })
@@ -149,6 +155,7 @@ export class UsersController {
     return this.commandBus.execute(new ResetPasswordCommand(id, dto.newPassword))
   }
 
+  @RequirePermission('user.avatar.manage')
   @Post(':id/avatar/presigned-url')
   @SuccessMessage('success.CREATED', { entity: 'entities.presigned_url' })
   @ApiOperation({ summary: 'Generate a presigned URL for avatar upload' })
@@ -163,6 +170,7 @@ export class UsersController {
     return this.commandBus.execute(new GenerateAvatarUrlCommand(id, dto.fileName, dto.contentType))
   }
 
+  @RequirePermission('user.avatar.manage')
   @Post(':id/avatar/confirm')
   @SuccessMessage('success.UPDATED', { entity: 'entities.avatar' })
   @ApiOperation({ summary: 'Confirm avatar upload after presigned URL flow' })

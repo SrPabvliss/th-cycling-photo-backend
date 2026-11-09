@@ -6,14 +6,19 @@ import type {
   PublicEventListProjection,
 } from '@events/application/projections'
 import { Event } from '@events/domain/entities'
+import { type EventFacts, resolveEventAlert } from '@events/domain/event-alert'
 import type { EventStatusType } from '@events/domain/value-objects/event-status.vo'
 import { Prisma, type Event as PrismaEvent } from '@generated/prisma/client'
-import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
+import type { AssetPreset } from '@shared/cloudflare/infrastructure/cdn-url.builder'
+import type { EventAggregate } from '../repositories/event-aggregates'
 
 // --- Select shapes for Prisma queries ---
 
 export const coverImageAssetSelectConfig = {
   public_slug: true,
+  focal_x: true,
+  focal_y: true,
 } satisfies Prisma.EventAssetSelect
 
 export const eventListSelectConfig = {
@@ -25,6 +30,7 @@ export const eventListSelectConfig = {
   province: { select: { name: true } },
   canton: { select: { name: true } },
   status: true,
+  is_frozen: true,
   _count: { select: { photos: true } },
   assets: {
     select: coverImageAssetSelectConfig,
@@ -35,12 +41,32 @@ export const eventListSelectConfig = {
 
 export type EventListSelect = Prisma.EventGetPayload<{ select: typeof eventListSelectConfig }>
 
+export const eventListRowSelectConfig = {
+  ...eventListSelectConfig,
+  tenant_id: true,
+  tenant: { select: { name: true } },
+  photo_quota: true,
+  photos_uploaded: true,
+  deleted_at: true,
+} satisfies Prisma.EventSelect
+
+export type EventListRowSelect = Prisma.EventGetPayload<{
+  select: typeof eventListRowSelectConfig
+}>
+
 export const eventDetailSelectConfig = {
   ...eventListSelectConfig,
   province_id: true,
   canton_id: true,
+  photo_quota: true,
+  photos_uploaded: true,
+  frozen_at: true,
   created_at: true,
   updated_at: true,
+  tenant: { select: { name: true } },
+  event_type_id: true,
+  event_type: { select: { name: true } },
+  contract: { select: { commercial_name: true } },
 } satisfies Prisma.EventSelect
 
 export type EventDetailSelect = Prisma.EventGetPayload<{ select: typeof eventDetailSelectConfig }>
@@ -68,6 +94,7 @@ export const publicEventListSelectConfig = {
   name: true,
   start_date: true,
   end_date: true,
+  snap_public_name: true,
   province: { select: { name: true } },
   canton: { select: { name: true } },
   _count: { select: { photos: true } },
@@ -83,14 +110,16 @@ export type PublicEventListSelect = Prisma.EventGetPayload<{
 }>
 
 export const publicEventDetailSelectConfig = {
+  id: true,
   name: true,
   slug: true,
   start_date: true,
   end_date: true,
+  snap_public_name: true,
   province: { select: { name: true } },
   canton: { select: { name: true } },
   _count: { select: { photos: true } },
-  assets: { select: { asset_type: true, public_slug: true } },
+  assets: { select: { asset_type: true, public_slug: true, focal_x: true, focal_y: true } },
   photo_categories: {
     select: { photo_category: { select: { id: true, name: true } } },
     orderBy: { photo_category: { name: 'asc' } },
@@ -107,6 +136,7 @@ export type PublicEventDetailSelect = Prisma.EventGetPayload<{
 export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
   return {
     id: entity.id,
+    tenant_id: entity.tenantId,
     name: entity.name,
     slug: entity.slug,
     start_date: entity.startDate,
@@ -115,6 +145,13 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
     canton_id: entity.cantonId,
     event_type_id: entity.eventTypeId,
     status: entity.status,
+    snap_public_name: entity.snapPublicName,
+    snap_watermark_storage_key: entity.snapWatermarkStorageKey,
+    snap_whatsapp_number: entity.snapWhatsappNumber,
+    photo_quota: entity.photoQuota,
+    contract_id: entity.contractId,
+    is_frozen: entity.isFrozen,
+    frozen_at: entity.frozenAt,
     created_at: entity.audit.createdAt,
     updated_at: entity.audit.updatedAt,
     deleted_at: entity.audit.deletedAt,
@@ -127,6 +164,7 @@ export function toPersistence(entity: Event): Prisma.EventUncheckedCreateInput {
 export function toEntity(record: PrismaEvent): Event {
   return Event.fromPersistence({
     id: record.id,
+    tenantId: record.tenant_id,
     name: record.name,
     slug: record.slug,
     startDate: record.start_date,
@@ -135,11 +173,20 @@ export function toEntity(record: PrismaEvent): Event {
     cantonId: record.canton_id,
     eventTypeId: record.event_type_id,
     status: record.status as EventStatusType,
+    snapPublicName: record.snap_public_name,
+    snapWatermarkStorageKey: record.snap_watermark_storage_key,
+    snapWhatsappNumber: record.snap_whatsapp_number,
+    photoQuota: record.photo_quota,
+    // read-only: the counter is mutated only via claimPhotoQuota's raw UPDATE, never through this write path
+    photosUploaded: record.photos_uploaded,
+    isFrozen: record.is_frozen,
+    frozenAt: record.frozen_at,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
     deletedAt: record.deleted_at,
     createdById: record.created_by_id,
     updatedById: record.updated_by_id,
+    contractId: record.contract_id,
   })
 }
 
@@ -150,12 +197,23 @@ function getCoverImageSlug(assets: { public_slug: string }[]): string | null {
   return assets[0]?.public_slug ?? null
 }
 
+type CoverAsset = { public_slug: string; focal_x: number; focal_y: number }
+
+function coverUrlOf(assets: CoverAsset[], cdn: CdnUrlBuilder, preset: AssetPreset): string | null {
+  const cover = assets[0]
+  if (!cover) return null
+  return cdn.assetUrl(
+    cover.public_slug,
+    preset,
+    CdnUrlBuilder.focalGravity(cover.focal_x, cover.focal_y),
+  )
+}
+
 /** Converts a Prisma record to a summary projection (cross-module shape). */
 export function toSummaryProjection(
   record: EventSummarySelect,
   cdn: CdnUrlBuilder,
 ): EventSummaryProjection {
-  const coverSlug = getCoverImageSlug(record.assets)
   const location = [record.canton?.name, record.province?.name].filter(Boolean).join(', ')
   return {
     id: record.id,
@@ -164,15 +222,27 @@ export function toSummaryProjection(
     startDate: record.start_date,
     endDate: record.end_date,
     location,
-    coverUrl: coverSlug ? cdn.assetUrl(coverSlug, 'cover-lg') : null,
+    coverUrl: coverUrlOf(record.assets, cdn, 'cover-lg'),
     totalPhotos: record._count.photos,
   }
 }
 
 /** Converts a Prisma selected record to a list projection. */
-export function toListProjection(record: EventListSelect, cdn: CdnUrlBuilder): EventListProjection {
+export function toListProjection(
+  record: EventListRowSelect,
+  cdn: CdnUrlBuilder,
+  aggregate: EventAggregate,
+): EventListProjection {
   const coverSlug = getCoverImageSlug(record.assets)
-  const coverUrl = coverSlug ? cdn.assetUrl(coverSlug, 'cover-sm') : null
+  const coverUrl = coverUrlOf(record.assets, cdn, 'cover-sm')
+  const facts: EventFacts = {
+    isArchived: record.deleted_at !== null,
+    hasCover: coverSlug !== null,
+    isFrozen: record.is_frozen,
+    photoCount: record._count.photos,
+    photosUploaded: record.photos_uploaded,
+    photoQuota: record.photo_quota,
+  }
   return {
     id: record.id,
     slug: record.slug,
@@ -184,8 +254,25 @@ export function toListProjection(record: EventListSelect, cdn: CdnUrlBuilder): E
     coverImageUrl: coverUrl,
     coverImageSlug: coverSlug,
     status: record.status,
+    isFrozen: record.is_frozen,
     photoCount: record._count.photos,
     totalFileSize: 0,
+    organizerId: record.tenant_id,
+    organizerName: record.tenant.name,
+    photoQuota: record.photo_quota,
+    photosUploaded: record.photos_uploaded,
+    reviewedCount: aggregate.reviewedCount,
+    categorizedCount: aggregate.categorizedCount,
+    revenue: aggregate.revenue,
+    paidCount: aggregate.paidCount,
+    deliveredCount: aggregate.deliveredCount,
+    giftedCount: aggregate.giftedCount,
+    unpaidCount: aggregate.unpaidCount,
+    cancelledCount: aggregate.cancelledCount,
+    soldPhotoCount: aggregate.soldPhotoCount,
+    lastUploadAt: aggregate.lastUploadAt,
+    isArchived: facts.isArchived,
+    alert: resolveEventAlert(facts),
   }
 }
 
@@ -195,7 +282,7 @@ export function toDetailProjection(
   cdn: CdnUrlBuilder,
 ): EventDetailProjection {
   const coverSlug = getCoverImageSlug(record.assets)
-  const coverUrl = coverSlug ? cdn.assetUrl(coverSlug, 'cover-lg') : null
+  const coverUrl = coverUrlOf(record.assets, cdn, 'cover-lg')
   return {
     id: record.id,
     slug: record.slug,
@@ -210,10 +297,24 @@ export function toDetailProjection(
     coverImageSlug: coverSlug,
     status: record.status,
     photoCount: record._count.photos,
+    photoQuota: record.photo_quota,
+    photosUploaded: record.photos_uploaded,
+    isFrozen: record.is_frozen,
     classifiedCount: 0,
+    categorizedCount: 0,
     totalFileSize: 0,
+    reviewedCount: 0,
+    lastUploadAt: null,
+    revenue: '0.00',
+    ordersCount: 0,
+    soldPhotoCount: 0,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
+    frozenAt: record.frozen_at,
+    organizerName: record.tenant.name,
+    eventTypeId: record.event_type_id,
+    eventTypeName: record.event_type.name,
+    contractName: record.contract?.commercial_name ?? null,
   }
 }
 
@@ -227,6 +328,7 @@ export function toPublicListProjection(record: PublicEventListSelect): PublicEve
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
     photoCount: record._count.photos,
+    ownerName: record.snap_public_name ?? '',
     coverSlug: record.assets[0]?.public_slug ?? null,
   }
 }
@@ -237,6 +339,7 @@ export function toPublicDetailProjection(
   cdn: CdnUrlBuilder,
 ): PublicEventDetailProjection {
   return {
+    id: record.id,
     slug: record.slug,
     name: record.name,
     startDate: record.start_date,
@@ -244,6 +347,7 @@ export function toPublicDetailProjection(
     provinceName: record.province?.name ?? null,
     cantonName: record.canton?.name ?? null,
     photoCount: record._count.photos,
+    ownerName: record.snap_public_name ?? '',
     assets: record.assets.map((a) => ({
       assetType: a.asset_type,
       url: cdn.assetUrl(a.public_slug),

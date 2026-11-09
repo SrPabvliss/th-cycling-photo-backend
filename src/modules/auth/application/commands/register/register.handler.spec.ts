@@ -1,7 +1,7 @@
 import type { LocationValidator } from '@locations/application/services'
 import type { ConfigService } from '@nestjs/config'
 import type { JwtService } from '@nestjs/jwt'
-import { CONSENT_TYPE, POLICY_VERSION } from '../../../domain/constants/consent.constants'
+import { CONSENT_TYPE, POLICY_VERSIONS } from '../../../domain/constants/consent.constants'
 import type {
   IAuthUserRepository,
   IConsentRepository,
@@ -92,7 +92,7 @@ describe('RegisterHandler', () => {
     expect(consentRepo.record).toHaveBeenCalledWith({
       userId: 'user-1',
       type: CONSENT_TYPE.TERMS_PRIVACY,
-      policyVersion: POLICY_VERSION,
+      policyVersion: POLICY_VERSIONS[CONSENT_TYPE.TERMS_PRIVACY],
       ipAddress: '1.2.3.4',
       userAgent: 'jest-agent',
     })

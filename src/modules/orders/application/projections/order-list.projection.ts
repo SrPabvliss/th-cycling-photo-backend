@@ -22,6 +22,10 @@ export class OrderListProjection {
   paidAt: Date | null
   /** When photos were delivered (null if not yet) */
   deliveredAt: Date | null
+  /** When the order was cancelled (null if not cancelled) */
+  cancelledAt: Date | null
+  /** Event UUID */
+  eventId: string
   /** Display name from snapshot at order creation time (snap_first_name + snap_last_name). For the current live customer identity, use customerFirstName/customerLastName. */
   userName: string
   /** Live user UUID (used to visually group orders by customer) */
@@ -46,6 +50,7 @@ export class OrderListProjection {
   snapCurrency: string | null
   /** Whether a delivery link exists for this order */
   hasDeliveryLink: boolean
+  paymentMethod: string | null
   /** First few photos in the order for thumbnail preview (max 3) */
   previewPhotos: OrderListPreviewPhotoProjection[]
 }

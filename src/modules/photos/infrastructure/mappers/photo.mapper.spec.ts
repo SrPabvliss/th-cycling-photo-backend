@@ -1,3 +1,4 @@
+import type { Photo as PrismaPhoto } from '@generated/prisma/client'
 import {
   AttributeSource,
   BibReadingStatus,
@@ -5,10 +6,11 @@ import {
   CorrectionTargetType,
   Prisma,
 } from '@generated/prisma/client'
+import { Photo } from '@photos/domain/entities/photo.entity'
 import type { ICorrectionRepository, ILatestCorrection } from '@photos/domain/ports'
 import type { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import type { IStorageAdapter } from '@shared/storage/domain/ports/storage-adapter.port'
-import { type PhotoDetailSelect, toDetailProjection } from './photo.mapper'
+import { type PhotoDetailSelect, toDetailProjection, toEntity, toPersistence } from './photo.mapper'
 
 const buildRecord = (overrides: Partial<PhotoDetailSelect> = {}): PhotoDetailSelect =>
   ({
@@ -40,6 +42,7 @@ const cdn = {
 
 const buildStorage = (): jest.Mocked<IStorageAdapter> => ({
   upload: jest.fn(),
+  download: jest.fn(),
   getPresignedUrl: jest.fn(),
   getPresignedDownloadUrl: jest.fn(async ({ key }) => `https://signed/${key}?sig=x`),
   getPublicUrl: jest.fn(),
@@ -286,5 +289,24 @@ describe('toDetailProjection', () => {
       expect(result.colors[0].secondaryColorOriginal).toBe('verde')
       expect(result.colors[0].secondaryWasCorrected).toBe(false)
     })
+  })
+})
+
+describe('toPersistence / toEntity', () => {
+  it('keeps processing_started_at across the round trip', () => {
+    const photo = Photo.create({
+      eventId: '550e8400-e29b-41d4-a716-446655440000',
+      filename: 'photo-001.jpg',
+      storageKey: 'events/550e8400/photos/abc123.jpg',
+      fileSize: 1024n,
+      mimeType: 'image/jpeg',
+    })
+    photo.markProcessing()
+
+    const row = toPersistence(photo)
+    expect(row.processing_started_at).toEqual(photo.processingStartedAt)
+
+    const rebuilt = toEntity(row as unknown as PrismaPhoto)
+    expect(rebuilt.processingStartedAt).toEqual(photo.processingStartedAt)
   })
 })

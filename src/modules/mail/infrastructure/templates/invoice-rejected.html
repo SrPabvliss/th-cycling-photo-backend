@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corrige los datos de tu factura</title>
+<style>
+@media only screen and (max-width: 600px) {
+  .card { width: 100% !important; max-width: 100% !important; }
+  .px { padding-left: 20px !important; padding-right: 20px !important; }
+  .hero-title-td { display: block !important; width: 100% !important; }
+  .hero-badge-td {
+    display: block !important;
+    width: 100% !important;
+    text-align: left !important;
+    border-left: 0 !important;
+    padding-left: 0 !important;
+    padding-top: 16px !important;
+    border-top: 1px solid #2b3841 !important;
+  }
+  .hero-title { font-size: 24px !important; }
+  .hero-badge-num { font-size: 28px !important; }
+  .stack-label-td, .stack-body-td { display: block !important; width: 100% !important; padding-left: 0 !important; }
+  .stack-body-td { padding-top: 4px !important; }
+}
+</style>
+</head>
+<body style="margin:0; padding:0; background:#e8e6e2;">
+<div style="display:none; max-height:0; overflow:hidden; opacity:0;">El SRI no aceptó los datos de facturación de tu pedido.</div>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#e8e6e2;">
+  <tr>
+    <td align="center" style="padding:32px 12px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="card" style="width:600px; max-width:600px; background:#ffffff; border:1px solid #d7d3cc;">
+        <tr>
+          <td class="px" style="background:#ffffff; padding:16px 36px; border-bottom:1px solid #e6e2db;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td width="44" style="width:44px;"><img src="{{{logoUrl}}}" width="44" alt="TitanTV" style="display:block; width:44px; height:auto; border:0;"></td>
+                <td align="right" style="font:700 11px/1.2 Helvetica, Arial, sans-serif; letter-spacing:.16em; text-transform:uppercase; color:#1F5C7C;">Compra &middot; Factura</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td class="px" style="background:#101820; padding:34px 36px;">
+            <div class="hero-title" style="font:700 30px/1.15 Helvetica, Arial, sans-serif; letter-spacing:-.01em; color:#ffffff;">Necesitamos corregir<br>los datos de tu factura</div>
+          </td>
+        </tr>
+        <tr>
+          <td class="px" style="padding:32px 36px 0 36px; font:400 17px/1.5 Helvetica, Arial, sans-serif; color:#2b3238;">{{#if firstName}}Hola {{firstName}},{{else}}Hola,{{/if}}</td>
+        </tr>
+        <tr>
+          <td class="px" style="padding:12px 36px 0 36px; font:400 17px/1.5 Helvetica, Arial, sans-serif; color:#2b3238;">El SRI no aceptó los datos de facturación de tu pedido {{orderRef}} de {{eventName}}.</td>
+        </tr>
+        {{#if reason}}
+        <tr>
+          <td class="px" style="padding:20px 36px 0 36px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #e6e2db;">
+              <tr>
+                <td class="stack-label-td" width="130" valign="top" style="width:130px; padding:16px 0 0 0; font:700 11px/1.4 Helvetica, Arial, sans-serif; letter-spacing:.12em; text-transform:uppercase; color:#8a8579;">Motivo</td>
+                <td class="stack-body-td" style="padding:16px 0 0 0; font:400 15px/1.5 Helvetica, Arial, sans-serif; color:#2b3238;">{{reason}}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        {{/if}}
+        <tr>
+          <td class="px" style="padding:24px 36px 0 36px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td bgcolor="#1F5C7C" align="center"><a href="{{{correctUrl}}}" style="display:block; padding:19px 24px; font:700 17px/1 Helvetica, Arial, sans-serif; color:#ffffff; text-decoration:none;">Corregir mis datos</a></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td class="px" style="padding:22px 36px 34px 36px; font:400 13px/1.65 Helvetica, Arial, sans-serif; color:#8a8579; word-break:break-all;">Si el botón no abre, pega este enlace:<br><a href="{{{correctUrl}}}" style="color:#1F5C7C;">{{{correctUrl}}}</a></td>
+        </tr>
+        <tr>
+          <td class="px" style="border-top:1px solid #e6e2db; padding:18px 36px; font:400 12px/1.5 Helvetica, Arial, sans-serif; letter-spacing:.04em; color:#a09a90;">&copy; TitanTV 2026</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

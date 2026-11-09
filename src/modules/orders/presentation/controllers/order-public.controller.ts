@@ -5,8 +5,9 @@ import {
   CreateOrderFromPreviewCommand,
   CreateOrderFromPreviewDto,
 } from '@orders/application/commands'
-import { EntityIdProjection } from '@shared/application'
+import { PreviewOrderCreatedProjection } from '@orders/application/projections'
 import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Orders (Public)')
@@ -15,6 +16,7 @@ import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@
 export class OrderPublicController {
   constructor(private readonly commandBus: CommandBus) {}
 
+  @Authenticated()
   @Post()
   @SuccessMessage('success.CREATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Create an order from a preview link (requires authentication)' })
@@ -22,7 +24,7 @@ export class OrderPublicController {
   @ApiEnvelopeResponse({
     status: 201,
     description: 'Order created successfully',
-    type: EntityIdProjection,
+    type: PreviewOrderCreatedProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
   @ApiEnvelopeErrorResponse({ status: 401, description: 'Authentication required' })
@@ -40,6 +42,8 @@ export class OrderPublicController {
       dto.notes ?? null,
       dto.bibNumber ?? null,
       dto.snapCategoryName ?? null,
+      dto.billingAccountId,
+      dto.method,
     )
     return this.commandBus.execute(command)
   }

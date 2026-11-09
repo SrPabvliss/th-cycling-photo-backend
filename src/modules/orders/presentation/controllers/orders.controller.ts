@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import {
@@ -6,9 +6,13 @@ import {
   ConfirmOrderPaymentCommand,
   ConvertOrderToGiftCommand,
   ConvertOrderToSaleCommand,
+  CorrectOrderBillingCommand,
+  CorrectOrderBillingDto,
   GiftOrderCommand,
   NotifyPaymentInfoCommand,
   RegenerateDeliveryCommand,
+  ResendOrderTaxDocumentCommand,
+  RetryOrderAnnulmentCommand,
   SendDeliveryCommand,
 } from '@orders/application/commands'
 import {
@@ -16,15 +20,19 @@ import {
   OrderListProjection,
   OrderPaymentConfirmedProjection,
   OrdersStatsProjection,
+  TaxDocumentFilesProjection,
 } from '@orders/application/projections'
 import {
   GetOrderDetailQuery,
   GetOrdersListDto,
   GetOrdersListQuery,
   GetOrdersStatsQuery,
+  GetOrderTaxDocumentFilesQuery,
 } from '@orders/application/queries'
 import { AuditContext, EntityIdProjection, Pagination } from '@shared/application'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { AllowedWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Orders')
@@ -36,7 +44,7 @@ export class OrdersController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Roles('admin')
+  @RequirePermission('order.read')
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List orders with filters' })
@@ -46,31 +54,41 @@ export class OrdersController {
     type: OrderListProjection,
     isArray: true,
   })
-  async findAll(@Query() dto: GetOrdersListDto) {
+  async findAll(@Query() dto: GetOrdersListDto, @CurrentUser() user: ICurrentUser) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetOrdersListQuery(pagination, {
-      eventId: dto.eventId,
-      status: dto.status,
-      search: dto.search,
-    })
+    const query = new GetOrdersListQuery(
+      pagination,
+      {
+        eventId: dto.eventId,
+        status: dto.status,
+        search: dto.search,
+        invoiceState: dto.invoiceState,
+      },
+      user.userId,
+    )
     return this.queryBus.execute(query)
   }
 
-  @Roles('admin')
+  @RequirePermission('order.stats.read')
   @Get('stats')
   @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Get order statistics, optionally scoped to an event' })
   @ApiQuery({ name: 'eventId', required: false, description: 'Scope stats to a single event' })
+  @ApiQuery({ name: 'search', required: false, description: 'Filter stats by customer search' })
   @ApiEnvelopeResponse({
     status: 200,
     description: 'Order statistics retrieved',
     type: OrdersStatsProjection,
   })
-  async getStats(@Query('eventId') eventId?: string) {
-    return this.queryBus.execute(new GetOrdersStatsQuery(eventId))
+  async getStats(
+    @Query('eventId') eventId: string | undefined,
+    @Query('search') search: string | undefined,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.queryBus.execute(new GetOrdersStatsQuery(eventId, user.userId, search))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.read')
   @Get(':id')
   @SuccessMessage('success.FETCHED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Get order detail' })
@@ -81,11 +99,36 @@ export class OrdersController {
     type: OrderDetailProjection,
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
-  async findOne(@Param('id') id: string) {
-    return this.queryBus.execute(new GetOrderDetailQuery(id))
+  async findOne(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.queryBus.execute(new GetOrderDetailQuery(id, user.userId))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.read')
+  @Get(':id/tax-documents/:taxDocumentId/files')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.tax_document' })
+  @ApiOperation({ summary: 'Get signed download URLs for the XML and PDF of a tax document' })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiParam({ name: 'taxDocumentId', description: 'Tax document UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Signed file URLs',
+    type: TaxDocumentFilesProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order or tax document not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'The files are not ready yet' })
+  @ApiEnvelopeErrorResponse({ status: 502, description: 'The invoicing service is unavailable' })
+  async findTaxDocumentFiles(
+    @Param('id') id: string,
+    @Param('taxDocumentId') taxDocumentId: string,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.queryBus.execute(
+      new GetOrderTaxDocumentFilesQuery(id, taxDocumentId, user.userId, 'admin'),
+    )
+  }
+
+  @RequirePermission('order.notify_payment')
+  @AllowedWhenFrozen()
   @Patch(':id/notify-payment-info')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -104,7 +147,8 @@ export class OrdersController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @RequirePermission('order.confirm_payment')
+  @AllowedWhenFrozen()
   @Patch(':id/confirm-payment')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Confirm payment (pending → paid)' })
@@ -121,7 +165,8 @@ export class OrdersController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @RequirePermission('order.gift')
+  @AllowedWhenFrozen()
   @Patch(':id/gift')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -140,7 +185,8 @@ export class OrdersController {
     return this.commandBus.execute(new GiftOrderCommand(id, new AuditContext(user.userId)))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.convert_to_sale')
+  @AllowedWhenFrozen()
   @Patch(':id/convert-to-sale')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -159,7 +205,8 @@ export class OrdersController {
     return this.commandBus.execute(new ConvertOrderToSaleCommand(id, new AuditContext(user.userId)))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.convert_to_gift')
+  @AllowedWhenFrozen()
   @Patch(':id/convert-to-gift')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -178,7 +225,8 @@ export class OrdersController {
     return this.commandBus.execute(new ConvertOrderToGiftCommand(id, new AuditContext(user.userId)))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.deliver')
+  @AllowedWhenFrozen()
   @Patch(':id/send-delivery')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -197,7 +245,8 @@ export class OrdersController {
     return this.commandBus.execute(new SendDeliveryCommand(id, new AuditContext(user.userId)))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.delivery.regenerate')
+  @AllowedWhenFrozen()
   @Post(':id/regenerate-delivery')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({ summary: 'Regenerate expired delivery link' })
@@ -213,7 +262,8 @@ export class OrdersController {
     return this.commandBus.execute(new RegenerateDeliveryCommand(id, new AuditContext(user.userId)))
   }
 
-  @Roles('admin')
+  @RequirePermission('order.cancel')
+  @AllowedWhenFrozen()
   @Patch(':id/cancel')
   @SuccessMessage('success.UPDATED', { entity: 'entities.order' })
   @ApiOperation({
@@ -227,7 +277,81 @@ export class OrdersController {
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
   @ApiEnvelopeErrorResponse({ status: 422, description: 'Order is not cancellable' })
-  async cancel(@Param('id') id: string) {
-    return this.commandBus.execute(new CancelOrderCommand(id))
+  async cancel(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new CancelOrderCommand(id, user.userId))
+  }
+
+  @RequirePermission('order.invoice.manage')
+  @AllowedWhenFrozen()
+  @Post(':id/tax-documents/:taxDocumentId/resends')
+  @SuccessMessage('order.invoice_resent')
+  @ApiOperation({ summary: 'Ask the invoicing service to resend a tax document to the buyer' })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiParam({ name: 'taxDocumentId', description: 'Tax document UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Resend accepted',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order or tax document not found' })
+  @ApiEnvelopeErrorResponse({ status: 409, description: 'The document cannot be resent' })
+  @ApiEnvelopeErrorResponse({ status: 502, description: 'The invoicing service is unavailable' })
+  async resendTaxDocument(
+    @Param('id') id: string,
+    @Param('taxDocumentId') taxDocumentId: string,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new ResendOrderTaxDocumentCommand(id, taxDocumentId, user.userId),
+    )
+  }
+
+  @RequirePermission('order.invoice.manage')
+  @AllowedWhenFrozen()
+  @Post(':id/invoice/annulment-retries')
+  @SuccessMessage('order.invoice_annulment_retried')
+  @ApiOperation({ summary: 'Retry the annulment of an invoice whose credit note was rejected' })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    description: 'Annulment queued again',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
+  @ApiEnvelopeErrorResponse({ status: 409, description: 'The annulment cannot be retried now' })
+  async retryAnnulment(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
+    return this.commandBus.execute(new RetryOrderAnnulmentCommand(id, user.userId))
+  }
+
+  @RequirePermission('order.invoice.manage')
+  @AllowedWhenFrozen()
+  @Patch(':id/billing')
+  @SuccessMessage('order.invoice_correction_sent')
+  @ApiOperation({ summary: 'Correct the billing data of a rejected invoice' })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Corrected emission queued',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
+  @ApiEnvelopeErrorResponse({ status: 409, description: 'The invoice cannot be corrected now' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Billing data is invalid' })
+  async correctBilling(
+    @Param('id') id: string,
+    @Body() correctOrderBillingDto: CorrectOrderBillingDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new CorrectOrderBillingCommand(
+        id,
+        user.userId,
+        correctOrderBillingDto.idType,
+        correctOrderBillingDto.idNumber,
+        correctOrderBillingDto.legalName,
+        correctOrderBillingDto.email,
+        correctOrderBillingDto.address ?? null,
+      ),
+    )
   }
 }

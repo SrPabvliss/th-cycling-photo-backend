@@ -14,6 +14,24 @@ export default () => {
 
   const { AI_PIPELINE_BASE_URL, AI_PIPELINE_TIMEOUT_MS } = process.env
 
+  const { YUPANA_BASE_URL, YUPANA_PRODUCER_KEY, YUPANA_SERVICE_KEY, YUPANA_TIMEOUT_MS } =
+    process.env
+
+  const { RIKUCHIY_BASE_URL, RIKUCHIY_SERVICE_KEY, RIKUCHIY_TIMEOUT_MS } = process.env
+
+  const {
+    PAYPHONE_ENVIRONMENT,
+    PAYPHONE_TOKEN,
+    PAYPHONE_STORE_ID,
+    PAYPHONE_SPLIT_ENCRYPTION_PASSWORD,
+    PAYPHONE_API_TOKEN,
+    PAYPHONE_API_STORE_ID,
+    PAYMENT_EXPIRY_SWEEP_DELAY_MS,
+    PAYMENT_SYSTEM_USER_EMAIL,
+  } = process.env
+
+  const { CREDENTIAL_ENCRYPTION_KEY } = process.env
+
   const { JWT_SECRET, JWT_ACCESS_EXPIRATION_SECONDS, JWT_REFRESH_EXPIRY_DAYS, CORS_ORIGIN } =
     process.env
 
@@ -22,6 +40,8 @@ export default () => {
     CLOUDFLARE_KV_NAMESPACE_ID,
     CLOUDFLARE_API_TOKEN,
     CLOUDFLARE_HMAC_SECRET,
+    CLOUDFLARE_ANALYTICS_TOKEN,
+    CDN_TRANSFORMATIONS_DATASET,
   } = process.env
 
   const { WATERMARK_BASE_URL, PREVIEW_BASE_URL, DELIVERY_BASE_URL } = process.env
@@ -35,6 +55,7 @@ export default () => {
     MAIL_FROM_NAME,
     MAIL_REPLY_TO,
     MAIL_REDIRECT_TO,
+    CONTACT_INBOX_EMAIL,
     MAIL_TRANSPORT,
     PASSWORD_RESET_HMAC_SECRET,
     APP_WEB_BASE_URL,
@@ -72,6 +93,8 @@ export default () => {
       kvNamespaceId: CLOUDFLARE_KV_NAMESPACE_ID,
       apiToken: CLOUDFLARE_API_TOKEN,
       hmacSecret: CLOUDFLARE_HMAC_SECRET,
+      analyticsToken: CLOUDFLARE_ANALYTICS_TOKEN || '',
+      transformationsDataset: CDN_TRANSFORMATIONS_DATASET || '',
     },
     voyageAi: {
       apiKey: VOYAGE_API_KEY,
@@ -107,6 +130,7 @@ export default () => {
       fromName: MAIL_FROM_NAME,
       replyTo: MAIL_REPLY_TO,
       redirectTo: MAIL_REDIRECT_TO || '',
+      contactInbox: CONTACT_INBOX_EMAIL || MAIL_REPLY_TO,
       transport: MAIL_TRANSPORT || 'api',
     },
     passwordReset: {
@@ -118,7 +142,35 @@ export default () => {
     },
     aiPipeline: {
       baseUrl: AI_PIPELINE_BASE_URL || 'http://localhost:8001',
-      timeoutMs: Number.parseInt(AI_PIPELINE_TIMEOUT_MS || '30000', 10),
+      timeoutMs: Number.parseInt(AI_PIPELINE_TIMEOUT_MS || '120000', 10),
+    },
+    yupana: {
+      baseUrl: YUPANA_BASE_URL || '',
+      producerKey: YUPANA_PRODUCER_KEY || '',
+      serviceKey: YUPANA_SERVICE_KEY || '',
+      timeoutMs: Number.parseInt(YUPANA_TIMEOUT_MS || '5000', 10),
+    },
+    rikuchiy: {
+      baseUrl: RIKUCHIY_BASE_URL || '',
+      serviceKey: RIKUCHIY_SERVICE_KEY || '',
+      timeoutMs: Number.parseInt(RIKUCHIY_TIMEOUT_MS || '5000', 10),
+    },
+    payphone: {
+      environment: PAYPHONE_ENVIRONMENT,
+      token: PAYPHONE_TOKEN,
+      storeId: PAYPHONE_STORE_ID,
+      splitEncryptionPassword: PAYPHONE_SPLIT_ENCRYPTION_PASSWORD || '',
+      apiToken: PAYPHONE_API_TOKEN || '',
+      apiStoreId: PAYPHONE_API_STORE_ID || '',
+      timeoutMs: 15000,
+    },
+    payments: {
+      taxRate: 0,
+      expirySweepDelayMs: Number.parseInt(PAYMENT_EXPIRY_SWEEP_DELAY_MS || '900000', 10),
+      systemUserEmail: PAYMENT_SYSTEM_USER_EMAIL,
+    },
+    crypto: {
+      credentialKey: CREDENTIAL_ENCRYPTION_KEY,
     },
   }
 }

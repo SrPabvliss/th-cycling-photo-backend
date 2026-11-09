@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import { PrismaService } from '@shared/infrastructure'
+import type { OperatorRetouchEventProjection } from '../../application/projections'
 import type {
   IOperatorRetouchReadRepository,
   OperatorRetouchOrderDetailRow,
@@ -33,6 +35,14 @@ function buildOrdersWhere(eventIds: string[] | null, scope: RetouchOrderScope) {
 @Injectable()
 export class OperatorRetouchReadRepository implements IOperatorRetouchReadRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  async findRetouchableEvents(scope: EventScope): Promise<OperatorRetouchEventProjection[]> {
+    return this.prisma.event.findMany({
+      where: { deleted_at: null, ...scope.toPrisma() },
+      select: { id: true, slug: true, name: true },
+      orderBy: { name: 'asc' },
+    })
+  }
 
   async getRetouchQueuePage(
     eventId: string,
@@ -201,7 +211,7 @@ export class OperatorRetouchReadRepository implements IOperatorRetouchReadReposi
   ): Promise<OperatorRetouchOrderDetailRow | null> {
     const itemsWhere = onlyPending ? { photo: PENDING_PHOTO_FILTER } : undefined
     const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
+      where: { id: orderId, status: 'paid' },
       select: {
         id: true,
         event_id: true,
@@ -252,8 +262,12 @@ export class OperatorRetouchReadRepository implements IOperatorRetouchReadReposi
   }
 
   async isOperatorAssigned(eventId: string, operatorId: string): Promise<boolean> {
-    const record = await this.prisma.eventOperator.findUnique({
-      where: { event_id_user_id: { event_id: eventId, user_id: operatorId } },
+    const record = await this.prisma.userPermissionGrant.findFirst({
+      where: {
+        event_id: eventId,
+        user_id: operatorId,
+        permission: { key: 'photo.retouch.read' },
+      },
       select: { id: true },
     })
     return record !== null

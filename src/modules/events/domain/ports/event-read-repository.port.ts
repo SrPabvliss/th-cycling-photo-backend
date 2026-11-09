@@ -3,24 +3,40 @@ import type {
   EventDetailProjection,
   EventListProjection,
   EventSummaryProjection,
+  EventsStatsProjection,
   PublicEventDetailProjection,
   PublicEventListProjection,
   PublicPhotoProjection,
 } from '@events/application/projections'
+import type { EventListFilters } from '@events/application/queries/get-events-list/get-events-list.dto'
 import type { PaginatedResult, Pagination } from '@shared/application'
+import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { Event } from '../entities'
+import type { EventAggregate } from './event-aggregate'
 
 export type AssignedEventStatus = 'active' | 'completed'
 
 export interface IEventReadRepository {
   findById(id: string, includeArchived?: boolean): Promise<Event | null>
+  /**
+   * Scoped load — the tenant-boundary check for every mutation in this module. `findById` is not a
+   * safe basis for `authz.assert()`, which only tests whether the caller holds the key, never
+   * whether the row is theirs. An out-of-scope id resolves to `null` (404).
+   */
+  findByIdInScope(id: string, scope: EventScope, includeArchived?: boolean): Promise<Event | null>
   getEventsList(
     pagination: Pagination,
-    includeArchived?: boolean,
-    search?: string,
+    filters: EventListFilters,
+    scope: EventScope,
   ): Promise<PaginatedResult<EventListProjection>>
-  getEventDetail(id: string): Promise<EventDetailProjection | null>
-  getEventDetailBySlug(slug: string): Promise<EventDetailProjection | null>
+  getEventDetailBySlug(slug: string, scope: EventScope): Promise<EventDetailProjection | null>
+  getAggregateByEvent(eventId: string): Promise<EventAggregate>
+  /**
+   * Aggregates in the database, scoped by `scope` and narrowed by `filters.search` /
+   * `filters.organizerId`. `filters.tab` is ignored — the tabs partition the same population
+   * these tiles summarize.
+   */
+  getEventsStats(filters: EventListFilters, scope: EventScope): Promise<EventsStatsProjection>
   getAssignedEventsByStatus(
     operatorId: string,
     status: AssignedEventStatus,
@@ -30,7 +46,7 @@ export interface IEventReadRepository {
   getAssignedEventIdsByStatus(operatorId: string, status: AssignedEventStatus): Promise<string[]>
   getAllAssignedEventIds(operatorId: string): Promise<string[]>
   getEventBriefsByIds(ids: string[]): Promise<EventBriefProjection[]>
-  countAll(): Promise<number>
+  countAll(scope: EventScope): Promise<number>
   getPublicEventsList(pagination: Pagination): Promise<PaginatedResult<PublicEventListProjection>>
   getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null>
   getPublicPhotos(
@@ -45,6 +61,7 @@ export interface IEventReadRepository {
   ): Promise<PaginatedResult<PublicPhotoProjection>>
   existsActiveEvent(eventId: string): Promise<{ id: string; name: string } | null>
   existsActiveEventBySlug(slug: string): Promise<{ id: string; name: string } | null>
+  isFrozen(eventId: string): Promise<boolean>
 }
 
 export const EVENT_READ_REPOSITORY = Symbol('EVENT_READ_REPOSITORY')

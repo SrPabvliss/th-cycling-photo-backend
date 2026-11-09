@@ -9,6 +9,12 @@ class CheckoutOrderProjection {
 
   @ApiProperty({ description: 'Number of photos in the order' })
   photoCount: number
+
+  @ApiProperty({ description: 'Order subtotal' })
+  subtotal: number
+
+  @ApiProperty({ description: 'Currency code' })
+  currency: string
 }
 
 export class CheckoutResultProjection {

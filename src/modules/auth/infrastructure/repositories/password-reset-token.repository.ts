@@ -71,7 +71,7 @@ export class PasswordResetTokenRepository implements IPasswordResetTokenReposito
 
       await tx.user.update({
         where: { id: userId },
-        data: { password_hash: passwordHash },
+        data: { password_hash: passwordHash, permissions_version: { increment: 1 } },
       })
 
       await tx.refreshToken.updateMany({

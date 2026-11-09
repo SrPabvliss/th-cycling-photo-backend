@@ -10,6 +10,20 @@ describe('Photo Entity', () => {
     mimeType: 'image/jpeg',
   }
 
+  describe('markProcessing', () => {
+    it('sets processingStartedAt to the start of the attempt', () => {
+      const photo = Photo.create(validData)
+      expect(photo.processingStartedAt).toBeNull()
+
+      const before = Date.now()
+      photo.markProcessing()
+
+      expect(photo.status).toBe('processing')
+      expect(photo.processingStartedAt).toBeInstanceOf(Date)
+      expect(photo.processingStartedAt?.getTime()).toBeGreaterThanOrEqual(before)
+    })
+  })
+
   describe('create', () => {
     it('should create photo with valid data and pending status', () => {
       const photo = Photo.create(validData)

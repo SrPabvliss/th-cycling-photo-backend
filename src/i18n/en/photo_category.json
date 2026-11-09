@@ -1,0 +1,6 @@
+{
+  "not_available_for_event": "This category is not available to the event's organizer",
+  "not_assigned_to_event": "The category is not assigned to one of these photos' events",
+  "tenant_required": "Only an organizer can create their own categories",
+  "name_taken": "A category with that name already exists"
+}

@@ -1,0 +1,16 @@
+{
+  "photo": "f",
+  "order": "f",
+  "presigned_url": "f",
+  "stats": "fp",
+  "notification": "f",
+  "billing_account": "f",
+  "session": "f",
+  "photo_category": "f",
+  "password": "f",
+  "email_verification": "f",
+  "cover": "f",
+  "payphone_account": "f",
+  "province": "f",
+  "retouched_photo": "f"
+}

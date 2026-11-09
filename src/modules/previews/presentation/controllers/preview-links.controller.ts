@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { CreatePreviewLinkCommand, CreatePreviewLinkDto } from '@previews/application/commands'
@@ -8,7 +8,9 @@ import {
 } from '@previews/application/projections'
 import { GetPreviewLinksListDto, GetPreviewLinksListQuery } from '@previews/application/queries'
 import { AuditContext, Pagination } from '@shared/application'
-import { CurrentUser, type ICurrentUser, Roles } from '@shared/auth'
+import { CurrentUser, type ICurrentUser } from '@shared/auth'
+import { AllowedWhenFrozen } from '@shared/authorization/presentation/decorators/freeze-policy.decorator'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
 
 @ApiTags('Preview Links')
@@ -20,7 +22,8 @@ export class PreviewLinksController {
     private readonly queryBus: QueryBus,
   ) {}
 
-  @Roles('admin')
+  @RequirePermission('preview_link.create')
+  @AllowedWhenFrozen()
   @Post()
   @SuccessMessage('success.CREATED', { entity: 'entities.preview_link' })
   @ApiOperation({ summary: 'Create a preview link for an event' })
@@ -33,7 +36,7 @@ export class PreviewLinksController {
   @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Event not found' })
   async create(
-    @Param('eventId') eventId: string,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
     @Body() dto: CreatePreviewLinkDto,
     @CurrentUser() user: ICurrentUser,
   ) {
@@ -46,7 +49,7 @@ export class PreviewLinksController {
     return this.commandBus.execute(command)
   }
 
-  @Roles('admin')
+  @RequirePermission('preview_link.read')
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List preview links for an event' })
@@ -57,9 +60,13 @@ export class PreviewLinksController {
     type: PreviewLinkListProjection,
     isArray: true,
   })
-  async findAll(@Param('eventId') eventId: string, @Query() dto: GetPreviewLinksListDto) {
+  async findAll(
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+    @Query() dto: GetPreviewLinksListDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    const query = new GetPreviewLinksListQuery(eventId, pagination)
+    const query = new GetPreviewLinksListQuery(eventId, pagination, user.userId)
     return this.queryBus.execute(query)
   }
 }

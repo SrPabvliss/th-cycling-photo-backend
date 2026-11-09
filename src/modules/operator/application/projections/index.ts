@@ -7,6 +7,7 @@ export {
 } from './operator-active-event-stats.projection'
 export { OperatorCompletedEventProjection } from './operator-completed-event.projection'
 export { OperatorCompletedEventStatsProjection } from './operator-completed-event-stats.projection'
+export { OperatorRetouchEventProjection } from './operator-retouch-event.projection'
 export {
   OperatorRetouchOrderDetailPhotoProjection,
   OperatorRetouchOrderDetailProjection,

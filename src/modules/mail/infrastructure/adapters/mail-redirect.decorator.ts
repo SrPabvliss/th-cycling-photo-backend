@@ -19,6 +19,7 @@ export class MailRedirectDecorator implements IMailer {
       subject: `[DEV -> ${message.to}] ${message.subject}`,
       html: `<div style="background:#fff3cd;border:1px solid #f59e0b;padding:12px;font-family:sans-serif;font-size:13px;">${banner}</div>${message.html}`,
       text: `${banner}\n\n${message.text}`,
+      replyTo: message.replyTo,
       headers: { ...message.headers, 'X-Original-To': message.to },
     })
   }

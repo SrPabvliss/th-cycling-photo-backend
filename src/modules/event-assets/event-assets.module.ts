@@ -4,6 +4,7 @@ import { CqrsModule } from '@nestjs/cqrs'
 import { ConfirmAssetUploadHandler } from './application/commands/confirm-asset-upload/confirm-asset-upload.handler'
 import { DeleteEventAssetHandler } from './application/commands/delete-event-asset/delete-event-asset.handler'
 import { GenerateAssetPresignedUrlHandler } from './application/commands/generate-asset-presigned-url/generate-asset-presigned-url.handler'
+import { SetAssetFocalPointHandler } from './application/commands/set-asset-focal-point/set-asset-focal-point.handler'
 import { GetEventAssetsHandler } from './application/queries/get-event-assets/get-event-assets.handler'
 import { EVENT_ASSET_READ_REPOSITORY, EVENT_ASSET_WRITE_REPOSITORY } from './domain/ports'
 import { EventAssetReadRepository } from './infrastructure/repositories/event-asset-read.repository'
@@ -13,6 +14,7 @@ import { EventAssetsController } from './presentation/controllers/event-assets.c
 const CommandHandlers = [
   GenerateAssetPresignedUrlHandler,
   ConfirmAssetUploadHandler,
+  SetAssetFocalPointHandler,
   DeleteEventAssetHandler,
 ]
 const QueryHandlers = [GetEventAssetsHandler]

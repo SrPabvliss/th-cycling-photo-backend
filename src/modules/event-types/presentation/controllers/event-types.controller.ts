@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common'
 import { QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
+import { RequirePermission } from '@shared/authorization/presentation/decorators/require-permission.decorator'
 import { SuccessMessage } from '@shared/http'
 import { EventTypeProjection } from '../../application/projections'
 import { GetAllEventTypesQuery } from '../../application/queries'
@@ -13,6 +14,7 @@ import { GetAllEventTypesQuery } from '../../application/queries'
 export class EventTypesController {
   constructor(private readonly queryBus: QueryBus) {}
 
+  @RequirePermission('event_type.read')
   @Get()
   @SuccessMessage('success.LIST')
   @ApiOperation({ summary: 'List all event types' })

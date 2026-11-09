@@ -1,4 +1,4 @@
-import { CONSENT_TYPE, POLICY_VERSION } from '../../../domain/constants/consent.constants'
+import { CONSENT_TYPE, POLICY_VERSIONS } from '../../../domain/constants/consent.constants'
 import type { IConsentRepository } from '../../../domain/ports'
 import { RecordConsentsCommand } from './record-consents.command'
 import { RecordConsentsHandler } from './record-consents.handler'
@@ -25,7 +25,7 @@ describe('RecordConsentsHandler', () => {
     expect(consentRepo.record).toHaveBeenCalledWith({
       userId: 'user-1',
       type: CONSENT_TYPE.TERMS_PRIVACY,
-      policyVersion: POLICY_VERSION,
+      policyVersion: POLICY_VERSIONS[CONSENT_TYPE.TERMS_PRIVACY],
       ipAddress: '1.2.3.4',
       userAgent: 'jest-agent',
     })
