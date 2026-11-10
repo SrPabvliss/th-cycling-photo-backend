@@ -39,28 +39,6 @@ export class YupanaUsageReport {
     return `email:sha256:${createHash('sha256').update(reportId).digest('hex')}`
   }
 
-  static voyagePixels(input: {
-    reportId?: string
-    photoId: string
-    eventId: string
-    imagePixels: number | null
-    occurredAt: Date
-  }): YupanaOutboxEntry {
-    const pixels = input.imagePixels
-    const observed = pixels !== null && pixels >= 0
-    return YupanaUsageReport.unit({
-      reportId: input.reportId,
-      photoId: input.photoId,
-      provider: 'voyage',
-      meter: 'embedding.image_pixels',
-      unit: 'pixel',
-      quantity: observed ? pixels : 0,
-      complete: observed,
-      subject: { photo_id: input.photoId, domain_event_id: input.eventId },
-      occurredAt: input.occurredAt,
-    })
-  }
-
   static modalCall(input: {
     reportId?: string
     photoId: string

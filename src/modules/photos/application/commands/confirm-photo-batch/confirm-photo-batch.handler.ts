@@ -25,7 +25,6 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
     @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
     @Inject(PHOTO_WRITE_REPOSITORY) private readonly photoWriteRepo: IPhotoWriteRepository,
     @Inject(KV_STORAGE_ADAPTER) private readonly kvStorage: IKvStorageAdapter,
-    @InjectQueue('embedding-generation') private readonly embeddingQueue: Queue,
     @InjectQueue('photo-classification') private readonly classificationQueue: Queue,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly prisma: PrismaService,
@@ -108,15 +107,6 @@ export class ConfirmPhotoBatchHandler implements ICommandHandler<ConfirmPhotoBat
         err,
       )
     })
-
-    await this.embeddingQueue.addBulk(
-      photos.map((photo) => ({
-        name: 'generate-embedding',
-        data: { photoId: photo.id },
-        opts: { attempts: 3, backoff: { type: 'exponential', delay: 2000 } },
-      })),
-    )
-    this.logger.log(`Enqueued ${photos.length} embedding generation jobs`)
 
     await this.classificationQueue.addBulk(
       photos.map((photo) => ({

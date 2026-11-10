@@ -6,7 +6,7 @@ function versionOf(storageKey: string): string {
   return encodeURIComponent(storageKey.split('/').pop() ?? '')
 }
 
-export type InternalPreset = 'thumb' | 'workspace' | 'embedding'
+export type InternalPreset = 'thumb' | 'workspace'
 export type AssetPreset = 'cover-sm' | 'cover-lg'
 
 @Injectable()

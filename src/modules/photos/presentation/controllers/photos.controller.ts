@@ -42,10 +42,8 @@ import {
   PresignedUrlProjection,
   ReclassifyPhotosResultProjection,
   ReviewQueueItemProjection,
-  SimilarPhotoProjection,
 } from '@photos/application/projections'
 import {
-  FindSimilarPhotosQuery,
   GetClassificationFailuresQuery,
   GetPendingRetouchQuery,
   GetPhotoDetailBySlugQuery,
@@ -221,30 +219,6 @@ export class PhotosController {
   })
   async getPendingRetouch(@CurrentUser() user: ICurrentUser) {
     return this.queryBus.execute(new GetPendingRetouchQuery(user.userId))
-  }
-
-  /** Finds visually similar photos within the same event using vector embeddings. */
-  @RequirePermission('photo.read')
-  @AllowedWhenFrozen()
-  @Get('photos/:id/similar')
-  @SuccessMessage('success.LIST')
-  @ApiOperation({ summary: 'Find visually similar photos within the same event' })
-  @ApiParam({ name: 'id', description: 'Photo UUID', format: 'uuid' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiEnvelopeResponse({
-    status: 200,
-    description: 'Similar photos found',
-    type: SimilarPhotoProjection,
-    isArray: true,
-  })
-  @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
-  async findSimilar(
-    @Param('id') id: string,
-    @Query('limit') limit: number | undefined,
-    @CurrentUser() user: ICurrentUser,
-  ) {
-    const query = new FindSimilarPhotosQuery(id, limit ? Number(limit) : 10, user.userId)
-    return this.queryBus.execute(query)
   }
 
   /** Retrieves a lightweight photo view by public slug. */

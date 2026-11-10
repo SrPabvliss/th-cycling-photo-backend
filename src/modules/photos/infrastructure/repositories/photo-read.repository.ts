@@ -6,7 +6,6 @@ import type {
   PhotoListBib,
   PhotoListProjection,
   PhotoViewProjection,
-  SimilarPhotoProjection,
 } from '@photos/application/projections'
 import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { Photo } from '@photos/domain/entities'
@@ -731,52 +730,6 @@ export class PhotoReadRepository implements IPhotoReadRepository {
       distinct: ['event_id'],
     })
     return rows.map((r) => r.event_id)
-  }
-
-  /** Finds visually similar photos using vector cosine similarity. */
-  async findSimilar(
-    photoId: string,
-    eventId: string,
-    limit: number,
-  ): Promise<SimilarPhotoProjection[]> {
-    const embeddingRows = await this.prisma.$queryRawUnsafe<Array<{ embedding: unknown }>>(
-      'SELECT "embedding" FROM "photos" WHERE "id" = $1::uuid AND "embedding" IS NOT NULL',
-      photoId,
-    )
-
-    if (embeddingRows.length === 0) return []
-
-    const rows = await this.prisma.$queryRawUnsafe<
-      Array<{
-        id: string
-        filename: string
-        public_slug: string
-        similarity: number
-        has_classifications: boolean
-      }>
-    >(
-      `SELECT p.id, p.filename, p.public_slug,
-        1 - (p.embedding <=> (SELECT embedding FROM photos WHERE id = $1::uuid)) as similarity,
-        EXISTS(SELECT 1 FROM photo_bibs pb WHERE pb.photo_id = p.id AND pb.deleted_at IS NULL) as has_classifications
-      FROM photos p
-      WHERE p.event_id = $2::uuid
-        AND p.id != $1::uuid
-        AND p.embedding IS NOT NULL
-      ORDER BY p.embedding <=> (SELECT embedding FROM photos WHERE id = $1::uuid)
-      LIMIT $3`,
-      photoId,
-      eventId,
-      limit,
-    )
-
-    return rows.map((row) => ({
-      id: row.id,
-      filename: row.filename,
-      publicSlug: row.public_slug,
-      thumbnailUrl: this.cdn.internalUrl(row.public_slug, 'thumb'),
-      similarity: Number(row.similarity),
-      hasClassifications: row.has_classifications,
-    }))
   }
 
   /** Retrieves the review queue for an event with bib/color counts and min bib confidence. */

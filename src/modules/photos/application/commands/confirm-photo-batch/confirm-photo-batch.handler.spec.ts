@@ -17,7 +17,6 @@ describe('ConfirmPhotoBatchHandler', () => {
   let eventReadRepo: jest.Mocked<IEventReadRepository>
   let photoWriteRepo: jest.Mocked<IPhotoWriteRepository>
   let kvStorage: { writeBulk: jest.Mock }
-  let embeddingQueue: { add: jest.Mock; addBulk: jest.Mock }
   let classificationQueue: { add: jest.Mock; addBulk: jest.Mock }
   let authz: jest.Mocked<IAuthorizationService>
   let prisma: { $transaction: jest.Mock; event: { findUniqueOrThrow: jest.Mock } }
@@ -95,7 +94,6 @@ describe('ConfirmPhotoBatchHandler', () => {
     } as jest.Mocked<IPhotoWriteRepository>
 
     kvStorage = { writeBulk: jest.fn().mockResolvedValue(undefined) }
-    embeddingQueue = { add: jest.fn(), addBulk: jest.fn() }
     classificationQueue = { add: jest.fn(), addBulk: jest.fn() }
 
     authz = {
@@ -124,7 +122,6 @@ describe('ConfirmPhotoBatchHandler', () => {
       eventReadRepo,
       photoWriteRepo,
       kvStorage as any,
-      embeddingQueue as unknown as import('bullmq').Queue,
       classificationQueue as unknown as import('bullmq').Queue,
       authz,
       prisma as any,
@@ -220,7 +217,7 @@ describe('ConfirmPhotoBatchHandler', () => {
     expect(result).toEqual({ confirmed: 2 })
   })
 
-  it('should enqueue embedding generation for each confirmed photo', async () => {
+  it('should enqueue classification for each confirmed photo', async () => {
     eventReadRepo.findById.mockResolvedValueOnce(existingEvent)
     photoWriteRepo.saveMany.mockImplementationOnce(insertAll)
 
@@ -239,11 +236,11 @@ describe('ConfirmPhotoBatchHandler', () => {
 
     await handler.execute(command)
 
-    expect(embeddingQueue.addBulk).toHaveBeenCalledTimes(1)
-    expect(embeddingQueue.addBulk).toHaveBeenCalledWith(
+    expect(classificationQueue.addBulk).toHaveBeenCalledTimes(1)
+    expect(classificationQueue.addBulk).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
-          name: 'generate-embedding',
+          name: 'classify-photo',
           data: expect.objectContaining({ photoId: expect.any(String) }),
           opts: expect.objectContaining({ attempts: 3 }),
         }),

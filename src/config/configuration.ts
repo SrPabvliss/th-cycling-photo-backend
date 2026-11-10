@@ -8,8 +8,6 @@ export default () => {
 
   const { CLOUDFLARE_CDN_URL } = process.env
 
-  const { VOYAGE_API_KEY } = process.env
-
   const { REDIS_HOST, REDIS_PORT, REDIS_PASSWORD } = process.env
 
   const { AI_PIPELINE_BASE_URL, AI_PIPELINE_TIMEOUT_MS } = process.env
@@ -95,9 +93,6 @@ export default () => {
       hmacSecret: CLOUDFLARE_HMAC_SECRET,
       analyticsToken: CLOUDFLARE_ANALYTICS_TOKEN || '',
       transformationsDataset: CDN_TRANSFORMATIONS_DATASET || '',
-    },
-    voyageAi: {
-      apiKey: VOYAGE_API_KEY,
     },
     redis: {
       host: REDIS_HOST || 'localhost',

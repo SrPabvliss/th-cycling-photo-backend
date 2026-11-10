@@ -95,11 +95,6 @@ export class EnvironmentVariables {
   @Matches(/^[a-z][a-z0-9_]{0,62}$/)
   CDN_TRANSFORMATIONS_DATASET?: string
 
-  // Voyage AI
-  @IsOptional()
-  @IsString()
-  VOYAGE_API_KEY?: string
-
   // Auth
   @IsString()
   @IsNotEmpty()
