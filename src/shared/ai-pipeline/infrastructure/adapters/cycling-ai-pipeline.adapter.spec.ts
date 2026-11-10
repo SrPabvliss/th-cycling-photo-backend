@@ -44,7 +44,9 @@ describe('CyclingAiPipelineAdapter', () => {
       imageUrl: 'https://x/y.jpg',
     })
     const calledUrl = fetchMock.mock.calls[0][0] as string
-    expect(calledUrl).toContain('color=none')
+    expect(calledUrl).toMatch(/\/pipeline\?color=none$/)
+    expect(calledUrl).not.toContain('detector=')
+    expect(calledUrl).not.toContain('ocr=')
     expect(calledUrl).not.toContain('color=gemini')
   })
 

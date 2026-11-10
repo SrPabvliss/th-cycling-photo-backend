@@ -10,27 +10,18 @@ import {
   type ICropUploadUrlsService,
 } from '../../domain/ports/crop-upload-urls.port'
 
-const SUB_PATHS: Record<keyof CropUploadUrls, string> = {
-  bibs: 'bibs',
-  colorsHelmet: 'colors/helmet',
-  colorsClothes: 'colors/clothes',
-  colorsBicycle: 'colors/bicycle',
-}
-
 @Injectable()
 export class CropUploadUrlsService implements ICropUploadUrlsService {
   constructor(@Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter) {}
 
   async generate(photoId: string, eventId: string): Promise<CropUploadUrls> {
-    const tasks = (Object.keys(SUB_PATHS) as (keyof CropUploadUrls)[]).flatMap((field) =>
-      Array.from({ length: CROP_UPLOAD_MAX_PER_TYPE }, (_, idx) => ({
-        field,
-        key: `events/${eventId}/photos/${photoId}/crops/${SUB_PATHS[field]}/${idx}.jpg`,
-      })),
+    const keys = Array.from(
+      { length: CROP_UPLOAD_MAX_PER_TYPE },
+      (_, idx) => `events/${eventId}/photos/${photoId}/crops/bibs/${idx}.jpg`,
     )
 
     const signed = await Promise.all(
-      tasks.map(({ key }) =>
+      keys.map((key) =>
         this.storage.getPresignedUrl({
           key,
           contentType: 'image/jpeg',
@@ -40,14 +31,11 @@ export class CropUploadUrlsService implements ICropUploadUrlsService {
     )
 
     const result: CropUploadUrls = {
-      bibs: [],
+      bibs: signed.map((s) => s.url),
       colorsHelmet: [],
       colorsClothes: [],
       colorsBicycle: [],
     }
-    tasks.forEach((t, i) => {
-      result[t.field].push(signed[i].url)
-    })
     return result
   }
 }
