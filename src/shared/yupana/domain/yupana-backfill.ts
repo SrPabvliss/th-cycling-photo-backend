@@ -6,14 +6,10 @@ import { YupanaUsageReport } from './yupana-usage-report'
 export interface BackfillPhoto {
   id: string
   eventId: string
-  width: number | null
-  height: number | null
   fileSize: bigint
   retouchedFileSize: bigint | null
   uploadedAt: Date
   retouchedAt: Date | null
-  processedAt: Date | null
-  hasEmbedding: boolean
 }
 
 export interface BackfillProcessing {
@@ -54,18 +50,7 @@ const ULID_LENGTH = 26
 const RANDOM_BYTES = 10
 
 export class YupanaBackfill {
-  static readonly EMBEDDING_MAX_WIDTH = 1600
-  static readonly VOYAGE_MAX_IMAGE_PIXELS = 2_000_000
   static readonly REPORT_PREFIX = 'backfill'
-
-  static embeddingPixels(width: number, height: number): number {
-    const scaled =
-      width <= YupanaBackfill.EMBEDDING_MAX_WIDTH
-        ? width * height
-        : YupanaBackfill.EMBEDDING_MAX_WIDTH *
-          Math.round((height * YupanaBackfill.EMBEDDING_MAX_WIDTH) / width)
-    return Math.min(scaled, YupanaBackfill.VOYAGE_MAX_IMAGE_PIXELS)
-  }
 
   static surrogateCallId(processingId: string, startedAt: Date): string {
     const randomness = createHash('sha256').update(processingId).digest().subarray(0, RANDOM_BYTES)
@@ -152,31 +137,7 @@ export class YupanaBackfill {
       YupanaBackfill.telemetryOf(session, input.coldStartMs),
     )
 
-    const pixels = input.photos
-      .filter(
-        (photo) =>
-          photo.uploadedAt >= input.from &&
-          photo.uploadedAt < input.to &&
-          photo.hasEmbedding &&
-          photo.width !== null &&
-          photo.height !== null &&
-          photo.width > 0 &&
-          photo.height > 0,
-      )
-      .map((photo) =>
-        YupanaUsageReport.voyagePixels({
-          reportId: `${YupanaBackfill.REPORT_PREFIX}:voyage:${photo.id}`,
-          photoId: photo.id,
-          eventId: photo.eventId,
-          imagePixels: YupanaBackfill.embeddingPixels(
-            photo.width as number,
-            photo.height as number,
-          ),
-          occurredAt: photo.processedAt ?? photo.uploadedAt,
-        }),
-      )
-
-    return { declarations, reports: [...calls, ...telemetry, ...pixels] }
+    return { declarations, reports: [...calls, ...telemetry] }
   }
 
   private static telemetryOf(session: BackfillSession, coldStartMs: number): YupanaOutboxEntry[] {

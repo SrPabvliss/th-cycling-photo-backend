@@ -108,7 +108,6 @@ describe('photo size declarations for yupana', () => {
         },
         { provide: PREVIEW_LINK_READ_REPOSITORY, useValue: { existsByPhotoId: async () => false } },
         { provide: EventEmitter2, useValue: { emit: () => true } },
-        { provide: getQueueToken('embedding-generation'), useValue: { addBulk: async () => [] } },
         { provide: getQueueToken('photo-classification'), useValue: { addBulk: async () => [] } },
         FreezeStateService,
         ConfirmPhotoBatchHandler,

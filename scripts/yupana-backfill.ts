@@ -24,14 +24,10 @@ const IDLE_SECONDS = 300
 interface PhotoRow {
   id: string
   event_id: string
-  width: number | null
-  height: number | null
   file_size: bigint
   retouched_file_size: bigint | null
   uploaded_at: Date
   retouched_at: Date | null
-  processed_at: Date | null
-  has_embedding: boolean
 }
 
 interface ProcessingRow {
@@ -91,22 +87,18 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 
 async function readPhotos(): Promise<BackfillPhoto[]> {
   const rows = await prisma.$queryRaw<PhotoRow[]>`
-    SELECT id, event_id, width, height, file_size, retouched_file_size,
-           uploaded_at, retouched_at, processed_at, embedding IS NOT NULL AS has_embedding
+    SELECT id, event_id, file_size, retouched_file_size,
+           uploaded_at, retouched_at
     FROM photos
     WHERE uploaded_at < ${to}
     ORDER BY uploaded_at, id`
   return rows.map((row) => ({
     id: row.id,
     eventId: row.event_id,
-    width: row.width,
-    height: row.height,
     fileSize: BigInt(row.file_size),
     retouchedFileSize: row.retouched_file_size === null ? null : BigInt(row.retouched_file_size),
     uploadedAt: row.uploaded_at,
     retouchedAt: row.retouched_at,
-    processedAt: row.processed_at,
-    hasEmbedding: row.has_embedding,
   }))
 }
 
