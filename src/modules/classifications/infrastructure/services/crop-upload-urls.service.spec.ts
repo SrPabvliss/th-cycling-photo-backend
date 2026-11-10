@@ -34,27 +34,25 @@ describe('CropUploadUrlsService', () => {
     service = moduleRef.get(CropUploadUrlsService)
   })
 
-  it('generates MAX_PER_TYPE × 4 URLs (40 total) per photo', async () => {
+  it('signs only MAX_PER_TYPE bib URLs and returns empty color lists', async () => {
     const result = await service.generate('photo-1', 'event-1')
 
     expect(result.bibs).toHaveLength(CROP_UPLOAD_MAX_PER_TYPE)
-    expect(result.colorsHelmet).toHaveLength(CROP_UPLOAD_MAX_PER_TYPE)
-    expect(result.colorsClothes).toHaveLength(CROP_UPLOAD_MAX_PER_TYPE)
-    expect(result.colorsBicycle).toHaveLength(CROP_UPLOAD_MAX_PER_TYPE)
-    expect(storage.getPresignedUrl).toHaveBeenCalledTimes(4 * CROP_UPLOAD_MAX_PER_TYPE)
+    expect(result.colorsHelmet).toEqual([])
+    expect(result.colorsClothes).toEqual([])
+    expect(result.colorsBicycle).toEqual([])
+    expect(storage.getPresignedUrl).toHaveBeenCalledTimes(CROP_UPLOAD_MAX_PER_TYPE)
   })
 
-  it('uses canonical paths events/{eventId}/photos/{photoId}/crops/{type}/{idx}.jpg', async () => {
+  it('uses canonical paths events/{eventId}/photos/{photoId}/crops/bibs/{idx}.jpg', async () => {
     await service.generate('photo-1', 'event-1')
     const calls = storage.getPresignedUrl.mock.calls.map((c) => c[0].key)
     expect(calls).toContain('events/event-1/photos/photo-1/crops/bibs/0.jpg')
     expect(calls).toContain('events/event-1/photos/photo-1/crops/bibs/9.jpg')
-    expect(calls).toContain('events/event-1/photos/photo-1/crops/colors/helmet/0.jpg')
-    expect(calls).toContain('events/event-1/photos/photo-1/crops/colors/clothes/5.jpg')
-    expect(calls).toContain('events/event-1/photos/photo-1/crops/colors/bicycle/9.jpg')
+    expect(calls.every((key) => key.includes('/crops/bibs/'))).toBe(true)
   })
 
-  it('requests image/jpeg content-type and TTL of 600s for every URL', async () => {
+  it('requests image/jpeg content-type and TTL of 600s for every bib URL', async () => {
     await service.generate('photo-1', 'event-1')
     for (const call of storage.getPresignedUrl.mock.calls) {
       expect(call[0].contentType).toBe('image/jpeg')

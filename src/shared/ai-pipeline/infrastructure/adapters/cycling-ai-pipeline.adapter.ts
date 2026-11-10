@@ -35,7 +35,9 @@ export class CyclingAiPipelineAdapter implements IClassificationPipelineAdapter 
       // it consumed ~70-80% of per-photo time without discriminating value.
       // Pipeline returns color_analyses=[] → no photo_colors rows inserted.
       // Reviewers can still add colors manually from the admin UI.
-      response = await fetch(`${this.baseUrl}/pipeline?detector=yolo&ocr=parseq&color=none`, {
+      // TIT-101: detector and reader are not set in the URL; the AI service
+      // picks its own defaults.
+      response = await fetch(`${this.baseUrl}/pipeline?color=none`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
