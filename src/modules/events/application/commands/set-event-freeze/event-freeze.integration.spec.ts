@@ -145,7 +145,6 @@ describe('event freeze — the gallery/order boundary', () => {
             generatePresignedGetUrl: async () => 'http://fake',
           },
         },
-        { provide: getQueueToken('embedding-generation'), useValue: { addBulk: async () => [] } },
         { provide: getQueueToken('photo-classification'), useValue: { addBulk: async () => [] } },
         {
           provide: NotificationsService,

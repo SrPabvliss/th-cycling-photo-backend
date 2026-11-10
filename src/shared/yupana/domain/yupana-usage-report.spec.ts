@@ -5,52 +5,11 @@ describe('YupanaUsageReport', () => {
   const eventId = 'b0a7c9e2-5d3f-4a61-8e2c-7f9d1e4a6b22'
   const occurredAt = new Date('2026-11-01T12:00:00.000Z')
 
-  it('reports the pixels Voyage billed as a complete unit report', () => {
-    const entry = YupanaUsageReport.voyagePixels({
-      photoId,
-      eventId,
-      imagePixels: 1705600,
-      occurredAt,
-    })
-
-    expect(entry.kind).toBe('usage_report')
-    expect(entry.photoId).toBe(photoId)
-    expect(entry.itemKey).toBe(entry.payload.report_id)
-    expect(entry.payload).toEqual({
-      report_id: expect.stringMatching(/^[0-9a-f-]{36}$/),
-      schema_version: 2,
-      occurred_at: '2026-11-01T12:00:00.000Z',
-      provider: 'voyage',
-      kind: 'unit',
-      measurement_status: 'complete',
-      payload: {
-        meter: 'embedding.image_pixels',
-        quantity: 1705600,
-        unit: 'pixel',
-        subject: { photo_id: photoId, domain_event_id: eventId },
-      },
-    })
-  })
-
-  it('never reports a missing pixel count as a zero', () => {
-    const entry = YupanaUsageReport.voyagePixels({
-      photoId,
-      eventId,
-      imagePixels: null,
-      occurredAt,
-    })
-
-    expect(entry.payload).toMatchObject({
-      measurement_status: 'not_observed',
-      payload: { quantity: 0 },
-    })
-  })
-
   it('gives every report its own id', () => {
-    const input = { photoId, eventId, imagePixels: 10, occurredAt }
+    const input = { photoId, eventId, callId: 'fc-01JABCDEFGHJKMNPQRSTVWXYZ0', occurredAt }
 
-    expect(YupanaUsageReport.voyagePixels(input).itemKey).not.toBe(
-      YupanaUsageReport.voyagePixels(input).itemKey,
+    expect(YupanaUsageReport.modalCall(input)?.itemKey).not.toBe(
+      YupanaUsageReport.modalCall(input)?.itemKey,
     )
   })
 
@@ -116,14 +75,7 @@ describe('YupanaUsageReport', () => {
     expect(entry.payload.report_id).toBe(entry.itemKey)
   })
 
-  it('keeps a given report id on the Voyage and Modal call reports', () => {
-    const voyage = YupanaUsageReport.voyagePixels({
-      reportId: 'backfill:voyage:ph',
-      photoId,
-      eventId,
-      imagePixels: 10,
-      occurredAt,
-    })
+  it('keeps a given report id on the Modal call report', () => {
     const call = YupanaUsageReport.modalCall({
       reportId: 'backfill:call:pr',
       photoId,
@@ -132,8 +84,7 @@ describe('YupanaUsageReport', () => {
       occurredAt,
     })
 
-    expect(voyage.payload.report_id).toBe('backfill:voyage:ph')
-    expect(voyage.itemKey).toBe('backfill:voyage:ph')
+    expect(call?.itemKey).toBe('backfill:call:pr')
     expect(call?.payload.report_id).toBe('backfill:call:pr')
   })
 

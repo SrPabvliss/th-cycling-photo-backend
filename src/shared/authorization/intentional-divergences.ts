@@ -27,7 +27,6 @@ export const INTENTIONAL_DIVERGENCES: ReadonlySet<string> = new Set([
   'GET /events/:eventId/photos/resume-point',
   'GET /photos/search',
   'GET /photos/:id',
-  'GET /photos/:id/similar',
   'GET /photos/view/:slug',
   // Group C — correction
   'GET /event-types', // was open to any authenticated user; now staff-only

@@ -372,7 +372,6 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
     legacyMarker: 'admin,operator',
     permission: 'photo.retouch.read',
   },
-  { method: 'GET', path: '/photos/:id/similar', legacyMarker: 'NONE', permission: 'photo.read' },
   { method: 'GET', path: '/photos/view/:slug', legacyMarker: 'NONE', permission: 'photo.read' },
   {
     method: 'GET',

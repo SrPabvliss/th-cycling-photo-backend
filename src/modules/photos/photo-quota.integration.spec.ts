@@ -66,7 +66,6 @@ describe('photo quota', () => {
             internalUrl: () => 'http://fake',
           },
         },
-        { provide: getQueueToken('embedding-generation'), useValue: { addBulk: async () => [] } },
         { provide: getQueueToken('photo-classification'), useValue: { addBulk: async () => [] } },
         FreezeStateService,
         {

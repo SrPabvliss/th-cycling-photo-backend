@@ -4,7 +4,6 @@ import type {
   PhotoDetailProjection,
   PhotoListProjection,
   PhotoViewProjection,
-  SimilarPhotoProjection,
 } from '@photos/application/projections'
 import type { SearchPhotosFilters } from '@photos/application/queries'
 import type { PaginatedResult, Pagination } from '@shared/application'
@@ -91,7 +90,6 @@ export interface IPhotoReadRepository {
     photoCategoryId: number,
     scope: EventScope,
   ): Promise<number>
-  findSimilar(photoId: string, eventId: string, limit: number): Promise<SimilarPhotoProjection[]>
   getPhotoViewBySlug(slug: string, scope: EventScope): Promise<PhotoViewProjection | null>
   countAll(scope: EventScope): Promise<number>
   /** Ids of the event's `failed` photos, restricted to `photoIds` when given. */

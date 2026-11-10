@@ -45,7 +45,6 @@ describe('GenerateRetouchedPresignedUrlHandler', () => {
       countPendingReview: jest.fn(),
       sumAllFileSize: jest.fn(),
       countByIds: jest.fn(),
-      findSimilar: jest.fn(),
       countByIdsAndEvent: jest.fn(),
       getReviewQueue: jest.fn(),
       getReviewQueueByEventIds: jest.fn(),

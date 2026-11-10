@@ -18,7 +18,6 @@ import { MarkPhotoReviewedHandler } from '@photos/application/commands/mark-phot
 import { ReapStalledPhotosHandler } from '@photos/application/commands/reap-stalled-photos/reap-stalled-photos.handler'
 import { ReclassifyPhotosHandler } from '@photos/application/commands/reclassify-photos/reclassify-photos.handler'
 import { SetPhotoRetouchFlagHandler } from '@photos/application/commands/set-photo-retouch-flag/set-photo-retouch-flag.handler'
-import { FindSimilarPhotosHandler } from '@photos/application/queries/find-similar-photos/find-similar-photos.handler'
 import { GetClassificationFailuresHandler } from '@photos/application/queries/get-classification-failures/get-classification-failures.handler'
 import { GetDownloadManifestHandler } from '@photos/application/queries/get-download-manifest/get-download-manifest.handler'
 import { GetGalleryFacetsHandler } from '@photos/application/queries/get-gallery-facets/get-gallery-facets.handler'
@@ -40,7 +39,6 @@ import {
   PHOTO_WRITE_REPOSITORY,
 } from '@photos/domain/ports'
 import { BullPhotoClassificationQueue } from '@photos/infrastructure/adapters/bull-photo-classification-queue.adapter'
-import { EmbeddingGenerationProcessor } from '@photos/infrastructure/processors/embedding-generation.processor'
 import { PhotoClassificationProcessor } from '@photos/infrastructure/processors/photo-classification.processor'
 import {
   PHOTO_PROCESSING_REAPER_QUEUE,
@@ -76,7 +74,6 @@ const CommandHandlers = [
   SetPhotoRetouchFlagHandler,
 ]
 const QueryHandlers = [
-  FindSimilarPhotosHandler,
   GetClassificationFailuresHandler,
   GetGalleryFacetsHandler,
   GetPhotosListHandler,
@@ -95,7 +92,6 @@ const QueryHandlers = [
   imports: [
     CqrsModule,
     BullModule.registerQueue(
-      { name: 'embedding-generation' },
       { name: 'photo-classification' },
       { name: PHOTO_PROCESSING_REAPER_QUEUE },
     ),
@@ -108,7 +104,6 @@ const QueryHandlers = [
   providers: [
     ...CommandHandlers,
     ...QueryHandlers,
-    EmbeddingGenerationProcessor,
     PhotoClassificationProcessor,
     PhotoProcessingReaperProcessor,
     PhotoProcessingReaperSchedulerService,

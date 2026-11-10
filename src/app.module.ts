@@ -39,7 +39,6 @@ import { AuthorizationModule } from './shared/authorization/authorization.module
 import { PermissionGuard } from './shared/authorization/infrastructure/guards/permission.guard'
 import { CloudflareModule } from './shared/cloudflare/cloudflare.module'
 import { CryptoModule } from './shared/crypto'
-import { EmbeddingsModule } from './shared/embeddings/embeddings.module'
 import { RequestIdMiddleware } from './shared/http/middleware/request-id.middleware'
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module'
 import { PaymentGatewaysModule } from './shared/payment-gateways'
@@ -95,7 +94,6 @@ import { YupanaModule } from './shared/yupana/yupana.module'
     CryptoModule,
     PaymentGatewaysModule,
     NotificationsModule,
-    EmbeddingsModule,
     AiPipelineModule,
     YupanaModule,
     RikuchiyModule,

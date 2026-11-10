@@ -14,14 +14,10 @@ describe('YupanaBackfill', () => {
     return {
       id: 'ph-june',
       eventId: 'ev-june',
-      width: 4000,
-      height: 3000,
       fileSize: 5_000_000n,
       retouchedFileSize: null,
       uploadedAt: new Date('2026-06-10T09:00:00.000Z'),
       retouchedAt: null,
-      processedAt: new Date('2026-06-10T09:30:00.000Z'),
-      hasEmbedding: true,
       ...overrides,
     }
   }
@@ -63,20 +59,6 @@ describe('YupanaBackfill', () => {
   function reportsOf(plan: ReturnType<typeof YupanaBackfill.plan>, prefix: string) {
     return plan.reports.filter((entry) => entry.itemKey.startsWith(prefix))
   }
-
-  describe('embeddingPixels', () => {
-    it('scales a wide photo down to 1600 pixels of width', () => {
-      expect(YupanaBackfill.embeddingPixels(4000, 3000)).toBe(1_920_000)
-    })
-
-    it('never counts more than the 2,000,000 pixels Voyage bills for one image', () => {
-      expect(YupanaBackfill.embeddingPixels(3000, 4000)).toBe(2_000_000)
-    })
-
-    it('keeps a photo already narrower than 1600 pixels', () => {
-      expect(YupanaBackfill.embeddingPixels(1200, 800)).toBe(960_000)
-    })
-  })
 
   describe('surrogateCallId', () => {
     const startedAt = new Date('2026-06-10T10:00:00.000Z')
@@ -126,39 +108,12 @@ describe('YupanaBackfill', () => {
   })
 
   describe('plan', () => {
-    it('reports the scaled pixels of an embedded photo uploaded in the range', () => {
-      const [voyage] = reportsOf(YupanaBackfill.plan(input()), 'backfill:voyage:')
-
-      expect(voyage?.itemKey).toBe('backfill:voyage:ph-june')
-      expect(voyage?.payload).toMatchObject({
-        provider: 'voyage',
-        measurement_status: 'complete',
-        occurred_at: '2026-06-10T09:30:00.000Z',
-        payload: { meter: 'embedding.image_pixels', quantity: 1_920_000 },
-      })
-    })
-
-    it('reports no pixels for a photo without an embedding', () => {
-      const plan = YupanaBackfill.plan(input({ photos: [photo({ hasEmbedding: false })] }))
-      expect(reportsOf(plan, 'backfill:voyage:')).toEqual([])
-    })
-
-    it.each([
-      { width: null, height: 3000 },
-      { width: 0, height: 3000 },
-      { width: 4000, height: -1 },
-    ])('reports no pixels for a photo with dimensions $width x $height', (dimensions) => {
-      const plan = YupanaBackfill.plan(input({ photos: [photo(dimensions)] }))
-      expect(reportsOf(plan, 'backfill:voyage:')).toEqual([])
-    })
-
-    it('declares a photo stored before the range but reports none of its pixels', () => {
+    it('declares a photo stored before the range', () => {
       const plan = YupanaBackfill.plan(
         input({ photos: [photo({ uploadedAt: new Date('2026-05-20T09:00:00.000Z') })] }),
       )
 
       expect(plan.declarations).toHaveLength(1)
-      expect(reportsOf(plan, 'backfill:voyage:')).toEqual([])
     })
 
     it('declares the original and the retouch together, as of the retouch', () => {
