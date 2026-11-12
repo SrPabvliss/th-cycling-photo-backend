@@ -62,6 +62,7 @@ module.exports = {
       ...baseProject,
       displayName: 'integration',
       testRegex: '.*\\.integration\\.spec\\.ts$',
+      setupFiles: [path.join(__dirname, 'test/setup-database-test-env.ts')],
     },
   ],
 }

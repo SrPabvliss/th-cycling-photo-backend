@@ -48,70 +48,79 @@ describe('countActivePermissionGrantHolders', () => {
     const platformAdminTemplate = await prisma.permissionTemplate.findUniqueOrThrow({
       where: { key: 'platform_admin' },
     })
-    const issuer = await prisma.user.findFirstOrThrow({
-      where: { tenant: { is_platform: true } },
+    // Only the author of the grants below. It holds no template and no grant of its own, so it
+    // never moves the counts, and the spec does not depend on a seeded user being present.
+    const issuer = await prisma.user.create({
+      data: {
+        email: `tit38-ruling4-issuer-${Date.now()}@example.test`,
+        password_hash: 'x',
+        is_active: true,
+        tenant_id: platformTenant.id,
+      },
     })
 
-    const { baseline, afterGrant, afterDeny, excludingDirectHolder } = await prisma.$transaction(
-      async (tx) => {
-        const baseline = await countActivePermissionGrantHolders(tx)
+    const { baseline, afterGrant, afterDeny, excludingDirectHolder } = await prisma
+      .$transaction(
+        async (tx) => {
+          const baseline = await countActivePermissionGrantHolders(tx)
 
-        // Direct-grant-only holder: no template, a global allow grant. A template-only query
-        // would miss this user entirely.
-        const directGrantHolder = await tx.user.create({
-          data: {
-            email: `tit38-ruling4-grant-${Date.now()}@example.test`,
-            password_hash: 'x',
-            is_active: true,
-            tenant_id: platformTenant.id,
-            permission_grants: {
-              create: {
-                permission_id: grantPermission.id,
-                scope_type: 'global',
-                effect: 'allow',
-                granted_by_id: issuer.id,
+          // Direct-grant-only holder: no template, a global allow grant. A template-only query
+          // would miss this user entirely.
+          const directGrantHolder = await tx.user.create({
+            data: {
+              email: `tit38-ruling4-grant-${Date.now()}@example.test`,
+              password_hash: 'x',
+              is_active: true,
+              tenant_id: platformTenant.id,
+              permission_grants: {
+                create: {
+                  permission_id: grantPermission.id,
+                  scope_type: 'global',
+                  effect: 'allow',
+                  granted_by_id: issuer.id,
+                },
               },
             },
-          },
-        })
+          })
 
-        const afterGrant = await countActivePermissionGrantHolders(tx)
+          const afterGrant = await countActivePermissionGrantHolders(tx)
 
-        // Grant beats template, so this user must not be counted despite holding the key.
-        const deniedTemplateHolder = await tx.user.create({
-          data: {
-            email: `tit38-ruling4-deny-${Date.now()}@example.test`,
-            password_hash: 'x',
-            is_active: true,
-            tenant_id: platformTenant.id,
-            permission_template_id: platformAdminTemplate.id,
-            permission_grants: {
-              create: {
-                permission_id: grantPermission.id,
-                scope_type: 'global',
-                effect: 'deny',
-                granted_by_id: issuer.id,
+          // Grant beats template, so this user must not be counted despite holding the key.
+          const deniedTemplateHolder = await tx.user.create({
+            data: {
+              email: `tit38-ruling4-deny-${Date.now()}@example.test`,
+              password_hash: 'x',
+              is_active: true,
+              tenant_id: platformTenant.id,
+              permission_template_id: platformAdminTemplate.id,
+              permission_grants: {
+                create: {
+                  permission_id: grantPermission.id,
+                  scope_type: 'global',
+                  effect: 'deny',
+                  granted_by_id: issuer.id,
+                },
               },
             },
-          },
-        })
+          })
 
-        const afterDeny = await countActivePermissionGrantHolders(tx)
+          const afterDeny = await countActivePermissionGrantHolders(tx)
 
-        // excludeUserId removes exactly the direct-grant holder from the count.
-        const excludingDirectHolder = await countActivePermissionGrantHolders(
-          tx,
-          directGrantHolder.id,
-        )
+          // excludeUserId removes exactly the direct-grant holder from the count.
+          const excludingDirectHolder = await countActivePermissionGrantHolders(
+            tx,
+            directGrantHolder.id,
+          )
 
-        // Deleted inside the same transaction — nothing outlives this test, on any connection.
-        await tx.user.delete({ where: { id: directGrantHolder.id } })
-        await tx.user.delete({ where: { id: deniedTemplateHolder.id } })
+          // Deleted inside the same transaction — nothing outlives this test, on any connection.
+          await tx.user.delete({ where: { id: directGrantHolder.id } })
+          await tx.user.delete({ where: { id: deniedTemplateHolder.id } })
 
-        return { baseline, afterGrant, afterDeny, excludingDirectHolder }
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-    )
+          return { baseline, afterGrant, afterDeny, excludingDirectHolder }
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      )
+      .finally(() => prisma.user.delete({ where: { id: issuer.id } }))
 
     expect(afterGrant).toBe(baseline + 1)
     expect(afterDeny).toBe(afterGrant)

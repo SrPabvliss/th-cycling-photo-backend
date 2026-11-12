@@ -11,6 +11,10 @@ import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import configuration from '../../../../../config/configuration'
 import { validate } from '../../../../../config/env.validation'
 
+// The event carries its own snapshot of the public name, so the spec states it instead of reading
+// whatever the platform tenant happens to be called in this database (it may have none).
+const PLATFORM_PUBLIC_NAME = 'Titan TV Oficial'
+
 describe('public owner legend', () => {
   let module: TestingModule
   let prisma: PrismaService
@@ -92,7 +96,7 @@ describe('public owner legend', () => {
         tenant_id: platformTenant.id,
         event_type_id: evtType.id,
         status: 'active',
-        snap_public_name: platformTenant.public_name,
+        snap_public_name: PLATFORM_PUBLIC_NAME,
       },
     })
 
@@ -130,8 +134,8 @@ describe('public owner legend', () => {
     const platformItem = result.items.find((i) => i.slug === platformEvent.slug)
 
     expect(item?.ownerName).toBe('Foto Andes')
-    expect(item?.ownerName).not.toBe(platformTenant.public_name)
-    expect(platformItem?.ownerName).toBe(platformTenant.public_name)
+    expect(item?.ownerName).not.toBe(PLATFORM_PUBLIC_NAME)
+    expect(platformItem?.ownerName).toBe(PLATFORM_PUBLIC_NAME)
     expect(platformItem?.ownerName).not.toBe(item?.ownerName)
   })
 })
