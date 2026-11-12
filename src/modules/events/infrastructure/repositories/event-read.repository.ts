@@ -12,10 +12,12 @@ import type {
   EventSummaryProjection,
   EventsStatsProjection,
   PublicEventDetailProjection,
+  PublicEventFiltersProjection,
   PublicEventListProjection,
   PublicPhotoProjection,
 } from '../../application/projections'
 import type { EventListFilters } from '../../application/queries/get-events-list/get-events-list.dto'
+import type { PublicEventListFilters } from '../../application/queries/get-public-events-list/get-public-events-list.dto'
 import type { Event } from '../../domain/entities'
 import type { AssignedEventStatus, IEventReadRepository } from '../../domain/ports'
 import * as EventMapper from '../mappers/event.mapper'
@@ -28,6 +30,7 @@ import {
   resolveEventSort,
   resolveEventTab,
 } from './event-list-sql'
+import { PUBLICLY_LISTED_EVENT, publicEventSearchSql } from './public-event-list-sql'
 
 type EventsStatsRow = {
   total_events: number
@@ -346,13 +349,21 @@ export class EventReadRepository implements IEventReadRepository {
 
   async getPublicEventsList(
     pagination: Pagination,
+    filters: PublicEventListFilters,
   ): Promise<PaginatedResult<PublicEventListProjection>> {
-    // Public listings require a cover_image asset — no cover means the event is
-    // still in "setup incomplete" state and must not be visible to buyers.
-    const where: Prisma.EventWhereInput = {
-      deleted_at: null,
-      status: 'active',
-      assets: { some: { asset_type: 'cover_image' } },
+    const where: Prisma.EventWhereInput = { ...PUBLICLY_LISTED_EVENT }
+
+    if (filters.eventTypeId !== null) where.event_type_id = filters.eventTypeId
+    // Same population `photoCount` counts: every photo row of the event.
+    if (filters.hasPhotos) where.photos = { some: {} }
+    if (filters.search !== null) {
+      // The accent-insensitive match needs unaccent(), which Prisma's query builder cannot
+      // express. It only resolves which events match; listing, ordering, paging and counting
+      // stay on the one `where` below, so a search can never page or count differently.
+      const matches = await this.prisma.$queryRaw<{ id: string }[]>(
+        publicEventSearchSql(filters.search),
+      )
+      where.id = { in: matches.map((match) => match.id) }
     }
 
     const [events, total] = await Promise.all([
@@ -369,6 +380,15 @@ export class EventReadRepository implements IEventReadRepository {
     const items = events.map((e) => EventMapper.toPublicListProjection(e))
 
     return new PaginatedResult(items, total, pagination)
+  }
+
+  async getPublicEventFilters(): Promise<PublicEventFiltersProjection> {
+    const eventTypes = await this.prisma.eventType.findMany({
+      where: { events: { some: PUBLICLY_LISTED_EVENT } },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    })
+    return { eventTypes }
   }
 
   async getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null> {

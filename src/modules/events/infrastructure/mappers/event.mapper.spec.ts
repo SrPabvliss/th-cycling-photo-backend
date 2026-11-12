@@ -10,6 +10,7 @@ describe('public projection owner name', () => {
       end_date: new Date('2026-01-02'),
       snap_public_name: 'Foto Andes',
       province: { name: 'Tungurahua' },
+      event_type: { id: 3, name: 'Ciclismo de ruta' },
       canton: { name: 'Ambato' },
       _count: { photos: 12 },
       assets: [],
