@@ -3,6 +3,7 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "globalSetup": "<rootDir>/guard-test-database.ts",
+  "setupFiles": ["<rootDir>/setup-database-test-env.ts"],
   "testRegex": ".e2e-spec.ts$",
   "testTimeout": 30000,
   "transform": {
@@ -25,7 +26,10 @@
     "^@notifications/(.*)$": "<rootDir>/../src/modules/notifications/$1",
     "^@auth/(.*)$": "<rootDir>/../src/modules/auth/$1",
     "^@cart/(.*)$": "<rootDir>/../src/modules/cart/$1",
+    "^@billing/(.*)$": "<rootDir>/../src/modules/billing/$1",
     "^@pricing/(.*)$": "<rootDir>/../src/modules/pricing/$1",
+    "^@payments/(.*)$": "<rootDir>/../src/modules/payments/$1",
+    "^@tenants/(.*)$": "<rootDir>/../src/modules/tenants/$1",
     "^(\\.{1,2}/.*)\\.js$": "$1"
   }
 }

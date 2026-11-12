@@ -12,6 +12,7 @@ import { ResponseInterceptor } from '../src/shared/http/interceptors/response.in
 import { PrismaService } from '../src/shared/infrastructure'
 import { STORAGE_ADAPTER } from '../src/shared/storage/domain/ports/storage-adapter.port'
 import { createAuthenticatedUser, type TestAuthUser } from './fixtures/factories/auth.factory'
+import { ensurePaymentSystemUser } from './fixtures/factories/payment-system-user.factory'
 import { createPhotoFixture } from './fixtures/factories/photo.factory'
 import { createEventFixture } from './fixtures/factories/user.factory'
 
@@ -61,6 +62,7 @@ describe('Review queue (e2e)', () => {
     app.useGlobalFilters(new GlobalExceptionFilter())
     const reflector = app.get(Reflector)
     app.useGlobalInterceptors(new ResponseInterceptor(reflector))
+    await ensurePaymentSystemUser(moduleFixture.get(PrismaService))
     await app.init()
 
     prisma = moduleFixture.get(PrismaService)
@@ -133,9 +135,9 @@ describe('Review queue (e2e)', () => {
     await app.close()
   })
 
-  it('GET default (onlyPending=true) → A, B, C in order; D excluded', async () => {
+  it('GET status=pending → A, B, C in order; D excluded', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventSlug}/review-queue`)
+      .get(`/api/v1/events/${eventSlug}/review-queue?status=pending`)
       .set('Authorization', bearer)
       .expect(200)
 
@@ -154,9 +156,9 @@ describe('Review queue (e2e)', () => {
     expect(res.body.meta.pagination.totalPages).toBe(1)
   })
 
-  it('GET onlyPending=false → returns all 4 including reviewed photo', async () => {
+  it('GET default (status=all) → returns all 4 including reviewed photo', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventSlug}/review-queue?onlyPending=false`)
+      .get(`/api/v1/events/${eventSlug}/review-queue`)
       .set('Authorization', bearer)
       .expect(200)
 
@@ -165,9 +167,26 @@ describe('Review queue (e2e)', () => {
     expect(res.body.meta.pagination.total).toBe(4)
   })
 
-  it('pagination: page=1&limit=2 returns 2; page=2 returns 1', async () => {
+  it('GET status=reviewed → only the reviewed photo', async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/events/${eventSlug}/review-queue?status=reviewed`)
+      .set('Authorization', bearer)
+      .expect(200)
+
+    expect((res.body.data as Array<{ id: string }>).map((i) => i.id)).toEqual([photoD])
+    expect(res.body.meta.pagination.total).toBe(1)
+  })
+
+  it('the retired onlyPending parameter is rejected → 400', async () => {
+    await request(app.getHttpServer())
+      .get(`/api/v1/events/${eventSlug}/review-queue?onlyPending=false`)
+      .set('Authorization', bearer)
+      .expect(400)
+  })
+
+  it('pagination over status=pending: page=1&limit=2 returns 2; page=2 returns 1', async () => {
     const r1 = await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventSlug}/review-queue?page=1&limit=2`)
+      .get(`/api/v1/events/${eventSlug}/review-queue?status=pending&page=1&limit=2`)
       .set('Authorization', bearer)
       .expect(200)
     expect(r1.body.data).toHaveLength(2)
@@ -177,7 +196,7 @@ describe('Review queue (e2e)', () => {
     expect(r1.body.meta.pagination.totalPages).toBe(2)
 
     const r2 = await request(app.getHttpServer())
-      .get(`/api/v1/events/${eventSlug}/review-queue?page=2&limit=2`)
+      .get(`/api/v1/events/${eventSlug}/review-queue?status=pending&page=2&limit=2`)
       .set('Authorization', bearer)
       .expect(200)
     expect(r2.body.data).toHaveLength(1)
