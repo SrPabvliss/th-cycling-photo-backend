@@ -4,6 +4,7 @@ import { CqrsModule } from '@nestjs/cqrs'
 import { CreateBillingAccountHandler } from './application/commands/create-billing-account/create-billing-account.handler'
 import { DeleteBillingAccountHandler } from './application/commands/delete-billing-account/delete-billing-account.handler'
 import { SetDefaultBillingAccountHandler } from './application/commands/set-default-billing-account/set-default-billing-account.handler'
+import { UpdateBillingAccountHandler } from './application/commands/update-billing-account/update-billing-account.handler'
 import { GetMyBillingAccountsHandler } from './application/queries/get-my-billing-accounts/get-my-billing-accounts.handler'
 import { BILLING_ACCOUNT_REPOSITORY } from './domain/ports'
 import { BillingAccountRepository } from './infrastructure/repositories/billing-account.repository'
@@ -11,6 +12,7 @@ import { BillingAccountsController } from './presentation/controllers/billing-ac
 
 const CommandHandlers = [
   CreateBillingAccountHandler,
+  UpdateBillingAccountHandler,
   SetDefaultBillingAccountHandler,
   DeleteBillingAccountHandler,
 ]
