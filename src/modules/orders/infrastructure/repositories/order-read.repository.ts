@@ -121,6 +121,28 @@ function visibleToOwnerWhere(userId: string): Prisma.OrderWhereInput {
   }
 }
 
+/**
+ * The event fields that tell whether its public gallery still opens. A cover is counted rather
+ * than loaded, so the buyer's order list stays at the same number of queries.
+ */
+const PUBLIC_GALLERY_EVENT_SELECT = {
+  slug: true,
+  status: true,
+  deleted_at: true,
+  _count: { select: { assets: { where: { asset_type: 'cover_image' } } } },
+} satisfies Prisma.EventSelect
+
+/**
+ * Slug of the event's public gallery, or null when /gallery/:slug would answer 404. Same rule as
+ * the public events listing and the public gallery: not deleted, active, and with a cover.
+ */
+function publicGallerySlug(
+  event: Prisma.EventGetPayload<{ select: typeof PUBLIC_GALLERY_EVENT_SELECT }>,
+): string | null {
+  const opens = event.deleted_at === null && event.status === 'active' && event._count.assets > 0
+  return opens ? event.slug : null
+}
+
 function toCustomerState(status: string): MyOrderCustomerState {
   // A draft only ever reaches a buyer through `visibleToOwnerWhere`, as a payment being confirmed.
   if (status === OrderStatus.DRAFT) return 'confirming'
@@ -587,7 +609,8 @@ export class OrderReadRepository implements IOrderReadRepository {
           created_at: true,
           subtotal: true,
           snap_currency: true,
-          event: { select: { name: true } },
+          payment_method: true,
+          event: { select: { name: true, ...PUBLIC_GALLERY_EVENT_SELECT } },
           _count: { select: { items: true } },
           items: {
             take: 3,
@@ -615,6 +638,8 @@ export class OrderReadRepository implements IOrderReadRepository {
           photoId: item.photo.id,
           galleryUrl: this.cdn.galleryUrl(item.photo.public_slug),
         })),
+        paymentMethod: order.payment_method,
+        eventSlug: publicGallerySlug(order.event),
       })),
       total,
       pagination,
@@ -641,7 +666,8 @@ export class OrderReadRepository implements IOrderReadRepository {
         snap_billing_legal_name: true,
         snap_billing_email: true,
         snap_billing_address: true,
-        event: { select: { name: true } },
+        payment_method: true,
+        event: { select: { name: true, ...PUBLIC_GALLERY_EVENT_SELECT } },
         items: {
           orderBy: { photo: { id: 'asc' } },
           select: { photo: { select: { id: true, public_slug: true } } },
@@ -669,6 +695,8 @@ export class OrderReadRepository implements IOrderReadRepository {
         id: item.photo.id,
         galleryUrl: this.cdn.galleryUrl(item.photo.public_slug),
       })),
+      paymentMethod: order.payment_method,
+      eventSlug: publicGallerySlug(order.event),
     }
   }
 
