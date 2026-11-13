@@ -24,6 +24,12 @@ export class OrderWriteRepository implements IOrderWriteRepository {
     return OrderMapper.toEntity(saved)
   }
 
+  async findByIdForUpdate(id: string, tx: Prisma.TransactionClient): Promise<Order | null> {
+    await tx.$queryRaw`SELECT id FROM orders WHERE id = ${id}::uuid FOR UPDATE`
+    const row = await tx.order.findUnique({ where: { id } })
+    return row ? OrderMapper.toEntity(row) : null
+  }
+
   /** Persists an order entity with snap fields in a single operation. */
   async saveWithSnap(order: Order, snap: OrderSnapData): Promise<Order> {
     const data = OrderMapper.toPersistence(order)

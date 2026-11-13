@@ -2,6 +2,7 @@ import { SettleCartCommand } from '@cart/application/commands'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { ConfirmOrderPaymentCommand, SendDeliveryCommand } from '@orders/application/commands'
+import type { ConfirmOrderPaymentResult } from '@orders/application/commands/confirm-order-payment/confirm-order-payment.command'
 import type { OrderPaymentConfirmedProjection } from '@orders/application/projections'
 import type { OrderStatusType } from '@orders/domain/value-objects/order-status.vo'
 import type {
@@ -213,9 +214,11 @@ export class ConfirmPaymentTransactionHandler
           )
         })
 
+      // Always in id order, whatever order the contexts came back in.
       const settleableOrderIds = decisions
         .filter(({ decision }) => decision === OrderSettlementDecision.SETTLE)
         .map(({ context }) => context.orderId)
+        .sort()
 
       const isGenuinelyStranded = unresolvedOrderIds.length > 0 || hasUnsettleableOrder
 
@@ -231,9 +234,25 @@ export class ConfirmPaymentTransactionHandler
     const settledResults = await Promise.all(
       settleable.map(async (orderId) => {
         try {
-          await this.commandBus.execute(
-            new ConfirmOrderPaymentCommand(orderId, new AuditContext(this.systemActor.userId)),
+          // Another confirmation of the same charge may pay the order between the decision above
+          // and this command. The command then finds it paid under the order's lock and skips it,
+          // and it is treated as one already settled: not settled here, not delivered here.
+          const result = await this.commandBus.execute<
+            ConfirmOrderPaymentCommand,
+            ConfirmOrderPaymentResult | undefined
+          >(
+            new ConfirmOrderPaymentCommand(
+              orderId,
+              new AuditContext(this.systemActor.userId),
+              'skip',
+            ),
           )
+          if (result?.alreadyPaid) {
+            this.logger.log(
+              `Approved payment did not settle one of its orders. clientTransactionId=${clientTransactionId} orderId=${orderId} decision=${OrderSettlementDecision.ALREADY_SETTLED}`,
+            )
+            return null
+          }
           return orderId
         } catch (error) {
           this.logger.error(

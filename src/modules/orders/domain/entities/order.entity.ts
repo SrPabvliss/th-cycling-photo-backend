@@ -99,6 +99,11 @@ export class Order {
     return this.status === OrderStatus.DRAFT
   }
 
+  /** Paid, whether or not it has been delivered since. */
+  get isPaid(): boolean {
+    return this.status === OrderStatus.PAID || this.status === OrderStatus.DELIVERED
+  }
+
   confirmDraftAsPending(): void {
     if (this.status !== OrderStatus.DRAFT) {
       throw AppException.businessRule('order.not_draft')
