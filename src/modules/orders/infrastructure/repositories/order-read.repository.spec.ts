@@ -257,6 +257,122 @@ describe('OrderReadRepository customer scoping', () => {
   })
 })
 
+describe('OrderReadRepository: how a buyer order is paid and where its event gallery is', () => {
+  const visibleEvent = {
+    name: 'Vuelta al Cotopaxi',
+    slug: 'vuelta-al-cotopaxi',
+    status: 'active',
+    deleted_at: null,
+    _count: { assets: 1 },
+  }
+
+  function myOrderRow(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'order-1',
+      status: OrderStatus.PENDING,
+      created_at: new Date('2026-11-12'),
+      subtotal: null,
+      snap_currency: 'USD',
+      payment_method: 'transfer',
+      payment_transaction_orders: [],
+      event: visibleEvent,
+      items: [],
+      _count: { items: 0 },
+      ...overrides,
+    }
+  }
+
+  async function detailOf(row: Record<string, unknown>) {
+    const { repository, findFirst } = buildRepository()
+    findFirst.mockResolvedValue(row)
+    return repository.getMyDetail('user-1', 'order-1')
+  }
+
+  it.each([
+    ['a card order', OrderStatus.PAID, 'card'],
+    ['a transfer order', OrderStatus.PENDING, 'transfer'],
+    ['a gifted order, with the method it was placed with', OrderStatus.GIFTED, 'transfer'],
+  ] as const)('gives the payment method of %s', async (_, status, method) => {
+    const detail = await detailOf(myOrderRow({ status, payment_method: method }))
+
+    expect(detail?.paymentMethod).toBe(method)
+  })
+
+  it('gives no payment method for an order placed before the method was recorded', async () => {
+    const detail = await detailOf(myOrderRow({ status: OrderStatus.GIFTED, payment_method: null }))
+
+    expect(detail?.paymentMethod).toBeNull()
+  })
+
+  it('gives the event slug when its public gallery opens', async () => {
+    const detail = await detailOf(myOrderRow())
+
+    expect(detail?.eventSlug).toBe('vuelta-al-cotopaxi')
+  })
+
+  it.each([
+    ['was deleted', { deleted_at: new Date('2026-11-01') }],
+    ['is completed', { status: 'completed' }],
+    ['is archived', { status: 'archived' }],
+    ['is frozen', { status: 'frozen' }],
+    ['has no cover', { _count: { assets: 0 } }],
+  ])('gives no event slug when the event %s, so the buyer is not sent to a 404', async (_, event) => {
+    const detail = await detailOf(myOrderRow({ event: { ...visibleEvent, ...event } }))
+
+    expect(detail?.eventSlug).toBeNull()
+  })
+
+  it('reads both from the same query as the rest of the detail, counting only cover images', async () => {
+    const { repository, findFirst } = buildRepository()
+
+    await repository.getMyDetail('user-1', 'order-1')
+
+    expect(findFirst).toHaveBeenCalledTimes(1)
+    const { select } = findFirst.mock.calls[0][0]
+    expect(select.payment_method).toBe(true)
+    expect(select.event.select).toEqual({
+      name: true,
+      slug: true,
+      status: true,
+      deleted_at: true,
+      _count: { select: { assets: { where: { asset_type: 'cover_image' } } } },
+    })
+  })
+
+  it('gives each order of the list its payment method and event slug, from the same query', async () => {
+    const { repository, findMany } = buildRepository()
+    findMany.mockResolvedValue([
+      myOrderRow({ id: 'order-1', status: OrderStatus.PAID, payment_method: 'card' }),
+      myOrderRow({
+        id: 'order-2',
+        payment_method: 'transfer',
+        event: { ...visibleEvent, _count: { assets: 0 } },
+      }),
+      myOrderRow({ id: 'order-3', status: OrderStatus.GIFTED, payment_method: null }),
+    ])
+
+    const page = await repository.getMyList('user-1', {
+      page: 1,
+      limit: 20,
+      skip: 0,
+      take: 20,
+    } as never)
+
+    expect(findMany).toHaveBeenCalledTimes(1)
+    expect(findMany.mock.calls[0][0].select).toMatchObject({
+      payment_method: true,
+      event: { select: { slug: true, status: true, deleted_at: true } },
+    })
+    expect(
+      page.items.map(({ id, paymentMethod, eventSlug }) => ({ id, paymentMethod, eventSlug })),
+    ).toEqual([
+      { id: 'order-1', paymentMethod: 'card', eventSlug: 'vuelta-al-cotopaxi' },
+      { id: 'order-2', paymentMethod: 'transfer', eventSlug: null },
+      { id: 'order-3', paymentMethod: null, eventSlug: 'vuelta-al-cotopaxi' },
+    ])
+  })
+})
+
 describe('OrderReadRepository buyer queries are deliberately ownership-scoped, not tenant-scoped', () => {
   const assertOwnershipNotTenantScoped = (where: Record<string, unknown>) => {
     expect(where.user_id).toBe('user-1')
