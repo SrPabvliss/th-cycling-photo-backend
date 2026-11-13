@@ -111,27 +111,45 @@ describe('OrderReadRepository.getPhotoIdsByOrderIds', () => {
 })
 
 describe('OrderReadRepository customer scoping', () => {
-  it('scopes the customer list to the caller and hides drafts', async () => {
+  // A draft is hidden unless a card payment for it is awaiting confirmation (TIT-118). The rule
+  // itself is proven against a real database in my-orders-confirming.integration.spec.ts; here
+  // only its shape is pinned: scoped to the caller, and a draft admitted through one door only.
+  const expectOwnerVisibilityRule = (where: Record<string, unknown>) => {
+    expect(where.user_id).toBe('user-1')
+    expect(where.OR).toEqual([
+      { status: { not: OrderStatus.DRAFT } },
+      {
+        status: OrderStatus.DRAFT,
+        payment_transaction_orders: {
+          some: {
+            payment_transaction: {
+              OR: [
+                { status: 'approved' },
+                { status: 'confirming', updated_at: { gte: expect.any(Date) } },
+              ],
+            },
+          },
+        },
+      },
+    ])
+  }
+
+  it('scopes the customer list to the caller and hides drafts not awaiting confirmation', async () => {
     const { repository, findMany } = buildRepository()
 
     await repository.getMyList('user-1', { page: 1, limit: 20, skip: 0, take: 20 } as never)
 
-    const { where } = findMany.mock.calls[0][0]
-    expect(where.user_id).toBe('user-1')
-    expect(where.status).toEqual({ not: OrderStatus.DRAFT })
+    expectOwnerVisibilityRule(findMany.mock.calls[0][0].where)
   })
 
-  it('scopes the customer detail to the caller and hides drafts', async () => {
+  it('scopes the customer detail to the caller and hides drafts not awaiting confirmation', async () => {
     const { repository, findFirst } = buildRepository()
 
     await repository.getMyDetail('user-1', 'order-1')
 
     const { where } = findFirst.mock.calls[0][0]
-    expect(where).toMatchObject({
-      id: 'order-1',
-      user_id: 'user-1',
-      status: { not: OrderStatus.DRAFT },
-    })
+    expect(where.id).toBe('order-1')
+    expectOwnerVisibilityRule(where)
   })
 
   it('builds watermarked gallery URLs for customer-facing detail photos', async () => {

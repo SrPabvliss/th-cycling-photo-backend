@@ -1,4 +1,8 @@
-export type MyOrderCustomerState = 'in_process' | 'ready' | 'gifted' | 'cancelled'
+/**
+ * `confirming` is a card order whose payment is being confirmed with the gateway, or was approved
+ * and is about to be settled. It cannot be cancelled or downloaded yet.
+ */
+export type MyOrderCustomerState = 'in_process' | 'confirming' | 'ready' | 'gifted' | 'cancelled'
 
 export class MyOrderPreviewPhotoProjection {
   /** Photo UUID */

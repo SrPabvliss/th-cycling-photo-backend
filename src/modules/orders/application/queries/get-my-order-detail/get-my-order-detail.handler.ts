@@ -24,14 +24,17 @@ export class GetMyOrderDetailHandler implements IQueryHandler<GetMyOrderDetailQu
   ) {}
 
   async execute(query: GetMyOrderDetailQuery): Promise<MyOrderDetailProjection> {
-    if (!(await this.readRepo.existsOwnedBy(query.userId, query.orderId))) {
+    if (!(await this.readRepo.existsVisibleToOwner(query.userId, query.orderId))) {
       throw AppException.notFound('entities.order', query.orderId)
     }
 
-    await this.orderInvoiceSyncService.syncOrder(query.orderId)
-
     const detail = await this.readRepo.getMyDetail(query.userId, query.orderId)
     if (!detail) throw AppException.notFound('entities.order', query.orderId)
+
+    // Not paid yet: there is no invoice to follow, and nothing to ask the invoicing service about.
+    if (detail.state === 'confirming') return { ...detail, invoice: null }
+
+    await this.orderInvoiceSyncService.syncOrder(query.orderId)
 
     const [rows, documents] = await Promise.all([
       this.rikuchiyOutboxRepository.findByOrder(query.orderId),

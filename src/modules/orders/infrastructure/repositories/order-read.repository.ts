@@ -16,6 +16,7 @@ import type { Order } from '@orders/domain/entities'
 import type { IOrderReadRepository, OrderListFilters } from '@orders/domain/ports'
 import { resolveDeliveredFile } from '@orders/domain/services'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
+import { PaymentTransactionStatus } from '@payments/domain/value-objects/payment-transaction-status.vo'
 import type { PendingRetouchOrderProjection } from '@photos/application/projections'
 import { PaginatedResult, type Pagination } from '@shared/application'
 import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
@@ -77,7 +78,52 @@ const MY_ORDER_STATUSES: string[] = [
 ]
 const SPENT_STATUSES: string[] = [OrderStatus.PAID, OrderStatus.DELIVERED]
 
+/**
+ * How long a confirmation may stay silent before its order stops being shown as "confirming".
+ * The sweep expires an unanswered confirmation well before this; the cap only matters if that job
+ * is lost, so the order does not stay "confirming" forever.
+ */
+export const CONFIRMING_VISIBILITY_MINUTES = 30
+
+/**
+ * The payment attempts that make a draft card order worth showing to its buyer: one the gateway is
+ * being asked about right now, or one the gateway approved whose order has not been settled yet.
+ * An approved payment has no time limit: the buyer has paid, and hiding the order would be worse
+ * than showing it as still being confirmed.
+ */
+function awaitingConfirmationWhere(): Prisma.PaymentTransactionWhereInput {
+  const silentSince = new Date(Date.now() - CONFIRMING_VISIBILITY_MINUTES * 60_000)
+  return {
+    OR: [
+      { status: PaymentTransactionStatus.APPROVED },
+      { status: PaymentTransactionStatus.CONFIRMING, updated_at: { gte: silentSince } },
+    ],
+  }
+}
+
+/**
+ * What a buyer sees under "my orders": every order that is not a draft, plus the drafts whose
+ * card payment is awaiting confirmation. A draft with no attempt, or whose attempts were never
+ * taken to the gateway, were declined or expired, is an abandoned checkout and stays hidden.
+ */
+function visibleToOwnerWhere(userId: string): Prisma.OrderWhereInput {
+  return {
+    user_id: userId,
+    OR: [
+      { status: { not: OrderStatus.DRAFT } },
+      {
+        status: OrderStatus.DRAFT,
+        payment_transaction_orders: {
+          some: { payment_transaction: awaitingConfirmationWhere() },
+        },
+      },
+    ],
+  }
+}
+
 function toCustomerState(status: string): MyOrderCustomerState {
+  // A draft only ever reaches a buyer through `visibleToOwnerWhere`, as a payment being confirmed.
+  if (status === OrderStatus.DRAFT) return 'confirming'
   if (status === OrderStatus.GIFTED) return 'gifted'
   if (status === OrderStatus.PAID || status === OrderStatus.DELIVERED) return 'ready'
   if (status === OrderStatus.CANCELLED) return 'cancelled'
@@ -530,10 +576,7 @@ export class OrderReadRepository implements IOrderReadRepository {
     userId: string,
     pagination: Pagination,
   ): Promise<PaginatedResult<MyOrderListProjection>> {
-    const where: Prisma.OrderWhereInput = {
-      user_id: userId,
-      status: { not: OrderStatus.DRAFT },
-    }
+    const where = visibleToOwnerWhere(userId)
 
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
@@ -580,13 +623,19 @@ export class OrderReadRepository implements IOrderReadRepository {
 
   async getMyDetail(userId: string, orderId: string): Promise<RawMyOrderDetailProjection | null> {
     const order = await this.prisma.order.findFirst({
-      where: { id: orderId, user_id: userId, status: { not: OrderStatus.DRAFT } },
+      where: { id: orderId, ...visibleToOwnerWhere(userId) },
       select: {
         id: true,
         status: true,
         created_at: true,
         subtotal: true,
         snap_currency: true,
+        payment_transaction_orders: {
+          where: { payment_transaction: awaitingConfirmationWhere() },
+          orderBy: { payment_transaction: { updated_at: 'desc' } },
+          take: 1,
+          select: { payment_transaction: { select: { client_transaction_id: true } } },
+        },
         snap_billing_id_type: true,
         snap_billing_id_number: true,
         snap_billing_legal_name: true,
@@ -611,12 +660,23 @@ export class OrderReadRepository implements IOrderReadRepository {
       snapCurrency: order.snap_currency,
       canDownload: DOWNLOADABLE_STATUSES.includes(order.status),
       canCancel: IN_PROCESS_STATUSES.includes(order.status),
+      confirmingTransactionId:
+        order.status === OrderStatus.DRAFT
+          ? (order.payment_transaction_orders[0]?.payment_transaction.client_transaction_id ?? null)
+          : null,
       billing: toOrderBilling(order),
       photos: order.items.map((item) => ({
         id: item.photo.id,
         galleryUrl: this.cdn.galleryUrl(item.photo.public_slug),
       })),
     }
+  }
+
+  async existsVisibleToOwner(userId: string, orderId: string): Promise<boolean> {
+    const count = await this.prisma.order.count({
+      where: { id: orderId, ...visibleToOwnerWhere(userId) },
+    })
+    return count > 0
   }
 
   async existsOwnedBy(userId: string, orderId: string): Promise<boolean> {

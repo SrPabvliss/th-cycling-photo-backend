@@ -61,10 +61,22 @@ export class ConfirmPaymentTransactionHandler
     private readonly systemActor: PaymentSystemActor,
   ) {}
 
+  /**
+   * The confirmation runs in two locked steps on purpose.
+   *
+   * The first one only records that the buyer came back from the gateway (`confirming`) and
+   * commits. The second one asks the gateway and records its answer. If they were a single
+   * database transaction, a slow or failing gateway would roll the record back and leave the
+   * payment looking exactly like a checkout the buyer abandoned, so "Mis fotos" could not tell an
+   * order being confirmed from one that never will be.
+   *
+   * The gateway is only ever called inside the second step, with the row locked and after
+   * re-reading its state, so two confirmations of the same transaction still call it once.
+   */
   async execute(command: ConfirmPaymentTransactionCommand): Promise<PaymentResultProjection> {
     let sellerTenantId: string | null | undefined
 
-    const runConfirmation = () =>
+    const beginConfirmation = () =>
       this.transactionRepo.runLocked(command.clientTransactionId, async (transaction) => {
         const contexts = await this.contextRepo.findByOrderIds(transaction.orderIds)
         if (contexts.length === 0) throw AppException.businessRule('payment.order_context_missing')
@@ -83,17 +95,20 @@ export class ConfirmPaymentTransactionHandler
 
         sellerTenantId = contexts[0].sellerTenantId
 
-        const wasExpired = transaction.status === PaymentTransactionStatus.EXPIRED
-
-        if (transaction.isSettled && !wasExpired) {
-          return {
-            approved: transaction.status === PaymentTransactionStatus.APPROVED,
-            orderIds: transaction.orderIds,
-            message: transaction.failureMessage,
-          }
-        }
+        const earlier = ConfirmPaymentTransactionHandler.earlierOutcomeOf(transaction)
+        if (earlier) return earlier
 
         transaction.beginConfirmation()
+        return null
+      })
+
+    const askGateway = () =>
+      this.transactionRepo.runLocked(command.clientTransactionId, async (transaction) => {
+        // Re-read under the lock: another confirmation may have settled it since the first step.
+        const earlier = ConfirmPaymentTransactionHandler.earlierOutcomeOf(transaction)
+        if (earlier) return earlier
+
+        const wasExpired = transaction.status === PaymentTransactionStatus.EXPIRED
 
         const gateway = this.registry.get(transaction.provider)
         const credentials = await this.resolveCredentials(transaction, gateway)
@@ -128,7 +143,7 @@ export class ConfirmPaymentTransactionHandler
 
     let outcome: ConfirmationOutcome
     try {
-      outcome = await runConfirmation()
+      outcome = (await beginConfirmation()) ?? (await askGateway())
     } catch (error) {
       await this.accountSuspension.disableOnInvalidCredentials(error, sellerTenantId)
       throw error
@@ -146,6 +161,21 @@ export class ConfirmPaymentTransactionHandler
       ...outcome,
       settled: settledOrderIds.length === outcome.orderIds.length,
       deliveries,
+    }
+  }
+
+  /**
+   * What a transaction that already has an answer answers again. An expired one has none: the
+   * gateway may still have approved it, so it is asked.
+   */
+  private static earlierOutcomeOf(transaction: PaymentTransaction): ConfirmationOutcome | null {
+    const isExpired = transaction.status === PaymentTransactionStatus.EXPIRED
+    if (!transaction.isSettled || isExpired) return null
+
+    return {
+      approved: transaction.status === PaymentTransactionStatus.APPROVED,
+      orderIds: transaction.orderIds,
+      message: transaction.failureMessage,
     }
   }
 
