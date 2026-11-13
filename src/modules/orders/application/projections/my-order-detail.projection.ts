@@ -26,6 +26,11 @@ export class MyOrderDetailProjection {
   canDownload: boolean
   /** True when the customer may still cancel this order */
   canCancel: boolean
+  /**
+   * Client transaction id of the payment being confirmed, to follow it on
+   * GET /payments/transactions/:clientTransactionId. Null unless state is `confirming`.
+   */
+  confirmingTransactionId: string | null
   /** Photos with watermarked URLs */
   photos: MyOrderPhotoProjection[]
   /** Billing snapshot taken when the order was placed */

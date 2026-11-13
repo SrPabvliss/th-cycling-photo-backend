@@ -426,7 +426,7 @@ describe('ConfirmPaymentTransactionHandler', () => {
     expect(commandBus.execute).not.toHaveBeenCalled()
   })
 
-  it('calls the gateway inside the first lock, decides settlement inside a second lock, and dispatches the order command only after every lock has closed', async () => {
+  it('records confirming in a first lock, calls the gateway inside a second one, decides settlement inside a third, and dispatches the order command only after every lock has closed', async () => {
     const { handler, gateway, commandBus, transactionRepo, transaction } = buildHandler()
     const callOrder: string[] = []
     gateway.confirm.mockImplementation(async () => {
@@ -453,14 +453,31 @@ describe('ConfirmPaymentTransactionHandler', () => {
 
     expect(callOrder).toEqual([
       'lock-open-1',
-      'gateway',
       'lock-close-1',
       'lock-open-2',
+      'gateway',
       'lock-close-2',
+      'lock-open-3',
+      'lock-close-3',
       'order-command',
       'order-command',
       'order-command',
     ])
+
+    const at = (label: string) => callOrder.indexOf(label)
+    const lastLockClose = Math.max(
+      ...callOrder.map((label, index) => (label.startsWith('lock-close') ? index : -1)),
+    )
+    // The gateway is called while a lock is held, never between locks.
+    expect(at('gateway')).toBeGreaterThan(at('lock-open-2'))
+    expect(at('gateway')).toBeLessThan(at('lock-close-2'))
+    // Settlement is decided in a later lock than the one the gateway was called in.
+    expect(at('lock-open-3')).toBeGreaterThan(at('lock-close-2'))
+    // Every order command runs after the last lock has closed.
+    expect(at('order-command')).toBeGreaterThan(lastLockClose)
+    // Confirming is recorded in a lock of its own, closed before the gateway is reached.
+    expect(transaction.beginConfirmation).toHaveBeenCalledTimes(1)
+    expect(at('lock-close-1')).toBeLessThan(at('gateway'))
   })
 
   it('still reports the payment approved when the order command fails, logging the failure instead of surfacing it', async () => {
