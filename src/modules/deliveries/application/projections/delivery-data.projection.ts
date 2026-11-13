@@ -7,6 +7,11 @@ export class DeliveryPhotoProjection {
   downloadUrl: string
   /** File size in bytes */
   fileSize: number
+  /**
+   * Signed CDN thumbnail of the delivered file, 400px wide and without watermark, valid as long as
+   * downloadUrl. Null when the delivered file has no CDN slug.
+   */
+  thumbnailUrl: string | null
 }
 
 export class DeliveryDataProjection {
@@ -32,6 +37,7 @@ export type DeliveryPhotoRaw = {
   filename: string
   storageKey: string
   fileSize: number
+  publicSlug: string | null
 }
 
 export type DeliveryDataRaw = Omit<DeliveryDataProjection, 'photos'> & {
