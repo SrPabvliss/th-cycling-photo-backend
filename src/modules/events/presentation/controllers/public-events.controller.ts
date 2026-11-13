@@ -1,10 +1,12 @@
 import {
   PublicEventDetailProjection,
+  PublicEventFiltersProjection,
   PublicEventListProjection,
   PublicPhotoProjection,
 } from '@events/application/projections'
 import {
   GetPublicEventDetailQuery,
+  GetPublicEventFiltersQuery,
   GetPublicEventPhotosDto,
   GetPublicEventPhotosQuery,
   GetPublicEventsListDto,
@@ -32,9 +34,29 @@ export class PublicEventsController {
     type: PublicEventListProjection,
     isArray: true,
   })
+  @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
   async findAll(@Query() dto: GetPublicEventsListDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
-    return this.queryBus.execute(new GetPublicEventsListQuery(pagination))
+    return this.queryBus.execute(
+      new GetPublicEventsListQuery(pagination, {
+        search: dto.search ?? null,
+        eventTypeId: dto.eventTypeId ?? null,
+        hasPhotos: dto.hasPhotos ?? false,
+      }),
+    )
+  }
+
+  @Public()
+  @Get('filters')
+  @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
+  @ApiOperation({ summary: 'Filter options for the public event list' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Event types that have at least one publicly listed event',
+    type: PublicEventFiltersProjection,
+  })
+  async findFilters() {
+    return this.queryBus.execute(new GetPublicEventFiltersQuery())
   }
 
   @Public()

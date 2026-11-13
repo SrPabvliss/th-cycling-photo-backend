@@ -129,7 +129,13 @@ describe('public owner legend', () => {
 
   it('shows the owning tenant on a public read, never the platform', async () => {
     const pagination = new Pagination(1, 50)
-    const result = await handler.execute(new GetPublicEventsListQuery(pagination))
+    const result = await handler.execute(
+      new GetPublicEventsListQuery(pagination, {
+        search: null,
+        eventTypeId: null,
+        hasPhotos: false,
+      }),
+    )
     const item = result.items.find((i) => i.slug === event.slug)
     const platformItem = result.items.find((i) => i.slug === platformEvent.slug)
 

@@ -14,5 +14,9 @@ export { EventListProjection } from './event-list.projection'
 export { EventSummaryProjection } from './event-summary.projection'
 export { EventsStatsProjection } from './events-stats.projection'
 export { PublicEventDetailProjection } from './public-event-detail.projection'
+export {
+  PublicEventFiltersProjection,
+  PublicEventTypeFilterProjection,
+} from './public-event-filters.projection'
 export { PublicEventListProjection } from './public-event-list.projection'
 export { PublicPhotoProjection } from './public-photo.projection'

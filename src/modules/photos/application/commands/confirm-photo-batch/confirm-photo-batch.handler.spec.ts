@@ -71,6 +71,7 @@ describe('ConfirmPhotoBatchHandler', () => {
       countAll: jest.fn(),
       countPendingReview: jest.fn(),
       getPublicEventsList: jest.fn(),
+      getPublicEventFilters: jest.fn(),
       getPublicEventDetail: jest.fn(),
       getPublicPhotos: jest.fn(),
       existsActiveEvent: jest.fn(),

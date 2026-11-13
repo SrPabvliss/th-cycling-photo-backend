@@ -97,6 +97,7 @@ export const publicEventListSelectConfig = {
   snap_public_name: true,
   province: { select: { name: true } },
   canton: { select: { name: true } },
+  event_type: { select: { id: true, name: true } },
   _count: { select: { photos: true } },
   assets: {
     select: { public_slug: true },
@@ -330,6 +331,8 @@ export function toPublicListProjection(record: PublicEventListSelect): PublicEve
     photoCount: record._count.photos,
     ownerName: record.snap_public_name ?? '',
     coverSlug: record.assets[0]?.public_slug ?? null,
+    eventTypeId: record.event_type.id,
+    eventTypeName: record.event_type.name,
   }
 }
 

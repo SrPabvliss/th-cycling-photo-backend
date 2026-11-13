@@ -5,10 +5,12 @@ import type {
   EventSummaryProjection,
   EventsStatsProjection,
   PublicEventDetailProjection,
+  PublicEventFiltersProjection,
   PublicEventListProjection,
   PublicPhotoProjection,
 } from '@events/application/projections'
 import type { EventListFilters } from '@events/application/queries/get-events-list/get-events-list.dto'
+import type { PublicEventListFilters } from '@events/application/queries/get-public-events-list/get-public-events-list.dto'
 import type { PaginatedResult, Pagination } from '@shared/application'
 import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { Event } from '../entities'
@@ -47,7 +49,11 @@ export interface IEventReadRepository {
   getAllAssignedEventIds(operatorId: string): Promise<string[]>
   getEventBriefsByIds(ids: string[]): Promise<EventBriefProjection[]>
   countAll(scope: EventScope): Promise<number>
-  getPublicEventsList(pagination: Pagination): Promise<PaginatedResult<PublicEventListProjection>>
+  getPublicEventsList(
+    pagination: Pagination,
+    filters: PublicEventListFilters,
+  ): Promise<PaginatedResult<PublicEventListProjection>>
+  getPublicEventFilters(): Promise<PublicEventFiltersProjection>
   getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null>
   getPublicPhotos(
     eventId: string,

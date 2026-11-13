@@ -12,6 +12,6 @@ export class GetPublicEventsListHandler implements IQueryHandler<GetPublicEvents
   async execute(
     query: GetPublicEventsListQuery,
   ): Promise<PaginatedResult<PublicEventListProjection>> {
-    return this.readRepo.getPublicEventsList(query.pagination)
+    return this.readRepo.getPublicEventsList(query.pagination, query.filters)
   }
 }
