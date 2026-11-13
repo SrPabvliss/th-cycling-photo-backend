@@ -7,6 +7,11 @@ export class MyOrderDownloadPhotoProjection {
   fileSize: number
   /** Presigned B2 download URL (1h expiration) */
   downloadUrl: string
+  /**
+   * Signed CDN thumbnail of the delivered file, 400px wide and without watermark, valid as long as
+   * downloadUrl. Null when the delivered file has no CDN slug.
+   */
+  thumbnailUrl: string | null
 }
 
 export class MyOrderDownloadsProjection {
@@ -21,4 +26,5 @@ export type MyOrderDownloadRaw = {
   id: string
   storageKey: string
   fileSize: number
+  publicSlug: string | null
 }

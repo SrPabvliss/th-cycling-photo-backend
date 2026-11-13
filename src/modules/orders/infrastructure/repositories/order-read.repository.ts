@@ -645,6 +645,8 @@ export class OrderReadRepository implements IOrderReadRepository {
                 file_size: true,
                 retouched_storage_key: true,
                 retouched_file_size: true,
+                public_slug: true,
+                retouched_public_slug: true,
               },
             },
           },
@@ -661,8 +663,15 @@ export class OrderReadRepository implements IOrderReadRepository {
         retouchedStorageKey: item.photo.retouched_storage_key,
         fileSize: item.photo.file_size,
         retouchedFileSize: item.photo.retouched_file_size,
+        publicSlug: item.photo.public_slug,
+        retouchedPublicSlug: item.photo.retouched_public_slug,
       })
-      return { id: item.photo.id, storageKey: file.storageKey, fileSize: file.fileSize }
+      return {
+        id: item.photo.id,
+        storageKey: file.storageKey,
+        fileSize: file.fileSize,
+        publicSlug: file.publicSlug,
+      }
     })
   }
 
