@@ -24,6 +24,11 @@ export type OrderItemInput = { photoId: string; unitPrice: number | null }
 
 export interface IOrderWriteRepository {
   save(order: Order, tx?: Prisma.TransactionClient): Promise<Order>
+  /**
+   * Locks the order row until `tx` ends and reads it again under that lock. It only excludes
+   * anything when given the transaction that then writes the order.
+   */
+  findByIdForUpdate(id: string, tx: Prisma.TransactionClient): Promise<Order | null>
   saveWithSnap(order: Order, snap: OrderSnapData): Promise<Order>
   savePhotos(orderId: string, items: OrderItemInput[]): Promise<void>
   replaceItems(orderId: string, items: OrderItemInput[]): Promise<void>
