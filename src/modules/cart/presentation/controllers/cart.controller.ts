@@ -1,3 +1,4 @@
+import { OptionalJwtAuthGuard } from '@auth/infrastructure/guards/optional-jwt-auth.guard'
 import {
   AddToCartCommand,
   AddToCartDto,
@@ -15,9 +16,8 @@ import {
   MergeResultProjection,
 } from '@cart/application/projections'
 import { GetCartQuery } from '@cart/application/queries'
-import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common'
 import { CommandBus, QueryBus } from '@nestjs/cqrs'
-import { JwtService } from '@nestjs/jwt'
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { CurrentUser, type ICurrentUser, Public } from '@shared/auth'
 import { Authenticated } from '@shared/authorization/presentation/decorators/authenticated.decorator'
@@ -33,23 +33,18 @@ export class CartController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
-    private readonly jwtService: JwtService,
   ) {}
 
-  /** Try to extract user from Authorization header without failing if absent. */
-  private tryExtractUser(req: Request): ICurrentUser | null {
-    const authHeader = req.headers.authorization
-    if (!authHeader?.startsWith('Bearer ')) return null
-    try {
-      const token = authHeader.split(' ')[1]
-      const payload = this.jwtService.verify(token)
-      return { userId: payload.sub, email: payload.email, role: payload.role }
-    } catch {
-      return null
-    }
+  /**
+   * The signed-in user, or null for an anonymous visitor. `OptionalJwtAuthGuard` has already
+   * answered 401 to any request whose `Authorization` header did not hold.
+   */
+  private static sessionOf(req: Request): ICurrentUser | null {
+    return (req as Request & { user?: ICurrentUser }).user ?? null
   }
 
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get()
   @SuccessMessage('success.FETCHED', { entity: 'entities.cart' })
   @ApiOperation({ summary: 'Get the current cart (authenticated or anonymous)' })
@@ -60,16 +55,18 @@ export class CartController {
     type: CartViewEventGroupProjection,
     isArray: true,
   })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Authorization header sent but not valid' })
   async getCart(
     @Req() req: Request,
     @Query('sessionId') sessionId?: string,
   ): Promise<CartViewProjection> {
-    const user = this.tryExtractUser(req)
+    const user = CartController.sessionOf(req)
     const query = new GetCartQuery(user?.userId ?? null, sessionId ?? null)
     return this.queryBus.execute(query)
   }
 
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Post('items')
   @SuccessMessage('success.CREATED', { entity: 'entities.cart' })
   @ApiOperation({ summary: 'Add a photo to the cart' })
@@ -78,14 +75,16 @@ export class CartController {
     description: 'Item added to cart',
     type: CartSummaryProjection,
   })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Authorization header sent but not valid' })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Photo not found' })
   async addItem(@Req() req: Request, @Body() dto: AddToCartDto): Promise<CartSummaryProjection> {
-    const user = this.tryExtractUser(req)
+    const user = CartController.sessionOf(req)
     const command = new AddToCartCommand(dto.photoId, user?.userId ?? null, dto.sessionId ?? null)
     return this.commandBus.execute(command)
   }
 
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Delete('items/:photoId')
   @SuccessMessage('success.DELETED', { entity: 'entities.cart' })
   @ApiOperation({ summary: 'Remove a photo from the cart' })
@@ -95,13 +94,14 @@ export class CartController {
     description: 'Item removed from cart',
     type: CartSummaryProjection,
   })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Authorization header sent but not valid' })
   @ApiEnvelopeErrorResponse({ status: 422, description: 'No active cart found' })
   async removeItem(
     @Req() req: Request,
     @Param('photoId') photoId: string,
     @Query('sessionId') sessionId?: string,
   ): Promise<CartSummaryProjection> {
-    const user = this.tryExtractUser(req)
+    const user = CartController.sessionOf(req)
     const command = new RemoveFromCartCommand(photoId, user?.userId ?? null, sessionId ?? null)
     return this.commandBus.execute(command)
   }
