@@ -47,11 +47,16 @@ export interface IOrderWriteRepository {
       tx: Prisma.TransactionClient,
     ) => Promise<{ order: Order; items: OrderItemInput[]; snap: OrderSnapData }>,
   ): Promise<Order>
+  /**
+   * Under the link's lock, hands `build` the latest order on the link that is not cancelled, and
+   * whether it is still alive (placed, or a card draft whose payment is under way).
+   */
   lockAndUpsertPreviewOrder(
     previewLinkId: string,
     build: (
       existing: Order | null,
       tx: Prisma.TransactionClient,
+      existingIsAlive: boolean,
     ) => Promise<{ order: Order; items: OrderItemInput[]; snap: OrderSnapData }>,
   ): Promise<Order>
   updateItemsDeliveredAs(orderId: string): Promise<void>

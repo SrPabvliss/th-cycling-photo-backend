@@ -6,6 +6,7 @@ import type { IOrderWriteRepository, OrderItemInput, OrderSnapData } from '@orde
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import { PrismaService } from '@shared/infrastructure'
 import * as OrderMapper from '../mappers/order.mapper'
+import { livePreviewOrderWhere } from './live-preview-order'
 
 @Injectable()
 export class OrderWriteRepository implements IOrderWriteRepository {
@@ -132,6 +133,7 @@ export class OrderWriteRepository implements IOrderWriteRepository {
     build: (
       existing: Order | null,
       tx: Prisma.TransactionClient,
+      existingIsAlive: boolean,
     ) => Promise<{ order: Order; items: OrderItemInput[]; snap: OrderSnapData }>,
   ): Promise<Order> {
     return this.prisma.$transaction(async (tx) => {
@@ -139,12 +141,17 @@ export class OrderWriteRepository implements IOrderWriteRepository {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`
 
       const existingRecord = await tx.order.findFirst({
-        where: { preview_link_id: previewLinkId },
+        where: { preview_link_id: previewLinkId, status: { not: 'cancelled' } },
         orderBy: { created_at: 'desc' },
       })
       const existing = existingRecord ? OrderMapper.toEntity(existingRecord) : null
+      const existingIsAlive = existingRecord
+        ? (await tx.order.count({
+            where: { ...livePreviewOrderWhere(previewLinkId), id: existingRecord.id },
+          })) > 0
+        : false
 
-      return OrderWriteRepository.persistBuilt(tx, await build(existing, tx))
+      return OrderWriteRepository.persistBuilt(tx, await build(existing, tx, existingIsAlive))
     })
   }
 

@@ -32,12 +32,18 @@ const command = (method: 'card' | 'transfer' = PaymentMethod.TRANSFER, photoIds 
   new CreateOrderFromPreviewCommand('tok', photoIds, 'u1', null, '42', 'Élite', 'ba-1', method)
 
 function setup(
-  options: { existing?: Order | null; acceptsCard?: boolean; consent?: unknown } = {},
+  options: {
+    existing?: Order | null
+    existingIsAlive?: boolean
+    acceptsCard?: boolean
+    consent?: unknown
+  } = {},
 ) {
   const persisted: { order: Order; items: unknown[]; snap: Record<string, unknown> }[] = []
   const orderWriteRepo = {
+    save: jest.fn().mockResolvedValue(undefined),
     lockAndUpsertPreviewOrder: jest.fn(async (_id: string, build) => {
-      const built = await build(options.existing ?? null, {})
+      const built = await build(options.existing ?? null, {}, options.existingIsAlive ?? true)
       persisted.push(built)
       return built.order
     }),
@@ -86,7 +92,7 @@ function setup(
     receiverResolver as never,
     notifications as never,
   )
-  return { handler, persisted, notifications, transactionWriteRepo, link }
+  return { handler, persisted, notifications, transactionWriteRepo, link, orderWriteRepo }
 }
 
 const draftOf = (userId: string) =>
@@ -164,6 +170,22 @@ describe('CreateOrderFromPreviewHandler', () => {
 
     expect(error).toBeInstanceOf(AppException)
     expect(error.messageKey).toBe('order.already_submitted')
+  })
+
+  it('gives up an abandoned card draft of someone else and places a new order', async () => {
+    const abandoned = draftOf('u2')
+    const { handler, persisted, orderWriteRepo } = setup({
+      existing: abandoned,
+      existingIsAlive: false,
+    })
+
+    await handler.execute(command())
+
+    expect(abandoned.status).toBe('cancelled')
+    expect(orderWriteRepo.save).toHaveBeenCalledWith(abandoned, {})
+    expect(persisted).toHaveLength(1)
+    expect(persisted[0].order.id).not.toBe(abandoned.id)
+    expect(persisted[0].order.userId).toBe('u1')
   })
 
   it('refuses card when the event receiver does not accept it', async () => {

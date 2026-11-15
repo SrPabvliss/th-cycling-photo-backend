@@ -97,9 +97,19 @@ export class CreateOrderFromPreviewHandler
 
     const saved = await this.orderWriteRepo.lockAndUpsertPreviewOrder(
       previewLink.id,
-      async (existing, tx) => {
-        if (existing && (!existing.isDraft || existing.userId !== command.userId)) {
+      async (latest, tx, latestIsAlive) => {
+        let existing = latest
+        // A placed order that stands keeps the link taken, for its buyer as for anyone else.
+        if (existing && !existing.isDraft) {
           throw AppException.businessRule('order.already_submitted')
+        }
+        // Someone else's card draft keeps it taken while its payment is under way. Abandoned, it
+        // is given up so the link never carries two live orders.
+        if (existing && existing.userId !== command.userId) {
+          if (latestIsAlive) throw AppException.businessRule('order.already_submitted')
+          existing.abandonDraft()
+          await this.orderWriteRepo.save(existing, tx)
+          existing = null
         }
 
         if (existing) {

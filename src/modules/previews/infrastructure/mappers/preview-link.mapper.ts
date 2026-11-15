@@ -108,5 +108,7 @@ export function toPreviewDataProjection(record: PreviewDataSelect): PreviewDataP
       id: plp.photo.id,
       url: plp.photo.public_slug,
     })),
+    // Whose order took the link is the query handler's business, for a signed-in viewer only.
+    myOrderId: null,
   }
 }

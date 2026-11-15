@@ -1,11 +1,13 @@
-import { Controller, Get, Param } from '@nestjs/common'
+import { OptionalJwtAuthGuard } from '@auth/infrastructure/guards/optional-jwt-auth.guard'
+import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common'
 import { QueryBus } from '@nestjs/cqrs'
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { PreviewDataProjection } from '@previews/application/projections'
 import { GetPreviewByTokenQuery } from '@previews/application/queries'
-import { Public } from '@shared/auth'
+import { type ICurrentUser, Public } from '@shared/auth'
 import { ApiEnvelopeErrorResponse, ApiEnvelopeResponse, SuccessMessage } from '@shared/http'
+import type { Request } from 'express'
 
 @ApiTags('Preview (Public)')
 @Controller('preview')
@@ -17,6 +19,7 @@ export class PreviewPublicController {
   // same: anyone with the URL can fetch; brute force should be slow.
   @Throttle({ sensitive_token: { limit: 10, ttl: 60000 } })
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':token')
   @SuccessMessage('success.FETCHED', { entity: 'entities.preview_link' })
   @ApiOperation({ summary: 'Get preview data by token (public, no auth required)' })
@@ -28,8 +31,10 @@ export class PreviewPublicController {
   })
   @ApiEnvelopeErrorResponse({ status: 404, description: 'Preview link not found' })
   @ApiEnvelopeErrorResponse({ status: 410, description: 'Preview link has expired' })
-  async getByToken(@Param('token') token: string) {
-    const query = new GetPreviewByTokenQuery(token)
+  async getByToken(@Param('token') token: string, @Req() req: Request) {
+    // A signed-in viewer gets the photos they already own flagged; a stale session answers 401.
+    const viewer = (req as Request & { user?: ICurrentUser }).user ?? null
+    const query = new GetPreviewByTokenQuery(token, viewer?.userId ?? null)
     return this.queryBus.execute(query)
   }
 }

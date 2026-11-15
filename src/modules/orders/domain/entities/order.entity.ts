@@ -254,6 +254,19 @@ export class Order {
     this.cancelledAt = new Date()
   }
 
+  /**
+   * Gives up a card draft whose payments all ended without a charge, when someone else orders from
+   * the same preview link: draft → cancelled. Cancelled, a late approval of its payment is never
+   * settled but reported for refund.
+   */
+  abandonDraft(): void {
+    if (this.status !== OrderStatus.DRAFT) {
+      throw AppException.businessRule('order.not_draft')
+    }
+    this.status = OrderStatus.CANCELLED
+    this.cancelledAt = new Date()
+  }
+
   cancelByOwner(): void {
     if (this.status !== OrderStatus.PENDING && this.status !== OrderStatus.PAYMENT_INFO_SENT) {
       throw AppException.businessRule('order.not_cancellable_by_owner')

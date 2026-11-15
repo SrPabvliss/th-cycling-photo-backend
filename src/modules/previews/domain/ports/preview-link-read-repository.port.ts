@@ -16,6 +16,10 @@ export interface IPreviewLinkReadRepository {
   getPreviewData(token: string): Promise<PreviewDataProjection | null>
   /** Public name of the event's organizer, falling back to its legal name. */
   findOrganizerName(eventId: string): Promise<string | null>
+  /** Whether an order keeps the link taken: placed and standing, or a card draft being paid. */
+  hasLiveOrder(previewLinkId: string): Promise<boolean>
+  /** The id of the live order on the link when it belongs to `userId`, otherwise null. */
+  findLiveOrderIdOf(previewLinkId: string, userId: string): Promise<string | null>
   /** True if any preview link includes this photo (blocks hard-delete). */
   existsByPhotoId(photoId: string): Promise<boolean>
 }

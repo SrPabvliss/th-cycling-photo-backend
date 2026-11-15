@@ -494,3 +494,22 @@ describe('Order.cancelByOwner', () => {
     expect(() => order.cancelByOwner()).toThrow(/order\.not_cancellable_by_owner/)
   })
 })
+
+describe('Order.abandonDraft', () => {
+  it('gives up a draft: draft → cancelled', () => {
+    const order = buildDraftOrder()
+
+    order.abandonDraft()
+
+    expect(order.status).toBe(OrderStatus.CANCELLED)
+    expect(order.cancelledAt).toBeInstanceOf(Date)
+  })
+
+  it('refuses anything that is not a draft', () => {
+    const order = buildPendingOrder()
+
+    expect(() => order.abandonDraft()).toThrow(
+      expect.objectContaining({ messageKey: 'order.not_draft' }),
+    )
+  })
+})
