@@ -53,7 +53,11 @@ export interface IEventReadRepository {
     pagination: Pagination,
     filters: PublicEventListFilters,
   ): Promise<PaginatedResult<PublicEventListProjection>>
-  getPublicEventFilters(): Promise<PublicEventFiltersProjection>
+  /**
+   * Options for the public list's filters. Each group's counts apply the search and the other two
+   * groups, never the group itself, so a selected option does not zero out its siblings.
+   */
+  getPublicEventFilters(filters: PublicEventListFilters): Promise<PublicEventFiltersProjection>
   getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null>
   getPublicPhotos(
     eventId: string,

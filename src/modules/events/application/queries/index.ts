@@ -10,5 +10,9 @@ export { GetPublicEventDetailQuery } from './get-public-event-detail/get-public-
 export { GetPublicEventFiltersQuery } from './get-public-event-filters/get-public-event-filters.query'
 export { GetPublicEventPhotosDto } from './get-public-event-photos/get-public-event-photos.dto'
 export { GetPublicEventPhotosQuery } from './get-public-event-photos/get-public-event-photos.query'
-export { GetPublicEventsListDto } from './get-public-events-list/get-public-events-list.dto'
+export {
+  GetPublicEventsListDto,
+  PublicEventListFiltersDto,
+  toPublicEventListFilters,
+} from './get-public-events-list/get-public-events-list.dto'
 export { GetPublicEventsListQuery } from './get-public-events-list/get-public-events-list.query'

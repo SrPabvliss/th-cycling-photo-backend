@@ -128,8 +128,10 @@ describe('public owner legend', () => {
     const result = await handler.execute(
       new GetPublicEventsListQuery(pagination, {
         search: null,
-        eventTypeId: null,
-        hasPhotos: false,
+        eventTypeIds: [],
+        provinceIds: [],
+        from: null,
+        to: null,
       }),
     )
     const item = result.items.find((i) => i.slug === event.slug)

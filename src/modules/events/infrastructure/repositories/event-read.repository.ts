@@ -30,7 +30,14 @@ import {
   resolveEventSort,
   resolveEventTab,
 } from './event-list-sql'
-import { PUBLICLY_LISTED_EVENT, publicEventSearchSql } from './public-event-list-sql'
+import {
+  monthOf,
+  PUBLICLY_LISTED_EVENT,
+  publicEventSearchSql,
+  publicEventWhere,
+} from './public-event-list-sql'
+
+const SPANISH = new Intl.Collator('es')
 
 type EventsStatsRow = {
   total_events: number
@@ -351,20 +358,7 @@ export class EventReadRepository implements IEventReadRepository {
     pagination: Pagination,
     filters: PublicEventListFilters,
   ): Promise<PaginatedResult<PublicEventListProjection>> {
-    const where: Prisma.EventWhereInput = { ...PUBLICLY_LISTED_EVENT }
-
-    if (filters.eventTypeId !== null) where.event_type_id = filters.eventTypeId
-    // Same population `photoCount` counts: every photo row of the event.
-    if (filters.hasPhotos) where.photos = { some: {} }
-    if (filters.search !== null) {
-      // The accent-insensitive match needs unaccent(), which Prisma's query builder cannot
-      // express. It only resolves which events match; listing, ordering, paging and counting
-      // stay on the one `where` below, so a search can never page or count differently.
-      const matches = await this.prisma.$queryRaw<{ id: string }[]>(
-        publicEventSearchSql(filters.search),
-      )
-      where.id = { in: matches.map((match) => match.id) }
-    }
+    const where = publicEventWhere(filters, await this.resolvePublicSearch(filters.search))
 
     const [events, total] = await Promise.all([
       this.prisma.event.findMany({
@@ -382,13 +376,83 @@ export class EventReadRepository implements IEventReadRepository {
     return new PaginatedResult(items, total, pagination)
   }
 
-  async getPublicEventFilters(): Promise<PublicEventFiltersProjection> {
-    const eventTypes = await this.prisma.eventType.findMany({
-      where: { events: { some: PUBLICLY_LISTED_EVENT } },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
-    })
-    return { eventTypes }
+  async getPublicEventFilters(
+    filters: PublicEventListFilters,
+  ): Promise<PublicEventFiltersProjection> {
+    const searchIds = await this.resolvePublicSearch(filters.search)
+
+    // The options come from every publicly listed event; only their counts follow the filters.
+    const [eventTypes, provinces, startDates, typeCounts, provinceCounts, startDateCounts] =
+      await Promise.all([
+        this.prisma.eventType.findMany({
+          where: { events: { some: PUBLICLY_LISTED_EVENT } },
+          select: { id: true, name: true },
+        }),
+        // The provinces table holds many countries; only those where something is listed matter.
+        this.prisma.province.findMany({
+          where: {
+            country: { provinces: { some: { events: { some: PUBLICLY_LISTED_EVENT } } } },
+          },
+          select: {
+            id: true,
+            name: true,
+            _count: { select: { events: { where: PUBLICLY_LISTED_EVENT } } },
+          },
+        }),
+        this.prisma.event.groupBy({ by: ['start_date'], where: PUBLICLY_LISTED_EVENT }),
+        this.prisma.event.groupBy({
+          by: ['event_type_id'],
+          where: publicEventWhere(filters, searchIds, 'eventTypes'),
+          _count: { _all: true },
+        }),
+        this.prisma.event.groupBy({
+          by: ['province_id'],
+          where: publicEventWhere(filters, searchIds, 'provinces'),
+          _count: { _all: true },
+        }),
+        this.prisma.event.groupBy({
+          by: ['start_date'],
+          where: publicEventWhere(filters, searchIds, 'months'),
+          _count: { _all: true },
+        }),
+      ])
+
+    const countByType = new Map(typeCounts.map((row) => [row.event_type_id, row._count._all]))
+    const countByProvince = new Map(provinceCounts.map((row) => [row.province_id, row._count._all]))
+    const countByMonth = new Map<string, number>()
+    for (const row of startDateCounts) {
+      const month = monthOf(row.start_date)
+      countByMonth.set(month, (countByMonth.get(month) ?? 0) + row._count._all)
+    }
+    const months = [...new Set(startDates.map((row) => monthOf(row.start_date)))].sort()
+
+    // Sorted here, not in SQL: the database collation depends on the host OS (byte order on macOS),
+    // and option lists must read alphabetically in Spanish everywhere.
+    const byName = (a: { name: string }, b: { name: string }) => SPANISH.compare(a.name, b.name)
+
+    return {
+      eventTypes: eventTypes
+        .sort(byName)
+        .map((type) => ({ ...type, count: countByType.get(type.id) ?? 0 })),
+      provinces: provinces.sort(byName).map((province) => ({
+        id: province.id,
+        name: province.name,
+        count: countByProvince.get(province.id) ?? 0,
+        hasEvents: province._count.events > 0,
+      })),
+      months: months.map((month) => ({ month, count: countByMonth.get(month) ?? 0 })),
+    }
+  }
+
+  /**
+   * Ids of the events the public search matches, once per request; `null` without a search. The
+   * accent-insensitive match needs unaccent(), which Prisma's query builder cannot express, so it
+   * only resolves which events match: listing, paging and every count stay on `publicEventWhere`.
+   */
+  private async resolvePublicSearch(search: string | null): Promise<string[] | null> {
+    if (search === null) return null
+    const matches = await this.prisma.$queryRaw<{ id: string }[]>(publicEventSearchSql(search))
+    return matches.map((match) => match.id)
   }
 
   async getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null> {
