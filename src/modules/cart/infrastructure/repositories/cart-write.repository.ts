@@ -64,16 +64,29 @@ export class CartWriteRepository implements ICartWriteRepository {
         return 0
       }
 
-      const existingItems = await tx.cartItem.findMany({
-        where: { cart_id: userCartId, removed_at: null },
-        select: { photo_id: true },
+      // Every row the account cart ever had for these photos, removed ones included: a photo the
+      // buyer took out and then added again without a session is wanted again, so its row comes
+      // back, exactly as `addItem` brings it back for a signed-in buyer.
+      const accountRows = await tx.cartItem.findMany({
+        where: { cart_id: userCartId, photo_id: { in: sessionItems.map((i) => i.photo_id) } },
+        select: { photo_id: true, removed_at: true },
       })
-      const existingPhotoIds = new Set(existingItems.map((i) => i.photo_id))
+      const removedAt = new Map(accountRows.map((row) => [row.photo_id, row.removed_at]))
 
-      const newItems = sessionItems.filter((i) => !existingPhotoIds.has(i.photo_id))
-      if (newItems.length > 0) {
+      const revived = sessionItems.filter(
+        (i) => removedAt.has(i.photo_id) && removedAt.get(i.photo_id) !== null,
+      )
+      const created = sessionItems.filter((i) => !removedAt.has(i.photo_id))
+
+      if (revived.length > 0) {
+        await tx.cartItem.updateMany({
+          where: { cart_id: userCartId, photo_id: { in: revived.map((i) => i.photo_id) } },
+          data: { removed_at: null, added_at: new Date() },
+        })
+      }
+      if (created.length > 0) {
         await tx.cartItem.createMany({
-          data: newItems.map((i) => ({
+          data: created.map((i) => ({
             cart_id: userCartId,
             photo_id: i.photo_id,
             event_id: i.event_id,
@@ -87,7 +100,7 @@ export class CartWriteRepository implements ICartWriteRepository {
         data: { status: 'converted', converted_at: new Date() },
       })
 
-      return newItems.length
+      return revived.length + created.length
     })
   }
 

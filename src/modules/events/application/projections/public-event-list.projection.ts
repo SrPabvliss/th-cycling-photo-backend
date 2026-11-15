@@ -38,4 +38,10 @@ export class PublicEventListProjection {
 
   @ApiPropertyOptional({ description: 'Cover image slug for CDN transform URLs' })
   coverSlug: string | null
+
+  @ApiProperty({ description: 'Event type id', example: 1 })
+  eventTypeId: number
+
+  @ApiProperty({ description: 'Event type name', example: 'Ciclismo de ruta' })
+  eventTypeName: string
 }

@@ -5,10 +5,12 @@ import type {
   EventSummaryProjection,
   EventsStatsProjection,
   PublicEventDetailProjection,
+  PublicEventFiltersProjection,
   PublicEventListProjection,
   PublicPhotoProjection,
 } from '@events/application/projections'
 import type { EventListFilters } from '@events/application/queries/get-events-list/get-events-list.dto'
+import type { PublicEventListFilters } from '@events/application/queries/get-public-events-list/get-public-events-list.dto'
 import type { PaginatedResult, Pagination } from '@shared/application'
 import type { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { Event } from '../entities'
@@ -47,7 +49,15 @@ export interface IEventReadRepository {
   getAllAssignedEventIds(operatorId: string): Promise<string[]>
   getEventBriefsByIds(ids: string[]): Promise<EventBriefProjection[]>
   countAll(scope: EventScope): Promise<number>
-  getPublicEventsList(pagination: Pagination): Promise<PaginatedResult<PublicEventListProjection>>
+  getPublicEventsList(
+    pagination: Pagination,
+    filters: PublicEventListFilters,
+  ): Promise<PaginatedResult<PublicEventListProjection>>
+  /**
+   * Options for the public list's filters. Each group's counts apply the search and the other two
+   * groups, never the group itself, so a selected option does not zero out its siblings.
+   */
+  getPublicEventFilters(filters: PublicEventListFilters): Promise<PublicEventFiltersProjection>
   getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null>
   getPublicPhotos(
     eventId: string,
@@ -61,6 +71,10 @@ export interface IEventReadRepository {
   ): Promise<PaginatedResult<PublicPhotoProjection>>
   existsActiveEvent(eventId: string): Promise<{ id: string; name: string } | null>
   existsActiveEventBySlug(slug: string): Promise<{ id: string; name: string } | null>
+  /** The event behind a public gallery, under the same rule as the public listing; else null. */
+  findPublicEventBySlug(slug: string): Promise<{ id: string; name: string } | null>
+  /** Which of `eventIds` are on public sale, under the public listing's rule. */
+  findPublicEventIds(eventIds: string[]): Promise<string[]>
   isFrozen(eventId: string): Promise<boolean>
 }
 

@@ -1,6 +1,6 @@
 import { SettleCartCommand } from '@cart/application/commands'
 import { Logger } from '@nestjs/common'
-import { SendDeliveryCommand } from '@orders/application/commands'
+import { ConfirmOrderPaymentCommand, SendDeliveryCommand } from '@orders/application/commands'
 import { SellerAccountSuspension } from '@payments/application/services/seller-account-suspension.service'
 import { PaymentMode } from '@payments/domain/value-objects/payment-mode.vo'
 import { PaymentTransactionStatus } from '@payments/domain/value-objects/payment-transaction-status.vo'
@@ -35,6 +35,7 @@ type FixtureContext = {
   subtotalDollars: number | null
   sellerTenantId: string
   buyerUserId: string
+  confirmedById?: string | null
 }
 
 function buildTransaction(overrides: Record<string, unknown> = {}) {
@@ -63,6 +64,7 @@ function buildContext(overrides: Partial<FixtureContext> = {}): FixtureContext {
     subtotalDollars: 10,
     sellerTenantId: SELLER_TENANT,
     buyerUserId: BUYER,
+    confirmedById: 'system-user-1',
     ...overrides,
   }
 }
@@ -71,11 +73,17 @@ function buildHandler({
   transaction = buildTransaction(),
   contexts = [buildContext()],
   authorization = {},
+  otherApprovedCharge = false,
 }: {
   transaction?: ReturnType<typeof buildTransaction>
   contexts?: FixtureContext[]
   authorization?: Partial<AuthorizationResult>
+  otherApprovedCharge?: boolean
 } = {}) {
+  const transactionReadRepo = {
+    existsOtherApprovedForOrder: jest.fn().mockResolvedValue(otherApprovedCharge),
+  }
+  const notifications = { emitPaymentNeedsRefund: jest.fn() }
   const transactionRepo = {
     runLocked: jest.fn().mockImplementation((_id, work) => work(transaction)),
   }
@@ -110,6 +118,8 @@ function buildHandler({
     commandBus as never,
     new SellerAccountSuspension(payoutRepo as never),
     { userId: 'system-user-1' } as never,
+    transactionReadRepo as never,
+    notifications as never,
   )
 
   return {
@@ -120,6 +130,7 @@ function buildHandler({
     contextRepo,
     gateway,
     commandBus,
+    notifications,
   }
 }
 
@@ -426,7 +437,7 @@ describe('ConfirmPaymentTransactionHandler', () => {
     expect(commandBus.execute).not.toHaveBeenCalled()
   })
 
-  it('calls the gateway inside the first lock, decides settlement inside a second lock, and dispatches the order command only after every lock has closed', async () => {
+  it('records confirming in a first lock, calls the gateway inside a second one, decides settlement inside a third, and dispatches the order command only after every lock has closed', async () => {
     const { handler, gateway, commandBus, transactionRepo, transaction } = buildHandler()
     const callOrder: string[] = []
     gateway.confirm.mockImplementation(async () => {
@@ -453,14 +464,31 @@ describe('ConfirmPaymentTransactionHandler', () => {
 
     expect(callOrder).toEqual([
       'lock-open-1',
-      'gateway',
       'lock-close-1',
       'lock-open-2',
+      'gateway',
       'lock-close-2',
+      'lock-open-3',
+      'lock-close-3',
       'order-command',
       'order-command',
       'order-command',
     ])
+
+    const at = (label: string) => callOrder.indexOf(label)
+    const lastLockClose = Math.max(
+      ...callOrder.map((label, index) => (label.startsWith('lock-close') ? index : -1)),
+    )
+    // The gateway is called while a lock is held, never between locks.
+    expect(at('gateway')).toBeGreaterThan(at('lock-open-2'))
+    expect(at('gateway')).toBeLessThan(at('lock-close-2'))
+    // Settlement is decided in a later lock than the one the gateway was called in.
+    expect(at('lock-open-3')).toBeGreaterThan(at('lock-close-2'))
+    // Every order command runs after the last lock has closed.
+    expect(at('order-command')).toBeGreaterThan(lastLockClose)
+    // Confirming is recorded in a lock of its own, closed before the gateway is reached.
+    expect(transaction.beginConfirmation).toHaveBeenCalledTimes(1)
+    expect(at('lock-close-1')).toBeLessThan(at('gateway'))
   })
 
   it('still reports the payment approved when the order command fails, logging the failure instead of surfacing it', async () => {
@@ -586,6 +614,53 @@ describe('ConfirmPaymentTransactionHandler', () => {
 
     errorSpy.mockRestore()
     logSpy.mockRestore()
+  })
+
+  describe('a charge approved for an order that can no longer take it', () => {
+    it.each([
+      [
+        'paid by staff confirming a transfer',
+        { status: 'paid', confirmedById: 'staff-1' },
+        false,
+        'order_paid',
+      ],
+      ['paid by another card charge', { status: 'paid' }, true, 'order_paid'],
+      ['cancelled', { status: 'cancelled', confirmedById: null }, false, 'order_cancelled'],
+      ['gifted', { status: 'gifted', confirmedById: null }, false, 'order_gifted'],
+    ] as const)('is logged as an error and sent to staff to refund when the order was %s', async (_, context, otherApprovedCharge, reason) => {
+      const { handler, commandBus, notifications } = buildHandler({
+        contexts: [buildContext(context)],
+        otherApprovedCharge,
+      })
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation()
+
+      const result = await handler.execute(
+        new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER),
+      )
+
+      expect(result).toMatchObject({ approved: true, settled: false, refund: { reason } })
+      expect(commandBus.execute).not.toHaveBeenCalled()
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining(`reason=${reason}`))
+      expect(notifications.emitPaymentNeedsRefund).toHaveBeenCalledTimes(1)
+      expect(notifications.emitPaymentNeedsRefund).toHaveBeenCalledWith(
+        expect.objectContaining({ orderId: 'order-1', orderStatus: context.status, reason }),
+      )
+      errorSpy.mockRestore()
+    })
+
+    it('is reported only by the run that learns of the approval, not when the charge is confirmed again', async () => {
+      const { handler, notifications } = buildHandler({
+        transaction: buildTransaction({ status: 'approved', isSettled: true }),
+        contexts: [buildContext({ status: 'cancelled', confirmedById: null })],
+      })
+
+      const result = await handler.execute(
+        new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER),
+      )
+
+      expect(notifications.emitPaymentNeedsRefund).not.toHaveBeenCalled()
+      expect(result.refund).toEqual({ reason: 'order_cancelled' })
+    })
   })
 
   it('dispatches the order command when the order is pending', async () => {
@@ -942,5 +1017,86 @@ describe('ConfirmPaymentTransactionHandler', () => {
 
     expect(result.approved).toBe(false)
     expect(result.deliveries).toEqual([])
+  })
+
+  describe('when another confirmation pays an order first', () => {
+    /** The order command answers that a run racing this one paid the given orders already. */
+    function paidElsewhere(commandBus: { execute: jest.Mock }, orderIds: string[]) {
+      withDelivery(commandBus, [
+        DELIVERY,
+        { ...DELIVERY, orderId: 'order-2', token: 'tok-2', deliveryUrl: 'https://t/2' },
+      ])
+      const deliverOrPay = commandBus.execute.getMockImplementation() as (c: unknown) => unknown
+      commandBus.execute.mockImplementation((command: { orderId?: string }) => {
+        if (command instanceof ConfirmOrderPaymentCommand && orderIds.includes(command.orderId)) {
+          return Promise.resolve({ id: command.orderId, alreadyPaid: true })
+        }
+        return deliverOrPay(command)
+      })
+    }
+
+    it('asks the order command to skip an order it finds already paid', async () => {
+      const { handler, commandBus } = buildHandler()
+
+      await handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER))
+
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        new ConfirmOrderPaymentCommand('order-1', new AuditContext('system-user-1'), 'skip'),
+      )
+    })
+
+    it('answers like a repeated confirmation: approved, not settled here, nothing delivered, no error', async () => {
+      const { handler, commandBus } = buildHandler()
+      paidElsewhere(commandBus, ['order-1'])
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation()
+      const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation()
+
+      const result = await handler.execute(
+        new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER),
+      )
+
+      expect(result).toMatchObject({ approved: true, settled: false, deliveries: [] })
+      expect(commandBus.execute).not.toHaveBeenCalledWith(expect.any(SettleCartCommand))
+      expect(commandBus.execute).not.toHaveBeenCalledWith(expect.any(SendDeliveryCommand))
+      expect(errorSpy).not.toHaveBeenCalled()
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('orderId=order-1'))
+
+      errorSpy.mockRestore()
+      logSpy.mockRestore()
+    })
+
+    it('still settles and delivers the sibling order this run did pay', async () => {
+      const { handler, commandBus } = buildHandler({
+        transaction: buildTransaction({ orderIds: ['order-1', 'order-2'], amountCents: 2500 }),
+        contexts: [buildContext({ orderId: 'order-1' }), buildContext({ orderId: 'order-2' })],
+        authorization: { approved: true, amountCents: 2500 },
+      })
+      paidElsewhere(commandBus, ['order-1'])
+      jest.spyOn(Logger.prototype, 'log').mockImplementationOnce(() => undefined)
+
+      const result = await handler.execute(
+        new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER),
+      )
+
+      expect(result.settled).toBe(false)
+      expect(result.deliveries.map((delivery) => delivery.orderId)).toEqual(['order-2'])
+      expect(commandBus.execute).toHaveBeenCalledWith(new SettleCartCommand(BUYER, ['order-2']))
+    })
+  })
+
+  it('pays the orders of a charge in id order, whatever order their contexts come back in', async () => {
+    const { handler, commandBus } = buildHandler({
+      transaction: buildTransaction({ orderIds: ['order-b', 'order-a'], amountCents: 2500 }),
+      contexts: [buildContext({ orderId: 'order-b' }), buildContext({ orderId: 'order-a' })],
+      authorization: { approved: true, amountCents: 2500 },
+    })
+
+    await handler.execute(new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER))
+
+    const paidInOrder = commandBus.execute.mock.calls
+      .map(([command]) => command)
+      .filter((command) => command instanceof ConfirmOrderPaymentCommand)
+      .map((command: ConfirmOrderPaymentCommand) => command.orderId)
+    expect(paidInOrder).toEqual(['order-a', 'order-b'])
   })
 })

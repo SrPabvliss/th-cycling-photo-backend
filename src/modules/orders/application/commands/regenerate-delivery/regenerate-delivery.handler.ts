@@ -3,6 +3,7 @@ import type { DeliveryLinkCreatedProjection } from '@deliveries/application/proj
 import { Inject, Logger } from '@nestjs/common'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { OrderPaymentConfirmedProjection } from '@orders/application/projections'
+import { DeliveryEmailService } from '@orders/application/services/delivery-email.service'
 import { type IOrderReadRepository, ORDER_READ_REPOSITORY } from '@orders/domain/ports'
 import { buildDeliveryTemplate } from '@orders/domain/services/delivery-template'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
@@ -21,6 +22,7 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
     @Inject(ORDER_READ_REPOSITORY) private readonly orderReadRepo: IOrderReadRepository,
     @Inject(AUTHORIZATION_SERVICE) private readonly authz: IAuthorizationService,
     private readonly commandBus: CommandBus,
+    private readonly deliveryEmail: DeliveryEmailService,
   ) {}
 
   async execute(command: RegenerateDeliveryCommand): Promise<OrderPaymentConfirmedProjection> {
@@ -65,6 +67,19 @@ export class RegenerateDeliveryHandler implements ICommandHandler<RegenerateDeli
       { customerFirstName, photoCount, deliveryUrl: deliveryResult.deliveryUrl },
       'regenerated',
     )
+
+    // 6. The link of the earlier email stopped working just now: the buyer gets the new one by
+    //    email too, so they are never left with a dead link if the WhatsApp message is not sent.
+    await this.deliveryEmail.send('regenerated', {
+      email: detail?.snapEmail ?? null,
+      firstName: customerFirstName,
+      eventName: detail?.eventName ?? '',
+      photoCount,
+      subtotal: order.status === OrderStatus.DELIVERED ? (detail?.subtotal ?? null) : null,
+      currency: detail?.snapCurrency ?? null,
+      deliveryUrl: deliveryResult.deliveryUrl,
+      expiresAt: deliveryResult.expiresAt,
+    })
 
     return {
       orderId: order.id,

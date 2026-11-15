@@ -111,27 +111,45 @@ describe('OrderReadRepository.getPhotoIdsByOrderIds', () => {
 })
 
 describe('OrderReadRepository customer scoping', () => {
-  it('scopes the customer list to the caller and hides drafts', async () => {
+  // A draft is hidden unless a card payment for it is awaiting confirmation (TIT-118). The rule
+  // itself is proven against a real database in my-orders-confirming.integration.spec.ts; here
+  // only its shape is pinned: scoped to the caller, and a draft admitted through one door only.
+  const expectOwnerVisibilityRule = (where: Record<string, unknown>) => {
+    expect(where.user_id).toBe('user-1')
+    expect(where.OR).toEqual([
+      { status: { not: OrderStatus.DRAFT } },
+      {
+        status: OrderStatus.DRAFT,
+        payment_transaction_orders: {
+          some: {
+            payment_transaction: {
+              OR: [
+                { status: 'approved' },
+                { status: 'confirming', updated_at: { gte: expect.any(Date) } },
+              ],
+            },
+          },
+        },
+      },
+    ])
+  }
+
+  it('scopes the customer list to the caller and hides drafts not awaiting confirmation', async () => {
     const { repository, findMany } = buildRepository()
 
     await repository.getMyList('user-1', { page: 1, limit: 20, skip: 0, take: 20 } as never)
 
-    const { where } = findMany.mock.calls[0][0]
-    expect(where.user_id).toBe('user-1')
-    expect(where.status).toEqual({ not: OrderStatus.DRAFT })
+    expectOwnerVisibilityRule(findMany.mock.calls[0][0].where)
   })
 
-  it('scopes the customer detail to the caller and hides drafts', async () => {
+  it('scopes the customer detail to the caller and hides drafts not awaiting confirmation', async () => {
     const { repository, findFirst } = buildRepository()
 
     await repository.getMyDetail('user-1', 'order-1')
 
     const { where } = findFirst.mock.calls[0][0]
-    expect(where).toMatchObject({
-      id: 'order-1',
-      user_id: 'user-1',
-      status: { not: OrderStatus.DRAFT },
-    })
+    expect(where.id).toBe('order-1')
+    expectOwnerVisibilityRule(where)
   })
 
   it('builds watermarked gallery URLs for customer-facing detail photos', async () => {
@@ -226,16 +244,126 @@ describe('OrderReadRepository customer scoping', () => {
 
     expect(summary.spent).toEqual([])
   })
+})
 
-  it('reports a payment in flight only for initiated and confirming transactions', async () => {
-    const { repository, paymentTransactionOrderCount } = buildRepository()
-    paymentTransactionOrderCount.mockResolvedValue(1)
+describe('OrderReadRepository: how a buyer order is paid and where its event gallery is', () => {
+  const visibleEvent = {
+    name: 'Vuelta al Cotopaxi',
+    slug: 'vuelta-al-cotopaxi',
+    status: 'active',
+    deleted_at: null,
+    _count: { assets: 1 },
+  }
 
-    await expect(repository.hasPaymentInFlight('order-1')).resolves.toBe(true)
+  function myOrderRow(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'order-1',
+      status: OrderStatus.PENDING,
+      created_at: new Date('2026-11-12'),
+      subtotal: null,
+      snap_currency: 'USD',
+      payment_method: 'transfer',
+      payment_transaction_orders: [],
+      event: visibleEvent,
+      items: [],
+      _count: { items: 0 },
+      ...overrides,
+    }
+  }
 
-    const { where } = paymentTransactionOrderCount.mock.calls[0][0]
-    expect(where.order_id).toBe('order-1')
-    expect(where.payment_transaction.status).toEqual({ in: ['initiated', 'confirming'] })
+  async function detailOf(row: Record<string, unknown>) {
+    const { repository, findFirst } = buildRepository()
+    findFirst.mockResolvedValue(row)
+    return repository.getMyDetail('user-1', 'order-1')
+  }
+
+  it.each([
+    ['a card order', OrderStatus.PAID, 'card'],
+    ['a transfer order', OrderStatus.PENDING, 'transfer'],
+    ['a gifted order, with the method it was placed with', OrderStatus.GIFTED, 'transfer'],
+  ] as const)('gives the payment method of %s', async (_, status, method) => {
+    const detail = await detailOf(myOrderRow({ status, payment_method: method }))
+
+    expect(detail?.paymentMethod).toBe(method)
+  })
+
+  it('gives no payment method for an order placed before the method was recorded', async () => {
+    const detail = await detailOf(myOrderRow({ status: OrderStatus.GIFTED, payment_method: null }))
+
+    expect(detail?.paymentMethod).toBeNull()
+  })
+
+  it('gives the event slug when its public gallery opens', async () => {
+    const detail = await detailOf(myOrderRow())
+
+    expect(detail?.eventSlug).toBe('vuelta-al-cotopaxi')
+  })
+
+  it('gives the event slug of a completed event, whose gallery stays open', async () => {
+    const detail = await detailOf(myOrderRow({ event: { ...visibleEvent, status: 'completed' } }))
+
+    expect(detail?.eventSlug).toBe('vuelta-al-cotopaxi')
+  })
+
+  it.each([
+    ['was deleted', { deleted_at: new Date('2026-11-01') }],
+    ['is archived', { status: 'archived' }],
+    ['is frozen', { status: 'frozen' }],
+    ['has no cover', { _count: { assets: 0 } }],
+  ])('gives no event slug when the event %s, so the buyer is not sent to a 404', async (_, event) => {
+    const detail = await detailOf(myOrderRow({ event: { ...visibleEvent, ...event } }))
+
+    expect(detail?.eventSlug).toBeNull()
+  })
+
+  it('reads both from the same query as the rest of the detail, counting only cover images', async () => {
+    const { repository, findFirst } = buildRepository()
+
+    await repository.getMyDetail('user-1', 'order-1')
+
+    expect(findFirst).toHaveBeenCalledTimes(1)
+    const { select } = findFirst.mock.calls[0][0]
+    expect(select.payment_method).toBe(true)
+    expect(select.event.select).toEqual({
+      name: true,
+      slug: true,
+      status: true,
+      deleted_at: true,
+      _count: { select: { assets: { where: { asset_type: 'cover_image' } } } },
+    })
+  })
+
+  it('gives each order of the list its payment method and event slug, from the same query', async () => {
+    const { repository, findMany } = buildRepository()
+    findMany.mockResolvedValue([
+      myOrderRow({ id: 'order-1', status: OrderStatus.PAID, payment_method: 'card' }),
+      myOrderRow({
+        id: 'order-2',
+        payment_method: 'transfer',
+        event: { ...visibleEvent, _count: { assets: 0 } },
+      }),
+      myOrderRow({ id: 'order-3', status: OrderStatus.GIFTED, payment_method: null }),
+    ])
+
+    const page = await repository.getMyList('user-1', {
+      page: 1,
+      limit: 20,
+      skip: 0,
+      take: 20,
+    } as never)
+
+    expect(findMany).toHaveBeenCalledTimes(1)
+    expect(findMany.mock.calls[0][0].select).toMatchObject({
+      payment_method: true,
+      event: { select: { slug: true, status: true, deleted_at: true } },
+    })
+    expect(
+      page.items.map(({ id, paymentMethod, eventSlug }) => ({ id, paymentMethod, eventSlug })),
+    ).toEqual([
+      { id: 'order-1', paymentMethod: 'card', eventSlug: 'vuelta-al-cotopaxi' },
+      { id: 'order-2', paymentMethod: 'transfer', eventSlug: null },
+      { id: 'order-3', paymentMethod: null, eventSlug: 'vuelta-al-cotopaxi' },
+    ])
   })
 })
 

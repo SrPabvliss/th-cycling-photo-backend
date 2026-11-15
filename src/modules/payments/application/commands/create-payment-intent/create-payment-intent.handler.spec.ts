@@ -13,6 +13,7 @@ const CONTEXT = {
   orderId: 'order-1',
   eventId: 'event-1',
   status: 'pending',
+  paymentMethod: 'card',
   subtotalDollars: 20,
   sellerTenantId: 'tenant-1',
   buyerUserId: BUYER,
@@ -33,6 +34,7 @@ type FixtureContext = {
   orderId: string
   eventId: string
   status: string
+  paymentMethod: string | null
   subtotalDollars: number | null
   sellerTenantId: string | null
   buyerUserId: string
@@ -359,6 +361,7 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-1',
           eventId: 'event-1',
           status: 'pending',
+          paymentMethod: 'card',
           subtotalDollars: 10,
           sellerTenantId: 'tenant-1',
           buyerUserId: BUYER,
@@ -367,6 +370,7 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-2',
           eventId: 'event-2',
           status: 'pending',
+          paymentMethod: 'card',
           subtotalDollars: 15,
           sellerTenantId: 'tenant-1',
           buyerUserId: BUYER,
@@ -388,6 +392,7 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-1',
           eventId: 'event-1',
           status: 'draft',
+          paymentMethod: 'card',
           subtotalDollars: 10,
           sellerTenantId: null,
           buyerUserId: BUYER,
@@ -407,6 +412,7 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-1',
           eventId: 'event-1',
           status: 'pending',
+          paymentMethod: 'card',
           subtotalDollars: 10,
           sellerTenantId: 'tenant-1',
           buyerUserId: BUYER,
@@ -415,6 +421,7 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-2',
           eventId: 'event-2',
           status: 'pending',
+          paymentMethod: 'card',
           subtotalDollars: 15,
           sellerTenantId: 'tenant-2',
           buyerUserId: BUYER,
@@ -434,6 +441,7 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-1',
           eventId: 'event-1',
           status: 'draft',
+          paymentMethod: 'card',
           subtotalDollars: 10,
           sellerTenantId: 'tenant-1',
           buyerUserId: BUYER,
@@ -453,6 +461,7 @@ describe('CreatePaymentIntentHandler', () => {
           orderId: 'order-1',
           eventId: 'event-1',
           status: 'pending',
+          paymentMethod: 'card',
           subtotalDollars: 10,
           sellerTenantId: 'tenant-1',
           buyerUserId: BUYER,
@@ -601,6 +610,7 @@ describe('CreatePaymentIntentHandler', () => {
         orderId: 'order-1',
         eventId: 'event-1',
         status: 'pending',
+        paymentMethod: 'card',
         subtotalDollars: 10,
         sellerTenantId: 'tenant-1',
         buyerUserId: BUYER,
@@ -609,6 +619,7 @@ describe('CreatePaymentIntentHandler', () => {
         orderId: 'order-2',
         eventId: 'event-2',
         status: 'pending',
+        paymentMethod: 'card',
         subtotalDollars: 15,
         sellerTenantId: 'tenant-1',
         buyerUserId: BUYER,

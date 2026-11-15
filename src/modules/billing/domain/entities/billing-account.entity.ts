@@ -22,11 +22,11 @@ export class BillingAccount {
   private constructor(
     public readonly id: string,
     public readonly userId: string,
-    public readonly idType: BillingIdTypeValue,
-    public readonly idNumber: string,
-    public readonly legalName: string,
-    public readonly email: string,
-    public readonly address: string | null,
+    public idType: BillingIdTypeValue,
+    public idNumber: string,
+    public legalName: string,
+    public email: string,
+    public address: string | null,
     public isDefault: boolean,
     public readonly createdAt: Date,
     public deletedAt: Date | null,
@@ -90,6 +90,29 @@ export class BillingAccount {
       data.createdAt,
       data.deletedAt,
     )
+  }
+
+  /**
+   * Applies the given changes over the current data. A field left out keeps its value and
+   * `address: null` clears the address. Nothing is changed when the result would be malformed.
+   */
+  update(changes: Partial<BuyerBillingInput>): { identificationChanged: boolean } {
+    const next = BillingAccount.normalizeBuyer({
+      idType: changes.idType ?? this.idType,
+      idNumber: changes.idNumber ?? this.idNumber,
+      legalName: changes.legalName ?? this.legalName,
+      email: changes.email ?? this.email,
+      address: changes.address === undefined ? this.address : changes.address,
+    })
+    const identificationChanged = next.idType !== this.idType || next.idNumber !== this.idNumber
+
+    this.idType = next.idType
+    this.idNumber = next.idNumber
+    this.legalName = next.legalName
+    this.email = next.email
+    this.address = next.address
+
+    return { identificationChanged }
   }
 
   markDeleted(): void {

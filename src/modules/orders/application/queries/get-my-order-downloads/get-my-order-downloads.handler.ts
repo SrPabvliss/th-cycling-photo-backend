@@ -2,10 +2,12 @@ import { Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
 import type { MyOrderDownloadsProjection } from '@orders/application/projections'
 import { type IOrderReadRepository, ORDER_READ_REPOSITORY } from '@orders/domain/ports'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
 import { GetMyOrderDownloadsQuery } from './get-my-order-downloads.query'
 
+// The thumbnail is signed for the same lifetime, so both URLs of a photo stop working together.
 const PRESIGNED_URL_EXPIRY_SECONDS = 3600
 
 @QueryHandler(GetMyOrderDownloadsQuery)
@@ -13,6 +15,7 @@ export class GetMyOrderDownloadsHandler implements IQueryHandler<GetMyOrderDownl
   constructor(
     @Inject(ORDER_READ_REPOSITORY) private readonly readRepo: IOrderReadRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
+    private readonly cdn: CdnUrlBuilder,
   ) {}
 
   async execute(query: GetMyOrderDownloadsQuery): Promise<MyOrderDownloadsProjection> {
@@ -36,6 +39,9 @@ export class GetMyOrderDownloadsHandler implements IQueryHandler<GetMyOrderDownl
             filename,
             expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
           }),
+          thumbnailUrl: file.publicSlug
+            ? this.cdn.internalUrl(file.publicSlug, 'thumb', PRESIGNED_URL_EXPIRY_SECONDS)
+            : null,
         }
       }),
     )

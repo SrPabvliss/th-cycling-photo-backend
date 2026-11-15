@@ -16,6 +16,7 @@ import { GetEventOperatorsHandler } from '@events/application/queries/get-event-
 import { GetEventsListHandler } from '@events/application/queries/get-events-list/get-events-list.handler'
 import { GetEventsStatsHandler } from '@events/application/queries/get-events-stats/get-events-stats.handler'
 import { GetPublicEventDetailHandler } from '@events/application/queries/get-public-event-detail/get-public-event-detail.handler'
+import { GetPublicEventFiltersHandler } from '@events/application/queries/get-public-event-filters/get-public-event-filters.handler'
 import { GetPublicEventPhotosHandler } from '@events/application/queries/get-public-event-photos/get-public-event-photos.handler'
 import { GetPublicEventsListHandler } from '@events/application/queries/get-public-events-list/get-public-events-list.handler'
 import { EventConfigurationService } from '@events/application/services/event-configuration.service'
@@ -59,6 +60,7 @@ const QueryHandlers = [
   GetEventOperatorsHandler,
   GetEventsStatsHandler,
   GetPublicEventsListHandler,
+  GetPublicEventFiltersHandler,
   GetPublicEventDetailHandler,
   GetPublicEventPhotosHandler,
 ]

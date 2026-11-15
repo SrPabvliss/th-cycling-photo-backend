@@ -200,4 +200,22 @@ describe('PaymentTransaction', () => {
   it('rejects an empty order set, since a payment with nothing to settle is meaningless', () => {
     expect(() => startTransaction([])).toThrow()
   })
+
+  it('treats beginning a confirmation that is already under way as a no-op, not an error', () => {
+    const transaction = buildTransaction()
+    transaction.beginConfirmation()
+
+    expect(() => transaction.beginConfirmation()).not.toThrow()
+    expect(transaction.status).toBe(PaymentTransactionStatus.CONFIRMING)
+    expect(transaction.isSettled).toBe(false)
+  })
+
+  it('leaves a settled transaction as it is when a confirmation begins again', () => {
+    const transaction = buildTransaction()
+    transaction.beginConfirmation()
+    transaction.markApproved(APPROVED)
+
+    expect(() => transaction.beginConfirmation()).not.toThrow()
+    expect(transaction.status).toBe(PaymentTransactionStatus.APPROVED)
+  })
 })

@@ -2,6 +2,7 @@ import { Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
+import { PaymentMethod } from '@orders/domain/value-objects/payment-method.vo'
 import type { PaymentIntentProjection } from '@payments/application/projections'
 import { PaymentConfirmationScheduler } from '@payments/application/services/payment-confirmation-scheduler.service'
 import {
@@ -81,6 +82,16 @@ export class CreatePaymentIntentHandler implements ICommandHandler<CreatePayment
   ): Promise<PaymentIntentProjection> {
     if (contexts.some((context) => !PAYABLE_STATUSES.includes(context.status))) {
       throw AppException.businessRule('payment.order_not_payable')
+    }
+    // A placed order the buyer pays by transfer waits for staff to confirm the bank transfer. A
+    // card payment opened on it would let the same order be charged both ways.
+    if (
+      contexts.some(
+        (context) =>
+          context.status !== OrderStatus.DRAFT && context.paymentMethod !== PaymentMethod.CARD,
+      )
+    ) {
+      throw AppException.businessRule('payment.order_is_transfer')
     }
     if (contexts.some((context) => context.subtotalDollars === null)) {
       throw AppException.businessRule('payment.order_not_payable')

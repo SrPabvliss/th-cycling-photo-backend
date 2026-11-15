@@ -1,7 +1,7 @@
 import { type PricingTierSnapshot } from '@pricing/domain/value-objects'
 import { AppException } from '@shared/domain'
 import { OrderStatus, type OrderStatusType } from '../value-objects/order-status.vo'
-import type { PaymentMethodType } from '../value-objects/payment-method.vo'
+import { PaymentMethod, type PaymentMethodType } from '../value-objects/payment-method.vo'
 
 export class Order {
   constructor(
@@ -99,6 +99,11 @@ export class Order {
     return this.status === OrderStatus.DRAFT
   }
 
+  /** Paid, whether or not it has been delivered since. */
+  get isPaid(): boolean {
+    return this.status === OrderStatus.PAID || this.status === OrderStatus.DELIVERED
+  }
+
   confirmDraftAsPending(): void {
     if (this.status !== OrderStatus.DRAFT) {
       throw AppException.businessRule('order.not_draft')
@@ -189,6 +194,15 @@ export class Order {
     ) {
       throw AppException.businessRule('order.method_not_selectable')
     }
+    // Only a draft becomes a card payment: a placed transfer order is waiting for staff to confirm
+    // the bank transfer, and turning it into a card one would let it be charged both ways.
+    if (
+      !this.isDraft &&
+      method === PaymentMethod.CARD &&
+      this.paymentMethod !== PaymentMethod.CARD
+    ) {
+      throw AppException.businessRule('payment.order_is_transfer')
+    }
     this.paymentMethod = method
   }
 
@@ -235,6 +249,19 @@ export class Order {
     }
     if (this.deliveredAt !== null) {
       throw AppException.businessRule('order.not_cancellable')
+    }
+    this.status = OrderStatus.CANCELLED
+    this.cancelledAt = new Date()
+  }
+
+  /**
+   * Gives up a card draft whose payments all ended without a charge, when someone else orders from
+   * the same preview link: draft → cancelled. Cancelled, a late approval of its payment is never
+   * settled but reported for refund.
+   */
+  abandonDraft(): void {
+    if (this.status !== OrderStatus.DRAFT) {
+      throw AppException.businessRule('order.not_draft')
     }
     this.status = OrderStatus.CANCELLED
     this.cancelledAt = new Date()

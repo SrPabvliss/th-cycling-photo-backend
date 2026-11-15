@@ -12,13 +12,16 @@ import type {
   EventSummaryProjection,
   EventsStatsProjection,
   PublicEventDetailProjection,
+  PublicEventFiltersProjection,
   PublicEventListProjection,
   PublicPhotoProjection,
 } from '../../application/projections'
 import type { EventListFilters } from '../../application/queries/get-events-list/get-events-list.dto'
+import type { PublicEventListFilters } from '../../application/queries/get-public-events-list/get-public-events-list.dto'
 import type { Event } from '../../domain/entities'
 import type { AssignedEventStatus, IEventReadRepository } from '../../domain/ports'
 import * as EventMapper from '../mappers/event.mapper'
+import { PUBLICLY_LISTED_EVENT } from '../public-event-rule'
 import { buildEventAggregates, type EventAggregate } from './event-aggregates'
 import {
   eventListWhereSql,
@@ -28,6 +31,9 @@ import {
   resolveEventSort,
   resolveEventTab,
 } from './event-list-sql'
+import { monthOf, publicEventSearchSql, publicEventWhere } from './public-event-list-sql'
+
+const SPANISH = new Intl.Collator('es')
 
 type EventsStatsRow = {
   total_events: number
@@ -346,14 +352,9 @@ export class EventReadRepository implements IEventReadRepository {
 
   async getPublicEventsList(
     pagination: Pagination,
+    filters: PublicEventListFilters,
   ): Promise<PaginatedResult<PublicEventListProjection>> {
-    // Public listings require a cover_image asset — no cover means the event is
-    // still in "setup incomplete" state and must not be visible to buyers.
-    const where: Prisma.EventWhereInput = {
-      deleted_at: null,
-      status: 'active',
-      assets: { some: { asset_type: 'cover_image' } },
-    }
+    const where = publicEventWhere(filters, await this.resolvePublicSearch(filters.search))
 
     const [events, total] = await Promise.all([
       this.prisma.event.findMany({
@@ -371,14 +372,88 @@ export class EventReadRepository implements IEventReadRepository {
     return new PaginatedResult(items, total, pagination)
   }
 
+  async getPublicEventFilters(
+    filters: PublicEventListFilters,
+  ): Promise<PublicEventFiltersProjection> {
+    const searchIds = await this.resolvePublicSearch(filters.search)
+
+    // The options come from every publicly listed event; only their counts follow the filters.
+    const [eventTypes, provinces, startDates, typeCounts, provinceCounts, startDateCounts] =
+      await Promise.all([
+        this.prisma.eventType.findMany({
+          where: { events: { some: PUBLICLY_LISTED_EVENT } },
+          select: { id: true, name: true },
+        }),
+        // The provinces table holds many countries; only those where something is listed matter.
+        this.prisma.province.findMany({
+          where: {
+            country: { provinces: { some: { events: { some: PUBLICLY_LISTED_EVENT } } } },
+          },
+          select: {
+            id: true,
+            name: true,
+            _count: { select: { events: { where: PUBLICLY_LISTED_EVENT } } },
+          },
+        }),
+        this.prisma.event.groupBy({ by: ['start_date'], where: PUBLICLY_LISTED_EVENT }),
+        this.prisma.event.groupBy({
+          by: ['event_type_id'],
+          where: publicEventWhere(filters, searchIds, 'eventTypes'),
+          _count: { _all: true },
+        }),
+        this.prisma.event.groupBy({
+          by: ['province_id'],
+          where: publicEventWhere(filters, searchIds, 'provinces'),
+          _count: { _all: true },
+        }),
+        this.prisma.event.groupBy({
+          by: ['start_date'],
+          where: publicEventWhere(filters, searchIds, 'months'),
+          _count: { _all: true },
+        }),
+      ])
+
+    const countByType = new Map(typeCounts.map((row) => [row.event_type_id, row._count._all]))
+    const countByProvince = new Map(provinceCounts.map((row) => [row.province_id, row._count._all]))
+    const countByMonth = new Map<string, number>()
+    for (const row of startDateCounts) {
+      const month = monthOf(row.start_date)
+      countByMonth.set(month, (countByMonth.get(month) ?? 0) + row._count._all)
+    }
+    const months = [...new Set(startDates.map((row) => monthOf(row.start_date)))].sort()
+
+    // Sorted here, not in SQL: the database collation depends on the host OS (byte order on macOS),
+    // and option lists must read alphabetically in Spanish everywhere.
+    const byName = (a: { name: string }, b: { name: string }) => SPANISH.compare(a.name, b.name)
+
+    return {
+      eventTypes: eventTypes
+        .sort(byName)
+        .map((type) => ({ ...type, count: countByType.get(type.id) ?? 0 })),
+      provinces: provinces.sort(byName).map((province) => ({
+        id: province.id,
+        name: province.name,
+        count: countByProvince.get(province.id) ?? 0,
+        hasEvents: province._count.events > 0,
+      })),
+      months: months.map((month) => ({ month, count: countByMonth.get(month) ?? 0 })),
+    }
+  }
+
+  /**
+   * Ids of the events the public search matches, once per request; `null` without a search. The
+   * accent-insensitive match needs unaccent(), which Prisma's query builder cannot express, so it
+   * only resolves which events match: listing, paging and every count stay on `publicEventWhere`.
+   */
+  private async resolvePublicSearch(search: string | null): Promise<string[] | null> {
+    if (search === null) return null
+    const matches = await this.prisma.$queryRaw<{ id: string }[]>(publicEventSearchSql(search))
+    return matches.map((match) => match.id)
+  }
+
   async getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null> {
     const event = await this.prisma.event.findFirst({
-      where: {
-        slug,
-        deleted_at: null,
-        status: 'active',
-        assets: { some: { asset_type: 'cover_image' } },
-      },
+      where: { slug, ...PUBLICLY_LISTED_EVENT },
       select: EventMapper.publicEventDetailSelectConfig,
     })
 
@@ -514,6 +589,22 @@ export class EventReadRepository implements IEventReadRepository {
     })
   }
 
+  async findPublicEventBySlug(slug: string): Promise<{ id: string; name: string } | null> {
+    return this.prisma.event.findFirst({
+      where: { slug, ...PUBLICLY_LISTED_EVENT },
+      select: { id: true, name: true },
+    })
+  }
+
+  async findPublicEventIds(eventIds: string[]): Promise<string[]> {
+    if (eventIds.length === 0) return []
+    const events = await this.prisma.event.findMany({
+      where: { id: { in: eventIds }, ...PUBLICLY_LISTED_EVENT },
+      select: { id: true },
+    })
+    return events.map((event) => event.id)
+  }
+
   async isFrozen(eventId: string): Promise<boolean> {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
@@ -526,50 +617,44 @@ export class EventReadRepository implements IEventReadRepository {
    * Returns photo ids for the given event whose effective (latest-correction)
    * bib digits match. Skips soft-deleted bibs. A correction with `new_value = NULL`
    * is honored — the row will NOT match (we use CASE, not COALESCE).
+   *
+   * A rider types their number as they know it, usually without the zeros the plate or the OCR
+   * put in front, so `exact` and `starts` ignore leading zeros on both sides: 39 finds 039 and
+   * 039 finds 39. What is stored is never changed. A search made only of zeros keeps them, so it
+   * finds the zero plates instead of every plate. `contains` already finds 039 from 39 and is
+   * left as it was.
    */
   private async findMatchingBibPhotoIds(
     eventId: string,
     value: string,
     match: 'exact' | 'starts' | 'contains',
   ): Promise<string[]> {
-    const escaped = value.replace(/[\\%_]/g, (c) => `\\${c}`)
-    const pattern =
-      match === 'starts' ? `${escaped}%` : match === 'contains' ? `%${escaped}%` : escaped
+    const escapeLike = (text: string) => text.replace(/[\\%_]/g, (c) => `\\${c}`)
+    const withoutZeros = value.replace(/^0+/, '')
+    const effective = Prisma.sql`(CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END)`
 
-    const sql =
+    const condition =
       match === 'exact'
-        ? Prisma.sql`
-            SELECT DISTINCT pb.photo_id
-            FROM photo_bibs pb
-            JOIN photos p ON p.id = pb.photo_id AND p.event_id = ${eventId}::uuid
-            LEFT JOIN LATERAL (
-              SELECT new_value AS corrected_value, TRUE AS has_correction
-              FROM corrections
-              WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
-              ORDER BY corrected_at DESC LIMIT 1
-            ) latest ON TRUE
-            WHERE pb.deleted_at IS NULL
-              AND LOWER(
-                CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
-              ) = LOWER(${value})
-          `
-        : Prisma.sql`
-            SELECT DISTINCT pb.photo_id
-            FROM photo_bibs pb
-            JOIN photos p ON p.id = pb.photo_id AND p.event_id = ${eventId}::uuid
-            LEFT JOIN LATERAL (
-              SELECT new_value AS corrected_value, TRUE AS has_correction
-              FROM corrections
-              WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
-              ORDER BY corrected_at DESC LIMIT 1
-            ) latest ON TRUE
-            WHERE pb.deleted_at IS NULL
-              AND (
-                CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
-              ) ILIKE ${pattern} ESCAPE '\\'
-          `
+        ? Prisma.sql`LTRIM(LOWER(${effective}), '0') = LTRIM(LOWER(${value}), '0')`
+        : match === 'starts'
+          ? withoutZeros
+            ? Prisma.sql`LTRIM(${effective}, '0') ILIKE ${`${escapeLike(withoutZeros)}%`} ESCAPE '\\'`
+            : Prisma.sql`${effective} ILIKE ${`${escapeLike(value)}%`} ESCAPE '\\'`
+          : Prisma.sql`${effective} ILIKE ${`%${escapeLike(value)}%`} ESCAPE '\\'`
 
-    const rows = await this.prisma.$queryRaw<Array<{ photo_id: string }>>(sql)
+    const rows = await this.prisma.$queryRaw<Array<{ photo_id: string }>>(Prisma.sql`
+      SELECT DISTINCT pb.photo_id
+      FROM photo_bibs pb
+      JOIN photos p ON p.id = pb.photo_id AND p.event_id = ${eventId}::uuid
+      LEFT JOIN LATERAL (
+        SELECT new_value AS corrected_value, TRUE AS has_correction
+        FROM corrections
+        WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
+        ORDER BY corrected_at DESC LIMIT 1
+      ) latest ON TRUE
+      WHERE pb.deleted_at IS NULL
+        AND ${condition}
+    `)
     return rows.map((r) => r.photo_id)
   }
 }

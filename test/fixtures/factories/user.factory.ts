@@ -46,3 +46,20 @@ export async function createEventFixture(prisma: PrismaClient): Promise<string> 
   })
   return event.id
 }
+
+/**
+ * An event on public sale: active with a cover image, so the cart sells its photos. The cover is
+ * removed with the event (cascade).
+ */
+export async function createOnSaleEventFixture(prisma: PrismaClient): Promise<string> {
+  const eventId = await createEventFixture(prisma)
+  await prisma.eventAsset.create({
+    data: {
+      event_id: eventId,
+      asset_type: 'cover_image',
+      storage_key: `events/${eventId}/cover.jpg`,
+      public_slug: `cover-${Math.random().toString(36).slice(2, 14)}`,
+    },
+  })
+  return eventId
+}

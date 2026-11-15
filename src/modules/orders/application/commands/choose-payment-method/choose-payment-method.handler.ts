@@ -1,5 +1,6 @@
-import { Inject } from '@nestjs/common'
-import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import { SettleCartCommand } from '@cart/application/commands'
+import { Inject, Logger } from '@nestjs/common'
+import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { NotificationsService } from '@notifications/application/services/notifications.service'
 import type { Order } from '@orders/domain/entities'
 import {
@@ -20,6 +21,8 @@ import { ChoosePaymentMethodCommand } from './choose-payment-method.command'
 
 @CommandHandler(ChoosePaymentMethodCommand)
 export class ChoosePaymentMethodHandler implements ICommandHandler<ChoosePaymentMethodCommand> {
+  private readonly logger = new Logger(ChoosePaymentMethodHandler.name)
+
   constructor(
     @Inject(ORDER_WRITE_REPOSITORY) private readonly writeRepo: IOrderWriteRepository,
     @Inject(ORDER_READ_REPOSITORY) private readonly readRepo: IOrderReadRepository,
@@ -27,6 +30,7 @@ export class ChoosePaymentMethodHandler implements ICommandHandler<ChoosePayment
     private readonly transactionWriteRepo: IPaymentTransactionWriteRepository,
     private readonly notifications: NotificationsService,
     private readonly receiverResolver: PaymentReceiverResolver,
+    private readonly commandBus: CommandBus,
   ) {}
 
   async execute(command: ChoosePaymentMethodCommand): Promise<{ orderIds: string[] }> {
@@ -82,6 +86,27 @@ export class ChoosePaymentMethodHandler implements ICommandHandler<ChoosePayment
       }),
     )
 
+    await this.settleCart(command.buyerUserId, promoted)
+
     return { orderIds: command.orderIds }
+  }
+
+  /**
+   * A card order switched to transfer is now a placed order, exactly like one checked out by
+   * transfer, so its photos leave the buyer's cart the same way: through the operation the paid
+   * card path uses. The order is already pending by now, so a cart that cannot be updated is
+   * logged instead of failing the switch.
+   */
+  private async settleCart(buyerUserId: string, promoted: Order[]): Promise<void> {
+    if (promoted.length === 0) return
+
+    const orderIds = promoted.map((order) => order.id)
+    try {
+      await this.commandBus.execute(new SettleCartCommand(buyerUserId, orderIds))
+    } catch (error) {
+      this.logger.error(
+        `A card order switched to transfer but its photos could not be taken out of the cart. orderIds=${orderIds.join(',')} reason=${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
   }
 }

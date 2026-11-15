@@ -57,6 +57,7 @@ function buildHandler(
     billingAccount?: typeof billingAccount | null
     consent?: { acceptedAt: Date; ip: string | null } | null
     acceptsCard?: boolean
+    publicEventIds?: string[]
   } = {},
 ) {
   const savedOrders: Order[] = []
@@ -141,6 +142,10 @@ function buildHandler(
     acceptsCard: jest.fn(() => Promise.resolve(options.acceptsCard ?? true)),
   }
 
+  const eventReadRepo = {
+    findPublicEventIds: jest.fn((ids: string[]) => Promise.resolve(options.publicEventIds ?? ids)),
+  }
+
   const handler = new CheckoutCartHandler(
     cartReadRepo as never,
     cartWriteRepo as never,
@@ -153,10 +158,12 @@ function buildHandler(
       consentRepository as never,
     ),
     receiverResolver as never,
+    eventReadRepo as never,
   )
 
   return {
     handler,
+    eventReadRepo,
     savedOrders,
     savedSnaps,
     billingAccountRepository,
@@ -399,6 +406,19 @@ describe('CheckoutCartHandler', () => {
     )
 
     expect(transactionWriteRepo.expireOpenByOrderId.mock.calls[0][1]).toBe(fakeTx)
+  })
+
+  it('refuses a checkout for an event no longer on public sale, creating nothing', async () => {
+    const { handler, orderWriteRepo, cartWriteRepo, notifications, eventReadRepo } = buildHandler({
+      publicEventIds: [],
+    })
+
+    expect(await messageKeyOf(handler.execute(transferCheckout()))).toBe('cart.event_not_available')
+    expect(eventReadRepo.findPublicEventIds).toHaveBeenCalledWith([EVENT])
+    expect(orderWriteRepo.lockAndUpsertDraft).not.toHaveBeenCalled()
+    expect(cartWriteRepo.removeItems).not.toHaveBeenCalled()
+    expect(cartWriteRepo.markConverted).not.toHaveBeenCalled()
+    expect(notifications.emitOrderCreated).not.toHaveBeenCalled()
   })
 
   it('rejects a checkout that spans more than one event', async () => {

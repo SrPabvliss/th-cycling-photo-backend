@@ -92,10 +92,43 @@ describe('CreateBillingAccountHandler', () => {
     expect(billingAccountRepository.save).not.toHaveBeenCalled()
   })
 
-  it('saves the account when rikuchiy cannot give a verdict', async () => {
+  it('saves the account when rikuchiy cannot give a verdict and the number checks out locally', async () => {
     const { handler, billingAccountRepository } = setup({ check: null })
 
-    await handler.execute(command())
+    await handler.execute(command(BillingIdType.RUC, '1790016919001'))
+
+    expect(billingAccountRepository.save).toHaveBeenCalled()
+  })
+
+  it('refuses a cédula with a wrong check digit even when rikuchiy would accept it, without asking', async () => {
+    const { handler, billingAccountRepository, rikuchiyClient } = setup({})
+
+    await expect(
+      handler.execute(command(BillingIdType.NATIONAL_ID, '1700000002')),
+    ).rejects.toMatchObject({
+      messageKey: 'billing.identification_invalid',
+      context: { reason: 'check_digit' },
+    })
+    expect(rikuchiyClient.validateIdentification).not.toHaveBeenCalled()
+    expect(billingAccountRepository.save).not.toHaveBeenCalled()
+  })
+
+  it('refuses a company RUC with a wrong module-11 digit when rikuchiy cannot be asked', async () => {
+    const { handler, billingAccountRepository } = setup({ check: null })
+
+    await expect(
+      handler.execute(command(BillingIdType.RUC, '1790012345001')),
+    ).rejects.toMatchObject({
+      messageKey: 'billing.identification_invalid',
+      context: { reason: 'check_digit' },
+    })
+    expect(billingAccountRepository.save).not.toHaveBeenCalled()
+  })
+
+  it('takes the SRI word for a company RUC its module-11 digit would refuse', async () => {
+    const { handler, billingAccountRepository } = setup({})
+
+    await handler.execute(command(BillingIdType.RUC, '1790012345001'))
 
     expect(billingAccountRepository.save).toHaveBeenCalled()
   })

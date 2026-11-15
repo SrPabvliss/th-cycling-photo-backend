@@ -1,3 +1,4 @@
+import type { PaymentMethodType } from '@orders/domain/value-objects/payment-method.vo'
 import { MyOrderInvoiceProjection } from './my-order-invoice.projection'
 import type { MyOrderCustomerState } from './my-order-list.projection'
 import { OrderBillingProjection } from './order-billing.projection'
@@ -26,12 +27,24 @@ export class MyOrderDetailProjection {
   canDownload: boolean
   /** True when the customer may still cancel this order */
   canCancel: boolean
+  /**
+   * Client transaction id of the payment being confirmed, to follow it on
+   * GET /payments/transactions/:clientTransactionId. Null unless state is `confirming`.
+   */
+  confirmingTransactionId: string | null
   /** Photos with watermarked URLs */
   photos: MyOrderPhotoProjection[]
   /** Billing snapshot taken when the order was placed */
   billing: OrderBillingProjection | null
   /** Electronic invoice follow-up as the buyer sees it */
   invoice: MyOrderInvoiceProjection | null
+  /** How the order is paid. Null on orders placed before the method was recorded. */
+  paymentMethod: PaymentMethodType | null
+  /**
+   * Slug of the event's public gallery (/gallery/:slug). Null when that gallery no longer opens:
+   * the event was deleted, is no longer active, or has no cover.
+   */
+  eventSlug: string | null
 }
 
 export type RawMyOrderDetailProjection = Omit<MyOrderDetailProjection, 'invoice'>

@@ -26,10 +26,12 @@ import { ConfirmOrderPaymentHandler } from '@orders/application/commands/confirm
 import { SendDeliveryCommand } from '@orders/application/commands/send-delivery/send-delivery.command'
 import { SendDeliveryHandler } from '@orders/application/commands/send-delivery/send-delivery.handler'
 import { BuyerPurchaseSnapshotService } from '@orders/application/services/buyer-purchase-snapshot.service'
+import { DeliveryEmailService } from '@orders/application/services/delivery-email.service'
 import { ORDER_READ_REPOSITORY, ORDER_WRITE_REPOSITORY } from '@orders/domain/ports'
 import { PaymentMethod } from '@orders/domain/value-objects/payment-method.vo'
 import { OrderReadRepository } from '@orders/infrastructure/repositories/order-read.repository'
 import { OrderWriteRepository } from '@orders/infrastructure/repositories/order-write.repository'
+import { PaymentReceiverResolver } from '@payments/application/services/payment-receiver-resolver.service'
 import { PAYMENT_TRANSACTION_WRITE_REPOSITORY } from '@payments/domain/ports'
 import { PaymentTransactionWriteRepository } from '@payments/infrastructure/repositories/payment-transaction-write.repository'
 import { ApplyBibCorrectionCommand } from '@photos/application/commands/apply-bib-correction/apply-bib-correction.command'
@@ -167,6 +169,10 @@ describe('event freeze — the gallery/order boundary', () => {
         },
         { provide: MailService, useValue: { enqueue: async () => undefined } },
         BuyerPurchaseSnapshotService,
+        {
+          provide: PaymentReceiverResolver,
+          useValue: { acceptsCard: async () => false, resolveForEvent: async () => null },
+        },
         { provide: CDN_RETIRED_SLUG_REPOSITORY, useClass: CdnRetiredSlugRepository },
         { provide: BILLING_ACCOUNT_REPOSITORY, useClass: BillingAccountRepository },
         { provide: CONSENT_REPOSITORY, useClass: ConsentRepository },
@@ -177,6 +183,7 @@ describe('event freeze — the gallery/order boundary', () => {
         CheckoutCartHandler,
         ConfirmOrderPaymentHandler,
         SendDeliveryHandler,
+        DeliveryEmailService,
         {
           provide: YUPANA_PHOTO_DECLARER,
           useValue: {

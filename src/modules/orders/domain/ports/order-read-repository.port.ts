@@ -68,11 +68,11 @@ export interface IOrderReadRepository {
   getMyList(userId: string, pagination: Pagination): Promise<PaginatedResult<MyOrderListProjection>>
   getMyDetail(userId: string, orderId: string): Promise<RawMyOrderDetailProjection | null>
   /** True when the order belongs to the user and is not a draft. */
+  /** Whether the buyer can see the order under "my orders", one awaiting confirmation included. */
+  existsVisibleToOwner(userId: string, orderId: string): Promise<boolean>
   existsOwnedBy(userId: string, orderId: string): Promise<boolean>
   getMyDownloadFiles(userId: string, orderId: string): Promise<MyOrderDownloadRaw[] | null>
   getMySummary(userId: string): Promise<MyOrdersSummaryProjection>
-  /** True when a payment transaction for this order is still initiated or confirming. */
-  hasPaymentInFlight(orderId: string): Promise<boolean>
 }
 
 export const ORDER_READ_REPOSITORY = Symbol('ORDER_READ_REPOSITORY')

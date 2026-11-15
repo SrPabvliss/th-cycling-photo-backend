@@ -14,7 +14,14 @@ import { LOCATION_READ_REPOSITORY } from '@locations/domain/ports'
 import { ConfigModule } from '@nestjs/config'
 import { Test, type TestingModule } from '@nestjs/testing'
 import { AuditContext } from '@shared/application'
+import { AUTHORIZATION_SERVICE } from '@shared/authorization/domain/ports/authorization.service.port'
+import { AUTHORIZATION_CACHE } from '@shared/authorization/domain/ports/authorization-cache.port'
+import { PERMISSION_REPOSITORY } from '@shared/authorization/domain/ports/permission-repository.port'
+import { AuthorizationService } from '@shared/authorization/infrastructure/authorization.service'
+import { RequestScopedAuthorizationCache } from '@shared/authorization/infrastructure/cache/request-scoped-authorization.cache'
+import { PermissionRepository } from '@shared/authorization/infrastructure/repositories/permission.repository'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
+import { WatermarkNormalizer } from '@shared/images/infrastructure/watermark-normalizer.service'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import { PAYMENT_GATEWAY_REGISTRY } from '@shared/payment-gateways'
 import { TenantPayoutMethod } from '@tenants/domain/entities/tenant-payout-method.entity'
@@ -65,6 +72,10 @@ describe('create event configuration completeness', () => {
       ],
       providers: [
         PrismaService,
+        { provide: PERMISSION_REPOSITORY, useClass: PermissionRepository },
+        { provide: AUTHORIZATION_CACHE, useClass: RequestScopedAuthorizationCache },
+        AuthorizationService,
+        { provide: AUTHORIZATION_SERVICE, useExisting: AuthorizationService },
         { provide: EVENT_WRITE_REPOSITORY, useClass: EventWriteRepository },
         { provide: EVENT_PAYOUT_METHOD_REPOSITORY, useClass: EventPayoutMethodRepository },
         {
@@ -93,6 +104,10 @@ describe('create event configuration completeness', () => {
             writeBulk: jest.fn().mockResolvedValue(undefined),
             delete: jest.fn().mockResolvedValue(undefined),
           } satisfies IKvStorageAdapter,
+        },
+        {
+          provide: WatermarkNormalizer,
+          useValue: { normalize: jest.fn().mockResolvedValue(undefined) },
         },
         EventConfigurationService,
         LocationValidator,
@@ -353,11 +368,39 @@ describe('create event configuration completeness', () => {
     expect(event.snap_watermark_storage_key).not.toBe('tenants/placeholder/watermark-profile.png')
   })
 
-  it('throws and leaves no event row when the selection carries only a payphone', async () => {
+  it('creates the event when the selection carries only a payphone: one payout method is enough', async () => {
     await setUpTenant({
       publicName: 'Foto Andes',
       watermarkStorageKey: 'tenants/placeholder/watermark.png',
       whatsappNumber: '0991234567',
+    })
+
+    const command = new CreateEventCommand(
+      'Vuelta Solo Payphone',
+      new Date('2026-09-15'),
+      new Date('2026-09-16'),
+      null,
+      null,
+      await eventTypeId(),
+      new AuditContext(userId),
+      {
+        payoutMethods: [{ source: 'new', provider: 'payphone', phone: '+593912345678' }],
+      },
+    )
+
+    const { id: eventId } = await createEvent.execute(command)
+    createdEventIds.push(eventId)
+
+    const methods = await prisma.eventPayoutMethod.findMany({ where: { event_id: eventId } })
+    expect(methods).toHaveLength(1)
+    expect(methods[0].provider).toBe('payphone')
+  })
+
+  it('throws and leaves no event row when the profile lacks what an event needs', async () => {
+    await setUpTenant({
+      publicName: 'Foto Andes',
+      watermarkStorageKey: 'tenants/placeholder/watermark.png',
+      whatsappNumber: null,
     })
 
     const command = new CreateEventCommand(
@@ -375,6 +418,7 @@ describe('create event configuration completeness', () => {
 
     await expect(createEvent.execute(command)).rejects.toMatchObject({
       messageKey: 'event.configuration_incomplete',
+      context: { missing: 'whatsapp' },
     })
 
     const events = await prisma.event.findMany({ where: { tenant_id: tenantId } })

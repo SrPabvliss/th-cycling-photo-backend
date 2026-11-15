@@ -15,6 +15,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator'
+import { IsAccountPassword } from '../../validators/is-account-password.validator'
 
 export class RegisterDto {
   @ApiProperty({ description: 'Email address', example: 'customer@example.com' })
@@ -23,10 +24,13 @@ export class RegisterDto {
   @MaxLength(255)
   email: string
 
-  @ApiProperty({ description: 'Password (min 8 characters)', example: 'SecurePass123!' })
-  @IsString()
-  @MinLength(8)
-  @MaxLength(128)
+  @ApiProperty({
+    description: 'Password: 8 to 128 characters with at least one letter and one number',
+    example: 'SecurePass123!',
+    minLength: 8,
+    maxLength: 128,
+  })
+  @IsAccountPassword()
   password: string
 
   @ApiProperty({ description: 'First name', example: 'Juan' })

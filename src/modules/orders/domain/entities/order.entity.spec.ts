@@ -344,17 +344,37 @@ describe('Order.convertToGift', () => {
 
 describe('Order.choosePaymentMethod', () => {
   it('records the payment method the buyer picked', () => {
-    const order = Order.create(baseInput)
+    const order = buildDraftOrder()
 
+    order.choosePaymentMethod(PaymentMethod.TRANSFER)
+
+    expect(order.paymentMethod).toBe(PaymentMethod.TRANSFER)
+  })
+
+  it('lets the buyer switch method on a draft after a failed attempt', () => {
+    const order = buildDraftOrder()
+
+    order.choosePaymentMethod(PaymentMethod.TRANSFER)
     order.choosePaymentMethod(PaymentMethod.CARD)
 
     expect(order.paymentMethod).toBe(PaymentMethod.CARD)
   })
 
-  it('lets the buyer switch method after a failed attempt', () => {
-    const order = Order.create(baseInput)
+  it.each([
+    ['pending', (order: Order) => order],
+    ['payment_info_sent', (order: Order) => (order.notifyPaymentInfo('operator-1'), order)],
+  ])('refuses to turn a %s transfer order into a card one, so it is never charged both ways', (_, reach) => {
+    const order = reach(Order.create({ ...baseInput, paymentMethod: PaymentMethod.TRANSFER }))
 
-    order.choosePaymentMethod(PaymentMethod.CARD)
+    expect(() => order.choosePaymentMethod(PaymentMethod.CARD)).toThrow(
+      expect.objectContaining({ messageKey: 'payment.order_is_transfer' }),
+    )
+    expect(order.paymentMethod).toBe(PaymentMethod.TRANSFER)
+  })
+
+  it('lets a placed transfer order stay a transfer', () => {
+    const order = Order.create({ ...baseInput, paymentMethod: PaymentMethod.TRANSFER })
+
     order.choosePaymentMethod(PaymentMethod.TRANSFER)
 
     expect(order.paymentMethod).toBe(PaymentMethod.TRANSFER)
@@ -472,5 +492,24 @@ describe('Order.cancelByOwner', () => {
   ])('refuses an order in %s', (status) => {
     const order = buildOrderInStatus(status)
     expect(() => order.cancelByOwner()).toThrow(/order\.not_cancellable_by_owner/)
+  })
+})
+
+describe('Order.abandonDraft', () => {
+  it('gives up a draft: draft → cancelled', () => {
+    const order = buildDraftOrder()
+
+    order.abandonDraft()
+
+    expect(order.status).toBe(OrderStatus.CANCELLED)
+    expect(order.cancelledAt).toBeInstanceOf(Date)
+  })
+
+  it('refuses anything that is not a draft', () => {
+    const order = buildPendingOrder()
+
+    expect(() => order.abandonDraft()).toThrow(
+      expect.objectContaining({ messageKey: 'order.not_draft' }),
+    )
   })
 })

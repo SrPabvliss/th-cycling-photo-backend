@@ -13,8 +13,10 @@ export class OrderPaymentContextRepository implements IOrderPaymentContextReposi
         id: true,
         event_id: true,
         status: true,
+        payment_method: true,
         subtotal: true,
         user_id: true,
+        confirmed_by_id: true,
         event: { select: { tenant_id: true } },
       },
     })
@@ -23,9 +25,11 @@ export class OrderPaymentContextRepository implements IOrderPaymentContextReposi
       orderId: record.id,
       eventId: record.event_id,
       status: record.status,
+      paymentMethod: record.payment_method,
       subtotalDollars: record.subtotal === null ? null : Number(record.subtotal),
       sellerTenantId: record.event.tenant_id,
       buyerUserId: record.user_id,
+      confirmedById: record.confirmed_by_id,
     }))
   }
 }

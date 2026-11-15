@@ -11,6 +11,7 @@ import { AppModule } from '../src/app.module'
 import { GlobalExceptionFilter } from '../src/shared/http/filters/global-exception.filter'
 import { ResponseInterceptor } from '../src/shared/http/interceptors/response.interceptor'
 import { PrismaService } from '../src/shared/infrastructure'
+import { ensurePaymentSystemUser } from './fixtures/factories/payment-system-user.factory'
 
 describe('Password reset (e2e)', () => {
   let app: INestApplication<App>
@@ -50,6 +51,7 @@ describe('Password reset (e2e)', () => {
     app.useGlobalFilters(new GlobalExceptionFilter())
     const reflector = app.get(Reflector)
     app.useGlobalInterceptors(new ResponseInterceptor(reflector))
+    await ensurePaymentSystemUser(moduleFixture.get(PrismaService))
     await app.init()
 
     prisma = moduleFixture.get(PrismaService)

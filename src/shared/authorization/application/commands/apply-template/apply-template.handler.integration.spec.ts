@@ -19,6 +19,7 @@ describe('ApplyTemplateHandler (real database)', () => {
   let module: TestingModule
   let prisma: PrismaService
   let userId: string
+  let otherHolderId: string
 
   const cache = { get: jest.fn(), set: jest.fn(), invalidate: jest.fn() }
 
@@ -51,10 +52,23 @@ describe('ApplyTemplateHandler (real database)', () => {
       },
     })
     userId = user.id
+
+    // "Another holder remains" has to be true because this spec says so, not because the seeded
+    // admin happens to still be in the table.
+    const otherHolder = await prisma.user.create({
+      data: {
+        email: `tit38-apply-template-other-${Date.now()}@example.test`,
+        password_hash: 'x',
+        is_active: true,
+        tenant_id: platformTenant.id,
+        permission_template_id: platformAdminTemplate.id,
+      },
+    })
+    otherHolderId = otherHolder.id
   })
 
   afterAll(async () => {
-    await prisma.user.delete({ where: { id: userId } })
+    await prisma.user.deleteMany({ where: { id: { in: [userId, otherHolderId].filter(Boolean) } } })
     await prisma.$disconnect()
     await module.close()
   })

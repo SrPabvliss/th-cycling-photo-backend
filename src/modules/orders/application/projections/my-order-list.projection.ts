@@ -1,4 +1,10 @@
-export type MyOrderCustomerState = 'in_process' | 'ready' | 'gifted' | 'cancelled'
+import type { PaymentMethodType } from '@orders/domain/value-objects/payment-method.vo'
+
+/**
+ * `confirming` is a card order whose payment is being confirmed with the gateway, or was approved
+ * and is about to be settled. It cannot be cancelled or downloaded yet.
+ */
+export type MyOrderCustomerState = 'in_process' | 'confirming' | 'ready' | 'gifted' | 'cancelled'
 
 export class MyOrderPreviewPhotoProjection {
   /** Photo UUID */
@@ -24,4 +30,11 @@ export class MyOrderListProjection {
   snapCurrency: string | null
   /** Up to three watermarked thumbnails */
   previewPhotos: MyOrderPreviewPhotoProjection[]
+  /** How the order is paid. Null on orders placed before the method was recorded. */
+  paymentMethod: PaymentMethodType | null
+  /**
+   * Slug of the event's public gallery (/gallery/:slug). Null when that gallery no longer opens:
+   * the event was deleted, is no longer active, or has no cover.
+   */
+  eventSlug: string | null
 }
