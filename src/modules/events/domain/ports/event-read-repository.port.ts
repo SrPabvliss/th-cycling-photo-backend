@@ -71,6 +71,8 @@ export interface IEventReadRepository {
   ): Promise<PaginatedResult<PublicPhotoProjection>>
   existsActiveEvent(eventId: string): Promise<{ id: string; name: string } | null>
   existsActiveEventBySlug(slug: string): Promise<{ id: string; name: string } | null>
+  /** The event behind a public gallery, under the same rule as the public listing; else null. */
+  findPublicEventBySlug(slug: string): Promise<{ id: string; name: string } | null>
   isFrozen(eventId: string): Promise<boolean>
 }
 

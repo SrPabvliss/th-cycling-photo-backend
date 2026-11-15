@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { PublicEventFiltersProjection } from '@events/application/projections'
+import { PUBLICLY_LISTED_EVENT } from '@events/infrastructure/public-event-rule'
 import { EventReadRepository } from '@events/infrastructure/repositories/event-read.repository'
-import { PUBLICLY_LISTED_EVENT } from '@events/infrastructure/repositories/public-event-list-sql'
 import { ConfigModule } from '@nestjs/config'
 import { Test, type TestingModule } from '@nestjs/testing'
 import { Pagination } from '@shared/application'

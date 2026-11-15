@@ -20,7 +20,7 @@ type EventSetup = {
 
 /**
  * The buyer's order links back to its event's public gallery only while /gallery/:slug opens:
- * not deleted, active, and with a cover. Checked against a real Postgres, where the cover is
+ * not deleted, active or completed, and with a cover. Checked against a real Postgres, where the cover is
  * counted inside the event query.
  */
 describe('my orders: link to the event gallery', () => {
@@ -123,10 +123,13 @@ describe('my orders: link to the event gallery', () => {
 
   it.each([
     'noCover',
-    'completed',
     'deleted',
   ])('gives no slug when the gallery would answer 404 (%s)', async (key) => {
     expect((await repo.getMyDetail(buyerId, orderIds[key]))?.eventSlug).toBeNull()
+  })
+
+  it('gives the slug of a completed event with a cover: its gallery stays open', async () => {
+    expect((await repo.getMyDetail(buyerId, orderIds.completed))?.eventSlug).toBe(slugs.completed)
   })
 
   it('gives every order of the list the same slug as its detail', async () => {
@@ -135,7 +138,7 @@ describe('my orders: link to the event gallery', () => {
     const slugByOrder = new Map(page.items.map((item) => [item.id, item.eventSlug]))
     expect(
       Object.fromEntries(Object.entries(orderIds).map(([key, id]) => [key, slugByOrder.get(id)])),
-    ).toEqual({ listed: slugs.listed, noCover: null, completed: null, deleted: null })
+    ).toEqual({ listed: slugs.listed, noCover: null, completed: slugs.completed, deleted: null })
     expect(page.items.every((item) => item.paymentMethod === 'transfer')).toBe(true)
   })
 })

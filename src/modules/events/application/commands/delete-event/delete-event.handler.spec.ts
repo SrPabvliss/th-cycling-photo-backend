@@ -57,6 +57,7 @@ describe('DeleteEventHandler', () => {
       getPublicPhotos: jest.fn(),
       existsActiveEvent: jest.fn(),
       existsActiveEventBySlug: jest.fn(),
+      findPublicEventBySlug: jest.fn(),
       getAssignedEventsByStatus: jest.fn(),
       countAssignedEventsByStatus: jest.fn(),
       getAssignedEventIdsByStatus: jest.fn(),

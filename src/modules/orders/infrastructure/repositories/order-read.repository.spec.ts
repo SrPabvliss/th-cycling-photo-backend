@@ -310,9 +310,14 @@ describe('OrderReadRepository: how a buyer order is paid and where its event gal
     expect(detail?.eventSlug).toBe('vuelta-al-cotopaxi')
   })
 
+  it('gives the event slug of a completed event, whose gallery stays open', async () => {
+    const detail = await detailOf(myOrderRow({ event: { ...visibleEvent, status: 'completed' } }))
+
+    expect(detail?.eventSlug).toBe('vuelta-al-cotopaxi')
+  })
+
   it.each([
     ['was deleted', { deleted_at: new Date('2026-11-01') }],
-    ['is completed', { status: 'completed' }],
     ['is archived', { status: 'archived' }],
     ['is frozen', { status: 'frozen' }],
     ['has no cover', { _count: { assets: 0 } }],

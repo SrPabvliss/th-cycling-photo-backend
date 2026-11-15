@@ -21,6 +21,7 @@ import type { PublicEventListFilters } from '../../application/queries/get-publi
 import type { Event } from '../../domain/entities'
 import type { AssignedEventStatus, IEventReadRepository } from '../../domain/ports'
 import * as EventMapper from '../mappers/event.mapper'
+import { PUBLICLY_LISTED_EVENT } from '../public-event-rule'
 import { buildEventAggregates, type EventAggregate } from './event-aggregates'
 import {
   eventListWhereSql,
@@ -30,12 +31,7 @@ import {
   resolveEventSort,
   resolveEventTab,
 } from './event-list-sql'
-import {
-  monthOf,
-  PUBLICLY_LISTED_EVENT,
-  publicEventSearchSql,
-  publicEventWhere,
-} from './public-event-list-sql'
+import { monthOf, publicEventSearchSql, publicEventWhere } from './public-event-list-sql'
 
 const SPANISH = new Intl.Collator('es')
 
@@ -457,12 +453,7 @@ export class EventReadRepository implements IEventReadRepository {
 
   async getPublicEventDetail(slug: string): Promise<PublicEventDetailProjection | null> {
     const event = await this.prisma.event.findFirst({
-      where: {
-        slug,
-        deleted_at: null,
-        status: 'active',
-        assets: { some: { asset_type: 'cover_image' } },
-      },
+      where: { slug, ...PUBLICLY_LISTED_EVENT },
       select: EventMapper.publicEventDetailSelectConfig,
     })
 
@@ -594,6 +585,13 @@ export class EventReadRepository implements IEventReadRepository {
         deleted_at: null,
         assets: { some: { asset_type: 'cover_image' } },
       },
+      select: { id: true, name: true },
+    })
+  }
+
+  async findPublicEventBySlug(slug: string): Promise<{ id: string; name: string } | null> {
+    return this.prisma.event.findFirst({
+      where: { slug, ...PUBLICLY_LISTED_EVENT },
       select: { id: true, name: true },
     })
   }

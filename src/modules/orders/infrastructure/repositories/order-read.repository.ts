@@ -1,3 +1,7 @@
+import {
+  isPubliclyListedEvent,
+  PUBLIC_EVENT_RULE_SELECT,
+} from '@events/infrastructure/public-event-rule'
 import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import type {
@@ -127,20 +131,17 @@ function visibleToOwnerWhere(userId: string): Prisma.OrderWhereInput {
  */
 const PUBLIC_GALLERY_EVENT_SELECT = {
   slug: true,
-  status: true,
-  deleted_at: true,
-  _count: { select: { assets: { where: { asset_type: 'cover_image' } } } },
+  ...PUBLIC_EVENT_RULE_SELECT,
 } satisfies Prisma.EventSelect
 
 /**
- * Slug of the event's public gallery, or null when /gallery/:slug would answer 404. Same rule as
- * the public events listing and the public gallery: not deleted, active, and with a cover.
+ * Slug of the event's public gallery, or null when /gallery/:slug would answer 404. The rule is the
+ * public events listing's own (`isPubliclyListedEvent`), never a copy of it.
  */
 function publicGallerySlug(
   event: Prisma.EventGetPayload<{ select: typeof PUBLIC_GALLERY_EVENT_SELECT }>,
 ): string | null {
-  const opens = event.deleted_at === null && event.status === 'active' && event._count.assets > 0
-  return opens ? event.slug : null
+  return isPubliclyListedEvent(event) ? event.slug : null
 }
 
 function toCustomerState(status: string): MyOrderCustomerState {

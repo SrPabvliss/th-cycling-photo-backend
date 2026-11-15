@@ -1,16 +1,7 @@
 import { Prisma } from '@generated/prisma/client'
 import type { PublicEventListFilters } from '../../application/queries/get-public-events-list/get-public-events-list.dto'
+import { PUBLICLY_LISTED_EVENT } from '../public-event-rule'
 import { escapeLikeTerm } from './event-list-sql'
-
-/**
- * What makes an event appear in the public listing. A cover image is required: without one the
- * event is still being set up and must not be visible to buyers.
- */
-export const PUBLICLY_LISTED_EVENT = {
-  deleted_at: null,
-  status: 'active',
-  assets: { some: { asset_type: 'cover_image' } },
-} satisfies Prisma.EventWhereInput
 
 /**
  * Ids of the events whose name, canton or province contains the term, ignoring case and accents.
