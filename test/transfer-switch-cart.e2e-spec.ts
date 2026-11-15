@@ -14,7 +14,7 @@ import { PrismaService } from '../src/shared/infrastructure'
 import { createAuthenticatedUser, type TestAuthUser } from './fixtures/factories/auth.factory'
 import { ensurePaymentSystemUser } from './fixtures/factories/payment-system-user.factory'
 import { createPhotoFixture } from './fixtures/factories/photo.factory'
-import { createEventFixture } from './fixtures/factories/user.factory'
+import { createOnSaleEventFixture } from './fixtures/factories/user.factory'
 
 describe('Switching a card order to transfer empties it from the cart (e2e)', () => {
   let app: INestApplication<App>
@@ -83,7 +83,7 @@ describe('Switching a card order to transfer empties it from the cart (e2e)', ()
     })
 
     // Card is only offered on an event that has a usable Payphone receiver.
-    cardEventId = await createEventFixture(db())
+    cardEventId = await createOnSaleEventFixture(db())
     await prisma.eventPayoutMethod.create({
       data: {
         event_id: cardEventId,
@@ -97,7 +97,7 @@ describe('Switching a card order to transfer empties it from the cart (e2e)', ()
       await createPhotoFixture(db(), cardEventId),
     ].sort()
 
-    otherEventId = await createEventFixture(db())
+    otherEventId = await createOnSaleEventFixture(db())
     otherEventPhotoId = await createPhotoFixture(db(), otherEventId)
   })
 

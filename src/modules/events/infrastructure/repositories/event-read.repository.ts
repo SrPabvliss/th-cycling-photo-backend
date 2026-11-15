@@ -596,6 +596,15 @@ export class EventReadRepository implements IEventReadRepository {
     })
   }
 
+  async findPublicEventIds(eventIds: string[]): Promise<string[]> {
+    if (eventIds.length === 0) return []
+    const events = await this.prisma.event.findMany({
+      where: { id: { in: eventIds }, ...PUBLICLY_LISTED_EVENT },
+      select: { id: true },
+    })
+    return events.map((event) => event.id)
+  }
+
   async isFrozen(eventId: string): Promise<boolean> {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },

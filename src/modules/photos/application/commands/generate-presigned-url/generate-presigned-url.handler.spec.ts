@@ -58,6 +58,7 @@ describe('GeneratePresignedUrlHandler', () => {
       existsActiveEvent: jest.fn(),
       existsActiveEventBySlug: jest.fn(),
       findPublicEventBySlug: jest.fn(),
+      findPublicEventIds: jest.fn(),
       getAssignedEventsByStatus: jest.fn(),
       countAssignedEventsByStatus: jest.fn(),
       getAssignedEventIdsByStatus: jest.fn(),

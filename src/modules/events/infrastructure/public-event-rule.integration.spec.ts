@@ -193,6 +193,18 @@ describe('public event rule', () => {
     )
   })
 
+  it('tells which events are on public sale, for the cart', async () => {
+    const onSale = await repo.findPublicEventIds(events.map((event) => event.id))
+
+    expect(onSale.sort()).toEqual(
+      events
+        .filter((event) => event.public)
+        .map((event) => event.id)
+        .sort(),
+    )
+    expect(await repo.findPublicEventIds([])).toEqual([])
+  })
+
   it('serves the photos of a completed event', async () => {
     const event = await repo.findPublicEventBySlug(byKey('completed-cover-live').slug)
     if (!event) throw new Error('completed event not found')

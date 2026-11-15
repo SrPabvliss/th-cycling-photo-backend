@@ -5,5 +5,6 @@
   "cart_empty": "El carrito está vacío",
   "event_not_in_cart": "Evento no encontrado en el carrito",
   "checkout_failed": "Error al procesar el pedido",
-  "single_event_only": "Cada compra es de un solo evento"
+  "single_event_only": "Cada compra es de un solo evento",
+  "event_not_available": "Las fotos de este evento no están disponibles para la compra"
 }

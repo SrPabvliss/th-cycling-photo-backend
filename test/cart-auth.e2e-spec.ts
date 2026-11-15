@@ -14,7 +14,7 @@ import { PrismaService } from '../src/shared/infrastructure'
 import { createAuthenticatedUser, type TestAuthUser } from './fixtures/factories/auth.factory'
 import { ensurePaymentSystemUser } from './fixtures/factories/payment-system-user.factory'
 import { createPhotoFixture } from './fixtures/factories/photo.factory'
-import { createEventFixture } from './fixtures/factories/user.factory'
+import { createOnSaleEventFixture } from './fixtures/factories/user.factory'
 
 describe('Cart routes: optional session (e2e)', () => {
   let app: INestApplication<App>
@@ -66,7 +66,7 @@ describe('Cart routes: optional session (e2e)', () => {
     prisma = moduleFixture.get(PrismaService)
     jwt = moduleFixture.get(JwtService)
     buyer = await createAuthenticatedUser(prisma as never, jwt, 'customer')
-    eventId = await createEventFixture(prisma as unknown as PrismaClient)
+    eventId = await createOnSaleEventFixture(prisma as unknown as PrismaClient)
     photoId = await createPhotoFixture(prisma as unknown as PrismaClient, eventId)
   })
 

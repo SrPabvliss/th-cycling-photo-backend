@@ -73,6 +73,8 @@ export interface IEventReadRepository {
   existsActiveEventBySlug(slug: string): Promise<{ id: string; name: string } | null>
   /** The event behind a public gallery, under the same rule as the public listing; else null. */
   findPublicEventBySlug(slug: string): Promise<{ id: string; name: string } | null>
+  /** Which of `eventIds` are on public sale, under the public listing's rule. */
+  findPublicEventIds(eventIds: string[]): Promise<string[]>
   isFrozen(eventId: string): Promise<boolean>
 }
 

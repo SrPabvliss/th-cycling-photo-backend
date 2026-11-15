@@ -5,6 +5,7 @@ import {
   type ICartReadRepository,
   type ICartWriteRepository,
 } from '@cart/domain/ports'
+import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { type IPhotoReadRepository, PHOTO_READ_REPOSITORY } from '@photos/domain/ports'
@@ -19,6 +20,7 @@ export class AddToCartHandler implements ICommandHandler<AddToCartCommand> {
     @Inject(CART_READ_REPOSITORY) private readonly cartReadRepo: ICartReadRepository,
     @Inject(CART_WRITE_REPOSITORY) private readonly cartWriteRepo: ICartWriteRepository,
     @Inject(PHOTO_READ_REPOSITORY) private readonly photoReadRepo: IPhotoReadRepository,
+    @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
   ) {}
 
   async execute(command: AddToCartCommand): Promise<CartSummaryProjection> {
@@ -27,6 +29,10 @@ export class AddToCartHandler implements ICommandHandler<AddToCartCommand> {
     if (!photo) throw AppException.notFound('entities.photo', command.photoId)
 
     const eventId = photo.eventId
+
+    // Only events on public sale sell through the cart; preview links have their own way in.
+    const [onSale] = await this.eventReadRepo.findPublicEventIds([eventId])
+    if (!onSale) throw AppException.businessRule('cart.event_not_available', false, { eventId })
 
     // 2. Find or create active cart
     let cart = command.userId
