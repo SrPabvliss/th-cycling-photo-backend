@@ -11,6 +11,8 @@ describe('CancelMyOrderHandler', () => {
   let handler: CancelMyOrderHandler
   let writeRepo: jest.Mocked<IOrderWriteRepository>
   let prisma: { $transaction: jest.Mock }
+  let readRepo: { getDetail: jest.Mock }
+  let notifications: { emitOrderCancelledByBuyer: jest.Mock }
   let order: {
     id: string
     userId: string
@@ -36,7 +38,57 @@ describe('CancelMyOrderHandler', () => {
 
     prisma = { $transaction: jest.fn(async (work: (tx: unknown) => unknown) => work(fakeTx)) }
 
-    handler = new CancelMyOrderHandler(writeRepo, prisma as never)
+    readRepo = {
+      getDetail: jest.fn().mockResolvedValue({
+        eventId: 'event-1',
+        eventName: 'Downhill',
+        userName: 'Ana Rider',
+        photos: [{}, {}],
+        subtotal: '8.00',
+        snapCurrency: 'USD',
+      }),
+    }
+    notifications = { emitOrderCancelledByBuyer: jest.fn() }
+
+    handler = new CancelMyOrderHandler(
+      writeRepo,
+      prisma as never,
+      readRepo as never,
+      notifications as never,
+    )
+  })
+
+  it('tells staff once committed when the payment details had already been sent', async () => {
+    order.status = OrderStatus.PAYMENT_INFO_SENT
+
+    await handler.execute(new CancelMyOrderCommand(USER_ID, ORDER_ID))
+
+    expect(notifications.emitOrderCancelledByBuyer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderId: ORDER_ID,
+        eventId: 'event-1',
+        customerName: 'Ana Rider',
+        photoCount: 2,
+        subtotal: 8,
+        actorUserId: USER_ID,
+      }),
+    )
+  })
+
+  it('tells no one when the order was still waiting for the payment details', async () => {
+    await handler.execute(new CancelMyOrderCommand(USER_ID, ORDER_ID))
+
+    expect(notifications.emitOrderCancelledByBuyer).not.toHaveBeenCalled()
+  })
+
+  it('keeps the cancellation when staff cannot be told', async () => {
+    order.status = OrderStatus.PAYMENT_INFO_SENT
+    readRepo.getDetail.mockRejectedValue(new Error('db down'))
+
+    await expect(handler.execute(new CancelMyOrderCommand(USER_ID, ORDER_ID))).resolves.toEqual({
+      id: ORDER_ID,
+    })
+    expect(writeRepo.save).toHaveBeenCalled()
   })
 
   it('cancels an order that belongs to the caller, reading and saving it under its lock', async () => {

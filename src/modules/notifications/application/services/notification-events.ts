@@ -5,6 +5,7 @@ export const NotificationEvent = {
   ORDER_DELIVERED: 'order.delivered',
   ORDER_RETOUCH_COMPLETED: 'order.retouch_completed',
   TENANT_CONTRACT_ACCEPTED: 'tenant_contract.accepted',
+  ORDER_CANCELLED_BY_BUYER: 'order.cancelled_by_buyer',
 } as const
 
 export interface PreviewViewedPayload {
@@ -57,4 +58,20 @@ export interface TenantContractAcceptedPayload {
   commercialName: string
   tenantCreated: boolean
   acceptedBy: string
+}
+
+/**
+ * A buyer cancelled an order after staff had sent where to transfer: the money may already be on
+ * its way, so staff must give back a transfer that arrives for it.
+ */
+export interface OrderCancelledByBuyerPayload {
+  orderId: string
+  eventId: string
+  eventName: string
+  customerName: string
+  photoCount: number
+  subtotal: number | null
+  currency: string | null
+  cancelledAt: Date
+  actorUserId: string
 }

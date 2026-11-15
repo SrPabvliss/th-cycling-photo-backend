@@ -1,4 +1,5 @@
 import type {
+  OrderCancelledByBuyerPayload,
   OrderCreatedPayload,
   OrderDeliveredPayload,
   OrderPaidPayload,
@@ -47,6 +48,15 @@ export const NOTIFICATION_TEMPLATES: Record<string, TemplateConfig> = {
     message: (p) => {
       const payload = p as OrderRetouchCompletedPayload
       return `Todas las ${payload.photoCount} fotos del pedido de ${payload.customerName} (${payload.eventName}) están retocadas`
+    },
+  },
+  [NotificationEvent.ORDER_CANCELLED_BY_BUYER]: {
+    title: 'Pedido cancelado por el comprador',
+    message: (p) => {
+      const payload = p as OrderCancelledByBuyerPayload
+      const orderRef = payload.orderId.slice(0, 8).toUpperCase()
+      const amount = payload.subtotal !== null ? ` ($${payload.subtotal.toFixed(2)})` : ''
+      return `${payload.customerName} canceló el pedido ${orderRef}${amount} de ${payload.eventName} después de recibir los datos de pago. Si llega su transferencia, devuélvela.`
     },
   },
   [NotificationEvent.TENANT_CONTRACT_ACCEPTED]: {
