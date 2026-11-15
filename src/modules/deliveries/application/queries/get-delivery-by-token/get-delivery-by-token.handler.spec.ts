@@ -25,7 +25,6 @@ describe('GetDeliveryByTokenHandler', () => {
       getDeliveryData: jest.fn().mockResolvedValue({
         token: TOKEN,
         eventName: 'Vuelta al Cotopaxi',
-        customerName: 'Ana Rider',
         status: 'active',
         expiresAt: new Date('2026-12-01T00:00:00Z'),
         downloadCount: 3,

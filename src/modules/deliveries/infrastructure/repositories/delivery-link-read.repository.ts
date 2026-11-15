@@ -61,8 +61,6 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
     return {
       token: record.token,
       eventName: record.order.event.name,
-      customerName:
-        `${record.order.snap_first_name ?? ''} ${record.order.snap_last_name ?? ''}`.trim(),
       status: record.status,
       expiresAt: record.expires_at,
       downloadCount: record.download_count,

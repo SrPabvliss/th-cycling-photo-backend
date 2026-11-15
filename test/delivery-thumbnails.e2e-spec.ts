@@ -223,6 +223,9 @@ describe('Delivered photos carry thumbnails (e2e)', () => {
     const res = await request(app.getHttpServer()).get(`/api/v1/delivery/${token}`).expect(200)
 
     expectDeliveredPhotos(res.body.data.photos, requestedAt)
+    // Anyone holding the link sees it, and links get forwarded: the buyer's name is not in it.
+    expect(res.body.data).not.toHaveProperty('customerName')
+    expect(JSON.stringify(res.body.data)).not.toMatch(/Rider|snap_/)
 
     const after = await prisma.deliveryLink.findUniqueOrThrow({ where: { token } })
     expect(after.download_count).toBe(1)

@@ -78,7 +78,6 @@ export class GetDeliveryByTokenHandler implements IQueryHandler<GetDeliveryByTok
     return {
       token: data.token,
       eventName: data.eventName,
-      customerName: data.customerName,
       status: data.status,
       expiresAt: data.expiresAt,
       downloadCount: data.downloadCount,

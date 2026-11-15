@@ -19,8 +19,6 @@ export class DeliveryDataProjection {
   token: string
   /** Event name */
   eventName: string
-  /** Customer full name */
-  customerName: string
   /** Current status */
   status: string
   /** When the delivery link expires */
