@@ -26,6 +26,7 @@ import { ConfirmOrderPaymentHandler } from '@orders/application/commands/confirm
 import { SendDeliveryCommand } from '@orders/application/commands/send-delivery/send-delivery.command'
 import { SendDeliveryHandler } from '@orders/application/commands/send-delivery/send-delivery.handler'
 import { BuyerPurchaseSnapshotService } from '@orders/application/services/buyer-purchase-snapshot.service'
+import { DeliveryEmailService } from '@orders/application/services/delivery-email.service'
 import { ORDER_READ_REPOSITORY, ORDER_WRITE_REPOSITORY } from '@orders/domain/ports'
 import { PaymentMethod } from '@orders/domain/value-objects/payment-method.vo'
 import { OrderReadRepository } from '@orders/infrastructure/repositories/order-read.repository'
@@ -182,6 +183,7 @@ describe('event freeze — the gallery/order boundary', () => {
         CheckoutCartHandler,
         ConfirmOrderPaymentHandler,
         SendDeliveryHandler,
+        DeliveryEmailService,
         {
           provide: YUPANA_PHOTO_DECLARER,
           useValue: {

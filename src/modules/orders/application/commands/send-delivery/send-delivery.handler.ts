@@ -4,12 +4,12 @@ import {
   DELIVERY_LINK_READ_REPOSITORY,
   type IDeliveryLinkReadRepository,
 } from '@deliveries/domain/ports'
-import { MailService } from '@mail/application/services/mail.service'
 import { Inject, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { NotificationsService } from '@notifications/application/services/notifications.service'
 import type { OrderPaymentConfirmedProjection } from '@orders/application/projections'
+import { DeliveryEmailService } from '@orders/application/services/delivery-email.service'
 import {
   type IOrderReadRepository,
   type IOrderWriteRepository,
@@ -35,7 +35,6 @@ type DeliveryOutcome = {
 @CommandHandler(SendDeliveryCommand)
 export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand> {
   private readonly logger = new Logger(SendDeliveryHandler.name)
-  private readonly webBaseUrl: string
   private readonly deliveryBaseUrl: string
 
   constructor(
@@ -49,10 +48,9 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
     private readonly deliveryReadRepo: IDeliveryLinkReadRepository,
     private readonly commandBus: CommandBus,
     private readonly notifications: NotificationsService,
-    private readonly mailService: MailService,
+    private readonly deliveryEmail: DeliveryEmailService,
     private readonly config: ConfigService,
   ) {
-    this.webBaseUrl = this.config.getOrThrow<string>('app.webBaseUrl')
     this.deliveryBaseUrl = this.config.getOrThrow<string>('delivery.baseUrl')
   }
 
@@ -103,20 +101,22 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
     })
 
     if (!deliveryResult.reused && deliveryResult.expiresAt) {
-      this.sendDeliveryEmail({
-        email: detail?.snapEmail ?? null,
-        firstName: customerFirstName,
-        eventName: detail?.eventName ?? '',
-        photoCount,
-        subtotal: isSale ? (detail?.subtotal ?? null) : null,
-        currency: detail?.snapCurrency ?? null,
-        deliveryUrl: deliveryResult.deliveryUrl,
-        expiresAt: deliveryResult.expiresAt,
-      }).catch((error) => {
-        this.logger.error(
-          `Delivered the order but the email dispatch rejected. orderId=${order.id} reason=${error instanceof Error ? error.message : String(error)}`,
-        )
-      })
+      this.deliveryEmail
+        .send('first', {
+          email: detail?.snapEmail ?? null,
+          firstName: customerFirstName,
+          eventName: detail?.eventName ?? '',
+          photoCount,
+          subtotal: isSale ? (detail?.subtotal ?? null) : null,
+          currency: detail?.snapCurrency ?? null,
+          deliveryUrl: deliveryResult.deliveryUrl,
+          expiresAt: deliveryResult.expiresAt,
+        })
+        .catch((error) => {
+          this.logger.error(
+            `Delivered the order but the email dispatch rejected. orderId=${order.id} reason=${error instanceof Error ? error.message : String(error)}`,
+          )
+        })
     }
 
     const whatsappTemplate = buildDeliveryTemplate(
@@ -156,51 +156,6 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
       deliveryUrl: deliveryResult.deliveryUrl,
       expiresAt: deliveryResult.expiresAt,
       reused: false,
-    }
-  }
-
-  private async sendDeliveryEmail(data: {
-    email: string | null
-    firstName: string
-    eventName: string
-    photoCount: number
-    subtotal: string | null
-    currency: string | null
-    deliveryUrl: string
-    expiresAt: Date
-  }): Promise<void> {
-    if (!data.email) {
-      this.logger.warn(
-        `Delivered an order with no email address on file. eventName=${data.eventName}`,
-      )
-      return
-    }
-
-    const total =
-      data.subtotal === null ? '' : `${data.currency ?? 'USD'} ${Number(data.subtotal).toFixed(2)}`
-
-    try {
-      await this.mailService.enqueue({
-        to: data.email,
-        subject: `Tus fotos de ${data.eventName} están listas`,
-        template: 'order-delivered',
-        vars: {
-          firstName: data.firstName || 'Hola',
-          eventName: data.eventName,
-          photoCount: String(data.photoCount),
-          total,
-          deliveryUrl: data.deliveryUrl,
-          expiresOn: data.expiresAt.toLocaleDateString('es-EC', {
-            day: 'numeric',
-            month: 'long',
-          }),
-          logoUrl: `${this.webBaseUrl}/brand/logo-email.png`,
-        },
-      })
-    } catch (error) {
-      this.logger.error(
-        `Delivered the order but could not enqueue its email. reason=${error instanceof Error ? error.message : String(error)}`,
-      )
     }
   }
 }

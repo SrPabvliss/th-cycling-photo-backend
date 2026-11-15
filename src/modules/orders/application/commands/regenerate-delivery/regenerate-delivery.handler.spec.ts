@@ -33,14 +33,19 @@ describe('RegenerateDeliveryHandler', () => {
       resolveEventScope: jest.fn().mockResolvedValue(unrestrictedScope),
     } as unknown as jest.Mocked<IAuthorizationService>
     const commandBus = {
-      execute: jest.fn().mockResolvedValue({ deliveryUrl: 'https://example.com/d/new-token' }),
+      execute: jest.fn().mockResolvedValue({
+        deliveryUrl: 'https://example.com/d/new-token',
+        expiresAt: new Date('2026-12-01T00:00:00Z'),
+      }),
     }
+    const deliveryEmail = { send: jest.fn().mockResolvedValue(undefined) }
     const handler = new RegenerateDeliveryHandler(
       orderReadRepo as never,
       authz,
       commandBus as never,
+      deliveryEmail as never,
     )
-    return { orderReadRepo, authz, commandBus, handler }
+    return { orderReadRepo, authz, commandBus, handler, deliveryEmail }
   }
 
   it('throws when the order does not exist', async () => {
@@ -85,5 +90,32 @@ describe('RegenerateDeliveryHandler', () => {
     expect(commandBus.execute).toHaveBeenCalledTimes(1)
     expect(orderReadRepo.getDetail).toHaveBeenCalledWith(order.id, unrestrictedScope)
     expect(result.orderId).toBe(order.id)
+  })
+
+  it('emails the buyer the new link, since the one of the earlier email no longer works', async () => {
+    const { orderReadRepo, handler, deliveryEmail } = buildHandler()
+    const order = buildDeliveredOrder()
+    orderReadRepo.findByIdInScope.mockResolvedValue(order)
+    orderReadRepo.getDetail.mockResolvedValue({
+      snapEmail: 'ana@test.local',
+      snapFirstName: 'Ana',
+      eventName: 'Downhill',
+      photos: [{}, {}],
+      subtotal: '8.00',
+      snapCurrency: 'USD',
+    })
+
+    await handler.execute(new RegenerateDeliveryCommand(order.id, audit))
+
+    expect(deliveryEmail.send).toHaveBeenCalledWith(
+      'regenerated',
+      expect.objectContaining({
+        email: 'ana@test.local',
+        firstName: 'Ana',
+        photoCount: 2,
+        subtotal: '8.00',
+        deliveryUrl: 'https://example.com/d/new-token',
+      }),
+    )
   })
 })
