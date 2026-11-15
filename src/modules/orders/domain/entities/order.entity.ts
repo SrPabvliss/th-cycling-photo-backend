@@ -1,7 +1,7 @@
 import { type PricingTierSnapshot } from '@pricing/domain/value-objects'
 import { AppException } from '@shared/domain'
 import { OrderStatus, type OrderStatusType } from '../value-objects/order-status.vo'
-import type { PaymentMethodType } from '../value-objects/payment-method.vo'
+import { PaymentMethod, type PaymentMethodType } from '../value-objects/payment-method.vo'
 
 export class Order {
   constructor(
@@ -193,6 +193,15 @@ export class Order {
       this.status !== OrderStatus.PAYMENT_INFO_SENT
     ) {
       throw AppException.businessRule('order.method_not_selectable')
+    }
+    // Only a draft becomes a card payment: a placed transfer order is waiting for staff to confirm
+    // the bank transfer, and turning it into a card one would let it be charged both ways.
+    if (
+      !this.isDraft &&
+      method === PaymentMethod.CARD &&
+      this.paymentMethod !== PaymentMethod.CARD
+    ) {
+      throw AppException.businessRule('payment.order_is_transfer')
     }
     this.paymentMethod = method
   }

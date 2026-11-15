@@ -19,5 +19,6 @@
   "mixed_sellers": "No se pueden cobrar juntas órdenes de fotógrafos distintos",
   "mixed_receivers": "Estos eventos no reciben el pago en la misma cuenta. Paga cada evento por separado",
   "invalid_bank_details": "Los datos bancarios están incompletos",
-  "payout_method_already_exists": "Ya tienes una cuenta activa de este tipo. Edita la existente o elimínala antes de crear otra"
+  "payout_method_already_exists": "Ya tienes una cuenta activa de este tipo. Edita la existente o elimínala antes de crear otra",
+  "order_is_transfer": "Este pedido se paga por transferencia"
 }

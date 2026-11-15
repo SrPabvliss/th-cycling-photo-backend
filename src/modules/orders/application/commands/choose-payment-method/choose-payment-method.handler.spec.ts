@@ -154,7 +154,7 @@ function buildHandler(orders: Order[], acceptsCard = true, cart = buildCart([], 
 
 describe('ChoosePaymentMethodHandler', () => {
   it('writes the method on every order of the group', async () => {
-    const orders = [buildOrder('order-1', BUYER), buildOrder('order-2', BUYER)]
+    const orders = [buildDraftOrder('order-1', BUYER), buildDraftOrder('order-2', BUYER)]
     const { handler, saved } = buildHandler(orders)
 
     await handler.execute(
