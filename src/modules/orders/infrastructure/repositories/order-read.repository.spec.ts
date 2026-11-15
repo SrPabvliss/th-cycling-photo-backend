@@ -244,17 +244,6 @@ describe('OrderReadRepository customer scoping', () => {
 
     expect(summary.spent).toEqual([])
   })
-
-  it('reports a payment in flight only for initiated and confirming transactions', async () => {
-    const { repository, paymentTransactionOrderCount } = buildRepository()
-    paymentTransactionOrderCount.mockResolvedValue(1)
-
-    await expect(repository.hasPaymentInFlight('order-1')).resolves.toBe(true)
-
-    const { where } = paymentTransactionOrderCount.mock.calls[0][0]
-    expect(where.order_id).toBe('order-1')
-    expect(where.payment_transaction.status).toEqual({ in: ['initiated', 'confirming'] })
-  })
 })
 
 describe('OrderReadRepository: how a buyer order is paid and where its event gallery is', () => {

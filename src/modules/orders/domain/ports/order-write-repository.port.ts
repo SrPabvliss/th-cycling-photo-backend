@@ -1,5 +1,6 @@
 import type { Prisma } from '@generated/prisma/client'
 import type { Order } from '../entities'
+import type { OrderPayments } from '../payment-hold'
 
 export type OrderSnapData = {
   snapFirstName: string | null
@@ -29,6 +30,12 @@ export interface IOrderWriteRepository {
    * anything when given the transaction that then writes the order.
    */
   findByIdForUpdate(id: string, tx: Prisma.TransactionClient): Promise<Order | null>
+  /**
+   * Locks the order's card payments until `tx` ends, without waiting: a payment a confirmation
+   * holds is reported as `beingConfirmed` instead (Payphone may take seconds to answer). In that
+   * case `tx` has failed and the caller must end it, which refusing the cancellation does.
+   */
+  findPaymentsForUpdate(orderId: string, tx: Prisma.TransactionClient): Promise<OrderPayments>
   saveWithSnap(order: Order, snap: OrderSnapData): Promise<Order>
   savePhotos(orderId: string, items: OrderItemInput[]): Promise<void>
   replaceItems(orderId: string, items: OrderItemInput[]): Promise<void>

@@ -1,5 +1,6 @@
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import { isHeldByPayment } from '@orders/domain/payment-hold'
 import {
   type IOrderReadRepository,
   type IOrderWriteRepository,
@@ -31,16 +32,28 @@ export class CancelOrderHandler implements ICommandHandler<CancelOrderCommand> {
 
   async execute(command: CancelOrderCommand): Promise<EntityIdProjection> {
     const scope = await this.authz.resolveEventScope(command.userId, 'order.cancel')
-    const order = await this.readRepo.findByIdInScope(command.orderId, scope)
-    if (!order) throw AppException.notFound('entities.order', command.orderId)
-    await this.authz.assert(command.userId, 'order.cancel', order.eventId)
+    const scoped = await this.readRepo.findByIdInScope(command.orderId, scope)
+    if (!scoped) throw AppException.notFound('entities.order', command.orderId)
+    await this.authz.assert(command.userId, 'order.cancel', scoped.eventId)
 
-    order.cancel()
-    await this.prisma.$transaction(async (tx) => {
+    // Under the order's lock: read it again so a payment confirmed meanwhile is kept, not
+    // overwritten by the copy loaded above, and refuse while the buyer's card charge is still
+    // being answered or approved but not yet settled.
+    const cancelled = await this.prisma.$transaction(async (tx) => {
+      const order = await this.writeRepo.findByIdForUpdate(command.orderId, tx)
+      if (!order) throw AppException.notFound('entities.order', command.orderId)
+
+      const payments = await this.writeRepo.findPaymentsForUpdate(order.id, tx)
+      if (isHeldByPayment(order, payments)) {
+        throw AppException.businessRule('order.buyer_payment_in_progress')
+      }
+
+      order.cancel()
       await this.writeRepo.save(order, tx)
       await this.invoiceRequester.withdraw(order.id, 'cancelled', tx)
+      return order
     })
 
-    return { id: order.id }
+    return { id: cancelled.id }
   }
 }

@@ -15,6 +15,7 @@
   "method_not_selectable": "El método de pago ya no se puede cambiar en esta orden",
   "not_draft": "La orden ya no es un borrador",
   "not_cancellable_by_owner": "Solo puedes cancelar una orden que aún está en proceso",
+  "buyer_payment_in_progress": "El comprador tiene un pago con tarjeta en proceso; espera unos minutos antes de cancelar",
   "payment_in_progress": "Tienes un pago en proceso, espera unos minutos antes de cancelar",
   "not_downloadable": "Esta orden todavía no tiene fotos para descargar",
   "invoice_files_not_ready": "La factura todavía se está preparando, inténtalo en unos minutos.",

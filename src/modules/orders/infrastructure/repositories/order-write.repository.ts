@@ -1,6 +1,7 @@
 import type { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import type { Order } from '@orders/domain/entities'
+import type { OrderPayments } from '@orders/domain/payment-hold'
 import type { IOrderWriteRepository, OrderItemInput, OrderSnapData } from '@orders/domain/ports'
 import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import { PrismaService } from '@shared/infrastructure'
@@ -28,6 +29,27 @@ export class OrderWriteRepository implements IOrderWriteRepository {
     await tx.$queryRaw`SELECT id FROM orders WHERE id = ${id}::uuid FOR UPDATE`
     const row = await tx.order.findUnique({ where: { id } })
     return row ? OrderMapper.toEntity(row) : null
+  }
+
+  async findPaymentsForUpdate(
+    orderId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<OrderPayments> {
+    try {
+      // In id order, so runs locking the same payments never wait on each other in a cycle.
+      const rows = await tx.$queryRaw<{ status: string }[]>`
+        SELECT pt.status::text AS status
+        FROM payment_transactions pt
+        JOIN payment_transaction_orders pto ON pto.payment_transaction_id = pt.id
+        WHERE pto.order_id = ${orderId}::uuid
+        ORDER BY pt.id
+        FOR UPDATE OF pt NOWAIT
+      `
+      return { statuses: rows.map((row) => row.status), beingConfirmed: false }
+    } catch (error) {
+      if (isLockNotAvailable(error)) return { statuses: [], beingConfirmed: true }
+      throw error
+    }
   }
 
   /** Persists an order entity with snap fields in a single operation. */
@@ -189,4 +211,11 @@ export class OrderWriteRepository implements IOrderWriteRepository {
       snap_invoice_consent_ip: snap.snapInvoiceConsentIp,
     }
   }
+}
+
+/** Postgres `lock_not_available` (55P03), as Prisma's driver adapter reports a NOWAIT miss. */
+function isLockNotAvailable(error: unknown): boolean {
+  const cause = (error as { meta?: { driverAdapterError?: { cause?: { originalCode?: string } } } })
+    ?.meta?.driverAdapterError?.cause
+  return cause?.originalCode === '55P03'
 }

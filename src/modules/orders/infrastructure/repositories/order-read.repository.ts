@@ -814,14 +814,4 @@ export class OrderReadRepository implements IOrderReadRepository {
         })),
     }
   }
-
-  async hasPaymentInFlight(orderId: string): Promise<boolean> {
-    const count = await this.prisma.paymentTransactionOrder.count({
-      where: {
-        order_id: orderId,
-        payment_transaction: { status: { in: ['initiated', 'confirming'] } },
-      },
-    })
-    return count > 0
-  }
 }
