@@ -11,6 +11,8 @@ import {
   GetPublicEventPhotosQuery,
   GetPublicEventsListDto,
   GetPublicEventsListQuery,
+  PublicEventListFiltersDto,
+  toPublicEventListFilters,
 } from '@events/application/queries'
 import { Controller, Get, Param, Query } from '@nestjs/common'
 import { QueryBus } from '@nestjs/cqrs'
@@ -38,25 +40,26 @@ export class PublicEventsController {
   async findAll(@Query() dto: GetPublicEventsListDto) {
     const pagination = new Pagination(dto.page ?? 1, dto.limit ?? 20)
     return this.queryBus.execute(
-      new GetPublicEventsListQuery(pagination, {
-        search: dto.search ?? null,
-        eventTypeId: dto.eventTypeId ?? null,
-        hasPhotos: dto.hasPhotos ?? false,
-      }),
+      new GetPublicEventsListQuery(pagination, toPublicEventListFilters(dto)),
     )
   }
 
   @Public()
   @Get('filters')
   @SuccessMessage('success.FETCHED', { entity: 'entities.event' })
-  @ApiOperation({ summary: 'Filter options for the public event list' })
+  @ApiOperation({
+    summary: 'Filter options for the public event list, each with its number of events',
+    description:
+      'Takes the same filters as the list. Each group is counted with the search and the other groups applied, never its own.',
+  })
   @ApiEnvelopeResponse({
     status: 200,
-    description: 'Event types that have at least one publicly listed event',
+    description: 'Event types, provinces and start months, each option with its count',
     type: PublicEventFiltersProjection,
   })
-  async findFilters() {
-    return this.queryBus.execute(new GetPublicEventFiltersQuery())
+  @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
+  async findFilters(@Query() dto: PublicEventListFiltersDto) {
+    return this.queryBus.execute(new GetPublicEventFiltersQuery(toPublicEventListFilters(dto)))
   }
 
   @Public()

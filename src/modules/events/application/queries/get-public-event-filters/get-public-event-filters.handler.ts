@@ -8,7 +8,7 @@ import { GetPublicEventFiltersQuery } from './get-public-event-filters.query'
 export class GetPublicEventFiltersHandler implements IQueryHandler<GetPublicEventFiltersQuery> {
   constructor(@Inject(EVENT_READ_REPOSITORY) private readonly readRepo: IEventReadRepository) {}
 
-  async execute(_query: GetPublicEventFiltersQuery): Promise<PublicEventFiltersProjection> {
-    return this.readRepo.getPublicEventFilters()
+  async execute(query: GetPublicEventFiltersQuery): Promise<PublicEventFiltersProjection> {
+    return this.readRepo.getPublicEventFilters(query.filters)
   }
 }
