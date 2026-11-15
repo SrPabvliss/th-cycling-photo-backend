@@ -138,12 +138,23 @@ describe('UpdateBillingAccountHandler', () => {
     expect(billingAccountRepository.save).not.toHaveBeenCalled()
   })
 
-  it('lets the change through when the external validation gives no answer', async () => {
+  it('lets the change through when the external validation gives no answer and the number checks out locally', async () => {
     const { handler, billingAccountRepository } = setup({ check: null })
 
-    await handler.execute(command({ idType: BillingIdType.RUC, idNumber: '1790012345001' }))
+    await handler.execute(command({ idType: BillingIdType.RUC, idNumber: '1790016919001' }))
 
-    expect(savedAccount(billingAccountRepository).idNumber).toBe('1790012345001')
+    expect(savedAccount(billingAccountRepository).idNumber).toBe('1790016919001')
+  })
+
+  it('refuses a cédula with a wrong check digit when the external validation gives no answer', async () => {
+    const { handler, billingAccountRepository } = setup({ check: null })
+
+    const error = await errorOf(
+      handler.execute(command({ idType: BillingIdType.NATIONAL_ID, idNumber: '1700000002' })),
+    )
+
+    expect(error.messageKey).toBe('billing.identification_invalid')
+    expect(billingAccountRepository.save).not.toHaveBeenCalled()
   })
 
   it('refuses a malformed identification before asking anyone', async () => {

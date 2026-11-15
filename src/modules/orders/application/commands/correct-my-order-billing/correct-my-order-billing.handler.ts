@@ -1,3 +1,4 @@
+import { assertIdentificationValid } from '@billing/application/services/assert-identification-valid'
 import { BillingAccount } from '@billing/domain/entities/billing-account.entity'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
@@ -16,7 +17,6 @@ import {
   RIKUCHIY_INVOICE_REQUESTER,
   RIKUCHIY_OUTBOX_REPOSITORY,
 } from '@shared/rikuchiy/domain/ports'
-import { SRI_ID_TYPE } from '@shared/rikuchiy/domain/rikuchiy-emission-payload'
 import { CorrectMyOrderBillingCommand } from './correct-my-order-billing.command'
 
 @CommandHandler(CorrectMyOrderBillingCommand)
@@ -52,15 +52,7 @@ export class CorrectMyOrderBillingHandler implements ICommandHandler<CorrectMyOr
       email: command.email,
       address: command.address,
     })
-    const check = await this.rikuchiyClient.validateIdentification(
-      SRI_ID_TYPE[buyer.idType],
-      buyer.idNumber,
-    )
-    if (check && !check.valid) {
-      throw AppException.businessRule('billing.identification_invalid', false, {
-        reason: check.reason,
-      })
-    }
+    await assertIdentificationValid(this.rikuchiyClient, buyer.idType, buyer.idNumber)
 
     await this.prisma.$transaction(async (tx) => {
       await tx.order.update({

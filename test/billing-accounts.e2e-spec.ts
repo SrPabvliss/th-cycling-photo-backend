@@ -140,7 +140,7 @@ describe('Billing accounts — edit (e2e)', () => {
     const res = await request(app.getHttpServer())
       .patch(`${base}/${accountId}`)
       .set(as(owner))
-      .send({ idType: 'national_id', idNumber: '1710034066', legalName: 'No Debe Guardarse' })
+      .send({ idType: 'national_id', idNumber: '0926687856', legalName: 'No Debe Guardarse' })
       .expect(422)
 
     expect(res.body.error.code).toBe('BUSINESS_RULE')
@@ -149,6 +149,26 @@ describe('Billing accounts — edit (e2e)', () => {
       idNumber: '1790012345001',
       legalName: 'Juan P. Pérez',
     })
+  })
+
+  it.each([
+    ['a cédula with a wrong check digit', 'national_id', '1700000002'],
+    ['a company RUC with a wrong check digit', 'ruc', '1790012345001'],
+  ])('refuses %s when the external validation cannot answer, saving nothing', async (_, idType, idNumber) => {
+    rikuchiyStub.validateIdentification.mockResolvedValue(null)
+    const before = (await accountsOf(owner)).length
+
+    const res = await request(app.getHttpServer())
+      .post(base)
+      .set(as(owner))
+      .send({ idType, idNumber, legalName: 'No Debe Guardarse', email: 'no@correo.com' })
+      .expect(422)
+
+    expect(res.body.error).toMatchObject({
+      code: 'BUSINESS_RULE',
+      messageKey: 'billing.identification_invalid',
+    })
+    expect(await accountsOf(owner)).toHaveLength(before)
   })
 
   it('answers 404 to someone else trying to edit the account, and leaves it untouched', async () => {

@@ -1,9 +1,9 @@
+import { assertIdentificationValid } from '@billing/application/services/assert-identification-valid'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
 import { type IRikuchiyClient, RIKUCHIY_CLIENT } from '@shared/rikuchiy/domain/ports'
-import { SRI_ID_TYPE } from '@shared/rikuchiy/domain/rikuchiy-emission-payload'
 import { BILLING_ACCOUNT_REPOSITORY, type IBillingAccountRepository } from '../../../domain/ports'
 import { UpdateBillingAccountCommand } from './update-billing-account.command'
 
@@ -25,15 +25,7 @@ export class UpdateBillingAccountHandler implements ICommandHandler<UpdateBillin
     const { identificationChanged } = account.update(command.changes)
 
     if (identificationChanged) {
-      const check = await this.rikuchiyClient.validateIdentification(
-        SRI_ID_TYPE[account.idType],
-        account.idNumber,
-      )
-      if (check && !check.valid) {
-        throw AppException.businessRule('billing.identification_invalid', false, {
-          reason: check.reason,
-        })
-      }
+      await assertIdentificationValid(this.rikuchiyClient, account.idType, account.idNumber)
     }
 
     await this.billingAccountRepository.save(account)
