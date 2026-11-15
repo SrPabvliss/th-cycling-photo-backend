@@ -12,6 +12,7 @@ import { GlobalExceptionFilter } from '../src/shared/http/filters/global-excepti
 import { ResponseInterceptor } from '../src/shared/http/interceptors/response.interceptor'
 import { PrismaService } from '../src/shared/infrastructure'
 import { createAuthenticatedUser, type TestAuthUser } from './fixtures/factories/auth.factory'
+import { ensurePaymentSystemUser } from './fixtures/factories/payment-system-user.factory'
 import { createPhotoFixture } from './fixtures/factories/photo.factory'
 import { createEventFixture } from './fixtures/factories/user.factory'
 
@@ -79,6 +80,8 @@ describe('My order detail: payment method and event gallery (e2e)', () => {
     app.useGlobalFilters(new GlobalExceptionFilter())
     app.useGlobalInterceptors(new ResponseInterceptor(app.get(Reflector)))
     prisma = moduleFixture.get(PrismaService)
+    // Another suite may have truncated `users`; PaymentSystemActor refuses to boot without it.
+    await ensurePaymentSystemUser(prisma as unknown as PrismaClient)
     await app.init()
 
     buyer = await createAuthenticatedUser(db(), moduleFixture.get(JwtService), 'customer')

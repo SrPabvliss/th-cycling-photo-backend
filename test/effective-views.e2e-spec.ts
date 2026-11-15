@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config'
 import { Test } from '@nestjs/testing'
 import configuration from '../src/config/configuration'
 import { PrismaService } from '../src/shared/infrastructure/prisma/prisma.service'
+import { ensurePaymentSystemUser } from './fixtures/factories/payment-system-user.factory'
 import { createPhotoFixture } from './fixtures/factories/photo.factory'
 import { createEventFixture, createUserFixture } from './fixtures/factories/user.factory'
 
@@ -52,6 +53,9 @@ describe('photo_bib_effective view', () => {
   })
 
   afterAll(async () => {
+    // Each test truncates `users`, the payment system account included, and the application
+    // refuses to boot without it: give it back so the suites that run after this one can start.
+    await ensurePaymentSystemUser(prisma as unknown as PrismaClient)
     await prisma.$disconnect()
   })
 
@@ -185,6 +189,9 @@ describe('photo_color_effective view', () => {
   })
 
   afterAll(async () => {
+    // Each test truncates `users`, the payment system account included, and the application
+    // refuses to boot without it: give it back so the suites that run after this one can start.
+    await ensurePaymentSystemUser(prisma as unknown as PrismaClient)
     await prisma.$disconnect()
   })
 
