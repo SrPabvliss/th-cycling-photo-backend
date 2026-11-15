@@ -1,7 +1,9 @@
 import { SettleCartCommand } from '@cart/application/commands'
 import { Inject, Logger } from '@nestjs/common'
 import { CommandBus, CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
+import { NotificationsService } from '@notifications/application/services/notifications.service'
 import { ConfirmOrderPaymentCommand, SendDeliveryCommand } from '@orders/application/commands'
+import type { ConfirmOrderPaymentResult } from '@orders/application/commands/confirm-order-payment/confirm-order-payment.command'
 import type { OrderPaymentConfirmedProjection } from '@orders/application/projections'
 import type { OrderStatusType } from '@orders/domain/value-objects/order-status.vo'
 import type {
@@ -13,10 +15,17 @@ import { SellerAccountSuspension } from '@payments/application/services/seller-a
 import type { PaymentTransaction } from '@payments/domain/entities'
 import {
   type IOrderPaymentContextRepository,
+  type IPaymentTransactionReadRepository,
   type IPaymentTransactionWriteRepository,
   ORDER_PAYMENT_CONTEXT_REPOSITORY,
+  type OrderPaymentContext,
+  PAYMENT_TRANSACTION_READ_REPOSITORY,
   PAYMENT_TRANSACTION_WRITE_REPOSITORY,
 } from '@payments/domain/ports'
+import {
+  type RefundReasonType,
+  refundReasonFor,
+} from '@payments/domain/services/charge-refund-policy'
 import {
   decideOrderSettlement,
   OrderSettlementDecision,
@@ -38,7 +47,10 @@ import {
 } from '../../../../tenants/domain/ports/tenant-payout-method-repository.port'
 import { ConfirmPaymentTransactionCommand } from './confirm-payment-transaction.command'
 
-type ConfirmationOutcome = Omit<PaymentResultProjection, 'deliveries' | 'settled'>
+type ConfirmationOutcome = Omit<PaymentResultProjection, 'deliveries' | 'settled' | 'refund'>
+
+/** The charge this run just learnt the gateway approved; null when it was known before. */
+type FreshApproval = { amountCents: number; approvedAt: Date } | null
 
 @CommandHandler(ConfirmPaymentTransactionCommand)
 export class ConfirmPaymentTransactionHandler
@@ -59,12 +71,28 @@ export class ConfirmPaymentTransactionHandler
     private readonly commandBus: CommandBus,
     private readonly accountSuspension: SellerAccountSuspension,
     private readonly systemActor: PaymentSystemActor,
+    @Inject(PAYMENT_TRANSACTION_READ_REPOSITORY)
+    private readonly transactionReadRepo: IPaymentTransactionReadRepository,
+    private readonly notifications: NotificationsService,
   ) {}
 
+  /**
+   * The confirmation runs in two locked steps on purpose.
+   *
+   * The first one only records that the buyer came back from the gateway (`confirming`) and
+   * commits. The second one asks the gateway and records its answer. If they were a single
+   * database transaction, a slow or failing gateway would roll the record back and leave the
+   * payment looking exactly like a checkout the buyer abandoned, so "Mis fotos" could not tell an
+   * order being confirmed from one that never will be.
+   *
+   * The gateway is only ever called inside the second step, with the row locked and after
+   * re-reading its state, so two confirmations of the same transaction still call it once.
+   */
   async execute(command: ConfirmPaymentTransactionCommand): Promise<PaymentResultProjection> {
     let sellerTenantId: string | null | undefined
+    let freshApproval: FreshApproval = null
 
-    const runConfirmation = () =>
+    const beginConfirmation = () =>
       this.transactionRepo.runLocked(command.clientTransactionId, async (transaction) => {
         const contexts = await this.contextRepo.findByOrderIds(transaction.orderIds)
         if (contexts.length === 0) throw AppException.businessRule('payment.order_context_missing')
@@ -83,17 +111,20 @@ export class ConfirmPaymentTransactionHandler
 
         sellerTenantId = contexts[0].sellerTenantId
 
-        const wasExpired = transaction.status === PaymentTransactionStatus.EXPIRED
-
-        if (transaction.isSettled && !wasExpired) {
-          return {
-            approved: transaction.status === PaymentTransactionStatus.APPROVED,
-            orderIds: transaction.orderIds,
-            message: transaction.failureMessage,
-          }
-        }
+        const earlier = ConfirmPaymentTransactionHandler.earlierOutcomeOf(transaction)
+        if (earlier) return earlier
 
         transaction.beginConfirmation()
+        return null
+      })
+
+    const askGateway = () =>
+      this.transactionRepo.runLocked(command.clientTransactionId, async (transaction) => {
+        // Re-read under the lock: another confirmation may have settled it since the first step.
+        const earlier = ConfirmPaymentTransactionHandler.earlierOutcomeOf(transaction)
+        if (earlier) return earlier
+
+        const wasExpired = transaction.status === PaymentTransactionStatus.EXPIRED
 
         const gateway = this.registry.get(transaction.provider)
         const credentials = await this.resolveCredentials(transaction, gateway)
@@ -123,29 +154,47 @@ export class ConfirmPaymentTransactionHandler
         }
 
         transaction.markApproved(result)
+        freshApproval = { amountCents: transaction.amountCents, approvedAt: new Date() }
         return { approved: true, orderIds: transaction.orderIds, message: null }
       })
 
     let outcome: ConfirmationOutcome
     try {
-      outcome = await runConfirmation()
+      outcome = (await beginConfirmation()) ?? (await askGateway())
     } catch (error) {
       await this.accountSuspension.disableOnInvalidCredentials(error, sellerTenantId)
       throw error
     }
 
-    if (!outcome.approved) return { ...outcome, settled: false, deliveries: [] }
+    if (!outcome.approved) return { ...outcome, settled: false, deliveries: [], refund: null }
 
-    const { settledOrderIds, deliveries } = await this.settleOrders(
+    const { settledOrderIds, deliveries, refundReason } = await this.settleOrders(
       command.clientTransactionId,
       outcome.orderIds,
       command.buyerUserId,
+      freshApproval,
     )
 
     return {
       ...outcome,
       settled: settledOrderIds.length === outcome.orderIds.length,
       deliveries,
+      refund: refundReason ? { reason: refundReason } : null,
+    }
+  }
+
+  /**
+   * What a transaction that already has an answer answers again. An expired one has none: the
+   * gateway may still have approved it, so it is asked.
+   */
+  private static earlierOutcomeOf(transaction: PaymentTransaction): ConfirmationOutcome | null {
+    const isExpired = transaction.status === PaymentTransactionStatus.EXPIRED
+    if (!transaction.isSettled || isExpired) return null
+
+    return {
+      approved: transaction.status === PaymentTransactionStatus.APPROVED,
+      orderIds: transaction.orderIds,
+      message: transaction.failureMessage,
     }
   }
 
@@ -153,57 +202,99 @@ export class ConfirmPaymentTransactionHandler
     clientTransactionId: string,
     orderIds: string[],
     buyerUserId: string,
-  ): Promise<{ settledOrderIds: string[]; deliveries: PaymentDeliveryProjection[] }> {
-    const settleable = await this.transactionRepo.runLocked(clientTransactionId, async () => {
-      const contexts = await this.contextRepo.findByOrderIds(orderIds)
-      const foundOrderIds = new Set(contexts.map((context) => context.orderId))
+    freshApproval: FreshApproval,
+  ): Promise<{
+    settledOrderIds: string[]
+    deliveries: PaymentDeliveryProjection[]
+    refundReason: RefundReasonType | null
+  }> {
+    const { settleable, notSettled } = await this.transactionRepo.runLocked(
+      clientTransactionId,
+      async () => {
+        const contexts = await this.contextRepo.findByOrderIds(orderIds)
+        const foundOrderIds = new Set(contexts.map((context) => context.orderId))
 
-      const unresolvedOrderIds = orderIds.filter((orderId) => !foundOrderIds.has(orderId))
-      unresolvedOrderIds.forEach((orderId) => {
-        this.logger.error(
-          `Approved payment cannot settle its order: no order context found. clientTransactionId=${clientTransactionId} orderId=${orderId}`,
-        )
-      })
-
-      const decisions = contexts.map((context) => ({
-        context,
-        decision: decideOrderSettlement(context.status as OrderStatusType),
-      }))
-
-      const hasUnsettleableOrder = decisions.some(
-        ({ decision }) => decision === OrderSettlementDecision.NOT_SETTLEABLE,
-      )
-
-      decisions
-        .filter(({ decision }) => decision !== OrderSettlementDecision.SETTLE)
-        .forEach(({ context, decision }) => {
-          const logMethod = decision === OrderSettlementDecision.ALREADY_SETTLED ? 'log' : 'error'
-          this.logger[logMethod](
-            `Approved payment did not settle one of its orders. clientTransactionId=${clientTransactionId} orderId=${context.orderId} orderStatus=${context.status} decision=${decision}`,
+        const unresolvedOrderIds = orderIds.filter((orderId) => !foundOrderIds.has(orderId))
+        unresolvedOrderIds.forEach((orderId) => {
+          this.logger.error(
+            `Approved payment cannot settle its order: no order context found. clientTransactionId=${clientTransactionId} orderId=${orderId}`,
           )
         })
 
-      const settleableOrderIds = decisions
-        .filter(({ decision }) => decision === OrderSettlementDecision.SETTLE)
-        .map(({ context }) => context.orderId)
+        const decisions = contexts.map((context) => ({
+          context,
+          decision: decideOrderSettlement(context.status as OrderStatusType),
+        }))
 
-      const isGenuinelyStranded = unresolvedOrderIds.length > 0 || hasUnsettleableOrder
-
-      if (orderIds.length > 0 && settleableOrderIds.length === 0 && isGenuinelyStranded) {
-        this.logger.error(
-          `Approved payment settled none of its orders. clientTransactionId=${clientTransactionId} orderIds=${orderIds.join(',')}`,
+        const hasUnsettleableOrder = decisions.some(
+          ({ decision }) => decision === OrderSettlementDecision.NOT_SETTLEABLE,
         )
-      }
 
-      return settleableOrderIds
-    })
+        decisions
+          .filter(({ decision }) => decision !== OrderSettlementDecision.SETTLE)
+          .forEach(({ context, decision }) => {
+            const logMethod = decision === OrderSettlementDecision.ALREADY_SETTLED ? 'log' : 'error'
+            this.logger[logMethod](
+              `Approved payment did not settle one of its orders. clientTransactionId=${clientTransactionId} orderId=${context.orderId} orderStatus=${context.status} decision=${decision}`,
+            )
+          })
+
+        // Always in id order, whatever order the contexts came back in.
+        const settleableOrderIds = decisions
+          .filter(({ decision }) => decision === OrderSettlementDecision.SETTLE)
+          .map(({ context }) => context.orderId)
+          .sort()
+
+        const isGenuinelyStranded = unresolvedOrderIds.length > 0 || hasUnsettleableOrder
+
+        if (orderIds.length > 0 && settleableOrderIds.length === 0 && isGenuinelyStranded) {
+          this.logger.error(
+            `Approved payment settled none of its orders. clientTransactionId=${clientTransactionId} orderIds=${orderIds.join(',')}`,
+          )
+        }
+
+        return {
+          settleable: settleableOrderIds,
+          notSettled: decisions
+            .filter(({ decision }) => decision !== OrderSettlementDecision.SETTLE)
+            .map(({ context }) => context),
+        }
+      },
+    )
+
+    const refundReasons: RefundReasonType[] = []
+    for (const context of notSettled) {
+      const reason = await this.refundFor(clientTransactionId, context, freshApproval)
+      if (reason) refundReasons.push(reason)
+    }
 
     const settledResults = await Promise.all(
       settleable.map(async (orderId) => {
         try {
-          await this.commandBus.execute(
-            new ConfirmOrderPaymentCommand(orderId, new AuditContext(this.systemActor.userId)),
+          // Another confirmation of the same charge may pay the order between the decision above
+          // and this command. The command then finds it paid under the order's lock and skips it,
+          // and it is treated as one already settled: not settled here, not delivered here.
+          const result = await this.commandBus.execute<
+            ConfirmOrderPaymentCommand,
+            ConfirmOrderPaymentResult | undefined
+          >(
+            new ConfirmOrderPaymentCommand(
+              orderId,
+              new AuditContext(this.systemActor.userId),
+              'skip',
+            ),
           )
+          if (result?.alreadyPaid) {
+            this.logger.log(
+              `Approved payment did not settle one of its orders. clientTransactionId=${clientTransactionId} orderId=${orderId} decision=${OrderSettlementDecision.ALREADY_SETTLED}`,
+            )
+            const [context] = await this.contextRepo.findByOrderIds([orderId])
+            const reason = context
+              ? await this.refundFor(clientTransactionId, context, freshApproval)
+              : null
+            if (reason) refundReasons.push(reason)
+            return null
+          }
           return orderId
         } catch (error) {
           this.logger.error(
@@ -227,7 +318,53 @@ export class ConfirmPaymentTransactionHandler
     }
 
     const deliveries = await this.deliverOrders(clientTransactionId, settledOrderIds)
-    return { settledOrderIds, deliveries }
+    return { settledOrderIds, deliveries, refundReason: refundReasons[0] ?? null }
+  }
+
+  /**
+   * Why this charge must be given back to the buyer for this order, or null when it pays it. The
+   * money moved at the gateway whatever the order's state, so a charge approved for an order that
+   * could no longer take it (paid some other way, cancelled, gifted) is the buyer's to get back.
+   *
+   * Every confirmation of the charge answers the same reason, so a reload of the return screen
+   * says what the first one said. Only the run that learnt of the approval logs it as an error and
+   * tells admins to refund it, so the alert is raised once. A failure here never undoes the
+   * confirmation; it is logged and answers no reason.
+   */
+  private async refundFor(
+    clientTransactionId: string,
+    context: OrderPaymentContext,
+    approval: FreshApproval,
+  ): Promise<RefundReasonType | null> {
+    try {
+      const paidByAnotherPayment =
+        context.confirmedById !== this.systemActor.userId ||
+        (await this.transactionReadRepo.existsOtherApprovedForOrder(
+          context.orderId,
+          clientTransactionId,
+        ))
+      const reason = refundReasonFor(context.status, paidByAnotherPayment)
+      if (!reason || !approval) return reason
+
+      this.logger.error(
+        `A card charge was approved for an order that could not take it and must be refunded. clientTransactionId=${clientTransactionId} orderId=${context.orderId} orderStatus=${context.status} reason=${reason} amountCents=${approval.amountCents}`,
+      )
+      this.notifications.emitPaymentNeedsRefund({
+        clientTransactionId,
+        orderId: context.orderId,
+        eventId: context.eventId,
+        orderStatus: context.status,
+        reason,
+        amountCents: approval.amountCents,
+        approvedAt: approval.approvedAt,
+      })
+      return reason
+    } catch (error) {
+      this.logger.error(
+        `Could not report a card charge to refund. clientTransactionId=${clientTransactionId} orderId=${context.orderId} reason=${error instanceof Error ? error.message : String(error)}`,
+      )
+      return null
+    }
   }
 
   private async deliverOrders(

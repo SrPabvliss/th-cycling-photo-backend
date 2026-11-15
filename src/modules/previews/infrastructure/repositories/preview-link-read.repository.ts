@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { livePreviewOrderWhere } from '@orders/infrastructure/repositories/live-preview-order'
 import type {
   PreviewDataProjection,
   PreviewLinkListProjection,
@@ -13,6 +14,19 @@ import * as PreviewLinkMapper from '../mappers/preview-link.mapper'
 @Injectable()
 export class PreviewLinkReadRepository implements IPreviewLinkReadRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  async hasLiveOrder(previewLinkId: string): Promise<boolean> {
+    return (await this.prisma.order.count({ where: livePreviewOrderWhere(previewLinkId) })) > 0
+  }
+
+  async findLiveOrderIdOf(previewLinkId: string, userId: string): Promise<string | null> {
+    const order = await this.prisma.order.findFirst({
+      where: { ...livePreviewOrderWhere(previewLinkId), user_id: userId },
+      orderBy: { created_at: 'desc' },
+      select: { id: true },
+    })
+    return order?.id ?? null
+  }
 
   /** Finds a preview link entity by token. */
   async findByToken(token: string): Promise<PreviewLink | null> {

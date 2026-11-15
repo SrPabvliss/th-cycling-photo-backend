@@ -7,6 +7,8 @@ function versionOf(storageKey: string): string {
 }
 
 export type InternalPreset = 'thumb' | 'workspace'
+
+const DEFAULT_INTERNAL_URL_TTL_SECONDS = 600
 export type AssetPreset = 'cover-sm' | 'cover-lg'
 
 @Injectable()
@@ -24,11 +26,20 @@ export class CdnUrlBuilder {
     return `${this.baseUrl}/gallery/${slug}.jpg`
   }
 
-  /** HMAC-signed internal URL — Worker validates token before serving. */
-  internalUrl(slug: string, preset?: InternalPreset): string {
+  /**
+   * HMAC-signed internal URL — Worker validates token before serving.
+   *
+   * The default lifetime is short on purpose (see `signUrl`). Pass a longer one only where the URL
+   * cannot be refreshed cheaply, as on a delivery link whose every fetch is counted.
+   */
+  internalUrl(
+    slug: string,
+    preset?: InternalPreset,
+    ttlSeconds: number = DEFAULT_INTERNAL_URL_TTL_SECONDS,
+  ): string {
     const presetSegment = preset ? `${preset}/` : ''
     const pathname = `/internal/${presetSegment}${slug}.jpg`
-    return `${this.baseUrl}${pathname}${this.signUrl(pathname)}`
+    return `${this.baseUrl}${pathname}${this.signUrl(pathname, ttlSeconds)}`
   }
 
   /**
@@ -68,8 +79,8 @@ export class CdnUrlBuilder {
    * URLs refresh well before expiry (see INTERNAL_IMAGE_QUERY_DEFAULTS on
    * the frontend); shorter TTL limits the replay window if a payload leaks.
    */
-  private signUrl(pathname: string): string {
-    const expiration = Math.floor(Date.now() / 1000) + 600
+  private signUrl(pathname: string, ttlSeconds: number): string {
+    const expiration = Math.floor(Date.now() / 1000) + ttlSeconds
     const data = `${pathname}${expiration}`
     const hmac = createHmac('sha256', this.hmacSecret).update(data).digest('hex')
     return `?token=${expiration}-${hmac}`

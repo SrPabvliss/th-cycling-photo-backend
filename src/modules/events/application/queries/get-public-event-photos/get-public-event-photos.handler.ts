@@ -13,7 +13,7 @@ export class GetPublicEventPhotosHandler implements IQueryHandler<GetPublicEvent
   ) {}
 
   async execute(query: GetPublicEventPhotosQuery): Promise<PaginatedResult<PublicPhotoProjection>> {
-    const event = await this.eventReadRepo.existsActiveEventBySlug(query.slug)
+    const event = await this.eventReadRepo.findPublicEventBySlug(query.slug)
     if (!event) throw AppException.notFound('entities.event', query.slug)
 
     return this.eventReadRepo.getPublicPhotos(event.id, query.pagination, {

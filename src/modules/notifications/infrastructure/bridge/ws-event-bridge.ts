@@ -7,10 +7,12 @@ import { Inject, Injectable, Logger } from '@nestjs/common'
 import { OnEvent } from '@nestjs/event-emitter'
 import {
   NotificationEvent,
+  type OrderCancelledByBuyerPayload,
   type OrderCreatedPayload,
   type OrderDeliveredPayload,
   type OrderPaidPayload,
   type OrderRetouchCompletedPayload,
+  type PaymentNeedsRefundPayload,
   type PreviewViewedPayload,
   type TenantContractAcceptedPayload,
 } from '@notifications/application/services/notification-events'
@@ -140,6 +142,31 @@ export class WsEventBridge {
     await this.persistAndBroadcast(
       NotificationEvent.ORDER_RETOUCH_COMPLETED,
       'order:retouch_completed',
+      payload as unknown as Record<string, unknown>,
+    )
+  }
+
+  /** Admins and the event's operators, who are the ones that sent the payment details. */
+  @OnEvent(NotificationEvent.ORDER_CANCELLED_BY_BUYER, { async: true })
+  async handleOrderCancelledByBuyer(payload: OrderCancelledByBuyerPayload): Promise<void> {
+    this.logger.debug(`Processing order:cancelled_by_buyer for ${payload.orderId}`)
+    const operatorIds = await this.getOperatorIdsForEvent(payload.eventId)
+    await this.persistAndBroadcast(
+      NotificationEvent.ORDER_CANCELLED_BY_BUYER,
+      'order:cancelled_by_buyer',
+      payload as unknown as Record<string, unknown>,
+      operatorIds,
+      payload.actorUserId,
+    )
+  }
+
+  /** Refunds are handled by admins, whom every notification already reaches. */
+  @OnEvent(NotificationEvent.PAYMENT_NEEDS_REFUND, { async: true })
+  async handlePaymentNeedsRefund(payload: PaymentNeedsRefundPayload): Promise<void> {
+    this.logger.debug(`Processing payment:needs_refund for ${payload.orderId}`)
+    await this.persistAndBroadcast(
+      NotificationEvent.PAYMENT_NEEDS_REFUND,
+      'payment:needs_refund',
       payload as unknown as Record<string, unknown>,
     )
   }

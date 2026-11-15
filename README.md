@@ -197,6 +197,58 @@ pnpm test:e2e
 pnpm test:debug
 ```
 
+#### Test database (integration and e2e)
+
+`pnpm test:integration` and `pnpm test:e2e` run against a real, disposable PostgreSQL database.
+The e2e suite truncates tables, so it refuses to start unless `DB_HOST` is local and `DB_NAME`
+contains `test`.
+
+1. Create `.env.test` (it is not versioned). Start from `.env.example` and point it at a database
+   of its own, for example:
+
+   ```bash
+   DB_HOST=localhost
+   DB_PORT=5498
+   DB_USER=postgres
+   DB_PASSWORD=postgres
+   DB_NAME=cycling_photo_test
+   ```
+
+   It also needs every variable `.env.example` marks as required (JWT, B2, mail, CDN, Redis…).
+   The ones below may be left out: `test/setup-database-test-env.ts` fills them with placeholders
+   that are not credentials whenever they are unset.
+
+   | Variable | Placeholder used when unset |
+   | --- | --- |
+   | `PAYPHONE_ENVIRONMENT` | `test` |
+   | `PAYPHONE_TOKEN` | `placeholder-not-a-real-token` |
+   | `PAYPHONE_STORE_ID` | `placeholder-not-a-real-store` |
+   | `CREDENTIAL_ENCRYPTION_KEY` | 64 zeros |
+   | `PAYMENT_SYSTEM_USER_EMAIL` | `system@titantv.test` |
+
+2. Create the database, then migrate and seed it:
+
+   ```bash
+   docker exec cycling_photo_postgres psql -U postgres -c "CREATE DATABASE cycling_photo_test"
+   NODE_ENV=test pnpm prisma:migrate:deploy
+   NODE_ENV=test pnpm prisma:seed
+   ```
+
+   Run the migrate command again after pulling new migrations. The seed is required: it syncs the
+   permission catalog and loads countries, provinces and cantons, which the specs rely on.
+
+3. Run the suites, in any order:
+
+   ```bash
+   pnpm test:integration
+   pnpm test:e2e
+   ```
+
+Specs create the users, tenants and events they need and must not assume anything else is in the
+database: the e2e suite empties `users` and `events`, and the suites still have to pass afterwards.
+Every e2e spec that boots the whole `AppModule` calls `ensurePaymentSystemUser()` first, because the
+application refuses to start without the account named by `PAYMENT_SYSTEM_USER_EMAIL`.
+
 ---
 
 ## 🏗️ Project Structure

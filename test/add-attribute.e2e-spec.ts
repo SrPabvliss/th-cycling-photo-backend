@@ -12,6 +12,7 @@ import { ResponseInterceptor } from '../src/shared/http/interceptors/response.in
 import { PrismaService } from '../src/shared/infrastructure'
 import { STORAGE_ADAPTER } from '../src/shared/storage/domain/ports/storage-adapter.port'
 import { createAuthenticatedUser, type TestAuthUser } from './fixtures/factories/auth.factory'
+import { ensurePaymentSystemUser } from './fixtures/factories/payment-system-user.factory'
 import { createPhotoFixture } from './fixtures/factories/photo.factory'
 import { createEventFixture } from './fixtures/factories/user.factory'
 
@@ -62,6 +63,7 @@ describe('Add attribute endpoints (e2e)', () => {
     app.useGlobalFilters(new GlobalExceptionFilter())
     const reflector = app.get(Reflector)
     app.useGlobalInterceptors(new ResponseInterceptor(reflector))
+    await ensurePaymentSystemUser(moduleFixture.get(PrismaService))
     await app.init()
 
     prisma = moduleFixture.get(PrismaService)

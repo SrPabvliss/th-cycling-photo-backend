@@ -10,6 +10,8 @@ import {
   CreateBillingAccountDto,
   DeleteBillingAccountCommand,
   SetDefaultBillingAccountCommand,
+  UpdateBillingAccountCommand,
+  UpdateBillingAccountDto,
 } from '../../application/commands'
 import { MyBillingAccountsProjection } from '../../application/projections/billing-account.projection'
 import { GetMyBillingAccountsQuery } from '../../application/queries/get-my-billing-accounts/get-my-billing-accounts.query'
@@ -57,6 +59,37 @@ export class BillingAccountsController {
         dto.email,
         dto.address ?? null,
       ),
+    )
+  }
+
+  @Authenticated()
+  @Patch(':billingAccountId')
+  @SuccessMessage('success.UPDATED', { entity: 'entities.billing_account' })
+  @ApiOperation({
+    summary: 'Edit a billing account. Orders already placed keep the data they were placed with',
+  })
+  @ApiParam({ name: 'billingAccountId', description: 'Billing account UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Billing account updated',
+    type: EntityIdProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 400, description: 'Validation failed' })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Billing account not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'Identification not valid' })
+  async update(
+    @Param('billingAccountId') billingAccountId: string,
+    @Body() dto: UpdateBillingAccountDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new UpdateBillingAccountCommand(user.userId, billingAccountId, {
+        idType: dto.idType,
+        idNumber: dto.idNumber,
+        legalName: dto.legalName,
+        email: dto.email,
+        address: dto.address,
+      }),
     )
   }
 

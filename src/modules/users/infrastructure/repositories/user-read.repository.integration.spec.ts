@@ -135,7 +135,9 @@ describe('UserReadRepository buyers SQL', () => {
     // The filter fixtures hang off `never-buyer` on purpose: attaching them to an existing buyer
     // keeps every tab count below untouched while giving the profile/phone/date filters something
     // real to match. `birth_date` is derived from today so the age window never goes stale.
-    const country = await prisma.country.findFirstOrThrow()
+    // Named explicitly: "the first country" is whichever the seed inserted first, and most have no
+    // provinces at all.
+    const country = await prisma.country.findUniqueOrThrow({ where: { iso_code: 'EC' } })
     const province = await prisma.province.findFirstOrThrow({ where: { country_id: country.id } })
     countryId = country.id
     provinceId = province.id

@@ -10,6 +10,7 @@ import { CART_READ_REPOSITORY, CART_WRITE_REPOSITORY } from '@cart/domain/ports'
 import { CartReadRepository } from '@cart/infrastructure/repositories/cart-read.repository'
 import { CartWriteRepository } from '@cart/infrastructure/repositories/cart-write.repository'
 import { CartController } from '@cart/presentation/controllers/cart.controller'
+import { EventsModule } from '@events/events.module'
 import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { OrdersModule } from '@orders/orders.module'
@@ -31,6 +32,7 @@ const QueryHandlers = [GetCartHandler]
     CqrsModule,
     forwardRef(() => AuthModule),
     BillingModule,
+    forwardRef(() => EventsModule),
     forwardRef(() => OrdersModule),
     forwardRef(() => PhotosModule),
     PaymentsModule,

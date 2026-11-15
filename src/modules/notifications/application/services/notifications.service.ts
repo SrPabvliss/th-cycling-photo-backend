@@ -2,9 +2,11 @@ import { Injectable } from '@nestjs/common'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 import {
   NotificationEvent,
+  type OrderCancelledByBuyerPayload,
   type OrderCreatedPayload,
   type OrderDeliveredPayload,
   type OrderPaidPayload,
+  type PaymentNeedsRefundPayload,
   type PreviewViewedPayload,
   type TenantContractAcceptedPayload,
 } from './notification-events'
@@ -12,6 +14,14 @@ import {
 @Injectable()
 export class NotificationsService {
   constructor(private readonly eventEmitter: EventEmitter2) {}
+
+  emitOrderCancelledByBuyer(payload: OrderCancelledByBuyerPayload): void {
+    this.eventEmitter.emit(NotificationEvent.ORDER_CANCELLED_BY_BUYER, payload)
+  }
+
+  emitPaymentNeedsRefund(payload: PaymentNeedsRefundPayload): void {
+    this.eventEmitter.emit(NotificationEvent.PAYMENT_NEEDS_REFUND, payload)
+  }
 
   emitPreviewViewed(payload: PreviewViewedPayload): void {
     this.eventEmitter.emit(NotificationEvent.PREVIEW_VIEWED, payload)

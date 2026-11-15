@@ -173,3 +173,47 @@ describe('OrderWriteRepository.lockAndUpsertDraft', () => {
     )
   })
 })
+
+describe('OrderWriteRepository.findPaymentsForUpdate', () => {
+  const lockMiss = Object.assign(new Error('could not obtain lock'), {
+    code: 'P2010',
+    meta: { driverAdapterError: { cause: { originalCode: '55P03' } } },
+  })
+
+  function repositoryWith(queryRaw: jest.Mock) {
+    return {
+      repository: new OrderWriteRepository({} as never),
+      tx: { $queryRaw: queryRaw } as never,
+    }
+  }
+
+  it('returns the statuses of the payments it locked', async () => {
+    const queryRaw = jest.fn().mockResolvedValue([{ status: 'declined' }, { status: 'approved' }])
+    const { repository, tx } = repositoryWith(queryRaw)
+
+    await expect(repository.findPaymentsForUpdate('order-1', tx)).resolves.toEqual({
+      statuses: ['declined', 'approved'],
+      beingConfirmed: false,
+    })
+    const sql = (queryRaw.mock.calls[0][0] as string[]).join('?')
+    expect(sql).toContain('FOR UPDATE OF pt NOWAIT')
+  })
+
+  it('reports a payment a confirmation holds instead of waiting for it', async () => {
+    const { repository, tx } = repositoryWith(jest.fn().mockRejectedValue(lockMiss))
+
+    await expect(repository.findPaymentsForUpdate('order-1', tx)).resolves.toEqual({
+      statuses: [],
+      beingConfirmed: true,
+    })
+  })
+
+  it('lets any other database error through', async () => {
+    const other = Object.assign(new Error('boom'), {
+      meta: { driverAdapterError: { cause: { originalCode: '40001' } } },
+    })
+    const { repository, tx } = repositoryWith(jest.fn().mockRejectedValue(other))
+
+    await expect(repository.findPaymentsForUpdate('order-1', tx)).rejects.toBe(other)
+  })
+})

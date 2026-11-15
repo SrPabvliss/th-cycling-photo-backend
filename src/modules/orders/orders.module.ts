@@ -30,6 +30,7 @@ import { GetOrderTaxDocumentFilesHandler } from '@orders/application/queries/get
 import { GetOrdersListHandler } from '@orders/application/queries/get-orders-list/get-orders-list.handler'
 import { GetOrdersStatsHandler } from '@orders/application/queries/get-orders-stats/get-orders-stats.handler'
 import { BuyerPurchaseSnapshotService } from '@orders/application/services/buyer-purchase-snapshot.service'
+import { DeliveryEmailService } from '@orders/application/services/delivery-email.service'
 import { ORDER_READ_REPOSITORY, ORDER_WRITE_REPOSITORY } from '@orders/domain/ports'
 import {
   ORDER_INVOICE_SYNC_QUEUE,
@@ -96,6 +97,7 @@ const QueryHandlers = [
   ],
   providers: [
     BuyerPurchaseSnapshotService,
+    DeliveryEmailService,
     ...CommandHandlers,
     ...QueryHandlers,
     { provide: ORDER_READ_REPOSITORY, useClass: OrderReadRepository },

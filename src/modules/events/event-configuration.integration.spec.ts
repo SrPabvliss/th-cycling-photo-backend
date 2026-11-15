@@ -28,6 +28,7 @@ import { RequestScopedAuthorizationCache } from '@shared/authorization/infrastru
 import { PermissionRepository } from '@shared/authorization/infrastructure/repositories/permission.repository'
 import { type IKvStorageAdapter, KV_STORAGE_ADAPTER } from '@shared/cloudflare/domain/ports'
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
+import { WatermarkNormalizer } from '@shared/images/infrastructure/watermark-normalizer.service'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import { PAYMENT_GATEWAY_REGISTRY } from '@shared/payment-gateways'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
@@ -51,6 +52,8 @@ import { USER_READ_REPOSITORY } from '@users/domain/ports'
 import { UserReadRepository } from '@users/infrastructure/repositories/user-read.repository'
 import configuration from '../../config/configuration'
 import { validate } from '../../config/env.validation'
+import { CONTRACT_REPOSITORY } from '../contracts/domain/ports/contract-repository.port'
+import { ContractRepository } from '../contracts/infrastructure/repositories/contract.repository'
 
 describe('event configuration', () => {
   let module: TestingModule
@@ -105,6 +108,7 @@ describe('event configuration', () => {
         { provide: TENANT_PROFILE_REPOSITORY, useClass: TenantProfileRepository },
         { provide: TENANT_PAYOUT_METHOD_REPOSITORY, useClass: TenantPayoutMethodRepository },
         { provide: USER_READ_REPOSITORY, useClass: UserReadRepository },
+        { provide: CONTRACT_REPOSITORY, useClass: ContractRepository },
         {
           provide: LOCATION_READ_REPOSITORY,
           useValue: {
@@ -121,6 +125,8 @@ describe('event configuration', () => {
             buildSecureUrl: () => 'http://fake',
             assetUrl: () => 'http://fake',
             internalUrl: () => 'http://fake',
+            watermarkUrl: () => 'http://fake',
+            eventWatermarkUrl: () => 'http://fake',
           },
         },
         {
@@ -136,6 +142,10 @@ describe('event configuration', () => {
           useValue: {
             delete: jest.fn().mockResolvedValue(undefined),
           } satisfies Partial<IStorageAdapter>,
+        },
+        {
+          provide: WatermarkNormalizer,
+          useValue: { normalize: jest.fn().mockResolvedValue(undefined) },
         },
         EventConfigurationService,
         LocationValidator,
@@ -212,6 +222,29 @@ describe('event configuration', () => {
       },
     })
 
+    // A non-platform tenant can only create events against an accepted contract with free slots.
+    const contractHolders = [
+      { user: completeUser, tenant: completeTenant },
+      { user: incompleteUser, tenant: incompleteTenant },
+      { user: tenantBUser, tenant: tenantB },
+    ]
+    for (const { user, tenant } of contractHolders) {
+      await prisma.tenantContract.create({
+        data: {
+          user_id: user.id,
+          tenant_id: tenant.id,
+          commercial_name: 'Event Configuration Spec',
+          events_total: 10,
+          photos_per_event: 100,
+          status: 'accepted',
+          token_hash: crypto.randomUUID(),
+          valid_until: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+          terms_version: 'v1',
+          accepted_at: new Date(),
+        },
+      })
+    }
+
     eventType = await prisma.eventType.findFirstOrThrow()
 
     bankMethod = TenantPayoutMethod.createBankTransfer(
@@ -253,7 +286,18 @@ describe('event configuration', () => {
       await prisma.eventPayoutMethod.deleteMany({ where: { event_id: { in: createdEventIds } } })
       await prisma.event.deleteMany({ where: { id: { in: createdEventIds } } })
       await prisma.tenantPayoutMethod.deleteMany({
-        where: { tenant_id: { in: [completeTenant?.id, tenantB?.id].filter(Boolean) } },
+        where: {
+          tenant_id: {
+            in: [completeTenant?.id, incompleteTenant?.id, tenantB?.id].filter(Boolean),
+          },
+        },
+      })
+      await prisma.tenantContract.deleteMany({
+        where: {
+          tenant_id: {
+            in: [completeTenant?.id, incompleteTenant?.id, tenantB?.id].filter(Boolean),
+          },
+        },
       })
       await prisma.user.deleteMany({
         where: {
@@ -272,8 +316,8 @@ describe('event configuration', () => {
     }
   })
 
-  it('rejects creation with an incomplete profile and names what is missing', async () => {
-    const command = new CreateEventCommand(
+  const incompleteEventCommand = () =>
+    new CreateEventCommand(
       'Incomplete Event',
       new Date('2026-09-01'),
       new Date('2026-09-02'),
@@ -283,10 +327,36 @@ describe('event configuration', () => {
       new AuditContext(incompleteUser.id),
     )
 
-    await expect(createEvent.execute(command)).rejects.toMatchObject({
+  it('rejects creation when the tenant has no payout method at all', async () => {
+    await expect(createEvent.execute(incompleteEventCommand())).rejects.toMatchObject({
       httpStatus: 422,
-      context: { missing: expect.stringContaining('watermark') },
+      messageKey: 'event.payout_method_required',
     })
+  })
+
+  it('rejects creation with an incomplete profile and names what is missing', async () => {
+    await payoutRepo.save(
+      TenantPayoutMethod.createBankTransfer(
+        incompleteTenant.id,
+        {
+          bankName: 'Banco del Austro',
+          accountNumber: '5550001112',
+          accountType: 'savings',
+          accountHolder: 'Incomplete Tenant',
+          holderIdentification: '0102030405',
+        },
+        incompleteUser.id,
+      ),
+    )
+
+    await expect(createEvent.execute(incompleteEventCommand())).rejects.toMatchObject({
+      httpStatus: 422,
+      messageKey: 'event.configuration_incomplete',
+      context: { missing: 'whatsapp' },
+    })
+
+    const events = await prisma.event.findMany({ where: { tenant_id: incompleteTenant.id } })
+    expect(events).toHaveLength(0)
   })
 
   it('does not change an existing event when the profile is edited afterwards', async () => {

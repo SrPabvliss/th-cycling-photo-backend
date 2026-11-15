@@ -45,6 +45,8 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
                     file_size: true,
                     retouched_storage_key: true,
                     retouched_file_size: true,
+                    public_slug: true,
+                    retouched_public_slug: true,
                   },
                 },
               },
@@ -59,8 +61,6 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
     return {
       token: record.token,
       eventName: record.order.event.name,
-      customerName:
-        `${record.order.snap_first_name ?? ''} ${record.order.snap_last_name ?? ''}`.trim(),
       status: record.status,
       expiresAt: record.expires_at,
       downloadCount: record.download_count,
@@ -71,12 +71,15 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
           retouchedStorageKey: item.photo.retouched_storage_key,
           fileSize: item.photo.file_size,
           retouchedFileSize: item.photo.retouched_file_size,
+          publicSlug: item.photo.public_slug,
+          retouchedPublicSlug: item.photo.retouched_public_slug,
         })
         return {
           id: item.photo.id,
           filename: item.photo.filename,
           storageKey: file.storageKey,
           fileSize: file.fileSize,
+          publicSlug: file.publicSlug,
         }
       }),
     }

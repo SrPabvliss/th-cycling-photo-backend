@@ -70,6 +70,64 @@ describe('BillingAccount', () => {
     expect(create({ email: '  Juan@Correo.COM ' }).email).toBe('juan@correo.com')
   })
 
+  it('applies only the changes it is given and keeps identity and default flag', () => {
+    const account = create({ isDefault: true, address: 'Av. Amazonas' })
+    const id = account.id
+
+    account.update({ legalName: '  Juana Pérez ', email: ' JUANA@Correo.com ' })
+
+    expect(account.id).toBe(id)
+    expect(account.isDefault).toBe(true)
+    expect(account.legalName).toBe('Juana Pérez')
+    expect(account.email).toBe('juana@correo.com')
+    expect(account.idNumber).toBe('1710034065')
+    expect(account.address).toBe('Av. Amazonas')
+  })
+
+  it('reports whether an update changed the identification', () => {
+    const account = create()
+
+    expect(account.update({ legalName: 'Otro' }).identificationChanged).toBe(false)
+    expect(
+      account.update({ idType: BillingIdType.NATIONAL_ID, idNumber: ' 1710034065 ' })
+        .identificationChanged,
+    ).toBe(false)
+    expect(
+      account.update({ idType: BillingIdType.RUC, idNumber: '1790012345001' })
+        .identificationChanged,
+    ).toBe(true)
+    expect(account.idType).toBe(BillingIdType.RUC)
+  })
+
+  it('clears the address on null or blank and leaves it alone when absent', () => {
+    const account = create({ address: 'Av. Amazonas' })
+
+    account.update({})
+    expect(account.address).toBe('Av. Amazonas')
+
+    account.update({ address: null })
+    expect(account.address).toBeNull()
+
+    account.update({ address: 'Calle 2' })
+    account.update({ address: '   ' })
+    expect(account.address).toBeNull()
+  })
+
+  it('refuses an update that would leave the account malformed, changing nothing', () => {
+    const account = create()
+
+    expect(
+      messageKeyOf(() =>
+        account.update({ legalName: 'Nombre Nuevo', idType: BillingIdType.RUC, idNumber: '123' }),
+      ),
+    ).toBe('billing.identification_malformed')
+    expect(messageKeyOf(() => account.update({ legalName: '   ' }))).toBe(
+      'billing.legal_name_invalid',
+    )
+    expect(account.legalName).toBe('Juan Pérez')
+    expect(account.idNumber).toBe('1710034065')
+  })
+
   it('marks the account deleted without losing its data', () => {
     const account = create()
 

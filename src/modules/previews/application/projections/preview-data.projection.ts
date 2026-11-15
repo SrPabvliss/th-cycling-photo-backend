@@ -26,4 +26,10 @@ export class PreviewDataProjection {
   expiresAt: Date
   /** Photos with watermarked URLs */
   photos: PreviewPhotoProjection[]
+  /**
+   * The live order that took the link (placed, or a card draft being paid), only when the signed-in
+   * viewer is its owner. Null without a session, for anyone else, and while the link is active:
+   * nothing about the order is shown to someone who does not own it.
+   */
+  myOrderId: string | null
 }

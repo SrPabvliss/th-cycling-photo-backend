@@ -7,11 +7,14 @@ import {
 } from '@deliveries/domain/ports'
 import { HttpStatus, Inject } from '@nestjs/common'
 import { type IQueryHandler, QueryHandler } from '@nestjs/cqrs'
+import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure'
 import { AppException } from '@shared/domain'
 import { type IStorageAdapter, STORAGE_ADAPTER } from '@shared/storage/domain/ports'
 import { GetDeliveryByTokenQuery } from './get-delivery-by-token.query'
 
-const PRESIGNED_URL_EXPIRY_SECONDS = 3600 // 1 hour
+// 1 hour. The thumbnail is signed for the same lifetime: refreshing either URL costs one of the
+// link's counted accesses, so they must stop working together rather than ten minutes apart.
+const PRESIGNED_URL_EXPIRY_SECONDS = 3600
 // Hard cap on how many times a single delivery token can return presigned
 // URLs. Legitimate use is ~1 fetch per page load + occasional refresh; this
 // cap blocks "shared link with 50 friends" abuse without burdening users.
@@ -24,6 +27,7 @@ export class GetDeliveryByTokenHandler implements IQueryHandler<GetDeliveryByTok
     @Inject(DELIVERY_LINK_WRITE_REPOSITORY)
     private readonly writeRepo: IDeliveryLinkWriteRepository,
     @Inject(STORAGE_ADAPTER) private readonly storage: IStorageAdapter,
+    private readonly cdn: CdnUrlBuilder,
   ) {}
 
   async execute(query: GetDeliveryByTokenQuery): Promise<DeliveryDataProjection> {
@@ -64,6 +68,9 @@ export class GetDeliveryByTokenHandler implements IQueryHandler<GetDeliveryByTok
             filename: safeFilename,
             expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
           }),
+          thumbnailUrl: photo.publicSlug
+            ? this.cdn.internalUrl(photo.publicSlug, 'thumb', PRESIGNED_URL_EXPIRY_SECONDS)
+            : null,
         }
       }),
     )
@@ -71,7 +78,6 @@ export class GetDeliveryByTokenHandler implements IQueryHandler<GetDeliveryByTok
     return {
       token: data.token,
       eventName: data.eventName,
-      customerName: data.customerName,
       status: data.status,
       expiresAt: data.expiresAt,
       downloadCount: data.downloadCount,

@@ -1,6 +1,13 @@
 import { PrismaClient } from '@generated/prisma/client'
 import { JwtService } from '@nestjs/jwt'
 import { hashSync } from 'bcryptjs'
+import { getPlatformTenantId } from './tenant.factory'
+
+const TEMPLATE_BY_ROLE = {
+  admin: 'platform_admin',
+  operator: 'platform_staff',
+  customer: 'customer',
+} as const
 
 export interface TestAuthUser {
   userId: string
@@ -22,6 +29,14 @@ export async function createAuthenticatedUser(
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const email = `e2e-${role}-${stamp}@test.local`
 
+  // Same wiring the seed gives each role: without a permission template every permissioned route
+  // answers 403, and staff additionally need the platform tenant to resolve any permission at all.
+  const template = await prisma.permissionTemplate.findUniqueOrThrow({
+    where: { key: TEMPLATE_BY_ROLE[role] },
+    select: { id: true },
+  })
+  const tenantId = role === 'customer' ? null : await getPlatformTenantId(prisma)
+
   const user = await prisma.user.create({
     data: {
       email,
@@ -29,6 +44,8 @@ export async function createAuthenticatedUser(
       first_name: 'E2E',
       last_name: role,
       is_active: true,
+      tenant_id: tenantId,
+      permission_template_id: template.id,
     },
     select: { id: true, email: true },
   })

@@ -1,3 +1,4 @@
+import { DeliveryEmailService } from '@orders/application/services/delivery-email.service'
 import { AuditContext } from '@shared/application'
 import { EventScope } from '@shared/authorization/domain/event-scope.vo'
 import type { IAuthorizationService } from '@shared/authorization/domain/ports/authorization.service.port'
@@ -124,7 +125,7 @@ function buildHandler(options: { detail?: Partial<OrderDetailProjection>; order?
     deliveryReadRepo as never,
     commandBus as never,
     notifications as never,
-    mailService as never,
+    new DeliveryEmailService(mailService as never, configService as never),
     configService as never,
   )
 

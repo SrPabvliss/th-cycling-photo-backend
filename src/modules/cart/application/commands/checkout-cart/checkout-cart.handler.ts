@@ -5,6 +5,7 @@ import {
   type ICartReadRepository,
   type ICartWriteRepository,
 } from '@cart/domain/ports'
+import { EVENT_READ_REPOSITORY, type IEventReadRepository } from '@events/domain/ports'
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { NotificationsService } from '@notifications/application/services/notifications.service'
@@ -40,6 +41,7 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
     private readonly notifications: NotificationsService,
     private readonly buyerSnapshot: BuyerPurchaseSnapshotService,
     private readonly receiverResolver: PaymentReceiverResolver,
+    @Inject(EVENT_READ_REPOSITORY) private readonly eventReadRepo: IEventReadRepository,
   ) {}
 
   async execute(command: CheckoutCartCommand): Promise<CheckoutResultProjection> {
@@ -63,6 +65,14 @@ export class CheckoutCartHandler implements ICommandHandler<CheckoutCartCommand>
       if (!cartEventMap.has(item.eventId)) {
         throw AppException.businessRule('cart.event_not_in_cart')
       }
+    }
+
+    // An event can leave public sale while its photos wait in the cart; nothing is ordered then.
+    const checkoutEventIds = command.items.map((item) => item.eventId)
+    const onSale = new Set(await this.eventReadRepo.findPublicEventIds(checkoutEventIds))
+    const offSale = checkoutEventIds.find((eventId) => !onSale.has(eventId))
+    if (offSale) {
+      throw AppException.businessRule('cart.event_not_available', false, { eventId: offSale })
     }
 
     if (command.method === PaymentMethod.CARD) {

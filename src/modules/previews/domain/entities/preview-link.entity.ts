@@ -86,6 +86,16 @@ export class PreviewLink {
     return false
   }
 
+  /**
+   * Back to active when the order that took it is no longer alive (cancelled, or an abandoned card
+   * draft). Expiry is checked afterwards as for any active link. Returns true if it changed.
+   */
+  reopen(): boolean {
+    if (this.status !== PreviewLinkStatus.CONVERTED) return false
+    this.status = PreviewLinkStatus.ACTIVE
+    return true
+  }
+
   /** Marks as converted when an order is created from this preview. */
   markConverted(): void {
     if (this.status !== PreviewLinkStatus.ACTIVE) {

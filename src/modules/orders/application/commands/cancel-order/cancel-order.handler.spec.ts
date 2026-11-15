@@ -19,7 +19,11 @@ describe('CancelOrderHandler', () => {
   }
 
   let readRepo: { findByIdInScope: jest.Mock }
-  let writeRepo: { save: jest.Mock }
+  let writeRepo: {
+    save: jest.Mock
+    findByIdForUpdate: jest.Mock
+    findPaymentsForUpdate: jest.Mock
+  }
   let authz: jest.Mocked<IAuthorizationService>
   let handler: CancelOrderHandler
   const fakeTx = { fakeTx: true }
@@ -27,7 +31,12 @@ describe('CancelOrderHandler', () => {
 
   beforeEach(() => {
     readRepo = { findByIdInScope: jest.fn() }
-    writeRepo = { save: jest.fn().mockResolvedValue(undefined) }
+    writeRepo = {
+      save: jest.fn().mockResolvedValue(undefined),
+      // Under the lock the order is read again; by default it is the one the scoped load found.
+      findByIdForUpdate: jest.fn(async () => readRepo.findByIdInScope.mock.results[0]?.value),
+      findPaymentsForUpdate: jest.fn().mockResolvedValue({ statuses: [], beingConfirmed: false }),
+    }
     authz = {
       can: jest.fn(),
       assert: jest.fn().mockResolvedValue(undefined),
@@ -89,5 +98,54 @@ describe('CancelOrderHandler', () => {
     expect(writeRepo.save).toHaveBeenCalledWith(order, fakeTx)
     expect(invoiceRequester.withdraw).toHaveBeenCalledWith(order.id, 'cancelled', fakeTx)
     expect(result).toEqual({ id: order.id })
+  })
+
+  it('cancels the order as read again under its lock, not the copy loaded before it', async () => {
+    readRepo.findByIdInScope.mockResolvedValue(buildOrder())
+    const locked = buildOrder()
+    locked.confirmPayment('staff-2')
+    writeRepo.findByIdForUpdate.mockResolvedValue(locked)
+
+    await handler.execute(command)
+
+    expect(writeRepo.findByIdForUpdate).toHaveBeenCalledWith('order-1', fakeTx)
+    expect(writeRepo.save).toHaveBeenCalledWith(locked, fakeTx)
+    expect(locked.status).toBe('cancelled')
+    expect(locked.paidAt).not.toBeNull()
+  })
+
+  it('answers NOT_FOUND when the order disappears before its lock', async () => {
+    readRepo.findByIdInScope.mockResolvedValue(buildOrder())
+    writeRepo.findByIdForUpdate.mockResolvedValue(null)
+
+    await expect(handler.execute(command)).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    expect(writeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['initiated'],
+    ['confirming'],
+    ['approved'],
+  ])('refuses to cancel an unpaid order while the buyer card payment is %s', async (status) => {
+    const order = buildOrder()
+    readRepo.findByIdInScope.mockResolvedValue(order)
+    writeRepo.findPaymentsForUpdate.mockResolvedValue({ statuses: [status], beingConfirmed: false })
+
+    await expect(handler.execute(command)).rejects.toMatchObject({
+      messageKey: 'order.buyer_payment_in_progress',
+    })
+    expect(writeRepo.findPaymentsForUpdate).toHaveBeenCalledWith(order.id, fakeTx)
+    expect(writeRepo.save).not.toHaveBeenCalled()
+    expect(invoiceRequester.withdraw).not.toHaveBeenCalled()
+  })
+
+  it('refuses at once while a confirmation holds one of the buyer card payments', async () => {
+    readRepo.findByIdInScope.mockResolvedValue(buildOrder())
+    writeRepo.findPaymentsForUpdate.mockResolvedValue({ statuses: [], beingConfirmed: true })
+
+    await expect(handler.execute(command)).rejects.toMatchObject({
+      messageKey: 'order.buyer_payment_in_progress',
+    })
+    expect(writeRepo.save).not.toHaveBeenCalled()
   })
 })

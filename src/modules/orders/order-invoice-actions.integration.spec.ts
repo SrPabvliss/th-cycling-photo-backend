@@ -4,6 +4,7 @@ import {
   type IEventPayoutMethodRepository,
 } from '@events/domain/ports'
 import { MailService } from '@mail/application/services/mail.service'
+import { getQueueToken } from '@nestjs/bullmq'
 import { ConfigModule } from '@nestjs/config'
 import { Test, type TestingModule } from '@nestjs/testing'
 import { CorrectMyOrderBillingCommand } from '@orders/application/commands/correct-my-order-billing/correct-my-order-billing.command'
@@ -28,6 +29,7 @@ import { PermissionRepository } from '@shared/authorization/infrastructure/repos
 import { CdnUrlBuilder } from '@shared/cloudflare/infrastructure/cdn-url.builder'
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service'
 import type { InvoiceStateView } from '@shared/rikuchiy/domain/order-invoice-state'
+import { ORDER_INVOICE_SYNC_QUEUE } from '@shared/rikuchiy/domain/order-invoice-sync'
 import {
   type CachedTaxDocument,
   INVOICE_SOURCE_READER,
@@ -101,6 +103,10 @@ describe('order invoice actions', () => {
         CorrectOrderBillingHandler,
         CorrectMyOrderBillingHandler,
         RetryOrderAnnulmentHandler,
+        {
+          provide: getQueueToken(ORDER_INVOICE_SYNC_QUEUE),
+          useValue: { add: jest.fn().mockResolvedValue(undefined) },
+        },
         RikuchiyDeliveryProcessor,
         OrderInvoiceSyncProcessor,
         {
