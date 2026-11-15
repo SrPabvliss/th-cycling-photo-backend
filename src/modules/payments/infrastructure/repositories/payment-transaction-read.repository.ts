@@ -15,4 +15,18 @@ export class PaymentTransactionReadRepository implements IPaymentTransactionRead
     })
     return record ? PaymentTransactionMapper.toEntity(record) : null
   }
+
+  async existsOtherApprovedForOrder(
+    orderId: string,
+    clientTransactionId: string,
+  ): Promise<boolean> {
+    const count = await this.prisma.paymentTransaction.count({
+      where: {
+        status: 'approved',
+        client_transaction_id: { not: clientTransactionId },
+        orders: { some: { order_id: orderId } },
+      },
+    })
+    return count > 0
+  }
 }

@@ -6,6 +6,7 @@ export const NotificationEvent = {
   ORDER_RETOUCH_COMPLETED: 'order.retouch_completed',
   TENANT_CONTRACT_ACCEPTED: 'tenant_contract.accepted',
   ORDER_CANCELLED_BY_BUYER: 'order.cancelled_by_buyer',
+  PAYMENT_NEEDS_REFUND: 'payment.needs_refund',
 } as const
 
 export interface PreviewViewedPayload {
@@ -74,4 +75,19 @@ export interface OrderCancelledByBuyerPayload {
   currency: string | null
   cancelledAt: Date
   actorUserId: string
+}
+
+/**
+ * A card charge the gateway approved for an order that could not take it: already paid some
+ * other way, cancelled or gifted. The money was taken, so staff must refund it.
+ */
+export interface PaymentNeedsRefundPayload {
+  clientTransactionId: string
+  orderId: string
+  eventId: string
+  orderStatus: string
+  reason: 'order_paid' | 'order_cancelled' | 'order_gifted'
+  /** What the gateway charged for the whole transaction, which may cover several orders. */
+  amountCents: number
+  approvedAt: Date
 }

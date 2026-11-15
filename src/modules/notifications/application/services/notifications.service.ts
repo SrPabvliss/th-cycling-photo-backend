@@ -6,6 +6,7 @@ import {
   type OrderCreatedPayload,
   type OrderDeliveredPayload,
   type OrderPaidPayload,
+  type PaymentNeedsRefundPayload,
   type PreviewViewedPayload,
   type TenantContractAcceptedPayload,
 } from './notification-events'
@@ -16,6 +17,10 @@ export class NotificationsService {
 
   emitOrderCancelledByBuyer(payload: OrderCancelledByBuyerPayload): void {
     this.eventEmitter.emit(NotificationEvent.ORDER_CANCELLED_BY_BUYER, payload)
+  }
+
+  emitPaymentNeedsRefund(payload: PaymentNeedsRefundPayload): void {
+    this.eventEmitter.emit(NotificationEvent.PAYMENT_NEEDS_REFUND, payload)
   }
 
   emitPreviewViewed(payload: PreviewViewedPayload): void {

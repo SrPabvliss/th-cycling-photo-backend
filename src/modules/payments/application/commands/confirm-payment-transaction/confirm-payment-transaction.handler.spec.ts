@@ -35,6 +35,7 @@ type FixtureContext = {
   subtotalDollars: number | null
   sellerTenantId: string
   buyerUserId: string
+  confirmedById?: string | null
 }
 
 function buildTransaction(overrides: Record<string, unknown> = {}) {
@@ -63,6 +64,7 @@ function buildContext(overrides: Partial<FixtureContext> = {}): FixtureContext {
     subtotalDollars: 10,
     sellerTenantId: SELLER_TENANT,
     buyerUserId: BUYER,
+    confirmedById: 'system-user-1',
     ...overrides,
   }
 }
@@ -71,11 +73,17 @@ function buildHandler({
   transaction = buildTransaction(),
   contexts = [buildContext()],
   authorization = {},
+  otherApprovedCharge = false,
 }: {
   transaction?: ReturnType<typeof buildTransaction>
   contexts?: FixtureContext[]
   authorization?: Partial<AuthorizationResult>
+  otherApprovedCharge?: boolean
 } = {}) {
+  const transactionReadRepo = {
+    existsOtherApprovedForOrder: jest.fn().mockResolvedValue(otherApprovedCharge),
+  }
+  const notifications = { emitPaymentNeedsRefund: jest.fn() }
   const transactionRepo = {
     runLocked: jest.fn().mockImplementation((_id, work) => work(transaction)),
   }
@@ -110,6 +118,8 @@ function buildHandler({
     commandBus as never,
     new SellerAccountSuspension(payoutRepo as never),
     { userId: 'system-user-1' } as never,
+    transactionReadRepo as never,
+    notifications as never,
   )
 
   return {
@@ -120,6 +130,7 @@ function buildHandler({
     contextRepo,
     gateway,
     commandBus,
+    notifications,
   }
 }
 
@@ -603,6 +614,53 @@ describe('ConfirmPaymentTransactionHandler', () => {
 
     errorSpy.mockRestore()
     logSpy.mockRestore()
+  })
+
+  describe('a charge approved for an order that can no longer take it', () => {
+    it.each([
+      [
+        'paid by staff confirming a transfer',
+        { status: 'paid', confirmedById: 'staff-1' },
+        false,
+        'order_paid',
+      ],
+      ['paid by another card charge', { status: 'paid' }, true, 'order_paid'],
+      ['cancelled', { status: 'cancelled', confirmedById: null }, false, 'order_cancelled'],
+      ['gifted', { status: 'gifted', confirmedById: null }, false, 'order_gifted'],
+    ] as const)('is logged as an error and sent to staff to refund when the order was %s', async (_, context, otherApprovedCharge, reason) => {
+      const { handler, commandBus, notifications } = buildHandler({
+        contexts: [buildContext(context)],
+        otherApprovedCharge,
+      })
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation()
+
+      const result = await handler.execute(
+        new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER),
+      )
+
+      expect(result).toMatchObject({ approved: true, settled: false, refund: { reason } })
+      expect(commandBus.execute).not.toHaveBeenCalled()
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining(`reason=${reason}`))
+      expect(notifications.emitPaymentNeedsRefund).toHaveBeenCalledTimes(1)
+      expect(notifications.emitPaymentNeedsRefund).toHaveBeenCalledWith(
+        expect.objectContaining({ orderId: 'order-1', orderStatus: context.status, reason }),
+      )
+      errorSpy.mockRestore()
+    })
+
+    it('is reported only by the run that learns of the approval, not when the charge is confirmed again', async () => {
+      const { handler, notifications } = buildHandler({
+        transaction: buildTransaction({ status: 'approved', isSettled: true }),
+        contexts: [buildContext({ status: 'cancelled', confirmedById: null })],
+      })
+
+      const result = await handler.execute(
+        new ConfirmPaymentTransactionCommand('tx-1', '99', BUYER),
+      )
+
+      expect(notifications.emitPaymentNeedsRefund).not.toHaveBeenCalled()
+      expect(result.refund).toEqual({ reason: 'order_cancelled' })
+    })
   })
 
   it('dispatches the order command when the order is pending', async () => {

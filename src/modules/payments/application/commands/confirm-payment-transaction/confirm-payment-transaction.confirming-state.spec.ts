@@ -123,6 +123,8 @@ function setup(initialStatus: PaymentTransactionStatusType = PaymentTransactionS
     commandBus as never,
     new SellerAccountSuspension(payoutRepo as never),
     { userId: 'system-user-1' } as never,
+    { existsOtherApprovedForOrder: jest.fn().mockResolvedValue(false) } as never,
+    { emitPaymentNeedsRefund: jest.fn() } as never,
   )
 
   const confirm = (buyer = BUYER) =>

@@ -12,6 +12,7 @@ import {
   type OrderDeliveredPayload,
   type OrderPaidPayload,
   type OrderRetouchCompletedPayload,
+  type PaymentNeedsRefundPayload,
   type PreviewViewedPayload,
   type TenantContractAcceptedPayload,
 } from '@notifications/application/services/notification-events'
@@ -156,6 +157,17 @@ export class WsEventBridge {
       payload as unknown as Record<string, unknown>,
       operatorIds,
       payload.actorUserId,
+    )
+  }
+
+  /** Refunds are handled by admins, whom every notification already reaches. */
+  @OnEvent(NotificationEvent.PAYMENT_NEEDS_REFUND, { async: true })
+  async handlePaymentNeedsRefund(payload: PaymentNeedsRefundPayload): Promise<void> {
+    this.logger.debug(`Processing payment:needs_refund for ${payload.orderId}`)
+    await this.persistAndBroadcast(
+      NotificationEvent.PAYMENT_NEEDS_REFUND,
+      'payment:needs_refund',
+      payload as unknown as Record<string, unknown>,
     )
   }
 

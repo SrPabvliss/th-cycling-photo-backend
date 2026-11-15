@@ -7,6 +7,8 @@ export type OrderPaymentContext = {
   subtotalDollars: number | null
   sellerTenantId: string | null
   buyerUserId: string
+  /** Who settled the order: the payment system account for a card, a staff member for a transfer. */
+  confirmedById: string | null
 }
 
 export interface IOrderPaymentContextRepository {
