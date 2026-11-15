@@ -617,50 +617,44 @@ export class EventReadRepository implements IEventReadRepository {
    * Returns photo ids for the given event whose effective (latest-correction)
    * bib digits match. Skips soft-deleted bibs. A correction with `new_value = NULL`
    * is honored — the row will NOT match (we use CASE, not COALESCE).
+   *
+   * A rider types their number as they know it, usually without the zeros the plate or the OCR
+   * put in front, so `exact` and `starts` ignore leading zeros on both sides: 39 finds 039 and
+   * 039 finds 39. What is stored is never changed. A search made only of zeros keeps them, so it
+   * finds the zero plates instead of every plate. `contains` already finds 039 from 39 and is
+   * left as it was.
    */
   private async findMatchingBibPhotoIds(
     eventId: string,
     value: string,
     match: 'exact' | 'starts' | 'contains',
   ): Promise<string[]> {
-    const escaped = value.replace(/[\\%_]/g, (c) => `\\${c}`)
-    const pattern =
-      match === 'starts' ? `${escaped}%` : match === 'contains' ? `%${escaped}%` : escaped
+    const escapeLike = (text: string) => text.replace(/[\\%_]/g, (c) => `\\${c}`)
+    const withoutZeros = value.replace(/^0+/, '')
+    const effective = Prisma.sql`(CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END)`
 
-    const sql =
+    const condition =
       match === 'exact'
-        ? Prisma.sql`
-            SELECT DISTINCT pb.photo_id
-            FROM photo_bibs pb
-            JOIN photos p ON p.id = pb.photo_id AND p.event_id = ${eventId}::uuid
-            LEFT JOIN LATERAL (
-              SELECT new_value AS corrected_value, TRUE AS has_correction
-              FROM corrections
-              WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
-              ORDER BY corrected_at DESC LIMIT 1
-            ) latest ON TRUE
-            WHERE pb.deleted_at IS NULL
-              AND LOWER(
-                CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
-              ) = LOWER(${value})
-          `
-        : Prisma.sql`
-            SELECT DISTINCT pb.photo_id
-            FROM photo_bibs pb
-            JOIN photos p ON p.id = pb.photo_id AND p.event_id = ${eventId}::uuid
-            LEFT JOIN LATERAL (
-              SELECT new_value AS corrected_value, TRUE AS has_correction
-              FROM corrections
-              WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
-              ORDER BY corrected_at DESC LIMIT 1
-            ) latest ON TRUE
-            WHERE pb.deleted_at IS NULL
-              AND (
-                CASE WHEN latest.has_correction THEN latest.corrected_value ELSE pb.digits END
-              ) ILIKE ${pattern} ESCAPE '\\'
-          `
+        ? Prisma.sql`LTRIM(LOWER(${effective}), '0') = LTRIM(LOWER(${value}), '0')`
+        : match === 'starts'
+          ? withoutZeros
+            ? Prisma.sql`LTRIM(${effective}, '0') ILIKE ${`${escapeLike(withoutZeros)}%`} ESCAPE '\\'`
+            : Prisma.sql`${effective} ILIKE ${`${escapeLike(value)}%`} ESCAPE '\\'`
+          : Prisma.sql`${effective} ILIKE ${`%${escapeLike(value)}%`} ESCAPE '\\'`
 
-    const rows = await this.prisma.$queryRaw<Array<{ photo_id: string }>>(sql)
+    const rows = await this.prisma.$queryRaw<Array<{ photo_id: string }>>(Prisma.sql`
+      SELECT DISTINCT pb.photo_id
+      FROM photo_bibs pb
+      JOIN photos p ON p.id = pb.photo_id AND p.event_id = ${eventId}::uuid
+      LEFT JOIN LATERAL (
+        SELECT new_value AS corrected_value, TRUE AS has_correction
+        FROM corrections
+        WHERE target_type = 'photo_bib' AND target_id = pb.id AND field = 'digits'
+        ORDER BY corrected_at DESC LIMIT 1
+      ) latest ON TRUE
+      WHERE pb.deleted_at IS NULL
+        AND ${condition}
+    `)
     return rows.map((r) => r.photo_id)
   }
 }
