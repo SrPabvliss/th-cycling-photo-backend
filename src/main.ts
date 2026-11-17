@@ -42,6 +42,10 @@ async function bootstrap() {
     },
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: true,
+    // A signed-in request carries Authorization, so the browser asks permission first (OPTIONS).
+    // Without this it asks again every few seconds, per URL: two trips for each call. Two hours is
+    // the most Chrome keeps it; other browsers stop at their own limit.
+    maxAge: 7200,
   })
 
   app.useGlobalPipes(
