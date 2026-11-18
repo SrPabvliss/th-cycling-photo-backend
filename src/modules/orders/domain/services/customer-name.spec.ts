@@ -11,8 +11,12 @@ describe('customerFirstName', () => {
     expect(customerFirstName({ snapFirstName: null, userName: 'Pablo Villacrés' })).toBe('Pablo')
   })
 
-  it('keeps only the first word, because the greeting is informal', () => {
-    expect(customerFirstName({ snapFirstName: 'Ana María' })).toBe('Ana')
+  it('keeps every given name of the frozen name', () => {
+    expect(customerFirstName({ snapFirstName: 'Juan Carlos' })).toBe('Juan Carlos')
+  })
+
+  it('falls back to the account name when the frozen name is blank', () => {
+    expect(customerFirstName({ snapFirstName: '  ', userName: 'Pablo Villacrés' })).toBe('Pablo')
   })
 
   it('returns an empty string when there is no name at all', () => {

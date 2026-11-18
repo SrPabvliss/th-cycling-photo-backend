@@ -237,4 +237,14 @@ describe('SendDeliveryHandler', () => {
       }),
     )
   })
+
+  it('tells a paid order where its invoice is, and a gifted one nothing about invoices', async () => {
+    const paid = await buildHandler().handler.execute(new SendDeliveryCommand('order-1', audit))
+    const gifted = await buildHandler({ order: buildGiftedOrder() }).handler.execute(
+      new SendDeliveryCommand('order-1', audit),
+    )
+
+    expect(paid.whatsappTemplate).toContain('Revisa tu correo: ahí te enviamos tu factura.')
+    expect(gifted.whatsappTemplate).not.toContain('factura')
+  })
 })

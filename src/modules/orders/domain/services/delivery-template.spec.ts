@@ -16,6 +16,17 @@ describe('buildDeliveryTemplate', () => {
     expect(message).toContain('pago fue confirmado')
   })
 
+  it('points a paid order to the invoice in the email', () => {
+    const message = buildDeliveryTemplate({ ...context, invoiced: true }, 'first')
+
+    expect(message).toContain('Revisa tu correo: ahí te enviamos tu factura.')
+  })
+
+  it('mentions no invoice when the order was not paid, or on a later message', () => {
+    expect(buildDeliveryTemplate(context, 'first')).not.toContain('factura')
+    expect(buildDeliveryTemplate({ ...context, invoiced: true }, 'resend')).not.toContain('factura')
+  })
+
   it('says the link is a new one when it was regenerated', () => {
     const message = buildDeliveryTemplate(context, 'regenerated')
 
