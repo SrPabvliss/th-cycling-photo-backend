@@ -4,6 +4,7 @@ import type { IDeliveryLinkReadRepository } from '@deliveries/domain/ports'
 import { DeliveryLinkStatus } from '@deliveries/domain/value-objects/delivery-link-status.vo'
 import { Injectable } from '@nestjs/common'
 import { resolveDeliveredFile } from '@orders/domain/services'
+import { OrderStatus } from '@orders/domain/value-objects/order-status.vo'
 import { PrismaService } from '@shared/infrastructure'
 import * as DeliveryLinkMapper from '../mappers/delivery-link.mapper'
 
@@ -30,6 +31,7 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
         download_count: true,
         order: {
           select: {
+            status: true,
             event: { select: { name: true } },
             snap_first_name: true,
             snap_last_name: true,
@@ -64,6 +66,7 @@ export class DeliveryLinkReadRepository implements IDeliveryLinkReadRepository {
       status: record.status,
       expiresAt: record.expires_at,
       downloadCount: record.download_count,
+      invoiced: record.order.status !== OrderStatus.GIFTED,
       photos: record.order.items.map((item) => {
         const file = resolveDeliveredFile({
           deliveredAs: item.delivered_as,

@@ -12,6 +12,11 @@ export class DeliveryPhotoProjection {
    * downloadUrl. Null when the delivered file has no CDN slug.
    */
   thumbnailUrl: string | null
+  /**
+   * Signed CDN image of the delivered file at screen size, without watermark, to look at the photo
+   * in full screen without downloading the original. Same lifetime and same null case.
+   */
+  viewUrl: string | null
 }
 
 export class DeliveryDataProjection {
@@ -25,6 +30,8 @@ export class DeliveryDataProjection {
   expiresAt: Date
   /** How many times the delivery page has been accessed */
   downloadCount: number
+  /** The order was paid, so it has an invoice sent by email. False for a gifted order. */
+  invoiced: boolean
   /** Photos with presigned download URLs */
   photos: DeliveryPhotoProjection[]
 }

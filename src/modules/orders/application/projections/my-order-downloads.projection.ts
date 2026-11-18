@@ -12,6 +12,11 @@ export class MyOrderDownloadPhotoProjection {
    * downloadUrl. Null when the delivered file has no CDN slug.
    */
   thumbnailUrl: string | null
+  /**
+   * Signed CDN image of the delivered file at screen size, without watermark, to look at the photo
+   * in full screen without downloading the original. Same lifetime and same null case.
+   */
+  viewUrl: string | null
 }
 
 export class MyOrderDownloadsProjection {
