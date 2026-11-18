@@ -299,6 +299,7 @@ model User {
   preview_links_created     PreviewLink[]         @relation("PreviewLinkCreatedBy")
   orders_confirmed          Order[]               @relation("OrderConfirmedBy")
   orders_notified           Order[]               @relation("OrderNotifiedBy")
+  order_contact_changes     OrderContactChange[]  @relation("OrderContactChangedBy")
   orders_placed             Order[]               @relation("OrderUser")
   carts                     Cart[]
   notifications             Notification[]
@@ -743,6 +744,7 @@ model Order {
   payment_transaction_orders    PaymentTransactionOrder[]
   rikuchiy_outbox_items         RikuchiyOutboxItem[]
   order_tax_documents           OrderTaxDocument[]
+  contact_changes               OrderContactChange[]
   invoice_state                 OrderInvoiceState         @default(none)
   invoice_synced_at             DateTime?                 @db.Timestamptz
   invoice_rejection_notified_at DateTime?                 @db.Timestamptz
@@ -758,6 +760,25 @@ model Order {
   @@index([user_id, created_at(sort: Desc)], map: "idx_order_user_date")
   @@index([event_id, created_at(sort: Desc)], map: "idx_order_event_date")
   @@map("orders")
+}
+
+/// Who changed the contact phone frozen on an order, and when. Internal: no screen shows it.
+model OrderContactChange {
+  id            String   @id @default(uuid()) @db.Uuid
+  order_id      String   @db.Uuid
+  old_phone     String?  @db.VarChar(20)
+  new_phone     String   @db.VarChar(20)
+  /// `admin`: corrected from the organizer panel. `customer`: the buyer changed their own number.
+  source        String   @db.VarChar(20)
+  changed_by_id String   @db.Uuid
+  created_at    DateTime @default(now()) @db.Timestamptz
+
+  order      Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  changed_by User  @relation("OrderContactChangedBy", fields: [changed_by_id], references: [id], onDelete: Restrict)
+
+  @@index([order_id, created_at(sort: Desc)])
+  @@index([changed_by_id])
+  @@map("order_contact_changes")
 }
 
 model OrderItem {

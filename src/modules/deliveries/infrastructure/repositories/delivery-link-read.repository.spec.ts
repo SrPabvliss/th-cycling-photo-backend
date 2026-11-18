@@ -24,6 +24,7 @@ describe('DeliveryLinkReadRepository.getDeliveryData', () => {
       expires_at: new Date('2026-02-01'),
       download_count: 2,
       order: {
+        status: 'delivered',
         event: { name: 'Event 1' },
         snap_first_name: 'Jane',
         snap_last_name: 'Doe',
@@ -75,5 +76,24 @@ describe('DeliveryLinkReadRepository.getDeliveryData', () => {
     data?.photos.forEach((photo) => {
       expect(typeof photo.fileSize).toBe('number')
     })
+  })
+
+  it.each([
+    ['delivered', true],
+    ['paid', true],
+    ['gifted', false],
+  ])('says whether the order has an invoice: %s → %s', async (status, invoiced) => {
+    const { repository, findFirst } = buildRepository()
+    findFirst.mockResolvedValue({
+      token: 'token-1',
+      status: 'active',
+      expires_at: new Date('2026-02-01'),
+      download_count: 0,
+      order: { status, event: { name: 'Event 1' }, items: [] },
+    })
+
+    const result = await repository.getDeliveryData('token-1')
+
+    expect(result?.invoiced).toBe(invoiced)
   })
 })

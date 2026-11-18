@@ -42,6 +42,9 @@ export class GetMyOrderDownloadsHandler implements IQueryHandler<GetMyOrderDownl
           thumbnailUrl: file.publicSlug
             ? this.cdn.internalUrl(file.publicSlug, 'thumb', PRESIGNED_URL_EXPIRY_SECONDS)
             : null,
+          viewUrl: file.publicSlug
+            ? this.cdn.internalUrl(file.publicSlug, 'workspace', PRESIGNED_URL_EXPIRY_SECONDS)
+            : null,
         }
       }),
     )

@@ -71,6 +71,9 @@ export class GetDeliveryByTokenHandler implements IQueryHandler<GetDeliveryByTok
           thumbnailUrl: photo.publicSlug
             ? this.cdn.internalUrl(photo.publicSlug, 'thumb', PRESIGNED_URL_EXPIRY_SECONDS)
             : null,
+          viewUrl: photo.publicSlug
+            ? this.cdn.internalUrl(photo.publicSlug, 'workspace', PRESIGNED_URL_EXPIRY_SECONDS)
+            : null,
         }
       }),
     )
@@ -81,6 +84,7 @@ export class GetDeliveryByTokenHandler implements IQueryHandler<GetDeliveryByTok
       status: data.status,
       expiresAt: data.expiresAt,
       downloadCount: data.downloadCount,
+      invoiced: data.invoiced,
       photos,
     }
   }

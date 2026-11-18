@@ -120,7 +120,7 @@ export class SendDeliveryHandler implements ICommandHandler<SendDeliveryCommand>
     }
 
     const whatsappTemplate = buildDeliveryTemplate(
-      { customerFirstName, photoCount, deliveryUrl: deliveryResult.deliveryUrl },
+      { customerFirstName, photoCount, deliveryUrl: deliveryResult.deliveryUrl, invoiced: isSale },
       'first',
     )
 

@@ -28,6 +28,7 @@ describe('GetDeliveryByTokenHandler', () => {
         status: 'active',
         expiresAt: new Date('2026-12-01T00:00:00Z'),
         downloadCount: 3,
+        invoiced: true,
         photos: options.photos ?? [photo('a', 'slug-a'), photo('b', 'slug-b')],
       }),
     }
@@ -67,6 +68,7 @@ describe('GetDeliveryByTokenHandler', () => {
         fileSize: 1000,
         downloadUrl: 'https://b2.test/photo-1.jpg',
         thumbnailUrl: 'https://cdn.test/thumb/slug-a?ttl=3600',
+        viewUrl: 'https://cdn.test/workspace/slug-a?ttl=3600',
       },
       {
         id: 'b',
@@ -74,6 +76,7 @@ describe('GetDeliveryByTokenHandler', () => {
         fileSize: 1000,
         downloadUrl: 'https://b2.test/photo-2.jpg',
         thumbnailUrl: 'https://cdn.test/thumb/slug-b?ttl=3600',
+        viewUrl: 'https://cdn.test/workspace/slug-b?ttl=3600',
       },
     ])
   })
@@ -99,7 +102,7 @@ describe('GetDeliveryByTokenHandler', () => {
       'https://cdn.test/thumb/slug-b?ttl=3600',
     ])
     expect(result.photos[0].downloadUrl).toBe('https://b2.test/photo-1.jpg')
-    expect(cdn.internalUrl).toHaveBeenCalledTimes(1)
+    expect(cdn.internalUrl).toHaveBeenCalledTimes(2)
   })
 
   it('spends exactly one access of the link per request, thumbnails included', async () => {

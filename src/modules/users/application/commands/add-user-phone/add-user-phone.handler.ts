@@ -1,7 +1,8 @@
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
+import { OrderContactService } from '@shared/order-contact'
+import type { UserPhoneSavedProjection } from '@users/application/projections/user-phone-saved.projection'
 import { UserPhone } from '@users/domain/entities'
 import type { IUserPhoneReadRepository, IUserPhoneWriteRepository } from '@users/domain/ports'
 import { USER_PHONE_READ_REPOSITORY, USER_PHONE_WRITE_REPOSITORY } from '@users/domain/ports'
@@ -12,9 +13,10 @@ export class AddUserPhoneHandler implements ICommandHandler<AddUserPhoneCommand>
   constructor(
     @Inject(USER_PHONE_READ_REPOSITORY) private readonly readRepo: IUserPhoneReadRepository,
     @Inject(USER_PHONE_WRITE_REPOSITORY) private readonly writeRepo: IUserPhoneWriteRepository,
+    private readonly orderContact: OrderContactService,
   ) {}
 
-  async execute(command: AddUserPhoneCommand): Promise<EntityIdProjection> {
+  async execute(command: AddUserPhoneCommand): Promise<UserPhoneSavedProjection> {
     const duplicate = await this.readRepo.findByUserIdAndNumber(command.userId, command.phoneNumber)
     if (duplicate) throw AppException.businessRule('user_phone.duplicate_number')
 
@@ -31,6 +33,14 @@ export class AddUserPhoneHandler implements ICommandHandler<AddUserPhoneCommand>
     }
 
     const saved = await this.writeRepo.save(phone)
-    return { id: saved.id }
+
+    // The first number of an account is its primary one: orders in progress had none to reach.
+    const syncedOrders = phone.isPrimary
+      ? await this.orderContact.syncOrdersInProgress(command.userId, saved.phoneNumber, {
+          changedById: command.userId,
+          source: 'customer',
+        })
+      : 0
+    return { id: saved.id, syncedOrders }
   }
 }

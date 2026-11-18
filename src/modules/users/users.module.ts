@@ -1,6 +1,7 @@
 import { LocationsModule } from '@locations/locations.module'
 import { Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
+import { OrderContactModule } from '@shared/order-contact'
 import {
   USER_PHONE_READ_REPOSITORY,
   USER_PHONE_WRITE_REPOSITORY,
@@ -60,7 +61,7 @@ const QueryHandlers = [
 ]
 
 @Module({
-  imports: [CqrsModule, LocationsModule],
+  imports: [CqrsModule, LocationsModule, OrderContactModule],
   controllers: [UserProfileController, UsersController, UserPhonesController, BuyersController],
   providers: [
     ...CommandHandlers,

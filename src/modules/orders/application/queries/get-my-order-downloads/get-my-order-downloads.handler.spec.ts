@@ -48,6 +48,7 @@ describe('GetMyOrderDownloadsHandler', () => {
         fileSize: 10,
         downloadUrl: 'https://b2.test/photo-1.jpg',
         thumbnailUrl: 'https://cdn.test/thumb/slug-a?ttl=3600',
+        viewUrl: 'https://cdn.test/workspace/slug-a?ttl=3600',
       },
       {
         id: 'photo-b',
@@ -55,6 +56,7 @@ describe('GetMyOrderDownloadsHandler', () => {
         fileSize: 20,
         downloadUrl: 'https://b2.test/photo-2.jpg',
         thumbnailUrl: 'https://cdn.test/thumb/slug-b?ttl=3600',
+        viewUrl: 'https://cdn.test/workspace/slug-b?ttl=3600',
       },
     ])
   })
@@ -85,7 +87,7 @@ describe('GetMyOrderDownloadsHandler', () => {
       'https://cdn.test/thumb/slug-b?ttl=3600',
     ])
     expect(result.photos[0].downloadUrl).toBe('https://b2.test/photo-1.jpg')
-    expect(cdn.internalUrl).toHaveBeenCalledTimes(1)
+    expect(cdn.internalUrl).toHaveBeenCalledTimes(2)
   })
 
   it('rejects with not_downloadable when the order exists but is not ready', async () => {

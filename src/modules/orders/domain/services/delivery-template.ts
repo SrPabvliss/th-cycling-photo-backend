@@ -2,6 +2,8 @@ export interface DeliveryTemplateContext {
   customerFirstName: string
   photoCount: number
   deliveryUrl: string
+  /** True when the order was paid: only a sale has an invoice to point the buyer to. */
+  invoiced?: boolean
 }
 
 export type DeliveryTemplateVariant = 'first' | 'regenerated' | 'resend'
@@ -12,6 +14,7 @@ const OPENING: Record<DeliveryTemplateVariant, (name: string) => string> = {
   resend: (name) => `¡Hola ${name}! Te reenviamos el enlace de descarga.`,
 }
 
+const INVOICE_NOTICE = 'Revisa tu correo: ahí te enviamos tu factura.'
 /**
  * One text for the three ways an operator hands over the photos. It used to live in three places —
  * two backend handlers and the browser — which drifted apart, so the same order read differently
@@ -30,6 +33,7 @@ export function buildDeliveryTemplate(
     OPENING[variant](context.customerFirstName),
     `Aquí tienes tus ${photos} en alta calidad: ${context.deliveryUrl}`,
     'El enlace estará disponible por 7 días.',
+    ...(variant === 'first' && context.invoiced ? [INVOICE_NOTICE] : []),
     '¡Gracias!',
   ].join(' ')
 }
