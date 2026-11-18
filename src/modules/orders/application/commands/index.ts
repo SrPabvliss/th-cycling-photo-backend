@@ -1,5 +1,8 @@
 export { CancelMyOrderCommand } from './cancel-my-order/cancel-my-order.command'
 export { CancelOrderCommand } from './cancel-order/cancel-order.command'
+export { ChangeOrderContactPhoneCommand } from './change-order-contact-phone/change-order-contact-phone.command'
+export { ChangeOrderContactPhoneDto } from './change-order-contact-phone/change-order-contact-phone.dto'
+export { OrderContactPhoneChangedProjection } from './change-order-contact-phone/change-order-contact-phone.projection'
 export { ChoosePaymentMethodCommand } from './choose-payment-method/choose-payment-method.command'
 export { ChoosePaymentMethodDto } from './choose-payment-method/choose-payment-method.dto'
 export { ConfirmOrderPaymentCommand } from './confirm-order-payment/confirm-order-payment.command'

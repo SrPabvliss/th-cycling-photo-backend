@@ -8,6 +8,7 @@ import { forwardRef, Module } from '@nestjs/common'
 import { CqrsModule } from '@nestjs/cqrs'
 import { CancelMyOrderHandler } from '@orders/application/commands/cancel-my-order/cancel-my-order.handler'
 import { CancelOrderHandler } from '@orders/application/commands/cancel-order/cancel-order.handler'
+import { ChangeOrderContactPhoneHandler } from '@orders/application/commands/change-order-contact-phone/change-order-contact-phone.handler'
 import { ChoosePaymentMethodHandler } from '@orders/application/commands/choose-payment-method/choose-payment-method.handler'
 import { ConfirmOrderPaymentHandler } from '@orders/application/commands/confirm-order-payment/confirm-order-payment.handler'
 import { ConvertOrderToGiftHandler } from '@orders/application/commands/convert-order-to-gift/convert-order-to-gift.handler'
@@ -47,6 +48,7 @@ import { OrdersController } from '@orders/presentation/controllers/orders.contro
 import { PaymentsModule } from '@payments/payments.module'
 import { PhotosModule } from '@photos/photos.module'
 import { PreviewsModule } from '@previews/previews.module'
+import { OrderContactModule } from '@shared/order-contact'
 
 const CommandHandlers = [
   CreateOrderFromPreviewHandler,
@@ -55,6 +57,7 @@ const CommandHandlers = [
   ConvertOrderToGiftHandler,
   GiftOrderHandler,
   NotifyPaymentInfoHandler,
+  ChangeOrderContactPhoneHandler,
   ChoosePaymentMethodHandler,
   CancelOrderHandler,
   RegenerateDeliveryHandler,
@@ -88,6 +91,7 @@ const QueryHandlers = [
     forwardRef(() => AuthModule),
     forwardRef(() => PaymentsModule),
     BillingModule,
+    OrderContactModule,
   ],
   controllers: [
     OrderAccountController,

@@ -1,7 +1,8 @@
 import { Inject } from '@nestjs/common'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
-import type { EntityIdProjection } from '@shared/application'
 import { AppException } from '@shared/domain'
+import { OrderContactService } from '@shared/order-contact'
+import type { UserPhoneSavedProjection } from '@users/application/projections/user-phone-saved.projection'
 import type { IUserPhoneReadRepository, IUserPhoneWriteRepository } from '@users/domain/ports'
 import { USER_PHONE_READ_REPOSITORY, USER_PHONE_WRITE_REPOSITORY } from '@users/domain/ports'
 import { UpdateUserPhoneCommand } from './update-user-phone.command'
@@ -11,14 +12,17 @@ export class UpdateUserPhoneHandler implements ICommandHandler<UpdateUserPhoneCo
   constructor(
     @Inject(USER_PHONE_READ_REPOSITORY) private readonly readRepo: IUserPhoneReadRepository,
     @Inject(USER_PHONE_WRITE_REPOSITORY) private readonly writeRepo: IUserPhoneWriteRepository,
+    private readonly orderContact: OrderContactService,
   ) {}
 
-  async execute(command: UpdateUserPhoneCommand): Promise<EntityIdProjection> {
+  async execute(command: UpdateUserPhoneCommand): Promise<UserPhoneSavedProjection> {
     const phone = await this.readRepo.findById(command.phoneId)
     if (!phone) throw AppException.notFound('UserPhone', command.phoneId)
     if (phone.userId !== command.userId) throw AppException.notFound('UserPhone', command.phoneId)
 
-    if (command.phoneNumber !== undefined && command.phoneNumber !== phone.phoneNumber) {
+    const numberChanged =
+      command.phoneNumber !== undefined && command.phoneNumber !== phone.phoneNumber
+    if (numberChanged) {
       const duplicate = await this.readRepo.findByUserIdAndNumber(
         command.userId,
         command.phoneNumber,
@@ -33,6 +37,16 @@ export class UpdateUserPhoneHandler implements ICommandHandler<UpdateUserPhoneCo
     })
 
     await this.writeRepo.save(phone)
-    return { id: phone.id }
+
+    // A corrected primary number is the one the organizer must write to: the orders in progress
+    // were frozen with the old one.
+    const syncedOrders =
+      numberChanged && phone.isPrimary
+        ? await this.orderContact.syncOrdersInProgress(command.userId, phone.phoneNumber, {
+            changedById: command.userId,
+            source: 'customer',
+          })
+        : 0
+    return { id: phone.id, syncedOrders }
   }
 }

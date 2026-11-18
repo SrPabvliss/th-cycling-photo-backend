@@ -3,6 +3,8 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs'
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger'
 import {
   CancelOrderCommand,
+  ChangeOrderContactPhoneCommand,
+  ChangeOrderContactPhoneDto,
   ConfirmOrderPaymentCommand,
   ConvertOrderToGiftCommand,
   ConvertOrderToSaleCommand,
@@ -10,6 +12,7 @@ import {
   CorrectOrderBillingDto,
   GiftOrderCommand,
   NotifyPaymentInfoCommand,
+  OrderContactPhoneChangedProjection,
   RegenerateDeliveryCommand,
   ResendOrderTaxDocumentCommand,
   RetryOrderAnnulmentCommand,
@@ -321,6 +324,38 @@ export class OrdersController {
   @ApiEnvelopeErrorResponse({ status: 409, description: 'The annulment cannot be retried now' })
   async retryAnnulment(@Param('id') id: string, @CurrentUser() user: ICurrentUser) {
     return this.commandBus.execute(new RetryOrderAnnulmentCommand(id, user.userId))
+  }
+
+  @RequirePermission('order.notify_payment')
+  @AllowedWhenFrozen()
+  @Patch(':id/contact-phone')
+  @SuccessMessage('order.contact_phone_changed')
+  @ApiOperation({
+    summary: 'Correct the phone the buyer is reached at',
+    description:
+      "Changes the phone frozen on the order and on the buyer's other orders in progress, and by default on the buyer's account.",
+  })
+  @ApiParam({ name: 'id', description: 'Order UUID', format: 'uuid' })
+  @ApiEnvelopeResponse({
+    status: 200,
+    description: 'Phone changed',
+    type: OrderContactPhoneChangedProjection,
+  })
+  @ApiEnvelopeErrorResponse({ status: 404, description: 'Order not found' })
+  @ApiEnvelopeErrorResponse({ status: 422, description: 'The phone number is not valid' })
+  async changeContactPhone(
+    @Param('id') id: string,
+    @Body() changeOrderContactPhoneDto: ChangeOrderContactPhoneDto,
+    @CurrentUser() user: ICurrentUser,
+  ) {
+    return this.commandBus.execute(
+      new ChangeOrderContactPhoneCommand(
+        id,
+        changeOrderContactPhoneDto.phoneNumber,
+        changeOrderContactPhoneDto.updateAccount ?? true,
+        new AuditContext(user.userId),
+      ),
+    )
   }
 
   @RequirePermission('order.invoice.manage')

@@ -22,6 +22,7 @@
   "invoice_resent": "Invoice resent",
   "invoice_not_resendable": "This invoice cannot be resent.",
   "invoice_not_correctable": "This invoice cannot be corrected right now.",
+  "contact_phone_changed": "Phone updated",
   "invoice_correction_sent": "Billing data sent to correct the invoice",
   "invoice_annulment_not_retryable": "This annulment cannot be retried.",
   "invoice_annulment_retried": "Annulment sent again"
