@@ -262,6 +262,12 @@ export const ROUTE_CENSUS: RouteCensusEntry[] = [
   },
   {
     method: 'PATCH',
+    path: '/orders/:id/contact-phone',
+    legacyMarker: 'admin',
+    permission: 'order.notify_payment',
+  },
+  {
+    method: 'PATCH',
     path: '/orders/:id/confirm-payment',
     legacyMarker: 'admin',
     permission: 'order.confirm_payment',

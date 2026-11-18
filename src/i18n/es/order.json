@@ -1,7 +1,7 @@
 {
   "not_pending": "La orden no está en estado pendiente",
   "not_paid": "La orden no está en estado pagado",
-  "not_gifted": "La orden no está en estado regalada",
+  "not_gifted": "La orden no está marcada como obsequio",
   "not_deliverable": "La orden no se puede entregar en su estado actual",
   "not_correctable": "La orden no se puede corregir en su estado actual",
   "not_cancellable": "La orden no se puede cancelar en su estado actual",
@@ -22,6 +22,7 @@
   "invoice_resent": "Factura reenviada",
   "invoice_not_resendable": "Esta factura no se puede reenviar.",
   "invoice_not_correctable": "Esta factura no se puede corregir ahora.",
+  "contact_phone_changed": "Teléfono actualizado",
   "invoice_correction_sent": "Datos enviados para corregir la factura",
   "invoice_annulment_not_retryable": "Esta anulación no se puede reintentar.",
   "invoice_annulment_retried": "Anulación reenviada"

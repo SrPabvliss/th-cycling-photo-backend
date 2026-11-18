@@ -1,3 +1,4 @@
+import type { OrderContactService } from '@shared/order-contact'
 import { UserPhone } from '@users/domain/entities'
 import type { IUserPhoneReadRepository, IUserPhoneWriteRepository } from '@users/domain/ports'
 import { AddUserPhoneCommand } from './add-user-phone.command'
@@ -9,6 +10,7 @@ describe('AddUserPhoneHandler', () => {
 
   let readRepo: jest.Mocked<IUserPhoneReadRepository>
   let writeRepo: jest.Mocked<IUserPhoneWriteRepository>
+  let orderContact: { syncOrdersInProgress: jest.Mock }
   let handler: AddUserPhoneHandler
 
   const buildStored = () =>
@@ -36,7 +38,13 @@ describe('AddUserPhoneHandler', () => {
       setPrimary: jest.fn(),
     } as unknown as jest.Mocked<IUserPhoneWriteRepository>
 
-    handler = new AddUserPhoneHandler(readRepo, writeRepo)
+    orderContact = { syncOrdersInProgress: jest.fn().mockResolvedValue(2) }
+
+    handler = new AddUserPhoneHandler(
+      readRepo,
+      writeRepo,
+      orderContact as unknown as OrderContactService,
+    )
   })
 
   it('rejects a number the same user already registered', async () => {
@@ -61,5 +69,24 @@ describe('AddUserPhoneHandler', () => {
     await handler.execute(new AddUserPhoneCommand(USER_ID, NUMBER))
 
     expect(writeRepo.save).toHaveBeenCalledWith(expect.objectContaining({ isPrimary: true }))
+  })
+
+  it('gives the first number of an account to its orders in progress', async () => {
+    readRepo.countByUserId.mockResolvedValue(0)
+
+    const result = await handler.execute(new AddUserPhoneCommand(USER_ID, NUMBER))
+
+    expect(orderContact.syncOrdersInProgress).toHaveBeenCalledWith(USER_ID, NUMBER, {
+      changedById: USER_ID,
+      source: 'customer',
+    })
+    expect(result.syncedOrders).toBe(2)
+  })
+
+  it('leaves the orders alone when the new number is an extra one', async () => {
+    const result = await handler.execute(new AddUserPhoneCommand(USER_ID, NUMBER))
+
+    expect(orderContact.syncOrdersInProgress).not.toHaveBeenCalled()
+    expect(result.syncedOrders).toBe(0)
   })
 })
