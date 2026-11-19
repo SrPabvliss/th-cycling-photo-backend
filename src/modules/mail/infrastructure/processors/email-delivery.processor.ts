@@ -1,5 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq'
 import { Inject, Logger } from '@nestjs/common'
+import { AppException } from '@shared/domain'
 import type { Job } from 'bullmq'
 import type { IMailer, ITemplateRenderer, MailTemplate } from '../../domain/ports'
 import { MAILER, TEMPLATE_RENDERER } from '../../domain/ports'
@@ -10,6 +11,17 @@ export interface EmailJobData {
   template: MailTemplate
   vars: Record<string, string>
   replyTo?: string
+}
+
+/** The provider's own reason travels in the exception context, not in its i18n message key. */
+function describeFailure(error: unknown): string {
+  if (error instanceof AppException) {
+    const cause = error.context?.originalError
+    return typeof cause === 'string' && cause.length > 0
+      ? `${error.messageKey}: ${cause}`
+      : error.messageKey
+  }
+  return error instanceof Error ? error.message : String(error)
 }
 
 const EMAIL_DELIVERY_CONCURRENCY = Number.parseInt(
@@ -36,8 +48,10 @@ export class EmailDeliveryProcessor extends WorkerHost {
       await this.mailer.send({ to, subject, html, text, replyTo })
       this.logger.log(`Sent ${template} to ${to}`)
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      this.logger.error(`Failed to send ${template} to ${to}: ${message}`)
+      const attempt = `attempt ${job.attemptsMade + 1}/${job.opts.attempts ?? 1}`
+      this.logger.error(
+        `Failed to send ${template} to ${to} (${attempt}): ${describeFailure(error)}`,
+      )
       throw error
     }
   }

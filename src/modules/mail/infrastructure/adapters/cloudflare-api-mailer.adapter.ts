@@ -13,10 +13,44 @@ interface CloudflareSendResult {
   suppressed_recipients?: string[]
 }
 
+interface CloudflareApiError {
+  code?: number
+  message: string
+}
+
 interface CloudflareSendResponse {
   success: boolean
-  result?: CloudflareSendResult
-  errors?: { message: string }[]
+  result?: CloudflareSendResult | null
+  errors?: CloudflareApiError[]
+}
+
+const MAX_RAW_ERROR_LENGTH = 500
+
+/** Cloudflare's own error codes and messages, e.g. `10205 email.sending.error.email.recipient_suppressed`. */
+function describeErrors(errors: CloudflareApiError[] | undefined): string {
+  const described = (errors ?? []).map((e) => (e.code ? `${e.code} ${e.message}` : e.message))
+  return described.length > 0 ? described.join(', ') : 'no error detail'
+}
+
+/** The error body as Cloudflare's error list when it is JSON, otherwise the raw text, cut short. */
+function describeErrorBody(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as CloudflareSendResponse
+    if (Array.isArray(parsed.errors)) return describeErrors(parsed.errors)
+  } catch {
+    // Not JSON: fall through to the raw text.
+  }
+  const raw = body.trim().slice(0, MAX_RAW_ERROR_LENGTH)
+  return raw.length > 0 ? raw : 'empty body'
+}
+
+/** Which list of Cloudflare's result holds this recipient. */
+function recipientOutcome(to: string, result: CloudflareSendResult | null | undefined): string {
+  if (result?.suppressed_recipients?.includes(to)) return 'suppressed'
+  if (result?.permanent_bounces?.includes(to)) return 'bounced'
+  if (result?.delivered?.includes(to)) return 'delivered'
+  if (result?.queued?.includes(to)) return 'queued'
+  return 'no outcome reported'
 }
 
 @Injectable()
@@ -60,32 +94,45 @@ export class CloudflareApiMailerAdapter implements IMailer {
         }),
       })
     } catch (error) {
-      this.logger.error(`Failed to reach Cloudflare mail API for ${message.to}: ${message.subject}`)
+      const reason = error instanceof Error ? error.message : String(error)
+      this.logger.error(
+        `Failed to reach Cloudflare mail API for ${message.to}: ${message.subject} (${reason})`,
+      )
       throw AppException.externalService('CloudflareApiMailer', error as Error)
     }
 
     if (!response.ok) {
-      const errorText = await this.safeReadError(response)
+      const detail = describeErrorBody(await this.safeReadError(response))
       this.logger.error(
-        `Cloudflare mail API responded ${response.status} for ${message.to}: ${message.subject}`,
+        `Cloudflare mail API responded ${response.status} for ${message.to}: ${message.subject} (${detail})`,
       )
       throw AppException.externalService(
         'CloudflareApiMailer',
-        new Error(`Cloudflare mail API failed: ${response.status} ${errorText}`),
+        new Error(`Cloudflare mail API failed: ${response.status} ${detail}`),
       )
     }
 
     const payload = (await response.json()) as CloudflareSendResponse
 
     if (!payload.success) {
-      const errorText = (payload.errors ?? []).map((e) => e.message).join(', ')
+      const detail = describeErrors(payload.errors)
       this.logger.error(
-        `Cloudflare mail API returned success=false for ${message.to}: ${message.subject}`,
+        `Cloudflare mail API returned success=false for ${message.to}: ${message.subject} (${detail})`,
       )
       throw AppException.externalService(
         'CloudflareApiMailer',
-        new Error(`Cloudflare mail API returned success=false: ${errorText}`),
+        new Error(`Cloudflare mail API returned success=false: ${detail}`),
       )
+    }
+
+    const outcome = recipientOutcome(message.to, payload.result)
+    const messageId = payload.result?.message_id ?? 'without id'
+    if (outcome === 'suppressed') {
+      this.logger.warn(
+        `Cloudflare mail API accepted ${messageId} but suppressed ${message.to}: ${message.subject}`,
+      )
+    } else {
+      this.logger.log(`Cloudflare mail API accepted ${messageId} for ${message.to} (${outcome})`)
     }
 
     await this.recordSend(message.to, payload.result)
@@ -93,7 +140,7 @@ export class CloudflareApiMailerAdapter implements IMailer {
     const permanentBounces = payload.result?.permanent_bounces ?? []
     if (permanentBounces.length > 0) {
       this.logger.error(
-        `Cloudflare mail API reported a permanent bounce for ${message.to}: ${message.subject}`,
+        `Cloudflare mail API reported a permanent bounce for ${message.to}: ${message.subject} (${messageId})`,
       )
       throw AppException.externalService(
         'CloudflareApiMailer',
@@ -102,7 +149,10 @@ export class CloudflareApiMailerAdapter implements IMailer {
     }
   }
 
-  private async recordSend(to: string, result: CloudflareSendResult | undefined): Promise<void> {
+  private async recordSend(
+    to: string,
+    result: CloudflareSendResult | null | undefined,
+  ): Promise<void> {
     if ((result?.suppressed_recipients ?? []).includes(to)) return
     const messageId = result?.message_id ?? null
     try {
