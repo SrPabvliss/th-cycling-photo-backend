@@ -135,6 +135,82 @@ describe('CloudflareApiMailerAdapter', () => {
     expect(loggedText).not.toContain('secret-reset-link')
   })
 
+  it("logs and carries Cloudflare's error code when it refuses a suppressed recipient", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse(
+        {
+          success: false,
+          errors: [{ code: 10205, message: 'email.sending.error.email.recipient_suppressed' }],
+          result: null,
+        },
+        400,
+      ),
+    ) as never
+    const logSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined)
+
+    let thrown: unknown
+    try {
+      await buildAdapter().send(message)
+    } catch (error) {
+      thrown = error
+    }
+
+    const loggedText = logSpy.mock.calls.map((call) => call.join(' ')).join(' ')
+    expect(loggedText).toContain('400')
+    expect(loggedText).toContain('10205 email.sending.error.email.recipient_suppressed')
+    expect(JSON.stringify(thrown)).toContain('10205 email.sending.error.email.recipient_suppressed')
+  })
+
+  it('logs a short raw body when the error response is not JSON', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      text: jest.fn().mockResolvedValue(`<html>${'x'.repeat(2000)}</html>`),
+    }) as never
+    const logSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined)
+
+    await expect(buildAdapter().send(message)).rejects.toThrow()
+
+    const loggedText = logSpy.mock.calls.map((call) => call.join(' ')).join(' ')
+    expect(loggedText).toContain('502')
+    expect(loggedText).toContain('<html>')
+    expect(loggedText.length).toBeLessThan(1000)
+  })
+
+  it('logs the message id and the recipient outcome when Cloudflare accepts the message', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        success: true,
+        result: { message_id: '<abc@titantv.com.ec>', queued: ['real@customer.com'] },
+      }),
+    ) as never
+    const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined)
+
+    await buildAdapter().send(message)
+
+    const loggedText = logSpy.mock.calls.map((call) => call.join(' ')).join(' ')
+    expect(loggedText).toContain('<abc@titantv.com.ec>')
+    expect(loggedText).toContain('real@customer.com (queued)')
+  })
+
+  it('warns when Cloudflare accepts the request but suppresses the recipient', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        success: true,
+        result: {
+          message_id: '<abc@titantv.com.ec>',
+          suppressed_recipients: ['real@customer.com'],
+        },
+      }),
+    ) as never
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+
+    await buildAdapter().send(message)
+
+    const warnedText = warnSpy.mock.calls.map((call) => call.join(' ')).join(' ')
+    expect(warnedText).toContain('suppressed real@customer.com')
+  })
+
   it('records one email send when Cloudflare accepts the message', async () => {
     global.fetch = jest.fn().mockResolvedValue(
       jsonResponse({
