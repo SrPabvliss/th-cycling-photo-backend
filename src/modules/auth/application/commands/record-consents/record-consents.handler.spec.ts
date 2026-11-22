@@ -11,6 +11,8 @@ describe('RecordConsentsHandler', () => {
     consentRepo = {
       record: jest.fn().mockResolvedValue(undefined),
       findAcceptedTypes: jest.fn().mockResolvedValue([]),
+      findActive: jest.fn().mockResolvedValue(null),
+      revoke: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IConsentRepository>
 
     handler = new RecordConsentsHandler(consentRepo)

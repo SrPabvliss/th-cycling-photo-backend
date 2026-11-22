@@ -31,6 +31,7 @@ import { GetMeQuery } from './get-me.query'
 const PROMPT_CONDITIONS: Record<PromptKey, (me: MeProjection) => boolean> = {
   email_verification: (me) => !me.emailVerified,
   personal_profile: (me) => !me.hasPersonalProfile,
+  community_emails: (me) => me.communityEmailsAvailable && !me.communityEmails,
 }
 
 @QueryHandler(GetMeQuery)
@@ -52,6 +53,7 @@ export class GetMeHandler implements IQueryHandler<GetMeQuery> {
     if (!me.role) me.role = query.role
 
     me.pendingConsents = await this.findPendingConsents(query.userId)
+    me.communityEmails = await this.hasCommunityEmails(query.userId)
 
     const p = await this.permissionRepo.load(query.userId)
     const effective = new Set<string>()
@@ -87,6 +89,16 @@ export class GetMeHandler implements IQueryHandler<GetMeQuery> {
       if (allowed.length > 0) result[eventId] = allowed
     }
     return result
+  }
+
+  private async hasCommunityEmails(userId: string): Promise<boolean> {
+    try {
+      return (await this.consentRepo.findActive(userId, CONSENT_TYPE.COMMUNITY_EMAILS)) !== null
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Failed to read the community emails consent for ${userId}: ${message}`)
+      return false
+    }
   }
 
   private async findPendingConsents(userId: string): Promise<string[]> {

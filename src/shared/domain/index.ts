@@ -1,3 +1,4 @@
+export { ADULT_AGE, ageOn, isBirthdayOn, isMinorOn } from './age.utils'
 export { AuditFields } from './audit-fields'
 export {
   endOfDayInEcuador,

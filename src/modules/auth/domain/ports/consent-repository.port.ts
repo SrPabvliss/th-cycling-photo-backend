@@ -10,6 +10,8 @@ export interface IConsentRepository {
   record(payload: RecordConsentPayload): Promise<void>
   findAcceptedTypes(userId: string, policyVersion: string): Promise<ConsentType[]>
   findActive(userId: string, type: ConsentType): Promise<ActiveConsent | null>
+  /** Marks every active consent of that type as revoked. */
+  revoke(userId: string, type: ConsentType): Promise<void>
 }
 
 export const CONSENT_REPOSITORY = Symbol('CONSENT_REPOSITORY')

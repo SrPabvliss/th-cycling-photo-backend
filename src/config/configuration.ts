@@ -55,8 +55,11 @@ export default () => {
     MAIL_REDIRECT_TO,
     CONTACT_INBOX_EMAIL,
     MAIL_TRANSPORT,
+    COMMUNITY_EMAILS_ENABLED,
     PASSWORD_RESET_HMAC_SECRET,
     APP_WEB_BASE_URL,
+    API_PUBLIC_URL,
+    MAIL_ASSETS_URL,
   } = process.env
 
   let databaseUrl = `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
@@ -127,6 +130,9 @@ export default () => {
       redirectTo: MAIL_REDIRECT_TO || '',
       contactInbox: CONTACT_INBOX_EMAIL || MAIL_REPLY_TO,
       transport: MAIL_TRANSPORT || 'api',
+      communityEmailsEnabled: COMMUNITY_EMAILS_ENABLED !== 'false',
+      /** Where email images live. Defaults to the web front; set it locally to see them in a real inbox. */
+      assetsUrl: MAIL_ASSETS_URL || '',
     },
     passwordReset: {
       hmacSecret: PASSWORD_RESET_HMAC_SECRET,
@@ -134,6 +140,8 @@ export default () => {
     },
     app: {
       webBaseUrl: APP_WEB_BASE_URL,
+      /** Public HTTPS base of this API (…/api/v1), for links that must hit it directly. */
+      apiPublicUrl: API_PUBLIC_URL || '',
     },
     aiPipeline: {
       baseUrl: AI_PIPELINE_BASE_URL || 'http://localhost:8001',

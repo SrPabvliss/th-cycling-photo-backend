@@ -16,5 +16,6 @@ export class RegisterCommand {
     public readonly userAgent: string | null,
     public readonly acceptedTerms: boolean = false,
     public readonly guardianConsent: boolean = false,
+    public readonly communityEmails: boolean = false,
   ) {}
 }

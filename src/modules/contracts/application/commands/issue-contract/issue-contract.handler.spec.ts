@@ -116,7 +116,7 @@ describe('IssueContractHandler', () => {
     const job = mailService.enqueue.mock.calls[0][0]
     expect(job.to).toBe('organizador@test.com')
     expect(job.template).toBe('tenant-contract-invitation')
-    expect(job.subject).toBe('Tu contrato de servicio en TitanTV')
+    expect(job.subject).toBe('Tu contrato de servicio en Titan TV')
     expect(job.vars.firstName).toBe('Pablo')
     expect(job.vars.commercialName).toBe('Vuelta Ambato')
     expect(job.vars.eventsTotal).toBe('1')

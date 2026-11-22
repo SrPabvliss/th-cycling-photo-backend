@@ -55,7 +55,7 @@ export class DeliveryEmailService {
         subject: SUBJECTS[kind](data.eventName),
         template: 'order-delivered',
         vars: {
-          firstName: data.firstName || 'Hola',
+          firstName: data.firstName,
           eventName: data.eventName,
           photoCount: String(data.photoCount),
           total,

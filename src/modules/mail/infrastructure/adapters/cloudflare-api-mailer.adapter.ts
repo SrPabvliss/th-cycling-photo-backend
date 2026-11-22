@@ -91,6 +91,9 @@ export class CloudflareApiMailerAdapter implements IMailer {
           html: message.html,
           text: message.text,
           reply_to: message.replyTo ?? this.replyTo,
+          ...(message.headers && Object.keys(message.headers).length > 0
+            ? { headers: message.headers }
+            : {}),
         }),
       })
     } catch (error) {

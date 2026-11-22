@@ -28,6 +28,8 @@ import {
   RequestPasswordResetCommand,
   RequestPasswordResetDto,
   ResendEmailVerificationCommand,
+  RevokeConsentsCommand,
+  RevokeConsentsDto,
   SendEmailVerificationCommand,
   SnoozePromptCommand,
   ValidatePasswordResetTokenCommand,
@@ -102,6 +104,7 @@ export class AuthController {
       req.headers['user-agent'] ?? null,
       dto.acceptedTerms ?? false,
       dto.guardianConsent ?? false,
+      dto.communityEmails ?? false,
     )
     const result = await this.commandBus.execute(command)
 
@@ -261,6 +264,17 @@ export class AuthController {
         req.headers['user-agent'] ?? null,
       ),
     )
+  }
+
+  @Authenticated()
+  @Post('consents/revoke')
+  @HttpCode(204)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Withdraw optional consents (community emails) for the logged-in user' })
+  @ApiResponse({ status: 204, description: 'Consents withdrawn' })
+  @ApiEnvelopeErrorResponse({ status: 401, description: 'Invalid or expired JWT' })
+  async revokeConsents(@Body() dto: RevokeConsentsDto, @CurrentUser() user: ICurrentUser) {
+    await this.commandBus.execute(new RevokeConsentsCommand(user.userId, dto.types))
   }
 
   @Throttle({ short: { limit: 10, ttl: 60000 } })

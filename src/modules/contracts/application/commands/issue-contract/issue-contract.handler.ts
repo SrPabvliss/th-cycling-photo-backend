@@ -55,7 +55,7 @@ export class IssueContractHandler implements ICommandHandler<IssueContractComman
 
     await this.mailService.enqueue({
       to: command.ownerEmail,
-      subject: 'Tu contrato de servicio en TitanTV',
+      subject: 'Tu contrato de servicio en Titan TV',
       template: 'tenant-contract-invitation',
       vars: {
         firstName: owner.firstName ?? FALLBACK_NAME,

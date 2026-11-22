@@ -81,6 +81,30 @@ describe('CloudflareApiMailerAdapter', () => {
     })
   })
 
+  it('should forward custom headers such as List-Unsubscribe', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse({
+        success: true,
+        result: { message_id: 'id-2', delivered: ['real@customer.com'] },
+      }),
+    )
+    global.fetch = fetchMock as never
+
+    await buildAdapter().send({
+      ...message,
+      headers: {
+        'List-Unsubscribe': '<https://api.titantv.com.ec/api/v1/mail/unsubscribe?token=t>',
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
+    })
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body.headers).toEqual({
+      'List-Unsubscribe': '<https://api.titantv.com.ec/api/v1/mail/unsubscribe?token=t>',
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    })
+  })
+
   it('should throw on a non-2xx response', async () => {
     global.fetch = jest
       .fn()

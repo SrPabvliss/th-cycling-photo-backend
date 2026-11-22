@@ -1,7 +1,7 @@
 import { Prisma } from '@generated/prisma/client'
 import { Injectable } from '@nestjs/common'
 import { TEMPLATE_KEYS } from '@shared/authorization/domain/permission-template.constants'
-import { AppException } from '@shared/domain'
+import { AppException, isMinorOn, toEcuadorDateOnly } from '@shared/domain'
 import { PrismaService } from '@shared/infrastructure'
 import type {
   AuthCredentialsProjection,
@@ -75,7 +75,7 @@ export class AuthUserRepository implements IAuthUserRepository {
         email_verified_at: true,
         is_protected: true,
         user_roles: { select: { role: { select: { name: true } } } },
-        customer_profile: { select: { id: true } },
+        customer_profile: { select: { id: true, birth_date: true } },
         tenant: { select: { name: true, public_name: true } },
         permission_template: { select: { key: true } },
       },
@@ -92,6 +92,10 @@ export class AuthUserRepository implements IAuthUserRepository {
       emailVerified: user.email_verified_at !== null,
       isProtected: user.is_protected,
       hasPersonalProfile: user.customer_profile !== null,
+      communityEmailsAvailable: !isMinorOn(
+        user.customer_profile?.birth_date ?? null,
+        toEcuadorDateOnly(new Date()),
+      ),
       tenantName: user.tenant ? (user.tenant.public_name ?? user.tenant.name) : null,
       permissionTemplate: user.permission_template?.key ?? null,
     }

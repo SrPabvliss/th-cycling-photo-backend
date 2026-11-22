@@ -37,12 +37,15 @@ describe('GetMeHandler', () => {
         emailVerified: true,
         isProtected: false,
         hasPersonalProfile: true,
+        communityEmailsAvailable: true,
       }),
     } as unknown as jest.Mocked<IAuthUserRepository>
 
     consentRepo = {
       record: jest.fn(),
       findAcceptedTypes: jest.fn().mockResolvedValue([]),
+      findActive: jest.fn().mockResolvedValue(null),
+      revoke: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IConsentRepository>
 
     permissionRepo = {
@@ -116,6 +119,7 @@ describe('GetMeHandler — pendingPrompts', () => {
     emailVerified: false,
     isProtected: false,
     hasPersonalProfile: true,
+    communityEmailsAvailable: false,
     ...overrides,
   })
 
@@ -127,6 +131,8 @@ describe('GetMeHandler — pendingPrompts', () => {
     consentRepo = {
       record: jest.fn(),
       findAcceptedTypes: jest.fn().mockResolvedValue([CONSENT_TYPE.TERMS_PRIVACY]),
+      findActive: jest.fn().mockResolvedValue(null),
+      revoke: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IConsentRepository>
 
     permissionRepo = {
@@ -228,6 +234,34 @@ describe('GetMeHandler — pendingPrompts', () => {
     const me = await handler.execute(query)
 
     expect(me.pendingPrompts).not.toContain(PROMPT_KEY.PERSONAL_PROFILE)
+  })
+
+  it('offers community emails last, to an adult who has not activated them', async () => {
+    authUserRepo.getMe.mockResolvedValue(
+      meRecord({ emailVerified: true, hasPersonalProfile: true, communityEmailsAvailable: true }),
+    )
+
+    const me = await handler.execute(query)
+
+    expect(me.communityEmails).toBe(false)
+    expect(me.pendingPrompts).toEqual([PROMPT_KEY.COMMUNITY_EMAILS])
+  })
+
+  it('does not offer community emails once they are active, nor to a minor', async () => {
+    consentRepo.findActive.mockResolvedValue({ acceptedAt: new Date(), ip: null })
+    authUserRepo.getMe.mockResolvedValue(
+      meRecord({ emailVerified: true, communityEmailsAvailable: true }),
+    )
+    const active = await handler.execute(query)
+    expect(active.communityEmails).toBe(true)
+    expect(active.pendingPrompts).not.toContain(PROMPT_KEY.COMMUNITY_EMAILS)
+
+    consentRepo.findActive.mockResolvedValue(null)
+    authUserRepo.getMe.mockResolvedValue(
+      meRecord({ emailVerified: true, communityEmailsAvailable: false }),
+    )
+    const minor = await handler.execute(query)
+    expect(minor.pendingPrompts).not.toContain(PROMPT_KEY.COMMUNITY_EMAILS)
   })
 
   it('keeps /auth/me working with an empty list when the prompt repository fails', async () => {
