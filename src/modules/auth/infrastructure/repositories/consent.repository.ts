@@ -58,4 +58,11 @@ export class ConsentRepository implements IConsentRepository {
 
     return row ? { acceptedAt: row.accepted_at, ip: row.ip } : null
   }
+
+  async revoke(userId: string, type: ConsentType): Promise<void> {
+    await this.prisma.userConsent.updateMany({
+      where: { user_id: userId, type, revoked_at: null },
+      data: { revoked_at: new Date() },
+    })
+  }
 }

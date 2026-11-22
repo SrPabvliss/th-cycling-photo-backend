@@ -151,6 +151,21 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   APP_WEB_BASE_URL: string
 
+  /** Public HTTPS base of this API (e.g. https://api.titantv.com.ec/api/v1), for one-click unsubscribe. */
+  @IsOptional()
+  @IsString()
+  API_PUBLIC_URL?: string
+
+  /** Public base of the email images (e.g. https://titantv.com.ec/brand/email). Defaults to the front. */
+  @IsOptional()
+  @IsString()
+  MAIL_ASSETS_URL?: string
+
+  /** `false` turns the scheduled community emails (birthday, Christmas, New Year) off. */
+  @IsOptional()
+  @IsEnum(['true', 'false'])
+  COMMUNITY_EMAILS_ENABLED?: string
+
   // Watermark / Preview
   @IsOptional()
   @IsString()

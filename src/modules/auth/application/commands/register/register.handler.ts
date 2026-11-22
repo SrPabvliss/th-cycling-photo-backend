@@ -1,9 +1,10 @@
 import { LocationValidator } from '@locations/application/services'
+import { MailService } from '@mail/application/services/mail.service'
 import { Inject, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs'
 import { JwtService } from '@nestjs/jwt'
-import { AppException } from '@shared/domain'
+import { AppException, isMinorOn, toEcuadorDateOnly } from '@shared/domain'
 import { hashSync } from 'bcryptjs'
 import {
   CONSENT_TYPE,
@@ -27,6 +28,7 @@ import { RegisterCommand } from './register.command'
 export class RegisterHandler implements ICommandHandler<RegisterCommand> {
   private readonly logger = new Logger(RegisterHandler.name)
   private readonly refreshExpiryDays: number
+  private readonly webBaseUrl: string
 
   constructor(
     @Inject(AUTH_USER_REPOSITORY) private readonly authUserRepo: IAuthUserRepository,
@@ -35,9 +37,11 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
     @Inject(CONSENT_REPOSITORY) private readonly consentRepo: IConsentRepository,
     private readonly jwtService: JwtService,
     private readonly locationValidator: LocationValidator,
+    private readonly mailService: MailService,
     configService: ConfigService,
   ) {
     this.refreshExpiryDays = configService.get<number>('jwt.refreshExpiryDays', 30)
+    this.webBaseUrl = configService.getOrThrow<string>('app.webBaseUrl')
   }
 
   async execute(
@@ -84,7 +88,8 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
       userAgent: command.userAgent,
     })
 
-    await this.recordConsents(command, user.id)
+    const communityEmails = await this.recordConsents(command, user.id)
+    await this.sendWelcome(command, communityEmails)
 
     return {
       tokens: { accessToken },
@@ -92,13 +97,19 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
     }
   }
 
-  private async recordConsents(command: RegisterCommand, userId: string): Promise<void> {
+  /** Records the consents given at sign-up. Returns whether community emails were activated. */
+  private async recordConsents(command: RegisterCommand, userId: string): Promise<boolean> {
+    // Community emails are never activated for a minor, whatever the form sent.
+    const birthDate = command.birthDate ? new Date(command.birthDate) : null
+    const communityEmails =
+      command.communityEmails && !isMinorOn(birthDate, toEcuadorDateOnly(new Date()))
     const types: ConsentType[] = [
       ...(command.acceptedTerms ? [CONSENT_TYPE.TERMS_PRIVACY] : []),
       ...(command.guardianConsent ? [CONSENT_TYPE.GUARDIAN] : []),
+      ...(communityEmails ? [CONSENT_TYPE.COMMUNITY_EMAILS] : []),
     ]
 
-    if (types.length === 0) return
+    if (types.length === 0) return false
 
     try {
       await Promise.all(
@@ -112,9 +123,30 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
           }),
         ),
       )
+      return communityEmails
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.logger.error(`Failed to record consents for user ${userId}: ${message}`)
+      return false
+    }
+  }
+
+  /** The welcome email never blocks the sign-up: a queue failure is logged and the account stays. */
+  private async sendWelcome(command: RegisterCommand, communityEmails: boolean): Promise<void> {
+    try {
+      await this.mailService.enqueue({
+        to: command.email,
+        subject: 'Te damos la bienvenida a Titan TV',
+        template: 'welcome',
+        vars: {
+          firstName: command.firstName,
+          eventsUrl: `${this.webBaseUrl}/events`,
+          communityEmails: communityEmails ? 'true' : '',
+        },
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Failed to enqueue the welcome email: ${message}`)
     }
   }
 }

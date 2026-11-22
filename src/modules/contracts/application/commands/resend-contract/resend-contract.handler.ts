@@ -46,7 +46,7 @@ export class ResendContractHandler implements ICommandHandler<ResendContractComm
 
     await this.mailService.enqueue({
       to: owner.email,
-      subject: 'Tu contrato de servicio en TitanTV',
+      subject: 'Tu contrato de servicio en Titan TV',
       template: 'tenant-contract-invitation',
       vars: {
         firstName: owner.firstName ?? FALLBACK_NAME,
