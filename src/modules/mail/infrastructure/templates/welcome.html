@@ -1,0 +1,9 @@
+{{#> layout preheader="Así encuentras tus fotos en cada evento." eyebrow="Cuenta nueva" title="Te damos la bienvenida" bridge="arco-meta" reason="Recibiste este correo porque creaste una cuenta en Titan TV."}}
+{{#> intro}}{{#if firstName}}Hola {{firstName}},{{else}}Hola,{{/if}} ya tienes tu cuenta en Titan TV. Desde aquí encuentras y descargas tus fotos de cada evento.{{/intro}}
+{{> section label="Así encuentras tus fotos"}}
+{{> step number="1" text="Entra al evento en el que participaste." first=true}}
+{{> step number="2" text="Busca tus fotos con tu número de placa."}}
+{{> step number="3" text="Elige las que quieras y descárgalas."}}
+{{> button url=eventsUrl label="Ver eventos"}}
+{{#unless communityEmails}}{{#> note title="Correos de fechas especiales"}}La carrera termina en la meta, pero la comunidad sigue. Actívalos desde tu cuenta y celebremos juntos los días que importan.{{/note}}{{/unless}}
+{{/layout}}

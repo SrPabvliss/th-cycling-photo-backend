@@ -1,4 +1,5 @@
 import type { LocationValidator } from '@locations/application/services'
+import type { MailService } from '@mail/application/services/mail.service'
 import type { ConfigService } from '@nestjs/config'
 import type { JwtService } from '@nestjs/jwt'
 import { CONSENT_TYPE, POLICY_VERSIONS } from '../../../domain/constants/consent.constants'
@@ -11,7 +12,12 @@ import type {
 import { RegisterCommand } from './register.command'
 import { RegisterHandler } from './register.handler'
 
-const buildCommand = (acceptedTerms = false, guardianConsent = false) =>
+const buildCommand = (
+  acceptedTerms = false,
+  guardianConsent = false,
+  communityEmails = false,
+  birthDate: string | null = null,
+) =>
   new RegisterCommand(
     'rider@example.com',
     'SecurePass123!',
@@ -21,12 +27,13 @@ const buildCommand = (acceptedTerms = false, guardianConsent = false) =>
     1,
     null,
     null,
-    null,
+    birthDate,
     null,
     '1.2.3.4',
     'jest-agent',
     acceptedTerms,
     guardianConsent,
+    communityEmails,
   )
 
 describe('RegisterHandler', () => {
@@ -37,6 +44,7 @@ describe('RegisterHandler', () => {
   let consentRepo: jest.Mocked<IConsentRepository>
   let jwtService: jest.Mocked<JwtService>
   let locationValidator: jest.Mocked<LocationValidator>
+  let mailService: jest.Mocked<MailService>
 
   beforeEach(() => {
     authUserRepo = {
@@ -56,6 +64,8 @@ describe('RegisterHandler', () => {
     consentRepo = {
       record: jest.fn().mockResolvedValue(undefined),
       findAcceptedTypes: jest.fn().mockResolvedValue([]),
+      findActive: jest.fn().mockResolvedValue(null),
+      revoke: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IConsentRepository>
 
     jwtService = { sign: jest.fn().mockReturnValue('jwt') } as unknown as jest.Mocked<JwtService>
@@ -64,7 +74,14 @@ describe('RegisterHandler', () => {
       validateFull: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<LocationValidator>
 
-    const configService = { get: jest.fn().mockReturnValue(30) } as unknown as ConfigService
+    mailService = {
+      enqueue: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<MailService>
+
+    const configService = {
+      get: jest.fn().mockReturnValue(30),
+      getOrThrow: jest.fn().mockReturnValue('https://titantv.com.ec'),
+    } as unknown as ConfigService
 
     handler = new RegisterHandler(
       authUserRepo,
@@ -73,6 +90,7 @@ describe('RegisterHandler', () => {
       consentRepo,
       jwtService,
       locationValidator,
+      mailService,
       configService,
     )
   })
@@ -120,5 +138,49 @@ describe('RegisterHandler', () => {
 
     expect(authUserRepo.register).toHaveBeenCalledTimes(1)
     expect(result.tokens.accessToken).toBe('jwt')
+  })
+
+  it('sends the welcome email with the events link', async () => {
+    await handler.execute(buildCommand(true))
+
+    expect(mailService.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'rider@example.com',
+        template: 'welcome',
+        vars: expect.objectContaining({
+          firstName: 'Juan',
+          eventsUrl: 'https://titantv.com.ec/events',
+          communityEmails: '',
+        }),
+      }),
+    )
+  })
+
+  it('still registers the user when the welcome email cannot be queued', async () => {
+    mailService.enqueue.mockRejectedValue(new Error('redis down'))
+
+    const result = await handler.execute(buildCommand(true))
+
+    expect(result.tokens.accessToken).toBe('jwt')
+  })
+
+  it('activates community emails for an adult who opted in', async () => {
+    await handler.execute(buildCommand(true, false, true, '1990-05-10'))
+
+    expect(consentRepo.record).toHaveBeenCalledWith(
+      expect.objectContaining({ type: CONSENT_TYPE.COMMUNITY_EMAILS }),
+    )
+    expect(mailService.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({ vars: expect.objectContaining({ communityEmails: 'true' }) }),
+    )
+  })
+
+  it('never activates community emails for a minor', async () => {
+    const lastYear = new Date().getFullYear() - 1
+    await handler.execute(buildCommand(true, true, true, `${lastYear - 10}-01-01`))
+
+    expect(consentRepo.record).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: CONSENT_TYPE.COMMUNITY_EMAILS }),
+    )
   })
 })

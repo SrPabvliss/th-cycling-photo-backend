@@ -55,11 +55,12 @@ export class RequestPasswordResetHandler implements ICommandHandler<RequestPassw
 
     await this.mailService.enqueue({
       to: command.email,
-      subject: 'Restablece tu contraseña — vence en 30 minutos',
+      subject: `Restablece tu contraseña — vence en ${this.ttlMinutes} minutos`,
       template: 'password-reset',
       vars: {
         firstName: user.firstName ?? FALLBACK_NAME,
         resetUrl: `${this.webBaseUrl}/reset-password#t=${token}`,
+        ttlMinutes: String(this.ttlMinutes),
         logoUrl: `${this.webBaseUrl}/brand/logo-email.png`,
       },
     })

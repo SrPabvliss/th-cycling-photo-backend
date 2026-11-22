@@ -8,6 +8,10 @@ export type MailTemplate =
   | 'tenant-contract-invitation'
   | 'tenant-contact-request'
   | 'tenant-contact-confirmation'
+  | 'welcome'
+  | 'birthday'
+  | 'christmas'
+  | 'new-year'
 
 export interface RenderedTemplate {
   html: string

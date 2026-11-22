@@ -285,6 +285,7 @@ model User {
   consents                 UserConsent[]
   billing_accounts         BillingAccount[]
   prompt_snoozes           UserPromptSnooze[]
+  community_email_sends    CommunityEmailSend[]
 
   events_created            Event[]               @relation("EventCreatedBy")
   events_updated            Event[]               @relation("EventUpdatedBy")
@@ -885,6 +886,19 @@ model UserPhone {
   @@index([user_id])
   // Unique partial index (user_id) WHERE is_primary = true created via raw SQL
   @@map("user_phones")
+}
+
+/// One community email (birthday, Christmas, New Year) sent to one user. `campaign` carries the
+/// year (`christmas-2026`), so the unique key is what keeps a campaign from reaching anyone twice.
+model CommunityEmailSend {
+  id       String   @id @default(uuid()) @db.Uuid
+  user_id  String   @db.Uuid
+  campaign String   @db.VarChar(40)
+  sent_at  DateTime @default(now()) @db.Timestamptz
+  user     User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, campaign])
+  @@map("community_email_sends")
 }
 
 model UserConsent {

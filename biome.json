@@ -13,7 +13,7 @@
       "!!**/dist",
       "!!**/coverage",
       "!!**/.pnpm-store",
-      "!!src/modules/mail/infrastructure/templates/*.html"
+      "!!src/modules/mail/infrastructure/templates/**/*.html"
     ]
   },
   "formatter": {

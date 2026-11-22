@@ -15,6 +15,10 @@ export class MeProjection {
   hasPersonalProfile: boolean
   /** Whether this is a protected account, excluded from non-legal prompts */
   isProtected: boolean
+  /** Whether the user can receive community emails (false for minors by birth date) */
+  communityEmailsAvailable: boolean
+  /** Whether the user has community emails (birthday, Christmas, New Year) activated */
+  communityEmails?: boolean
   /** Consent types still pending for the current policy version */
   pendingConsents?: string[]
   /** Prompt keys pending, already ordered by priority and filtered by cooldowns */

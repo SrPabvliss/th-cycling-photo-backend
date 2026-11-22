@@ -16,6 +16,7 @@ import { RegisterHandler } from './application/commands/register/register.handle
 import { RequestEmailChangeHandler } from './application/commands/request-email-change/request-email-change.handler'
 import { RequestPasswordResetHandler } from './application/commands/request-password-reset/request-password-reset.handler'
 import { ResendEmailVerificationHandler } from './application/commands/resend-email-verification/resend-email-verification.handler'
+import { RevokeConsentsHandler } from './application/commands/revoke-consents/revoke-consents.handler'
 import { SendEmailVerificationHandler } from './application/commands/send-email-verification/send-email-verification.handler'
 import { SnoozePromptHandler } from './application/commands/snooze-prompt/snooze-prompt.handler'
 import { ValidatePasswordResetTokenHandler } from './application/commands/validate-password-reset-token/validate-password-reset-token.handler'
@@ -55,6 +56,7 @@ const CommandHandlers = [
   ConfirmPasswordResetHandler,
   ValidatePasswordResetTokenHandler,
   RecordConsentsHandler,
+  RevokeConsentsHandler,
   ChangePasswordHandler,
   SendEmailVerificationHandler,
   ResendEmailVerificationHandler,

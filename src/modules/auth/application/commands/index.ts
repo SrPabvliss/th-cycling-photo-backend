@@ -17,6 +17,8 @@ export { RequestEmailChangeDto } from './request-email-change/request-email-chan
 export { RequestPasswordResetCommand } from './request-password-reset/request-password-reset.command'
 export { RequestPasswordResetDto } from './request-password-reset/request-password-reset.dto'
 export { ResendEmailVerificationCommand } from './resend-email-verification/resend-email-verification.command'
+export { RevokeConsentsCommand } from './revoke-consents/revoke-consents.command'
+export { RevokeConsentsDto } from './revoke-consents/revoke-consents.dto'
 export { SendEmailVerificationCommand } from './send-email-verification/send-email-verification.command'
 export { SnoozePromptCommand } from './snooze-prompt/snooze-prompt.command'
 export { ValidatePasswordResetTokenCommand } from './validate-password-reset-token/validate-password-reset-token.command'

@@ -97,4 +97,12 @@ export class RegisterDto {
   @IsBoolean()
   @Equals(true)
   guardianConsent?: boolean
+
+  @ApiPropertyOptional({
+    description: 'Opt-in to community emails (birthday, Christmas, New Year). Ignored for minors',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  communityEmails?: boolean
 }
